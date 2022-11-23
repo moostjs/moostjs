@@ -1,0 +1,38 @@
+{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "outDir": "dist",
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "target": "es2015", 
+        "lib": [
+            "ESNext",
+            "DOM",
+            "WebWorker",
+            "DOM.Iterable"
+        ],
+        "noUnusedLocals": true,
+        "types": ["jest", "node"],
+        "declaration": true,
+        "resolveJsonModule": true,
+        "downlevelIteration": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "noImplicitAny": true,
+        "skipLibCheck": true,
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "removeComments": false,
+        "paths": {
+          "@moostjs/*": ["packages/*/src"],
+          "moost": ["packages/moost/src"],
+          "common/*": ["common/*"]
+        }
+    },
+    "include": [
+      "packages/*/src",
+      "packages/*/__tests__",
+      "common/*.ts",
+      "explorations"
+    ]
+}

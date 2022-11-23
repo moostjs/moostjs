@@ -1,0 +1,36 @@
+{
+  "name": "moost",
+  "version": "0.1.0",
+  "description": "moost",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/moost"
+  },
+  "keywords": [
+    "moost",
+    "moostjs",
+    "composables",
+    "framework",
+    "wooksjs",
+    "prostojs"
+  ],
+  "dependencies": {
+    "@prostojs/infact": "^0.0.13",
+    "@prostojs/mate": "^0.1.10",
+    "@prostojs/valido": "^0.0.2",
+    "wooks": "^0.1.0"
+  },
+  "author": "Artem Maltsev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/moost#readme"
+}

@@ -1,0 +1,30 @@
+{
+  "name": "@moostjs/event-http",
+  "version": "0.1.0",
+  "description": "@moostjs/event-http",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/event-http"
+  },
+  "keywords": [
+    "moost",
+    "moostjs",
+    "composables",
+    "framework",
+    "wooksjs",
+    "prostojs"
+  ],
+  "author": "Artem Maltsev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-http#readme"
+}
