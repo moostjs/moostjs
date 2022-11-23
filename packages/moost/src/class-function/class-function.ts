@@ -1,10 +1,10 @@
 import { getConstructor } from '@prostojs/mate'
+import { panic } from 'common/panic'
 import { getMoostMate } from '../metadata'
 import { getMoostInfact } from '../metadata/infact'
 // import { runPipes } from '../pipes/run-pipes'
 // import { sharedPipes } from '../pipes/shared-pipes'
 import { TAny, TAnyFn, TClassConstructor, TFunction, TObject } from '../types'
-import { panic } from '../utils/panic'
 import { TCallableClassFunction, TClassFunction } from './types'
 
 export async function getCallableFn<T extends TAnyFn = TAnyFn>(targetInstance: TObject, fn: TCallableClassFunction<T>, restoreCtx?: TFunction): Promise<T> {

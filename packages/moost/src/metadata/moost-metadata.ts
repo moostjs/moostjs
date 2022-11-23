@@ -29,6 +29,9 @@ export interface TValidateArrayOptions<T = unknown> {
 }
 
 export type TInjectableScope = 'FOR_REQUEST' | 'SINGLETON'
+export type TMoostHandler<T extends object> = T & {
+    type: string
+}
 
 export interface TMoostMetadata extends TProstoAndCommonMetadata {
     inherit?: boolean
@@ -44,10 +47,7 @@ export interface TMoostMetadata extends TProstoAndCommonMetadata {
     }[]
     injectable?: true | TInjectableScope
     interceptors?: TInterceptorData[],
-    httpHandler?: {
-        method: '*' | 'GET' | 'PUT' | 'POST' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
-        path: string
-    }[]
+    handlers?: TMoostHandler<TAny>[]
     validators?: TValidoFn[]
     validatorsOfItem?: TValidoFn[]
     arrayType?: true | TValidateArrayOptions,

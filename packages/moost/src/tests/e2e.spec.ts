@@ -118,7 +118,7 @@ describe('moost', () => {
     })
 
     afterAll(() => {
-        moost?.close()
+        void moost?.close()
     })
 })
 

@@ -1,15 +1,20 @@
-import { Wooks } from 'wooks'
 import { useHttpContext } from '@wooksjs/event-http'
-import { getMoostMate, TMoostMetadata } from '../metadata'
+import { getMoostMate, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { TPipeData } from '../pipes'
-import { TClassConstructor, TObject } from '../types'
-import { bindHandler } from './bind-handler'
+import { TAny, TClassConstructor, TObject } from '../types'
 import { getInstanceOwnMethods } from './utils'
-import { log } from '../utils/log'
 import { TInterceptorFn } from '../decorators'
 import { getCallableFn } from '../class-function/class-function'
+import { log } from 'common/log'
+import { InterceptorHandler, TMoostAdapter } from '../adapter'
+import { runPipes } from '../pipes/run-pipes'
+import { useEventContext } from '@wooksjs/event-core'
+import { getMoostInfact } from '../metadata/infact'
 
 export interface TBindControllerOptions {
+    getInstance: () => Promise<TObject>
+    classConstructor: TClassConstructor
+    adapters: TMoostAdapter<TAny>[]
     globalPrefix?: string
     replaceOwnPrefix?: string
     provide?: TMoostMetadata['provide']
@@ -17,10 +22,14 @@ export interface TBindControllerOptions {
     pipes?: TPipeData[]
 }
 
-export function bindControllerMethods(getInstance: () => Promise<TObject>, classConstructor: TClassConstructor, wooksApp: Wooks, options?: TBindControllerOptions) {
+export async function bindControllerMethods(options: TBindControllerOptions) {
     const opts = options || {}
+    const { getInstance } = opts
+    const { classConstructor } = opts
+    const { adapters } = opts
     opts.globalPrefix = opts.globalPrefix || ''
     opts.provide = opts.provide || {}
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const fakeInstance = Object.create(classConstructor.prototype) as TObject
     const methods = getInstanceOwnMethods(fakeInstance)
     const mate = getMoostMate()
@@ -29,7 +38,7 @@ export function bindControllerMethods(getInstance: () => Promise<TObject>, class
     const prefix = `${opts.globalPrefix}/${ ownPrefix }`
     for (const method of methods) {
         const methodMeta = getMoostMate().read(fakeInstance, method) || {} as TMoostMetadata
-        if (!methodMeta.httpHandler || !methodMeta.httpHandler.length) continue
+        if (!methodMeta.handlers || !methodMeta.handlers.length) continue
 
         // preparing interceptors
         const interceptors = [...(opts.interceptors || []), ...(meta.interceptors || []), ...(methodMeta.interceptors || [])].sort((a, b) => a.priority - b.priority)
@@ -50,7 +59,10 @@ export function bindControllerMethods(getInstance: () => Promise<TObject>, class
 
         // preparing pipes
         const pipes = [...(opts.pipes || []), ...(meta.pipes || []), ...(methodMeta.pipes || [])]
-        const argsPipes = []
+        const argsPipes: {
+            meta: TMoostParamsMetadata
+            pipes: TPipeData[]
+        }[] = []
         for (const p of methodMeta.params || []) {
             argsPipes.push({
                 meta: p,
@@ -58,20 +70,35 @@ export function bindControllerMethods(getInstance: () => Promise<TObject>, class
             })
         }
 
+        const resolveArgs = async () => {
+            const args: unknown[] = []
+            const { restoreCtx } = useEventContext()
+            for (let i = 0; i < argsPipes.length; i++) {
+                const { pipes, meta } = argsPipes[i]
+                args[i] = await runPipes(pipes, meta, restoreCtx)
+            }
+            return args           
+        }
+
         // preparing provide
-        const provide = {...(opts.provide || {}), ...(meta.provide || {})}
-        for (const { method: httpMethod, path: httpPath } of methodMeta.httpHandler) {
-            const path = typeof httpPath === 'string' ? httpPath : typeof method === 'string' ? method : ''
-            const targetPath = `${prefix || ''}/${path}`.replace(/\/\/+/g, '/')
-            bindHandler(getInstance, method, wooksApp, {
-                path: targetPath,
-                httpMethod,
-                interceptorHandlers,
-                provide,
-                argsMeta: methodMeta.params,
-                argsPipes,
+        // const provide = {...(opts.provide || {}), ...(meta.provide || {})}
+
+        for (const adapter of adapters) {
+            await adapter.bindHandler({
+                prefix,
+                fakeInstance,
+                getInstance,
+                registerEventScope: (scopeId: string) => {
+                    const infact = getMoostInfact()
+                    infact.registerScope(scopeId)
+                    return () => infact.unregisterScope(scopeId)
+                },
+                method,
+                handlers: methodMeta.handlers,
+                interceptorHandler: new InterceptorHandler(interceptorHandlers),
+                resolveArgs,
+                logHandler: (eventName: string) => log(`• ${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${classConstructor.name}.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`),
             })
-            log(`• ${httpMethod}${__DYE_CYAN__} ${targetPath} ${__DYE_GREEN__}→ ${classConstructor.name}.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`)
         }
     }
 }

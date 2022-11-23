@@ -1,7 +1,7 @@
 import { getMoostMate } from '../metadata/moost-metadata'
 
 export function HttpMethod(method: '*' | 'GET' | 'PUT' | 'POST' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS', path?: string): MethodDecorator {
-    return getMoostMate().decorate('httpHandler', { method, path }, true)
+    return getMoostMate().decorate('handlers', { method, path, type: 'HTTP' }, true)
 }
 
 export const All = (path?: string) => HttpMethod('*', path)

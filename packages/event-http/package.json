@@ -26,5 +26,12 @@
   "bugs": {
     "url": "https://github.com/moostjs/moostjs/issues"
   },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-http#readme"
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-http#readme",
+  "peerDependencies": {
+    "moost": ""
+  },
+  "dependencies": {
+    "@wooksjs/event-http": "^0.1.0",
+    "wooks": "^0.1.0"
+  }
 }

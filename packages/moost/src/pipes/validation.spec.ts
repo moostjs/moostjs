@@ -11,7 +11,7 @@ class A {
         expect(opts.type).toBe(String)
         expect(opts.key).toBe('s')
         expect(opts.label).toBe('Some String')
-        return opts.value.length > 5 || `"${opts.label}" is too short`
+        return opts.value.length > 5 || `"${ opts.label || opts.key || '' }" is too short`
     })
     s: string = ''
 
@@ -20,7 +20,7 @@ class A {
             expect(opts.parent).toBeDefined()
             expect(opts.parent && (opts.parent as { n: string }).n).toBe('nested')
         }
-        return opts.value % 2 === 0 || 'expected even number, got ' + opts.value
+        return opts.value % 2 === 0 || `expected even number, got ${ opts.value }`
     })
     n: number = 5
 }
