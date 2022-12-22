@@ -1,6 +1,6 @@
-import { useHttpContext, useRequest } from '@wooksjs/event-http'
-import { TMoostAdapter, TMoostAdapterOptions } from 'moost'
-import { Wooks } from 'wooks'
+import { createHttpApp, TWooksHttpOptions, useHttpContext, useRequest, WooksHttp } from '@wooksjs/event-http'
+import { getMoostMate, TMoostAdapter, TMoostAdapterOptions, TMoostMetadata } from 'moost'
+import { TProstoRouterPathBuilder } from '@prostojs/router'
 
 export interface THttpHandlerMeta {
     method: string
@@ -8,7 +8,39 @@ export interface THttpHandlerMeta {
 }
 
 export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
-    constructor(protected wooks: Wooks) {}
+    protected httpApp: WooksHttp
+
+    constructor(httpApp?: WooksHttp | TWooksHttpOptions) {
+        if (httpApp && httpApp instanceof WooksHttp) {
+            this.httpApp = httpApp
+        } else if (httpApp) {
+            this.httpApp = createHttpApp(httpApp)
+        } else {
+            this.httpApp = createHttpApp()
+        }
+    }
+
+    public getHttpApp() {
+        return this.httpApp
+    }
+
+    public getServerCb() {
+        return this.httpApp.getServerCb()
+    }
+
+    public listen(...args: Parameters<WooksHttp['listen']>) {
+        return this.httpApp.listen(...args)
+    }
+
+    public readonly pathBuilders: {
+        [id: string]: {
+            GET?: TProstoRouterPathBuilder<Record<string, string | string[]>>
+            PUT?: TProstoRouterPathBuilder<Record<string, string | string[]>>
+            PATCH?: TProstoRouterPathBuilder<Record<string, string | string[]>>
+            POST?: TProstoRouterPathBuilder<Record<string, string | string[]>>
+            DELETE?: TProstoRouterPathBuilder<Record<string, string | string[]>>
+        }
+    } = {}
 
     bindHandler<T extends object = object>(opts: TMoostAdapterOptions<THttpHandlerMeta, T>): void | Promise<void> {
         let fn
@@ -35,7 +67,9 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     // })
 
                     let response: unknown
-                    await opts.interceptorHandler.init()
+                    const interceptorHandler = await opts.getIterceptorHandler()
+                    restoreCtx()
+                    await interceptorHandler.init()
 
                     // params
                     let args: unknown[] = []
@@ -49,9 +83,9 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     if (!response) {
                         restoreCtx()
                         // fire before interceptors
-                        response = await opts.interceptorHandler.fireBefore(response)
+                        response = await interceptorHandler.fireBefore(response)
                         // fire request handler
-                        if (!opts.interceptorHandler.responseOverwritten) {
+                        if (!interceptorHandler.responseOverwritten) {
                             try {
                                 restoreCtx()
                                 response = await (instance[opts.method] as unknown as (...a: typeof args) => unknown)(...args)
@@ -62,11 +96,26 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     }
 
                     // fire after interceptors
-                    response = await opts.interceptorHandler.fireAfter(response)
+                    response = await interceptorHandler.fireAfter(response)
                     return response
                 }
             }
-            const pathBuilder = this.wooks.on(handler.method, targetPath, fn)
+            const pathBuilder = this.httpApp.on(handler.method, targetPath, fn)
+            const methodMeta = getMoostMate().read(opts.fakeInstance, opts.method as string) || {} as TMoostMetadata
+            const id = (methodMeta.id || opts.method) as string
+            if (id) {
+                const methods = this.pathBuilders[id] = this.pathBuilders[id] || {}
+                if (handler.method === '*') {
+                    methods.GET = pathBuilder
+                    methods.PUT = pathBuilder
+                    methods.PATCH = pathBuilder
+                    methods.POST = pathBuilder
+                    methods.DELETE = pathBuilder
+                } else {
+                    methods[handler.method as 'GET'] = pathBuilder
+                }
+            }
+
             opts.logHandler(`${__DYE_CYAN__}(${handler.method})${ __DYE_GREEN__ }${ targetPath }`)
         }
     }

@@ -1,6 +1,7 @@
 import { useRequest } from '@wooksjs/event-http'
 import { TClassFunction } from '../class-function'
-import { Controller, Delete, Get, Injectable, Patch, Post, ImportController, Query, Inject, Provide, TInterceptorFn, Intercept, Url } from '../decorators'
+import { Controller, Injectable, ImportController, Inject, Provide, TInterceptorFn, Intercept } from '../decorators'
+import { Delete, Get, Patch, Post, Url, Query } from '@moostjs/event-http'
 import { Moost } from '../moost'
 import { TFunction } from '../types'
 
@@ -16,7 +17,7 @@ export class E2eInterceptor implements TClassFunction<TInterceptorFn> {
     }
 }
 
-@Injectable('FOR_REQUEST')
+@Injectable('FOR_EVENT')
 class E2eInterceptorForRequest implements TClassFunction<TInterceptorFn> {
     constructor(@Url() private url: string) {
 
@@ -69,7 +70,7 @@ class E2eController {
     }
 }
 
-@Injectable('FOR_REQUEST')
+@Injectable('FOR_EVENT')
 @Controller('req')
 class E2eRequestController {
     constructor(@Query() private query: string, private commonDep: E2eCommonDep) {

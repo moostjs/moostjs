@@ -1,8 +1,8 @@
-import { getMoostMate } from '../../metadata'
 import { ResolveDecoratorsTestClass } from './resolve.artifacts'
 import * as wooksComposables from '@wooksjs/event-http'
 import * as eventCore from '@wooksjs/event-core'
 import * as wooksBody from '@wooksjs/http-body'
+import { getMoostMate } from 'moost'
 
 jest.mock('@wooksjs/event-http')
 const mWooksComposables = wooksComposables as jest.Mocked<typeof wooksComposables>
@@ -51,34 +51,68 @@ mWooksBody.useBody.mockImplementation(() => ({
 const instance = new ResolveDecoratorsTestClass()
 const meta = getMoostMate().read(instance, 'method')
 
-describe('resolve decorators', () => {
-    it('must set resolved for @Resolve', () => {
+describe('resolve http-decorators', () => {
+    it('must set resolved for @Header', () => {
         const i = 0
         expect((meta?.params || [])[i]).toHaveProperty('resolver')
         if (meta?.params[i].resolver) {
-            expect(meta?.params[i].resolver()).toBe('resolved')
+            expect(meta.params[i].resolver()).toBe('test header value')
         }
     })
-    it('must set resolved for @Param', () => {
+    it('must set resolved for @Cookie', () => {
         const i = 1
         expect((meta?.params || [])[i]).toHaveProperty('resolver')
         if (meta?.params[i].resolver) {
-            expect(eventCore.useRouteParams().get('test')).toBe('test route param')
-            expect(meta.params[i].resolver()).toBe('test route param')
+            expect(meta.params[i].resolver()).toBe('test cookie value')
         }
     })
-    it('must set resolved for @Params', () => {
+    it('must set resolved for @Query', () => {
         const i = 2
         expect((meta?.params || [])[i]).toHaveProperty('resolver')
         if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver()).toEqual({ test: 'test route param' })
+            expect(meta.params[i].resolver()).toEqual({ test: 'test query value' })
         }
     })
-    it('must set resolved for @Const', () => {
+    it('must set resolved for @Url', () => {
         const i = 3
         expect((meta?.params || [])[i]).toHaveProperty('resolver')
         if (meta?.params[i].resolver) {
-            expect(meta?.params[i].resolver()).toBe(10)
+            expect(meta.params[i].resolver()).toBe('test url')
+        }
+    })
+    it('must set resolved for @Method', () => {
+        const i = 4
+        expect((meta?.params || [])[i]).toHaveProperty('resolver')
+        if (meta?.params[i].resolver) {
+            expect(meta.params[i].resolver()).toBe('PUT')
+        }
+    })
+    it('must set resolved for @Req', () => {
+        const i = 5
+        expect((meta?.params || [])[i]).toHaveProperty('resolver')
+        if (meta?.params[i].resolver) {
+            expect(meta.params[i].resolver()).toBe('raw request')
+        }
+    })
+    it('must set resolved for @Res', () => {
+        const i = 6
+        expect((meta?.params || [])[i]).toHaveProperty('resolver')
+        if (meta?.params[i].resolver) {
+            expect(meta.params[i].resolver()).toBe('raw response')
+        }
+    })
+    it('must set resolved for @Body', () => {
+        const i = 7
+        expect((meta?.params || [])[i]).toHaveProperty('resolver')
+        if (meta?.params[i].resolver) {
+            expect(meta.params[i].resolver()).toBe('parsed body')
+        }
+    })
+    it('must set resolved for @RawBody', () => {
+        const i = 8
+        expect((meta?.params || [])[i]).toHaveProperty('resolver')
+        if (meta?.params[i].resolver) {
+            expect(meta.params[i].resolver()).toBe('raw body')
         }
     })
 })

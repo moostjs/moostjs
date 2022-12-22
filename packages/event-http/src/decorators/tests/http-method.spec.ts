@@ -1,13 +1,13 @@
-import { getMoostMate } from '../../metadata/moost-metadata'
+import { getMoostMate } from 'moost'
 import { HttpMethodTestClass } from './http-method.artifacts'
 
 function simpleTest(fnName: string, httpMethod: string, path?: string) {
     const meta = getMoostMate().read(HttpMethodTestClass, fnName)
 
-    expect(meta).toHaveProperty('httpHandler')
-    expect(meta?.httpHandler).toHaveLength(1)
-    if (meta?.httpHandler) {
-        expect(meta.httpHandler[0]).toEqual({ method: httpMethod, path: path })
+    expect(meta).toHaveProperty('handlers')
+    expect(meta?.handlers).toHaveLength(1)
+    if (meta?.handlers) {
+        expect(meta.handlers[0]).toEqual({ method: httpMethod, path: path, type: 'HTTP' })
     }
 }
 

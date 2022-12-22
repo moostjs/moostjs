@@ -42,19 +42,22 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
 
         // preparing interceptors
         const interceptors = [...(opts.interceptors || []), ...(meta.interceptors || []), ...(methodMeta.interceptors || [])].sort((a, b) => a.priority - b.priority)
-        const interceptorHandlers: TInterceptorFn[] = []
-        for (const { handler } of interceptors) {
-            const interceptorMeta = mate.read(handler)
-            if (interceptorMeta?.injectable) {
-                interceptorHandlers.push(async (...args) => {
-                    const { restoreCtx } = useHttpContext()
-                    const targetInstance = await getInstance()
-                    restoreCtx()
-                    return (await getCallableFn(targetInstance, handler, restoreCtx))(...args)
-                })
-            } else {
-                interceptorHandlers.push(handler as TInterceptorFn)
+        const getIterceptorHandler = async () => {
+            const interceptorHandlers: TInterceptorFn[] = []
+            for (const { handler } of interceptors) {
+                const interceptorMeta = mate.read(handler)
+                if (interceptorMeta?.injectable) {
+                    interceptorHandlers.push(async (...args) => {
+                        const { restoreCtx } = useHttpContext()
+                        const targetInstance = await getInstance()
+                        restoreCtx()
+                        return (await getCallableFn(targetInstance, handler, restoreCtx))(...args)
+                    })
+                } else {
+                    interceptorHandlers.push(handler as TInterceptorFn)
+                }
             }
+            return new InterceptorHandler(interceptorHandlers)
         }
 
         // preparing pipes
@@ -95,7 +98,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                 },
                 method,
                 handlers: methodMeta.handlers,
-                interceptorHandler: new InterceptorHandler(interceptorHandlers),
+                getIterceptorHandler,
                 resolveArgs,
                 logHandler: (eventName: string) => log(`• ${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${classConstructor.name}.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`),
             })

@@ -4,6 +4,10 @@ export function Label(value: string) {
     return getMoostMate().decorate('label', value)
 }
 
+export function Id(value: string) {
+    return getMoostMate().decorate('id', value)
+}
+
 export function Optional() {
     return getMoostMate().decorate('optional', true)
 }

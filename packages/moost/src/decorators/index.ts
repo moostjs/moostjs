@@ -1,4 +1,3 @@
-export * from './http-method.decorator'
 export * from './resolve.decorator'
 export * from './controller.decorator'
 export { Injectable } from './injectable.decorator'

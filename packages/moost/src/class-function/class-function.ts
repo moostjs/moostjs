@@ -12,7 +12,7 @@ export async function getCallableFn<T extends TAnyFn = TAnyFn>(targetInstance: T
     const meta = mate.read(fn)
     if (meta?.injectable) {
         const infact = getMoostInfact()
-        infact.silent(meta.injectable === 'FOR_REQUEST')
+        infact.silent(meta.injectable === 'FOR_EVENT')
         const instance = await infact.getForInstance(targetInstance, fn as TClassConstructor, [], () => { restoreCtx && restoreCtx() }) as TClassFunction<T>
         infact.silent(false)
         return ((...args: TAny[]) => {

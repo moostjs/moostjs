@@ -1,4 +1,4 @@
-import { getMoostMate } from '../metadata/moost-metadata'
+import { getMoostMate } from 'moost'
 
 export function HttpMethod(method: '*' | 'GET' | 'PUT' | 'POST' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS', path?: string): MethodDecorator {
     return getMoostMate().decorate('handlers', { method, path, type: 'HTTP' }, true)

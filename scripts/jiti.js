@@ -4,7 +4,7 @@ import path from 'path'
 import minimist from 'minimist'
 const args = minimist(process.argv.slice(2))
 
-const target = args._ && args._[0] || 'moost'
+const target = typeof args.dev === 'string' ? args.dev : args._ && args._[0] || 'moost'
 
 const alias = {
     'common': path.join(__dirname, '..', 'common')

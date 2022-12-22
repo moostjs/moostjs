@@ -32,9 +32,9 @@ export class Moost {
 
     }
 
-    public adapter<T extends object>(a: TMoostAdapter<T>) {
+    public adapter<T extends object, A extends TMoostAdapter<T>>(a: A) {
         this.adapters.push(a)
-        return this
+        return a
     }
 
     protected unregisteredControllers: (TObject | TFunction)[] = []
@@ -69,7 +69,7 @@ export class Moost {
             infact.setProvideRegByInstance(instance, provide)
         }
 
-        // getInstance - instance factory for resolving SINGLETON and FOR_REQUEST instance
+        // getInstance - instance factory for resolving SINGLETON and FOR_EVENT instance
         const getInstance = instance ? () => Promise.resolve(instance as TObject) : async (): Promise<TObject> => {
             // if (!instance) {
             infact.silent()

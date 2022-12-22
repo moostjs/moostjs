@@ -1,5 +1,5 @@
 import { TInterceptorAfter, TInterceptorBefore, TInterceptorFn, TInterceptorOnError } from './decorators'
-import { TAny, TObject } from './types'
+import { TObject } from './types'
 import { useEventContext } from '@wooksjs/event-core'
 import { TMoostHandler } from './metadata'
 
@@ -9,7 +9,7 @@ export interface TMoostAdapterOptions<H extends object, T extends object> {
     getInstance: () => Promise<T>
     method: keyof T
     handlers: TMoostHandler<H>[]
-    interceptorHandler: InterceptorHandler
+    getIterceptorHandler: () => Promise<InterceptorHandler>
     registerEventScope: (scopeId: string) => () => void
     resolveArgs: () => Promise<unknown[]>
     logHandler: (eventName: string) => void

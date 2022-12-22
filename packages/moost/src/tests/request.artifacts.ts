@@ -1,4 +1,4 @@
-import http, { IncomingMessage, OutgoingHttpHeaders } from 'http'
+import http from 'http'
 
 export const PORT = 3123
 

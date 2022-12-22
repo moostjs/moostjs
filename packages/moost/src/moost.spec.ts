@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Get, Post } from './decorators'
+import { Get, Post } from '@moostjs/event-http'
 import { Moost } from './moost'
 
 class A extends Moost {

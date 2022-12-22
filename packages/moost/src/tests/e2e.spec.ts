@@ -1,19 +1,24 @@
 import { createProvideRegistry } from '@prostojs/infact'
-import { Moost } from '../moost'
+import { Moost } from 'moost'
+import { MoostHttp } from '@moostjs/event-http'
 import { E2eTestMoost, SECRET, E2eInterceptor } from './e2e.artifacts'
 import * as request from './request.artifacts'
 
 describe('moost', () => {
     let moost: Moost
+    let moostHttp: MoostHttp
     const globalInterceptor = jest.fn()
     const e2eInterceptor = jest.fn()
 
     beforeAll(async () => {
         moost = new E2eTestMoost()
+        moostHttp = new MoostHttp()
+        moost.adapter(moostHttp)
         await moost
             .applyGlobalInterceptors(globalInterceptor)
             .setProvideRegistry(createProvideRegistry([E2eInterceptor, () => new E2eInterceptor(e2eInterceptor)]))
-            .listen(request.PORT)
+        await moostHttp.listen(request.PORT)
+        await moost.init()
     })
 
     describe('handler methods', () => {
@@ -57,7 +62,7 @@ describe('moost', () => {
             expect(response2.status()).toBe(200)
             expect(await response2.body()).toEqual('{"newValue":"2"}')
         })
-        it('must call (FOR_REQUEST) Nested Controller Method', async () => {
+        it('must call (FOR_EVENT) Nested Controller Method', async () => {
             const response = await request.get('req/nestedControllerMethod?value=3')
             expect(response.status()).toBe(200)
             expect(await response.body()).toEqual('{"value":"3"}')
@@ -73,7 +78,7 @@ describe('moost', () => {
             expect(response.status()).toBe(200)
             expect(await response.body()).toEqual(SECRET)
         })
-        it('must inject common dependency in (FOR_REQUEST) Nested Controller Method', async () => {
+        it('must inject common dependency in (FOR_EVENT) Nested Controller Method', async () => {
             const response = await request.get('req/common_dep/secret')
             expect(response.status()).toBe(200)
             expect(await response.body()).toEqual(SECRET)
@@ -95,7 +100,7 @@ describe('moost', () => {
             for (let i = 0; i < times; i++) {
                 await request.get('getMethod') // root level
                 await request.get('nestedControllerMethod?value=1') // nested controller
-                await request.get('req/nestedControllerMethod?value=1') // nested (FOR_REQUEST) controller
+                await request.get('req/nestedControllerMethod?value=1') // nested (FOR_EVENT) controller
             }
             expect(globalInterceptor).toHaveBeenCalledTimes(times * 3)
         })
@@ -107,7 +112,7 @@ describe('moost', () => {
             expect(response2.status()).toEqual(200)
             expect(e2eInterceptor).toHaveBeenCalledWith('/intercept/test2')
         })
-        it('must call (FOR_REQUEST) local interceptor', async () => {
+        it('must call (FOR_EVENT) local interceptor', async () => {
             const response = await request.get('intercept/for_request')
             expect(response.status()).toEqual(200)
             expect(await response.body()).toEqual('intercepted for url /intercept/for_request')
@@ -118,7 +123,7 @@ describe('moost', () => {
     })
 
     afterAll(() => {
-        void moost?.close()
+        void moostHttp?.getHttpApp().close()
     })
 })
 

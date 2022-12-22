@@ -1,8 +1,8 @@
-import { useRequest } from '@wooksjs/event-http'
 import { Infact, TInfactClassMeta, TInfactConstructorParamMeta } from '@prostojs/infact'
 import { runPipes } from '../pipes/run-pipes'
 import { sharedPipes } from '../pipes/shared-pipes'
 import { getMoostMate, TMoostParamsMetadata } from './moost-metadata'
+import { useEventId } from '@wooksjs/event-core'
 
 type TInfactMoostMeta = TInfactClassMeta<TMoostParamsMetadata & TInfactConstructorParamMeta> 
 
@@ -21,7 +21,7 @@ export function getNewMoostInfact(): Infact<TInfactMoostMeta> {
                 global: false,
                 constructorParams: meta?.params || [],
                 provide: meta?.provide,
-                scopeId: meta?.injectable === 'FOR_REQUEST' ? useRequest().reqId() : undefined,
+                scopeId: meta?.injectable === 'FOR_EVENT' ? useEventId().getId() : undefined,
             }
             return infactMeta
         },

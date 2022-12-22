@@ -9,6 +9,7 @@ import { TValidoDtoOptions, TValidoFn } from '@prostojs/valido'
 const METADATA_WORKSPACE = 'moost'
 
 interface TCommonMetaFields {
+    id?: string
     label?: string
     optional?: boolean
     required?: boolean
@@ -28,7 +29,7 @@ export interface TValidateArrayOptions<T = unknown> {
     maxLength?: number
 }
 
-export type TInjectableScope = 'FOR_REQUEST' | 'SINGLETON'
+export type TInjectableScope = 'FOR_EVENT' | 'SINGLETON'
 export type TMoostHandler<T extends object> = T & {
     type: string
 }
