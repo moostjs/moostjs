@@ -26,5 +26,12 @@
   "bugs": {
     "url": "https://github.com/moostjs/moostjs/issues"
   },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-cli#readme"
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-cli#readme",
+  "peerDependencies": {
+    "moost": "0.2.0",
+    "wooks": "^0.2.2"
+  },
+  "dependencies": {
+    "@wooksjs/event-cli": "^0.2.2"
+  }
 }

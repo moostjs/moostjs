@@ -25,7 +25,8 @@
     "@prostojs/infact": "^0.0.13",
     "@prostojs/mate": "^0.1.10",
     "@prostojs/valido": "^0.0.2",
-    "@wooksjs/event-core": "^0.1.0"
+    "@wooksjs/event-core": "^0.2.2",
+    "wooks": "^0.2.2"
   },
   "author": "Artem Maltsev",
   "license": "MIT",

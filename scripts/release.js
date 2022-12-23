@@ -5,7 +5,7 @@ import execa from 'execa'
 import semver from 'semver'
 const { prompt } = require('enquirer')
 
-import { packages, require, out, version as currentVersion, __dirname } from './utils.js'
+import { packages, require, out, version as currentVersion, __dirname, mainPkg } from './utils.js'
 
 const args = minimist(process.argv.slice(2))
 
@@ -165,6 +165,7 @@ function updatePackage(pkgPath, version) {
 function updateDeps(pkg, depType, version) {
     const deps = pkg[depType]
     if (!deps) return
+    updateDepsFrom(pkg, mainPkg, depType)
     Object.keys(deps).forEach(dep => {
         if (
             dep === 'moost' ||
@@ -172,6 +173,22 @@ function updateDeps(pkg, depType, version) {
         ) {
             out.warn(`${pkg.name} -> ${depType} -> ${dep}@${version}`)
             deps[dep] = version
+        }
+    })
+}
+
+function updateDepsFrom(targetPkg, sourcePkg, depType) {
+    const deps = targetPkg[depType]
+    if (!deps) return
+    Object.keys(deps).forEach(dep => {
+        if (sourcePkg.dependencies && sourcePkg.dependencies[dep]) {
+            deps[dep] = sourcePkg.dependencies[dep]
+        }
+        if (sourcePkg.devDependencies && sourcePkg.devDependencies[dep]) {
+            deps[dep] = sourcePkg.devDependencies[dep]
+        }
+        if (sourcePkg.peerDependencies && sourcePkg.peerDependencies[dep]) {
+            deps[dep] = sourcePkg.peerDependencies[dep]
         }
     })
 }
