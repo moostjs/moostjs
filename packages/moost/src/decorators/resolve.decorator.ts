@@ -50,7 +50,7 @@ export function Const(value: unknown, label?: string) {
 function fillLabel(target: TObject, key: string | symbol, index: number, name?: string) {
     if (name) {
         const meta = getMoostMate().read(target, key)
-        if (!meta?.params || !meta?.params[index].label) {
+        if (!meta?.params || !meta?.params[index] || !meta?.params[index].label) {
             Label(name)(target, key, index)
         }
     }

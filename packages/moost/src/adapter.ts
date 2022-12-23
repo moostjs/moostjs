@@ -17,6 +17,7 @@ export interface TMoostAdapterOptions<H extends object, T extends object> {
 
 export interface TMoostAdapter<H extends object> {
     bindHandler<T extends TObject = TObject>(options: TMoostAdapterOptions<H, T>): void | Promise<void>
+    onInit?: () => void | Promise<void>
 }
 
 export class InterceptorHandler {

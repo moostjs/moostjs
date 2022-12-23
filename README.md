@@ -9,14 +9,20 @@
 </a>
 </p>
 
-Moost is a Metadata driven Event Processing Framework inspired by [nestjs](https://nestjs.com/) and powered by [wooksjs](https://github.com/wooksjs/wooksjs).
+Moost is a Metadata driven Web App Framework inspired by [nestjs](https://nestjs.com/) and powered by [wooks](https://github.com/wooksjs/wooks).
 
 The main ideas behind Moost are:
 1. Use the power of TS decorators to describe your app
-2. Use the power of [wooksjs](https://github.com/wooksjs/wooksjs) to process events
+2. Use the power of [wooks](https://github.com/wooksjs/wooks) to process events
 3. Make it easier to control dependency injections
 4. Use as less external dependencies as possible
 
-## Install
+What's the difference to [nestjs](https://nestjs.com/)?
+1. It does not use additional `modules` abstraction
+2. It utilizes reusable dependency injection framework [@prostojs/infact](https://github.com/prostojs/infact)
+3. It uses metadata layer powered by [@prostojs/mate](https://github.com/prostojs/mate)
+4. It supports DTOs and validations powered by [@prostojs/valido](https://github.com/prostojs/valido)
+5. It does not use express or fastify (although you can use express/fastify with an adapter)
+6. Currently it does not support any of additional techniques (like ORMs, Queues etc.)
 
-`npm install moost`
+## [Documentation](https://github.com/moostjs/moostjs/tree/main/packages/moost)

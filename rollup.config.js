@@ -3,8 +3,8 @@ import replace from '@rollup/plugin-replace'
 import { statSync, readdirSync, rmSync } from 'node:fs'
 import { dye } from '@prostojs/dye'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
-// import commonJS from '@rollup/plugin-commonjs'
 import { createRequire } from 'module'
+import commonJS from '@rollup/plugin-commonjs'
 
 const require = createRequire(import.meta.url)
 const pkg = require('./package.json')
@@ -59,7 +59,7 @@ function createConfig(target, type, declaration = false) {
       sourcemap: false
     },
     plugins: [
-      // commonJS({ sourceMap: false }),
+      commonJS({ sourceMap: false }),
       nodeResolve(),
       typescript({
         check: true,

@@ -43,6 +43,9 @@ export class Moost {
         this.setProvideRegistry(createProvideRegistry([Moost, () => this]))
         this.unregisteredControllers.unshift(this)
         await this.bindControllers()
+        for (const a of this.adapters) {
+            await (a.onInit && a.onInit())
+        }
     }
 
     protected async bindControllers() {

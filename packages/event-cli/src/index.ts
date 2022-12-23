@@ -1,1 +1,2 @@
-console.log('hello world')
+export * from './event-cli'
+export * from './decorators'
