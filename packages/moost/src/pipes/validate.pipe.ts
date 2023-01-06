@@ -1,4 +1,4 @@
-import { WooksError, useHttpContext } from '@wooksjs/event-http'
+import { HttpError, useHttpContext } from '@wooksjs/event-http'
 import { getMoostValido } from '../metadata/valido'
 import { TObject } from '../types'
 import { TPipeFn, TPipePriority } from './types'
@@ -24,7 +24,7 @@ export const validatePipe: (opts?: TValidatePipeOptions) => TPipeFn = (opts) => 
         const valido = getMoostValido()
         const result = await valido.validateParam(_value, meta, undefined, undefined, undefined, undefined, 0, 0, opts?.errorLimit || DEFAULT_ERROR_LIMIT, restoreCtx)
         if (result !== true) {
-            throw new WooksError<{
+            throw new HttpError<{
                 statusCode: number
                 message: string
                 error: string

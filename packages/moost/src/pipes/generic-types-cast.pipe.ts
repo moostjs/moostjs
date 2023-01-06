@@ -1,4 +1,4 @@
-import { WooksError } from '@wooksjs/event-http'
+import { HttpError } from '@wooksjs/event-http'
 import { TPipeFn, TPipePriority } from './types'
 
 export const genericTypesCastPipe = (strict?: boolean): TPipeFn => {
@@ -57,5 +57,5 @@ export const genericTypesCastPipe = (strict?: boolean): TPipeFn => {
 
 function typeError(value: unknown, targetType: string, label?: string) {
     const prefix = label ? `Argument "${ label }" with value ` : ''
-    throw new WooksError(400, `${prefix}${ JSON.stringify(value) } is not a ${ targetType } type`)
+    throw new HttpError(400, `${prefix}${ JSON.stringify(value) } is not a ${ targetType } type`)
 }
