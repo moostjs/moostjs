@@ -41,6 +41,15 @@ export class Moost {
 
     public async init() {
         this.setProvideRegistry(createProvideRegistry([Moost, () => this]))
+        for (const a of this.adapters) {
+            const constructor = getConstructor(a)
+            if (constructor) {
+                this.setProvideRegistry(createProvideRegistry([constructor as TClassConstructor, () => a]))
+            }
+            if (typeof a.getProvideRegistry === 'function') {
+                this.setProvideRegistry(a.getProvideRegistry())
+            }
+        }
         this.unregisteredControllers.unshift(this)
         await this.bindControllers()
         for (const a of this.adapters) {
@@ -65,7 +74,7 @@ export class Moost {
         const isControllerConsructor = isConstructor(controller)
 
         let instance: TObject | undefined
-        if (isControllerConsructor && classMeta?.injectable === 'SINGLETON') {
+        if (isControllerConsructor && (classMeta?.injectable === 'SINGLETON' || classMeta?.injectable === true)) {
             instance = await infact.get(controller as (new () => unknown), provide) as Promise<TObject>
         } else if (!isControllerConsructor) {
             instance = controller

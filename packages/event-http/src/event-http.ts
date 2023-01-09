@@ -1,6 +1,7 @@
 import { createHttpApp, TWooksHttpOptions, useHttpContext, useRequest, WooksHttp } from '@wooksjs/event-http'
 import { getMoostMate, TMoostAdapter, TMoostAdapterOptions, TMoostMetadata } from 'moost'
 import { TProstoRouterPathBuilder } from '@prostojs/router'
+import { createProvideRegistry } from '@prostojs/infact'
 
 export interface THttpHandlerMeta {
     method: string
@@ -41,6 +42,10 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
             DELETE?: TProstoRouterPathBuilder<Record<string, string | string[]>>
         }
     } = {}
+
+    getProvideRegistry() {
+        return createProvideRegistry([WooksHttp, () => this.getHttpApp()], ['WooksHttp', () => this.getHttpApp()])
+    }
 
     bindHandler<T extends object = object>(opts: TMoostAdapterOptions<THttpHandlerMeta, T>): void | Promise<void> {
         let fn

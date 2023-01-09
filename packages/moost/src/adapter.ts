@@ -2,6 +2,7 @@ import { TInterceptorAfter, TInterceptorBefore, TInterceptorFn, TInterceptorOnEr
 import { TObject } from './types'
 import { useEventContext } from '@wooksjs/event-core'
 import { TMoostHandler } from './metadata'
+import { TProvideRegistry } from '@prostojs/infact'
 
 export interface TMoostAdapterOptions<H extends object, T extends object> {
     prefix: string,
@@ -18,6 +19,7 @@ export interface TMoostAdapterOptions<H extends object, T extends object> {
 export interface TMoostAdapter<H extends object> {
     bindHandler<T extends TObject = TObject>(options: TMoostAdapterOptions<H, T>): void | Promise<void>
     onInit?: () => void | Promise<void>
+    getProvideRegistry?: () => TProvideRegistry
 }
 
 export class InterceptorHandler {
