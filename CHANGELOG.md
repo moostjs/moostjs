@@ -1,3 +1,12 @@
+## [0.2.4](https://github.com/moostjs/moostjs/compare/v0.2.3...v0.2.4) (2023-01-09)
+
+
+### Features
+
+* provide wooks http instance ([1af44cd](https://github.com/moostjs/moostjs/commit/1af44cd40e04fb41cb8a77560609ee7fe899155d))
+
+
+
 ## [0.2.3](https://github.com/moostjs/moostjs/compare/v0.2.2...v0.2.3) (2023-01-06)
 
 
