@@ -1,3 +1,12 @@
+## [0.2.6](https://github.com/moostjs/moostjs/compare/v0.2.5...v0.2.6) (2023-01-14)
+
+
+### Features
+
+* **http:** add SetHeader and SetCookie ([21e8bff](https://github.com/moostjs/moostjs/commit/21e8bff2813b5bf498400699e18c176a51c9b09b))
+
+
+
 ## [0.2.5](https://github.com/moostjs/moostjs/compare/v0.2.4...v0.2.5) (2023-01-14)
 
 
