@@ -1,3 +1,12 @@
+## [0.2.5](https://github.com/moostjs/moostjs/compare/v0.2.4...v0.2.5) (2023-01-14)
+
+
+### Features
+
+* expose infact publicly ([1ea2461](https://github.com/moostjs/moostjs/commit/1ea2461d4134b1f1ae39953ea22d6119a6b113f0))
+
+
+
 ## [0.2.4](https://github.com/moostjs/moostjs/compare/v0.2.3...v0.2.4) (2023-01-09)
 
 
