@@ -1,5 +1,5 @@
 import { getConstructor } from '@prostojs/mate'
-import { panic } from 'common/panic'
+import { panic } from 'common'
 import { getMoostMate } from '../metadata'
 import { getMoostInfact } from '../metadata/infact'
 // import { runPipes } from '../pipes/run-pipes'
