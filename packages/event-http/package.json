@@ -29,7 +29,8 @@
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-http#readme",
   "peerDependencies": {
     "moost": "0.2.7",
-    "wooks": "^0.2.5"
+    "wooks": "^0.2.5",
+    "@wooksjs/event-core": "^0.2.5"
   },
   "dependencies": {
     "@wooksjs/event-http": "^0.2.5"

@@ -75,8 +75,6 @@ packages.forEach(({shortName, name, pkg, pkgPath}) => {
     "overrideTsconfig": {
       "compilerOptions": {
         "paths": {
-          "@moostjs/*": ["packages/${shortName}/dist/packages/*/src"],
-          "moost": ["packages/${shortName}/dist/packages/moost/src"],
           "common": ["packages/${shortName}/dist/common"]
         }
       },         
