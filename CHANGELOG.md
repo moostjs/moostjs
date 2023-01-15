@@ -1,3 +1,12 @@
+## [0.2.7](https://github.com/moostjs/moostjs/compare/v0.2.6...v0.2.7) (2023-01-15)
+
+
+### Bug Fixes
+
+* **cli:** add external dependencies ([8b35cf8](https://github.com/moostjs/moostjs/commit/8b35cf8b559a7b78386a64b9f65a019845984c8e))
+
+
+
 ## [0.2.6](https://github.com/moostjs/moostjs/compare/v0.2.5...v0.2.6) (2023-01-14)
 
 
