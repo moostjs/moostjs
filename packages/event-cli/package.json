@@ -29,7 +29,8 @@
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-cli#readme",
   "peerDependencies": {
     "moost": "0.2.6",
-    "wooks": "^0.2.5"
+    "wooks": "^0.2.5",
+    "@wooksjs/event-core": "^0.2.5"
   },
   "dependencies": {
     "@wooksjs/event-cli": "^0.2.5"

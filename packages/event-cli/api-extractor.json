@@ -6,6 +6,13 @@
   },
   "compiler": {
     "overrideTsconfig": {
+      "compilerOptions": {
+        "paths": {
+          "@moostjs/*": ["packages/event-cli/dist/packages/*/src"],
+          "moost": ["packages/event-cli/dist/packages/moost/src"],
+          "common": ["packages/event-cli/dist/common"]
+        }
+      },         
       "include": [
         "packages/event-cli/dist/packages",
         "packages/event-cli/dist/common"

@@ -5,7 +5,7 @@ import { TAny, TClassConstructor, TObject } from '../types'
 import { getInstanceOwnMethods } from './utils'
 import { TInterceptorFn } from '../decorators'
 import { getCallableFn } from '../class-function/class-function'
-import { log } from 'common/log'
+import { log } from 'common'
 import { InterceptorHandler, TMoostAdapter } from '../adapter'
 import { runPipes } from '../pipes/run-pipes'
 import { useEventContext } from '@wooksjs/event-core'
@@ -15,6 +15,7 @@ export interface TBindControllerOptions {
     getInstance: () => Promise<TObject>
     classConstructor: TClassConstructor
     adapters: TMoostAdapter<TAny>[]
+    silent: boolean
     globalPrefix?: string
     replaceOwnPrefix?: string
     provide?: TMoostMetadata['provide']
@@ -90,6 +91,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             await adapter.bindHandler({
                 prefix,
                 fakeInstance,
+                silent: opts.silent,
                 getInstance,
                 registerEventScope: (scopeId: string) => {
                     const infact = getMoostInfact()
@@ -100,7 +102,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                 handlers: methodMeta.handlers,
                 getIterceptorHandler,
                 resolveArgs,
-                logHandler: (eventName: string) => log(`• ${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${classConstructor.name}.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`),
+                logHandler: opts.silent ? (_: string) => {} : (eventName: string) => log(`• ${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${classConstructor.name}.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`),
             })
         }
     }

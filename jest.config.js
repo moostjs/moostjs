@@ -25,7 +25,7 @@ export default {
     moduleNameMapper: {
       '^@moostjs/(.*?)$': '<rootDir>/packages/$1/src',
       '^moost$': '<rootDir>/packages/moost/src',
-      '^common/(.*?)$': '<rootDir>/common/$1'
+      '^common$': '<rootDir>/common'
     },
     globals: {
       __DYE_RED_BRIGHT__: dye('red-bright').open,

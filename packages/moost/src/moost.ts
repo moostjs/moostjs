@@ -13,31 +13,34 @@ import { TMoostAdapter } from './adapter'
 
 export interface TMoostOptions {
     globalPrefix?: string
+    silent?: boolean
 }
 
 export class Moost {
-    pipes: TPipeData[] = [...sharedPipes]
+    protected pipes: TPipeData[] = [...sharedPipes]
 
-    interceptors: TInterceptorData[] = []
+    protected interceptors: TInterceptorData[] = []
 
-    adapters: TMoostAdapter<TAny>[] = []
+    protected adapters: TMoostAdapter<TAny>[] = []
 
-    provide: TProvideRegistry = createProvideRegistry(
+    protected provide: TProvideRegistry = createProvideRegistry(
         [Infact, getMoostInfact],
         [Mate, getMoostMate],
         [Valido, getMoostValido],
     )
 
-    constructor(protected options?: TMoostOptions) {
+    protected unregisteredControllers: (TObject | TFunction)[] = []
 
+    constructor(protected options?: TMoostOptions) {
+        if (options?.silent) {
+            getMoostInfact().silent()
+        }
     }
 
     public adapter<T extends object, A extends TMoostAdapter<T>>(a: A) {
         this.adapters.push(a)
         return a
     }
-
-    protected unregisteredControllers: (TObject | TFunction)[] = []
 
     public async init() {
         this.setProvideRegistry(createProvideRegistry([Moost, () => this]))
@@ -96,6 +99,7 @@ export class Moost {
             getInstance,
             classConstructor,
             adapters: this.adapters,
+            silent: !!this.options?.silent,
             globalPrefix,
             replaceOwnPrefix,
             interceptors: [...this.interceptors],
