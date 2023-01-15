@@ -1,3 +1,12 @@
+## [0.2.8](https://github.com/moostjs/moostjs/compare/v0.2.7...v0.2.8) (2023-01-15)
+
+
+### Bug Fixes
+
+* **types:** adjust api extractor ([748b75d](https://github.com/moostjs/moostjs/commit/748b75d3e9270753fd33daf6ac2d58b46eb79681))
+
+
+
 ## [0.2.7](https://github.com/moostjs/moostjs/compare/v0.2.6...v0.2.7) (2023-01-15)
 
 
