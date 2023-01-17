@@ -3,7 +3,7 @@ import { TClassFunction } from '../class-function'
 import { Controller, Injectable, ImportController, Inject, Provide, TInterceptorFn, Intercept } from '../decorators'
 import { Delete, Get, Patch, Post, Url, Query } from '@moostjs/event-http'
 import { Moost } from '../moost'
-import { TFunction } from '../types'
+import { TFunction } from 'common'
 
 @Injectable()
 export class E2eInterceptor implements TClassFunction<TInterceptorFn> {

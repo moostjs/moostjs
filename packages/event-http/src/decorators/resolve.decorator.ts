@@ -1,7 +1,7 @@
 import { attachHook } from '@wooksjs/event-core'
 import {
     useCookies, useHeaders, useRequest, useResponse, useSearchParams,
-    useAuthorization, useStatus, useSetHeader, useSetCookie
+    useAuthorization, useStatus, useSetHeader, useSetCookie,
 } from '@wooksjs/event-http'
 import { useBody } from '@wooksjs/http-body'
 import { Resolve } from 'moost'
@@ -33,20 +33,20 @@ export const StatusHook = () => Resolve((metas, level) => {
  * @paramType THeaderHook
  */
 export const HeaderHook = (name: string) => Resolve((metas, level) => {
-        const hook = useSetHeader(name)
-        if (level === 'PARAM') {
-            return hook
-        }
-        if (level === 'PROP' && metas.instance && metas.key) {
-            const initialValue = metas.instance[metas.key as keyof typeof metas.instance]
-            attachHook(metas.instance, {
-                get: () => hook.value,
-                set: (v) => hook.value = v,
-            }, metas.key)
-            return typeof initialValue === 'string' ? initialValue : ''
-        }
-    },
-    name,
+    const hook = useSetHeader(name)
+    if (level === 'PARAM') {
+        return hook
+    }
+    if (level === 'PROP' && metas.instance && metas.key) {
+        const initialValue = metas.instance[metas.key as keyof typeof metas.instance]
+        attachHook(metas.instance, {
+            get: () => hook.value,
+            set: (v) => hook.value = v,
+        }, metas.key)
+        return typeof initialValue === 'string' ? initialValue : ''
+    }
+},
+name,
 )
 
 /**
@@ -79,23 +79,23 @@ name,
  * @paramType TCookieHook
  */
 export const CookieAttrsHook = (name: string) => Resolve((metas, level) => {
-        const hook = useSetCookie(name)
-        if (level === 'PARAM') {
-            return attachHook({}, {
-                get: () => hook.attrs,
-                set: (v) => hook.attrs = v,
-            })
-        }
-        if (level === 'PROP' && metas.instance && metas.key) {
-            const initialValue = metas.instance[metas.key as keyof typeof metas.instance]
-            attachHook(metas.instance, {
-                get: () => hook.attrs,
-                set: (v) => hook.attrs = v,
-            }, metas.key)
-            return typeof initialValue === 'object' ? initialValue : {}
-        }
-    },
-    name,
+    const hook = useSetCookie(name)
+    if (level === 'PARAM') {
+        return attachHook({}, {
+            get: () => hook.attrs,
+            set: (v) => hook.attrs = v,
+        })
+    }
+    if (level === 'PROP' && metas.instance && metas.key) {
+        const initialValue = metas.instance[metas.key as keyof typeof metas.instance]
+        attachHook(metas.instance, {
+            get: () => hook.attrs,
+            set: (v) => hook.attrs = v,
+        }, metas.key)
+        return typeof initialValue === 'object' ? initialValue : {}
+    }
+},
+name,
 )
 
 /**
@@ -157,7 +157,6 @@ export function Query(name?: string): ParameterDecorator {
         if (name) {
             const p = urlSearchParams()
             const value = p.get(name)
-            console.log(name + ' = ', value)
             return value === '' && p.has(name) || value
         }
         const json = jsonSearchParams() as object

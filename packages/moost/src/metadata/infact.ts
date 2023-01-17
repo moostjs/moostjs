@@ -1,17 +1,21 @@
 import { Infact, TInfactClassMeta } from '@prostojs/infact'
 import { runPipes } from '../pipes/run-pipes'
-import { sharedPipes } from '../pipes/shared-pipes'
 import { getMoostMate, TMoostMetadata, TMoostParamsMetadata } from './moost-metadata'
 import { useEventId } from '@wooksjs/event-core'
+import { TPipeData } from '../pipes'
 
 const sharedMoostInfact = getNewMoostInfact()
 
-export function getMoostInfact(): Infact<TMoostMetadata, TMoostMetadata, TMoostParamsMetadata> {
+export function getMoostInfact() {
     return sharedMoostInfact
 }
 
-export function getNewMoostInfact(): Infact<TMoostMetadata, TMoostMetadata, TMoostParamsMetadata> {
-    return new Infact<TMoostMetadata, TMoostMetadata, TMoostParamsMetadata>({
+interface TCustom {
+    pipes?: TPipeData[]
+}
+
+export function getNewMoostInfact() {
+    return new Infact<TMoostMetadata, TMoostMetadata, TMoostParamsMetadata, TCustom>({
         describeClass(classConstructor) {
             const meta = getMoostMate().read(classConstructor)
             const infactMeta = {
@@ -24,18 +28,18 @@ export function getNewMoostInfact(): Infact<TMoostMetadata, TMoostMetadata, TMoo
             } as unknown as TInfactClassMeta<TMoostParamsMetadata> & TMoostMetadata
             return infactMeta
         },
-        resolveParam(paramMeta, classMeta) {
-            if (paramMeta.resolver) {
-                return runPipes(sharedPipes, undefined, { paramMeta, classMeta: classMeta as unknown as TMoostMetadata }, 'PARAM')
+        resolveParam({ paramMeta, classMeta, customData }) {
+            if (paramMeta && customData && customData.pipes) {
+                return runPipes(customData.pipes, undefined, { paramMeta, classMeta: classMeta as unknown as TMoostMetadata }, 'PARAM')
             }
         },
         describeProp(classConstructor, key) {
             const meta = getMoostMate().read(classConstructor, key)
             return meta as TMoostMetadata
         },
-        resolveProp(instance, key, initialValue, propMeta, classMeta) {
-            if (propMeta.resolver) {
-                return runPipes(sharedPipes, initialValue, { instance, key, propMeta, classMeta: classMeta as unknown as TMoostMetadata}, 'PROP')
+        resolveProp({ instance, key, initialValue, propMeta, classMeta, customData }) {
+            if (propMeta && customData && customData.pipes) {
+                return runPipes(customData.pipes, initialValue, { instance, key, propMeta, classMeta: classMeta as unknown as TMoostMetadata}, 'PROP')
             }
         },
         storeProvideRegByInstance: true,

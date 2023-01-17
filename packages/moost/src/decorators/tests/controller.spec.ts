@@ -1,6 +1,6 @@
 import { Controller, ImportController } from '../controller.decorator'
 import { getMoostMate } from '../../metadata/moost-metadata'
-import { TFunction } from '../../types'
+import { TFunction } from 'common'
 
 @Controller('my-path')
 class A {

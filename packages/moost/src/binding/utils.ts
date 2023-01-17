@@ -1,4 +1,4 @@
-import { TAny } from '../types'
+import { TAny } from 'common'
 
 export function getInstanceOwnMethods<T = TAny>(instance: T): (keyof T)[] {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

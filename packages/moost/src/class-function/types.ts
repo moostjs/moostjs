@@ -1,4 +1,4 @@
-import { TAny, TAnyFn } from '../types'
+import { TAny, TAnyFn } from 'common'
 
 export interface TClassFunction<T extends TAnyFn = TAnyFn> {
     handler: T

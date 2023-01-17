@@ -1,6 +1,6 @@
 import { getConstructor } from '@prostojs/mate'
 import { TValidoDtoMeta, TValidoParamMeta, Valido } from '@prostojs/valido'
-import { TFunction, TObject } from '../types'
+import { TFunction, TObject } from 'common'
 import { getMoostMate } from './moost-metadata'
 
 const valido = new Valido({

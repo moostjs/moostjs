@@ -1,7 +1,7 @@
 import { useHttpContext } from '@wooksjs/event-http'
 import { getMoostMate, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { TPipeData } from '../pipes'
-import { TAny, TClassConstructor, TObject } from '../types'
+import { TAny, TClassConstructor, TObject } from 'common'
 import { getInstanceOwnMethods } from './utils'
 import { TInterceptorFn } from '../decorators'
 import { getCallableFn } from '../class-function/class-function'
@@ -43,7 +43,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
 
         // preparing interceptors
         const interceptors = [...(opts.interceptors || []), ...(meta.interceptors || []), ...(methodMeta.interceptors || [])].sort((a, b) => a.priority - b.priority)
-        const getIterceptorHandler = async () => {
+        const getIterceptorHandler = () => {
             const interceptorHandlers: TInterceptorFn[] = []
             for (const { handler } of interceptors) {
                 const interceptorMeta = mate.read(handler)
@@ -58,11 +58,11 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                     interceptorHandlers.push(handler as TInterceptorFn)
                 }
             }
-            return new InterceptorHandler(interceptorHandlers)
+            return Promise.resolve(new InterceptorHandler(interceptorHandlers))
         }
 
         // preparing pipes
-        const pipes = [...(opts.pipes || []), ...(meta.pipes || []), ...(methodMeta.pipes || [])]
+        const pipes = [...(opts.pipes || []), ...(methodMeta.pipes || [])]
         const argsPipes: {
             meta: TMoostParamsMetadata
             pipes: TPipeData[]
@@ -106,7 +106,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                 handlers: methodMeta.handlers,
                 getIterceptorHandler,
                 resolveArgs,
-                logHandler: opts.silent ? (_: string) => {} : (eventName: string) => log(`• ${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${classConstructor.name}.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`),
+                logHandler: opts.silent ? () => {} : (eventName: string) => log(`• ${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${classConstructor.name}.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`),
             })
         }
     }

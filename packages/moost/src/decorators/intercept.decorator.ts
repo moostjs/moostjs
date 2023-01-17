@@ -1,6 +1,6 @@
 import { TCallableClassFunction } from '../class-function/types'
 import { getMoostMate } from '../metadata/moost-metadata'
-import { TAny } from '../types'
+import { TAny } from 'common'
 
 export type TInterceptorBefore = (reply: (response: TAny) => void) => void | Promise<void>
 export type TInterceptorAfter = (response: TAny, reply: (response: TAny) => void) => void | Promise<void>

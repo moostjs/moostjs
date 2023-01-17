@@ -1,7 +1,7 @@
 import { useRouteParams } from '@wooksjs/event-core'
 import { getMoostMate } from '../metadata/moost-metadata'
 import { TPipeMetas } from '../pipes'
-import { TEmpty, TObject } from '../types'
+import { TEmpty, TObject } from 'common'
 import { Label } from './common.decorator'
 import { TDecoratorLevel } from './types'
 

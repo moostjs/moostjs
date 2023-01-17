@@ -4,7 +4,7 @@ import { getMoostMate } from '../metadata'
 import { getMoostInfact } from '../metadata/infact'
 // import { runPipes } from '../pipes/run-pipes'
 // import { sharedPipes } from '../pipes/shared-pipes'
-import { TAny, TAnyFn, TClassConstructor, TFunction, TObject } from '../types'
+import { TAny, TAnyFn, TClassConstructor, TFunction, TObject } from 'common'
 import { TCallableClassFunction, TClassFunction } from './types'
 
 export async function getCallableFn<T extends TAnyFn = TAnyFn>(targetInstance: TObject, fn: TCallableClassFunction<T>, restoreCtx?: TFunction): Promise<T> {
@@ -13,7 +13,10 @@ export async function getCallableFn<T extends TAnyFn = TAnyFn>(targetInstance: T
     if (meta?.injectable) {
         const infact = getMoostInfact()
         infact.silent(meta.injectable === 'FOR_EVENT')
-        const instance = await infact.getForInstance(targetInstance, fn as TClassConstructor, [], () => { restoreCtx && restoreCtx() }) as TClassFunction<T>
+        const instance = await infact.getForInstance(targetInstance, fn as TClassConstructor<TAny>, {
+            syncContextFn: () => { restoreCtx && restoreCtx() },
+            customData: { pipes: meta.pipes },
+        }) as TClassFunction<T>
         infact.silent(false)
         return ((...args: TAny[]) => {
             return instance.handler(...args as Parameters<T>)

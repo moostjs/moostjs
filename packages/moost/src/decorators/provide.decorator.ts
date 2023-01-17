@@ -1,6 +1,6 @@
 import { createProvideRegistry, TProvideFn } from '@prostojs/infact'
 import { getMoostMate } from '../metadata/moost-metadata'
-import { TClassConstructor } from '../types'
+import { TClassConstructor } from 'common'
 
 export function Provide(type: string | TClassConstructor, fn: TProvideFn): ClassDecorator {
     return getMoostMate().decorate(meta => {

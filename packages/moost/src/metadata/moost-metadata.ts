@@ -1,6 +1,6 @@
 import { TInterceptorFn, TInterceptorPriority } from '../decorators/intercept.decorator'
 import { Mate, TProstoParamsMetadata, TProstoMetadata } from '@prostojs/mate'
-import { TAny, TClassConstructor, TFunction, TObject } from '../types'
+import { TAny, TClassConstructor, TFunction, TObject } from 'common'
 import { TProvideRegistry } from '@prostojs/infact'
 import { TPipeData, TPipeMetas } from '../pipes'
 import { TCallableClassFunction } from '../class-function/types'

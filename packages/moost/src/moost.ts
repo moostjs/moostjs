@@ -3,13 +3,14 @@ import { TInterceptorFn, TInterceptorPriority } from './decorators'
 import { getMoostMate, TInterceptorData } from './metadata'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
 import { TPipeData, TPipeFn, TPipePriority } from './pipes/types'
-import { TAny, TClassConstructor, TFunction, TObject } from './types'
+import { TAny, TClassConstructor, TFunction, TObject } from 'common'
 import { createProvideRegistry, Infact, TProvideRegistry } from '@prostojs/infact'
 import { getMoostInfact } from './metadata/infact'
 import { sharedPipes } from './pipes/shared-pipes'
 import { Valido } from '@prostojs/valido'
 import { getMoostValido } from './metadata/valido'
 import { TMoostAdapter } from './adapter'
+import { useEventContext } from '@wooksjs/event-core'
 
 export interface TMoostOptions {
     globalPrefix?: string
@@ -76,9 +77,11 @@ export class Moost {
         const infact = getMoostInfact()
         const isControllerConsructor = isConstructor(controller)
 
+        const pipes = [...this.pipes, ...(classMeta?.pipes || [])].sort((a, b) => a.priority - b.priority)
         let instance: TObject | undefined
+        const infactOpts = { provide, customData: { pipes } }
         if (isControllerConsructor && (classMeta?.injectable === 'SINGLETON' || classMeta?.injectable === true)) {
-            instance = await infact.get(controller as (new () => unknown), provide) as Promise<TObject>
+            instance = await infact.get(controller as TClassConstructor<TAny>, infactOpts) as Promise<TObject>
         } else if (!isControllerConsructor) {
             instance = controller
             infact.setProvideRegByInstance(instance, provide)
@@ -88,7 +91,8 @@ export class Moost {
         const getInstance = instance ? () => Promise.resolve(instance as TObject) : async (): Promise<TObject> => {
             // if (!instance) {
             infact.silent()
-            const instance = await infact.get(controller as (new () => unknown), provide) as Promise<TObject>
+            const { restoreCtx } = useEventContext()
+            const instance = await infact.get(controller as TClassConstructor<TAny>, { ...infactOpts, syncContextFn: restoreCtx }) as Promise<TObject>
             infact.silent(false)
             // }
             return instance
@@ -103,7 +107,7 @@ export class Moost {
             globalPrefix,
             replaceOwnPrefix,
             interceptors: [...this.interceptors],
-            pipes: [...this.pipes],
+            pipes,
             provide: classMeta?.provide || {},
         })
         if (classMeta && classMeta.importController) {

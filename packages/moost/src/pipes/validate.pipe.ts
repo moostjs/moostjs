@@ -1,6 +1,6 @@
-import { HttpError, useHttpContext } from '@wooksjs/event-http'
+import { useEventContext } from '@wooksjs/event-core'
 import { getMoostValido } from '../metadata/valido'
-import { TObject } from '../types'
+import { TObject } from 'common'
 import { TPipeFn, TPipePriority } from './types'
 
 const DEFAULT_ERROR_LIMIT = 10
@@ -16,29 +16,34 @@ function firstString(errors: TObject): string {
 
 interface TValidatePipeOptions {
     errorLimit?: number
+    errorCb?: (message: string, details: string | TObject) => unknown
 }
 
 export const validatePipe: (opts?: TValidatePipeOptions) => TPipeFn = (opts) => {
-    const pipe: TPipeFn = async (_value, meta) => {
-        const { restoreCtx } = useHttpContext()
+    const pipe: TPipeFn = async (_value, metas, level) => {
+        const { restoreCtx } = useEventContext()
         const valido = getMoostValido()
-        const result = await valido.validateParam(_value, meta.paramMeta || {}, undefined, undefined, undefined, undefined, 0, 0, opts?.errorLimit || DEFAULT_ERROR_LIMIT, restoreCtx)
+        let meta = {}
+        if (level === 'PARAM') {
+            meta = metas.paramMeta || {}
+        } else if (level === 'PROP') {
+            meta = metas.propMeta || {}
+        } else if (level === 'METHOD') {
+            meta = metas.methodMeta || {}
+        } else if (level === 'CLASS') {
+            meta = metas.classMeta || {}
+        }        
+        const result = await valido.validateParam(_value, meta, undefined, undefined, undefined, undefined, 0, 0, opts?.errorLimit || DEFAULT_ERROR_LIMIT, restoreCtx)
         if (result !== true) {
-            throw new HttpError<{
-                statusCode: number
-                message: string
-                error: string
-                details: string | TObject
-            }>(400, {
-                statusCode: 400,
-                message: typeof result === 'string' ? result : firstString(result),
-                error: 'Validation Error',
-                details: result,
-            })
+            const message = typeof result === 'string' ? result : firstString(result)
+            if (opts?.errorCb) {
+                opts.errorCb(message, result) 
+            } else {
+                throw new Error('Validation error: ' + message)
+            }
         }
         return _value
     }
     pipe.priority = TPipePriority.VALIDATE
     return pipe
 }
-

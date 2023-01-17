@@ -1,6 +1,6 @@
 import { TProvideRegistry } from '@prostojs/infact'
 import { getMoostMate } from '../metadata/moost-metadata'
-import { TFunction, TObject } from '../types'
+import { TFunction, TObject } from 'common'
 import { insureInjectable } from './injectable.decorator'
 
 /**

@@ -20,7 +20,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
     }
 
     onInit() {
-        this.cliApp.run()
+        void this.cliApp.run()
     }
 
     bindHandler<T extends object = object>(opts: TMoostAdapterOptions<TCliHandlerMeta, T>): void | Promise<void> {
@@ -67,6 +67,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                         }
                     }
 
+                    restoreCtx()
                     // fire after interceptors
                     response = await interceptorHandler.fireAfter(response)
                     unscope()

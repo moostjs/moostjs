@@ -1,7 +1,7 @@
 import { Wooks } from 'wooks'
 import { useHttpContext } from '@wooksjs/event-http'
 import { getMoostMate, TMoostMetadata } from '../metadata'
-import { TObject } from '../types'
+import { TObject } from 'common'
 
 interface TStore {
     controller: TObject

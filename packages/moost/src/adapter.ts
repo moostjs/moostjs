@@ -1,5 +1,5 @@
 import { TInterceptorAfter, TInterceptorBefore, TInterceptorFn, TInterceptorOnError } from './decorators'
-import { TObject } from './types'
+import { TObject } from 'common'
 import { useEventContext } from '@wooksjs/event-core'
 import { TMoostHandler } from './metadata'
 import { TProvideRegistry } from '@prostojs/infact'

@@ -21,8 +21,7 @@ export function Flags() {
     return Resolve(() => useFlags(), 'flags')
 }
 
-
-export function CliParam(keys: string | [string, string], descr: string) {
+export function CliParam(keys: string | [string, string], descr?: string) {
     return Resolve<TCliMeta>(() => {
         const flags = useFlags()
         const names = [keys].flat()
