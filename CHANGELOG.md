@@ -1,3 +1,12 @@
+## [0.2.11](https://github.com/moostjs/moostjs/compare/v0.2.10...v0.2.11) (2023-01-17)
+
+
+### Features
+
+* **pipes:** adjust validation pipe ([9254cce](https://github.com/moostjs/moostjs/commit/9254cce3923e15d8212e0b8ee49cb040ce64ba1d))
+
+
+
 ## [0.2.10](https://github.com/moostjs/moostjs/compare/v0.2.9...v0.2.10) (2023-01-17)
 
 
