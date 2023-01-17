@@ -1,7 +1,9 @@
 import { useRouteParams } from '@wooksjs/event-core'
 import { getMoostMate } from '../metadata/moost-metadata'
-import { TObject } from '../types'
+import { TPipeMetas } from '../pipes'
+import { TEmpty, TObject } from '../types'
 import { Label } from './common.decorator'
+import { TDecoratorLevel } from './types'
 
 /**
  * Hook to the Response Status
@@ -10,10 +12,11 @@ import { Label } from './common.decorator'
  * @param label - field label
  * @paramType unknown
  */
-export function Resolve(resolver: () => unknown, label?: string): ParameterDecorator {
-    return (target, key, index) => {
-        fillLabel(target, key, index, label)
-        getMoostMate().decorate('resolver', resolver)(target, key, index)
+export function Resolve<T extends TObject = TEmpty>(resolver: (metas: TPipeMetas<T>, level: TDecoratorLevel) => unknown, label?: string): ParameterDecorator & PropertyDecorator {
+    return (target, key, index?) => {
+        const i = typeof index === 'number' ? index : undefined
+        fillLabel(target, key, i, label)
+        getMoostMate().decorate('resolver', resolver)(target, key, i as number)
     }
 }
 
@@ -47,11 +50,17 @@ export function Const(value: unknown, label?: string) {
     return Resolve(() => value, label)
 }
 
-function fillLabel(target: TObject, key: string | symbol, index: number, name?: string) {
+function fillLabel(target: TObject, key: string | symbol, index?: number, name?: string) {
     if (name) {
         const meta = getMoostMate().read(target, key)
-        if (!meta?.params || !meta?.params[index] || !meta?.params[index].label) {
-            Label(name)(target, key, index)
+        if (typeof index === 'number') {
+            if (!meta?.params || !meta?.params[index] || !meta?.params[index].label) {
+                Label(name)(target, key, index)
+            }
+        } else {
+            if (!meta?.label) {
+                Label(name)(target, key)
+            }
         }
     }
 }

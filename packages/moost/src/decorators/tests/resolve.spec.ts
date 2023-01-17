@@ -56,7 +56,10 @@ describe('resolve decorators', () => {
         const i = 0
         expect((meta?.params || [])[i]).toHaveProperty('resolver')
         if (meta?.params[i].resolver) {
-            expect(meta?.params[i].resolver()).toBe('resolved')
+            expect(meta?.params[i].resolver({
+                methodMeta: meta,
+                paramMeta: meta.params[i],
+            }, 'PARAM')).toBe('resolved')
         }
     })
     it('must set resolved for @Param', () => {
@@ -64,21 +67,30 @@ describe('resolve decorators', () => {
         expect((meta?.params || [])[i]).toHaveProperty('resolver')
         if (meta?.params[i].resolver) {
             expect(eventCore.useRouteParams().get('test')).toBe('test route param')
-            expect(meta.params[i].resolver()).toBe('test route param')
+            expect(meta.params[i].resolver({
+                methodMeta: meta,
+                paramMeta: meta.params[i],
+            }, 'PARAM')).toBe('test route param')
         }
     })
     it('must set resolved for @Params', () => {
         const i = 2
         expect((meta?.params || [])[i]).toHaveProperty('resolver')
         if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver()).toEqual({ test: 'test route param' })
+            expect(meta.params[i].resolver({
+                methodMeta: meta,
+                paramMeta: meta.params[i],
+            }, 'PARAM')).toEqual({ test: 'test route param' })
         }
     })
     it('must set resolved for @Const', () => {
         const i = 3
         expect((meta?.params || [])[i]).toHaveProperty('resolver')
         if (meta?.params[i].resolver) {
-            expect(meta?.params[i].resolver()).toBe(10)
+            expect(meta?.params[i].resolver({
+                methodMeta: meta,
+                paramMeta: meta.params[i],
+            }, 'PARAM')).toBe(10)
         }
     })
 })

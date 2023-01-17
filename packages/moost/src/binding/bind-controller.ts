@@ -78,8 +78,12 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             const args: unknown[] = []
             const { restoreCtx } = useEventContext()
             for (let i = 0; i < argsPipes.length; i++) {
-                const { pipes, meta } = argsPipes[i]
-                args[i] = await runPipes(pipes, meta, restoreCtx)
+                const { pipes, meta: paramMeta } = argsPipes[i]
+                args[i] = await runPipes(pipes, undefined, {
+                    classMeta: meta,
+                    methodMeta,
+                    paramMeta,
+                }, 'PARAM', restoreCtx)
             }
             return args           
         }

@@ -2,7 +2,7 @@ import { HttpError } from '@wooksjs/event-http'
 import { TPipeFn, TPipePriority } from './types'
 
 export const genericTypesCastPipe = (strict?: boolean): TPipeFn => {
-    const handler: TPipeFn = (value, meta) => {
+    const handler: TPipeFn = (value, {paramMeta: meta}) => {
         if (meta?.type) {
             if ((value === undefined || value === null || (meta.type !== String && value === '')) && meta.optional) {
                 return undefined

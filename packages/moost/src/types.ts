@@ -6,3 +6,5 @@ export type TAnyFn = {
 export type TObject = object
 export type TFunction = Function
 export type TClassConstructor<T = unknown> = new (...args : TAny[]) => T
+
+export interface TEmpty {}

@@ -22,7 +22,7 @@ export const validatePipe: (opts?: TValidatePipeOptions) => TPipeFn = (opts) => 
     const pipe: TPipeFn = async (_value, meta) => {
         const { restoreCtx } = useHttpContext()
         const valido = getMoostValido()
-        const result = await valido.validateParam(_value, meta, undefined, undefined, undefined, undefined, 0, 0, opts?.errorLimit || DEFAULT_ERROR_LIMIT, restoreCtx)
+        const result = await valido.validateParam(_value, meta.paramMeta || {}, undefined, undefined, undefined, undefined, 0, 0, opts?.errorLimit || DEFAULT_ERROR_LIMIT, restoreCtx)
         if (result !== true) {
             throw new HttpError<{
                 statusCode: number

@@ -2,9 +2,10 @@ import { TInterceptorFn, TInterceptorPriority } from '../decorators/intercept.de
 import { Mate, TProstoParamsMetadata, TProstoMetadata } from '@prostojs/mate'
 import { TAny, TClassConstructor, TFunction, TObject } from '../types'
 import { TProvideRegistry } from '@prostojs/infact'
-import { TPipeData } from '../pipes'
+import { TPipeData, TPipeMetas } from '../pipes'
 import { TCallableClassFunction } from '../class-function/types'
 import { TValidoDtoOptions, TValidoFn } from '@prostojs/valido'
+import { TDecoratorLevel } from '../decorators/types'
 
 const METADATA_WORKSPACE = 'moost'
 
@@ -17,6 +18,7 @@ interface TCommonMetaFields {
 
 interface TCommonMoostMeta {
     pipes?: TPipeData[]
+    resolver?: (metas: TPipeMetas, level: TDecoratorLevel) => unknown
 }
 
 type TProstoParamsAndCommonMetadata = TProstoParamsMetadata & TCommonMetaFields & TCommonMoostMeta
@@ -46,6 +48,7 @@ export interface TMoostMetadata extends TProstoAndCommonMetadata {
         typeResolver?: TClassConstructor | (() => TClassConstructor | TObject | Promise<TClassConstructor | TObject>)
         provide?: TProvideRegistry
     }[]
+    properties?: (string | symbol)[],
     injectable?: true | TInjectableScope
     interceptors?: TInterceptorData[],
     handlers?: TMoostHandler<TAny>[]
@@ -64,7 +67,6 @@ export interface TMoostParamsMetadata extends TProstoParamsAndCommonMetadata {
     validators?: TValidoFn[]
     validatorsOfItem?: TValidoFn[]
     arrayType?: true | TValidateArrayOptions
-    resolver?: TFunction
     circular?: () => TAny
     inject?: string | symbol
 }
@@ -72,6 +74,7 @@ export interface TMoostParamsMetadata extends TProstoParamsAndCommonMetadata {
 const moostMate = new Mate<TMoostMetadata>(METADATA_WORKSPACE, {
     readType: true,
     readReturnType: true,
+    collectPropKeys: true,
 })
 
 export function getMoostMate() {
