@@ -1,3 +1,12 @@
+## [0.2.10](https://github.com/moostjs/moostjs/compare/v0.2.9...v0.2.10) (2023-01-17)
+
+
+### Features
+
+* add resolvers to instance props ([b2af823](https://github.com/moostjs/moostjs/commit/b2af823d1479dcc11868e3cd6ab3f9507e875876))
+
+
+
 ## [0.2.9](https://github.com/moostjs/moostjs/compare/v0.2.8...v0.2.9) (2023-01-16)
 
 
