@@ -1,3 +1,12 @@
+## [0.2.13](https://github.com/moostjs/moostjs/compare/v0.2.12...v0.2.13) (2023-01-18)
+
+
+### Features
+
+* **cli:** better logging ([1d2fd07](https://github.com/moostjs/moostjs/commit/1d2fd0775ef17c5e60b2c8beb1fb03e844a35f77))
+
+
+
 ## [0.2.12](https://github.com/moostjs/moostjs/compare/v0.2.11...v0.2.12) (2023-01-18)
 
 
