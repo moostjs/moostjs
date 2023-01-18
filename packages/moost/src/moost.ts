@@ -34,7 +34,7 @@ export class Moost {
 
     constructor(protected options?: TMoostOptions) {
         if (options?.silent) {
-            getMoostInfact().silent()
+            getMoostInfact().silent(options?.silent)
         }
     }
 
@@ -90,7 +90,7 @@ export class Moost {
         // getInstance - instance factory for resolving SINGLETON and FOR_EVENT instance
         const getInstance = instance ? () => Promise.resolve(instance as TObject) : async (): Promise<TObject> => {
             // if (!instance) {
-            infact.silent()
+            infact.silent(this.options?.silent || 'logs')
             const { restoreCtx } = useEventContext()
             const instance = await infact.get(controller as TClassConstructor<TAny>, { ...infactOpts, syncContextFn: restoreCtx }) as Promise<TObject>
             infact.silent(!!this.options?.silent)

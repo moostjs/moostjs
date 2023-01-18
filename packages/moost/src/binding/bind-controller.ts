@@ -52,7 +52,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                         const { restoreCtx } = useHttpContext()
                         const targetInstance = await getInstance()
                         restoreCtx()
-                        return (await getCallableFn(targetInstance, handler, restoreCtx))(...args)
+                        return (await getCallableFn(targetInstance, handler, restoreCtx, options.silent))(...args)
                     })
                 } else {
                     interceptorHandlers.push(handler as TInterceptorFn)
