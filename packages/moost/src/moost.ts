@@ -93,7 +93,7 @@ export class Moost {
             infact.silent()
             const { restoreCtx } = useEventContext()
             const instance = await infact.get(controller as TClassConstructor<TAny>, { ...infactOpts, syncContextFn: restoreCtx }) as Promise<TObject>
-            infact.silent(false)
+            infact.silent(!!this.options?.silent)
             // }
             return instance
         }
