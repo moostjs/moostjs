@@ -1,5 +1,5 @@
-import { getMoostMate } from 'moost'
+import { getCliMate } from '../meta-types'
 
 export function Cli(path?: string): MethodDecorator {
-    return getMoostMate().decorate('handlers', { path, type: 'CLI' }, true)
+    return getCliMate().decorate('handlers', { path, type: 'CLI' }, true)
 }

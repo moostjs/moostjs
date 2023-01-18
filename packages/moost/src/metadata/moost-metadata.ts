@@ -1,6 +1,6 @@
 import { TInterceptorFn, TInterceptorPriority } from '../decorators/intercept.decorator'
-import { Mate, TProstoParamsMetadata, TProstoMetadata } from '@prostojs/mate'
-import { TAny, TClassConstructor, TFunction, TObject } from 'common'
+import { Mate } from '@prostojs/mate'
+import { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
 import { TProvideRegistry } from '@prostojs/infact'
 import { TPipeData, TPipeMetas } from '../pipes'
 import { TCallableClassFunction } from '../class-function/types'
@@ -18,11 +18,12 @@ interface TCommonMetaFields {
 
 interface TCommonMoostMeta {
     pipes?: TPipeData[]
-    resolver?: (metas: TPipeMetas, level: TDecoratorLevel) => unknown
+    resolver?: (metas: TPipeMetas<TAny>, level: TDecoratorLevel) => unknown
+    type?: TFunction
+    validators?: TValidoFn<TAny>[]
+    validatorsOfItem?: TValidoFn<TAny>[]
+    arrayType?: true | TValidateArrayOptions<TAny>
 }
-
-type TProstoParamsAndCommonMetadata = TProstoParamsMetadata & TCommonMetaFields & TCommonMoostMeta
-type TProstoAndCommonMetadata<T extends TMoostParamsMetadata = TMoostParamsMetadata> = TProstoMetadata<T> & TCommonMetaFields & TCommonMoostMeta
 
 export interface TValidateArrayOptions<T = unknown> {
     itemType?: (item: T, index: number) => Promise<TFunction> | TFunction
@@ -36,7 +37,7 @@ export type TMoostHandler<T extends object> = T & {
     type: string
 }
 
-export interface TMoostMetadata extends TProstoAndCommonMetadata {
+export interface TMoostMetadata extends TCommonMetaFields, TCommonMoostMeta {
     inherit?: boolean
     dto?: TValidoDtoOptions
     requiredProps?: (string | symbol)[]
@@ -52,9 +53,6 @@ export interface TMoostMetadata extends TProstoAndCommonMetadata {
     injectable?: true | TInjectableScope
     interceptors?: TInterceptorData[],
     handlers?: TMoostHandler<TAny>[]
-    validators?: TValidoFn[]
-    validatorsOfItem?: TValidoFn[]
-    arrayType?: true | TValidateArrayOptions,
     provide?: TProvideRegistry
 }
 
@@ -63,20 +61,17 @@ export interface TInterceptorData {
     priority: TInterceptorPriority
 }
 
-export interface TMoostParamsMetadata extends TProstoParamsAndCommonMetadata {
-    validators?: TValidoFn[]
-    validatorsOfItem?: TValidoFn[]
-    arrayType?: true | TValidateArrayOptions
+export interface TMoostParamsMetadata extends TCommonMetaFields, TCommonMoostMeta {
     circular?: () => TAny
-    inject?: string | symbol
+    inject?: string | symbol | TClassConstructor
 }
 
-const moostMate = new Mate<TMoostMetadata>(METADATA_WORKSPACE, {
+const moostMate = new Mate<TMoostMetadata, TMoostMetadata, TMoostMetadata & TMoostParamsMetadata>(METADATA_WORKSPACE, {
     readType: true,
     readReturnType: true,
     collectPropKeys: true,
 })
 
-export function getMoostMate() {
-    return moostMate
+export function getMoostMate<Class extends TObject = TEmpty, Prop extends TObject = TEmpty, Param extends TObject = TEmpty>() {
+    return moostMate as Mate<TMoostMetadata & Class, TMoostMetadata & Prop, TMoostMetadata & TMoostParamsMetadata & Param>
 }

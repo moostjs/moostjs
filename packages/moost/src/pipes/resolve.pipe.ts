@@ -1,7 +1,9 @@
-import { TPipeFn, TPipePriority } from './types'
+import { TAny } from 'common'
+import { TDecoratorLevel } from '../decorators/types'
+import { TPipeFn, TPipeMetas, TPipePriority } from './types'
 
 export const resolvePipe: TPipeFn = (_value, metas, level) => {
-    let resolver
+    let resolver: ((metas: TPipeMetas<TAny>, level: TDecoratorLevel) => unknown) | undefined
     if (level === 'PARAM') {
         resolver = metas.paramMeta?.resolver
     } else if (level === 'PROP') {

@@ -32,8 +32,8 @@ export const validatePipe: (opts?: TValidatePipeOptions) => TPipeFn = (opts) => 
             meta = metas.methodMeta || {}
         } else if (level === 'CLASS') {
             meta = metas.classMeta || {}
-        }        
-        const result = await valido.validateParam(_value, meta, undefined, undefined, undefined, undefined, 0, 0, opts?.errorLimit || DEFAULT_ERROR_LIMIT, restoreCtx)
+        }
+        const result = await valido.validateParam(_value, meta, metas.key, undefined, metas.instance, undefined, 0, 0, opts?.errorLimit || DEFAULT_ERROR_LIMIT, restoreCtx)
         if (result !== true) {
             const message = typeof result === 'string' ? result : firstString(result)
             if (opts?.errorCb) {

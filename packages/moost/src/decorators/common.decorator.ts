@@ -17,7 +17,7 @@ export function Required() {
     return mate.apply(
         mate.decorate('required', true),
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        mate.decorateClass((meta, key, index) => {
+        mate.decorateClass((meta, level, key, index) => {
             if (typeof index !== 'number' && meta && ['string', 'symbol'].includes(typeof key)) {
                 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
                 meta.requiredProps = meta.requiredProps || []

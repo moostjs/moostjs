@@ -16,7 +16,7 @@ export const genericTypesCastPipe = (strict?: boolean): TPipeFn => {
                         d = new Date(value as string)
                     }
                     if (strict && Number.isNaN(d.getTime())) {
-                        typeError(value, 'Date', meta.label)
+                        typeError(value, 'Date', meta.label as string)
                     }
                     return Number.isNaN(d.getTime()) ? value : d
                 }
@@ -28,16 +28,16 @@ export const genericTypesCastPipe = (strict?: boolean): TPipeFn => {
                         return false
                     }
                     if (strict) {
-                        typeError(value, 'boolean', meta.label)
+                        typeError(value, 'boolean', meta.label as string)
                     }
                     return value
                 case Number: {
                     if (strict && !value && value !== 0) {
-                        typeError(value, 'numeric', meta.label)
+                        typeError(value, 'numeric', meta.label as string)
                     }
                     const n = typeof value === 'string' && value.length > 0 ? Number(value) : NaN
                     if (strict && Number.isNaN(n)) {
-                        typeError(value, 'numeric', meta.label)
+                        typeError(value, 'numeric', meta.label as string)
                     }
                     return Number.isNaN(n) ? value : n
                 }

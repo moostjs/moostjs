@@ -54,92 +54,119 @@ const meta = getMoostMate().read(instance, 'method')
 describe('resolve http-decorators', () => {
     it('must set resolved for @Header', () => {
         const i = 0
-        expect((meta?.params || [])[i]).toHaveProperty('resolver')
-        if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver({
-                methodMeta: meta,
-                paramMeta: meta.params[i],
-            }, 'PARAM')).toBe('test header value')
+        expect(meta?.params).toBeDefined()
+        if (meta?.params) {
+            expect((meta?.params || [])[i]).toHaveProperty('resolver')
+            if (meta?.params[i].resolver) {
+                expect(meta.params[i].resolver({
+                    methodMeta: meta,
+                    paramMeta: meta.params[i],
+                }, 'PARAM')).toBe('test header value')
+            }
         }
     })
     it('must set resolved for @Cookie', () => {
         const i = 1
-        expect((meta?.params || [])[i]).toHaveProperty('resolver')
-        if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver({
-                methodMeta: meta,
-                paramMeta: meta.params[i],
-            }, 'PARAM')).toBe('test cookie value')
+        expect(meta?.params).toBeDefined()
+        if (meta?.params) {
+            expect((meta?.params || [])[i]).toHaveProperty('resolver')
+            if (meta?.params[i].resolver) {
+                expect(meta.params[i].resolver({
+                    methodMeta: meta,
+                    paramMeta: meta.params[i],
+                }, 'PARAM')).toBe('test cookie value')
+            }
         }
     })
     it('must set resolved for @Query', () => {
         const i = 2
-        expect((meta?.params || [])[i]).toHaveProperty('resolver')
-        if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver({
-                methodMeta: meta,
-                paramMeta: meta.params[i],
-            }, 'PARAM')).toEqual({ test: 'test query value' })
+        expect(meta?.params).toBeDefined()
+        if (meta?.params) {
+            expect((meta?.params || [])[i]).toHaveProperty('resolver')
+            if (meta?.params[i].resolver) {
+                expect(meta.params[i].resolver({
+                    methodMeta: meta,
+                    paramMeta: meta.params[i],
+                }, 'PARAM')).toEqual({ test: 'test query value' })
+            }
         }
     })
     it('must set resolved for @Url', () => {
         const i = 3
-        expect((meta?.params || [])[i]).toHaveProperty('resolver')
-        if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver({
-                methodMeta: meta,
-                paramMeta: meta.params[i],
-            }, 'PARAM')).toBe('test url')
+        expect(meta?.params).toBeDefined()
+        if (meta?.params) {
+            expect((meta?.params || [])[i]).toHaveProperty('resolver')
+            if (meta?.params[i].resolver) {
+                expect(meta.params[i].resolver({
+                    methodMeta: meta,
+                    paramMeta: meta.params[i],
+                }, 'PARAM')).toBe('test url')
+            }
         }
     })
     it('must set resolved for @Method', () => {
         const i = 4
-        expect((meta?.params || [])[i]).toHaveProperty('resolver')
-        if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver({
-                methodMeta: meta,
-                paramMeta: meta.params[i],
-            }, 'PARAM')).toBe('PUT')
+        expect(meta?.params).toBeDefined()
+        if (meta?.params) {
+            expect((meta?.params || [])[i]).toHaveProperty('resolver')
+            if (meta?.params[i].resolver) {
+                expect(meta.params[i].resolver({
+                    methodMeta: meta,
+                    paramMeta: meta.params[i],
+                }, 'PARAM')).toBe('PUT')
+            }
         }
     })
     it('must set resolved for @Req', () => {
         const i = 5
-        expect((meta?.params || [])[i]).toHaveProperty('resolver')
-        if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver({
-                methodMeta: meta,
-                paramMeta: meta.params[i],
-            }, 'PARAM')).toBe('raw request')
+        expect(meta?.params).toBeDefined()
+        if (meta?.params) {
+            expect((meta?.params || [])[i]).toHaveProperty('resolver')
+            if (meta?.params[i].resolver) {
+                expect(meta.params[i].resolver({
+                    methodMeta: meta,
+                    paramMeta: meta.params[i],
+                }, 'PARAM')).toBe('raw request')
+            }
         }
     })
     it('must set resolved for @Res', () => {
         const i = 6
-        expect((meta?.params || [])[i]).toHaveProperty('resolver')
-        if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver({
-                methodMeta: meta,
-                paramMeta: meta.params[i],
-            }, 'PARAM')).toBe('raw response')
+        expect(meta?.params).toBeDefined()
+        if (meta?.params) {
+            expect((meta?.params || [])[i]).toHaveProperty('resolver')
+            if (meta?.params[i].resolver) {
+                expect(meta.params[i].resolver({
+                    methodMeta: meta,
+                    paramMeta: meta.params[i],
+                }, 'PARAM')).toBe('raw response')
+            }
         }
     })
     it('must set resolved for @Body', () => {
         const i = 7
-        expect((meta?.params || [])[i]).toHaveProperty('resolver')
-        if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver({
-                methodMeta: meta,
-                paramMeta: meta.params[i],
-            }, 'PARAM')).toBe('parsed body')
+        expect(meta?.params).toBeDefined()
+        if (meta?.params) {
+            expect((meta?.params || [])[i]).toHaveProperty('resolver')
+            if (meta?.params[i].resolver) {
+                expect(meta.params[i].resolver({
+                    methodMeta: meta,
+                    paramMeta: meta.params[i],
+                }, 'PARAM')).toBe('parsed body')
+            }
         }
     })
     it('must set resolved for @RawBody', () => {
         const i = 8
-        expect((meta?.params || [])[i]).toHaveProperty('resolver')
-        if (meta?.params[i].resolver) {
-            expect(meta.params[i].resolver({
-                methodMeta: meta,
-                paramMeta: meta.params[i],
-            }, 'PARAM')).toBe('raw body')
+        expect(meta?.params).toBeDefined()
+        if (meta?.params) {
+            expect((meta?.params || [])[i]).toHaveProperty('resolver')
+            if (meta?.params[i].resolver) {
+                expect(meta.params[i].resolver({
+                    methodMeta: meta,
+                    paramMeta: meta.params[i],
+                }, 'PARAM')).toBe('raw body')
+            }
         }
     })
 })

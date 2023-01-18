@@ -14,7 +14,7 @@ describe('moost', () => {
         moost = new E2eTestMoost()
         moostHttp = new MoostHttp()
         moost.adapter(moostHttp)
-        await moost
+        moost
             .applyGlobalInterceptors(globalInterceptor)
             .setProvideRegistry(createProvideRegistry([E2eInterceptor, () => new E2eInterceptor(e2eInterceptor)]))
         await moostHttp.listen(request.PORT)

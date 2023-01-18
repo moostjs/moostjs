@@ -1,6 +1,6 @@
 import { useFlags } from '@wooksjs/event-cli'
-import { panic } from 'common'
 import { Resolve } from 'moost'
+import { getCliMate } from '../meta-types'
 
 /**
  * Get Cli Flag
@@ -21,30 +21,31 @@ export function Flags() {
     return Resolve(() => useFlags(), 'flags')
 }
 
-export function CliParam(keys: string | [string, string], descr?: string) {
-    return Resolve<TCliMeta>(() => {
-        const flags = useFlags()
-        const names = [keys].flat()
-        const vals = []
-        for (const name of names) {
-            if (flags[name]) {
-                vals.push(flags[name])
-            }
-        }
-        if (vals.length > 1) {
-            throw panic(`Options ${names.map(n => n.length === 1 ? '-' + n : '--' + n).join(' and ')} are synonyms. Please use only one of them.`)
-        }
-        if (vals.length === 0) {
-            return false
-        }
-        return vals[0]
-    })
+function formatParams(keys: string | [string, string] | [string]) {
+    const names = [keys].flat()
+    return names.map(n => n.length === 1 ? '-' + n : '--' + n)
 }
 
-interface TCliMeta {
-    cliParams: {
-        keys: string[]
-        name: string
-        descr?: string
-    }[]
+export function CliParam(keys: string | [string, string], descr?: string) {
+    const mate = getCliMate()
+    return mate.apply(
+        mate.decorate('cliParams', { keys, descr }, true),
+        Resolve(() => {
+            const flags = useFlags()
+            const names = [keys].flat() as [string, string]
+            const vals = []
+            for (const name of names) {
+                if (flags[name]) {
+                    vals.push(flags[name])
+                }
+            }
+            if (vals.length > 1) {
+                throw new Error(`Options ${formatParams(names).join(' and ')} are synonyms. Please use only one of them.`)
+            }
+            if (vals.length === 0) {
+                return false
+            }
+            return vals[0]
+        }, formatParams(keys).join(', '))        
+    )
 }

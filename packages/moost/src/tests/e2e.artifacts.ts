@@ -61,6 +61,7 @@ class E2eController {
 
     @Get('common_dep/secret')
     secret() {
+        console.log('call common_dep/secret', this.commonDep)
         return this.commonDep.getSecret()
     }
 

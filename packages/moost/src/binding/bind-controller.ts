@@ -38,9 +38,10 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
     const ownPrefix = typeof opts.replaceOwnPrefix === 'string' ? opts.replaceOwnPrefix : (meta.controller?.prefix || '')
     const prefix = `${opts.globalPrefix}/${ ownPrefix }`
     for (const method of methods) {
-        const methodMeta = getMoostMate().read(fakeInstance, method) || {} as TMoostMetadata
+        const methodMeta = getMoostMate().read(fakeInstance, method) || {}
         if (!methodMeta.handlers || !methodMeta.handlers.length) continue
 
+        const pipes = [...(opts.pipes || []), ...(methodMeta.pipes || [])].sort((a, b) => a.priority - b.priority)
         // preparing interceptors
         const interceptors = [...(opts.interceptors || []), ...(meta.interceptors || []), ...(methodMeta.interceptors || [])].sort((a, b) => a.priority - b.priority)
         const getIterceptorHandler = () => {
@@ -52,7 +53,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                         const { restoreCtx } = useHttpContext()
                         const targetInstance = await getInstance()
                         restoreCtx()
-                        return (await getCallableFn(targetInstance, handler, restoreCtx, options.silent))(...args)
+                        return (await getCallableFn(targetInstance, handler, restoreCtx, pipes, options.silent))(...args)
                     })
                 } else {
                     interceptorHandlers.push(handler as TInterceptorFn)
@@ -62,7 +63,6 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
         }
 
         // preparing pipes
-        const pipes = [...(opts.pipes || []), ...(methodMeta.pipes || [])]
         const argsPipes: {
             meta: TMoostParamsMetadata
             pipes: TPipeData[]

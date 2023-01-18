@@ -1,6 +1,6 @@
 import { TProvideRegistry } from '@prostojs/infact'
 import { getMoostMate } from '../metadata/moost-metadata'
-import { TFunction, TObject } from 'common'
+import { TClassConstructor, TFunction, TObject } from 'common'
 import { insureInjectable } from './injectable.decorator'
 
 /**
@@ -33,7 +33,7 @@ export function ImportController(prefix: string, controller: TFunction | TObject
 export function ImportController(prefix: string | TFunction | TObject, controller?: TFunction | TObject | TProvideRegistry, provide?: TProvideRegistry): ClassDecorator {
     return getMoostMate().decorate('importController', {
         prefix: typeof prefix === 'string' ? prefix : undefined,
-        typeResolver: typeof prefix === 'string' ? controller : prefix,
+        typeResolver: typeof prefix === 'string' ? controller as TClassConstructor : prefix as TClassConstructor,
         provide: typeof prefix === 'string' ? provide || undefined : controller as TProvideRegistry || undefined,
     }, true)
 }

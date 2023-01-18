@@ -160,7 +160,7 @@ export function Query(name?: string): ParameterDecorator {
             return value === '' && p.has(name) || value
         }
         const json = jsonSearchParams() as object
-        return Object.keys(json).length ? json : undefined
+        return Object.keys(json).length ? json : null
     }, name || 'Query')
 }
 
@@ -170,7 +170,7 @@ export function Query(name?: string): ParameterDecorator {
  * @paramType string
  */
 export function Url() {
-    return Resolve(() => useRequest().url, 'url')
+    return Resolve(() => useRequest().url || '', 'url')
 }
 
 /**

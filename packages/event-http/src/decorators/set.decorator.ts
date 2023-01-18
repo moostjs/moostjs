@@ -2,7 +2,7 @@ import { Intercept, TInterceptorFn, TInterceptorPriority } from '@moostjs/moost'
 import { useSetCookies, useSetHeader, useStatus } from '@wooksjs/event-http'
 
 const setHeaderInterceptor: (name: string, value: string, opts?: { force?: boolean, status?: number }) => TInterceptorFn = (name, value, opts) => {
-    const fn: TInterceptorFn = (before, after, onError) => {
+    const fn: TInterceptorFn = (before, after) => {
         const h = useSetHeader(name)
         const status = useStatus()
         after(() => {
@@ -20,7 +20,7 @@ export function SetHeader(...args: Parameters<typeof setHeaderInterceptor>) {
 }
 
 const setCookieInterceptor: (...args: Parameters<ReturnType<typeof useSetCookies>['setCookie']>) => TInterceptorFn = (name, value, attrs) => {
-    const fn: TInterceptorFn = (before, after, onError) => {
+    const fn: TInterceptorFn = (before, after) => {
         const { setCookie, getCookie } = useSetCookies()
         after(() => {
             if (!getCookie(name)) {
