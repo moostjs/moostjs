@@ -1,3 +1,12 @@
+## [0.2.12](https://github.com/moostjs/moostjs/compare/v0.2.11...v0.2.12) (2023-01-18)
+
+
+### Bug Fixes
+
+* silent mode ([1a01c1d](https://github.com/moostjs/moostjs/commit/1a01c1deaa4e0a4e8e4a3311d4e742cda62ab469))
+
+
+
 ## [0.2.11](https://github.com/moostjs/moostjs/compare/v0.2.10...v0.2.11) (2023-01-17)
 
 
