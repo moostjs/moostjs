@@ -38,6 +38,6 @@ describe('getInstanceMethods', () => {
         expect(methodsB.includes('prop1')).toBeFalsy()
         expect(methodsB.includes('prop2')).toBeFalsy()
         expect(methodsB.includes('prop3')).toBeFalsy()
-        expect(methodsB.includes('method2')).toBeFalsy()
+        expect(methodsB).toContain('method2') // inheritance
     })
 })

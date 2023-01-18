@@ -17,6 +17,7 @@ interface TCommonMetaFields {
 }
 
 interface TCommonMoostMeta {
+    inherit?: boolean
     pipes?: TPipeData[]
     resolver?: (metas: TPipeMetas<TAny>, level: TDecoratorLevel) => unknown
     type?: TFunction
@@ -38,7 +39,6 @@ export type TMoostHandler<T extends object> = T & {
 }
 
 export interface TMoostMetadata extends TCommonMetaFields, TCommonMoostMeta {
-    inherit?: boolean
     dto?: TValidoDtoOptions
     requiredProps?: (string | symbol)[]
     controller?: {
@@ -70,6 +70,15 @@ const moostMate = new Mate<TMoostMetadata, TMoostMetadata, TMoostMetadata & TMoo
     readType: true,
     readReturnType: true,
     collectPropKeys: true,
+    inherit(classMeta, targetMeta, level) {
+        if (level === 'CLASS') {
+            return !!classMeta?.inherit
+        }
+        if (level === 'PROP') {
+            return !!targetMeta?.inherit || !!(classMeta?.inherit && !targetMeta)
+        }
+        return !!targetMeta?.inherit
+    },
 })
 
 export function getMoostMate<Class extends TObject = TEmpty, Prop extends TObject = TEmpty, Param extends TObject = TEmpty>() {
