@@ -1,3 +1,17 @@
+## [0.2.14](https://github.com/moostjs/moostjs/compare/v0.2.13...v0.2.14) (2023-01-19)
+
+
+### Bug Fixes
+
+* adopt new infact and mate versions ([5f9fd95](https://github.com/moostjs/moostjs/commit/5f9fd957b8a531e9568934ea2bb6fea54dfc14f2))
+
+
+### Features
+
+* **inheritance:** add meta inheritance support ([0b5368a](https://github.com/moostjs/moostjs/commit/0b5368a912ec0e9ba314b2cc60c5ff6883b7eac9))
+
+
+
 ## [0.2.13](https://github.com/moostjs/moostjs/compare/v0.2.12...v0.2.13) (2023-01-18)
 
 
