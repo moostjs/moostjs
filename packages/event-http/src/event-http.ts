@@ -2,6 +2,8 @@ import { createHttpApp, TWooksHttpOptions, useHttpContext, useRequest, WooksHttp
 import { getMoostMate, TMoostAdapter, TMoostAdapterOptions, TMoostMetadata } from 'moost'
 import { TProstoRouterPathBuilder } from '@prostojs/router'
 import { createProvideRegistry } from '@prostojs/infact'
+import { Server as HttpServer } from 'http'
+import { Server as HttpsServer } from 'https'
 
 export interface THttpHandlerMeta {
     method: string
@@ -44,7 +46,12 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     } = {}
 
     getProvideRegistry() {
-        return createProvideRegistry([WooksHttp, () => this.getHttpApp()], ['WooksHttp', () => this.getHttpApp()])
+        return createProvideRegistry(
+            [WooksHttp, () => this.getHttpApp()],
+            ['WooksHttp', () => this.getHttpApp()],
+            [HttpServer, () => this.getHttpApp().getServer() as unknown as HttpServer],
+            [HttpsServer, () => this.getHttpApp().getServer() as unknown as HttpsServer],
+        )
     }
 
     bindHandler<T extends object = object>(opts: TMoostAdapterOptions<THttpHandlerMeta, T>): void | Promise<void> {
