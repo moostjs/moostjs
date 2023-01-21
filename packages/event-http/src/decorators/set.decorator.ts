@@ -1,4 +1,4 @@
-import { Intercept, TInterceptorFn, TInterceptorPriority } from '@moostjs/moost'
+import { Intercept, TInterceptorFn, TInterceptorPriority } from 'moost'
 import { useSetCookies, useSetHeader, useStatus } from '@wooksjs/event-http'
 
 const setHeaderInterceptor: (name: string, value: string, opts?: { force?: boolean, status?: number }) => TInterceptorFn = (name, value, opts) => {

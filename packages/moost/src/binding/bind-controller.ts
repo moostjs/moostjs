@@ -1,4 +1,3 @@
-import { useHttpContext } from '@wooksjs/event-http'
 import { getMoostMate, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { TPipeData } from '../pipes'
 import { TAny, TClassConstructor, TObject } from 'common'
@@ -50,7 +49,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                 const interceptorMeta = mate.read(handler)
                 if (interceptorMeta?.injectable) {
                     interceptorHandlers.push(async (...args) => {
-                        const { restoreCtx } = useHttpContext()
+                        const { restoreCtx } = useEventContext()
                         const targetInstance = await getInstance()
                         restoreCtx()
                         return (await getCallableFn(targetInstance, handler, restoreCtx, pipes, options.silent))(...args)

@@ -27,12 +27,13 @@
     "url": "https://github.com/moostjs/moostjs/issues"
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-http#readme",
-  "peerDependencies": {
-    "moost": "0.2.15",
-    "wooks": "^0.2.8",
-    "@wooksjs/event-core": "^0.2.8"
+  "peerDependencies": {  
   },
   "dependencies": {
-    "@wooksjs/event-http": "^0.2.8"
+    "moost": "0.2.15",
+    "@wooksjs/event-core": "^0.2.8",
+    "@wooksjs/event-http": "^0.2.8",
+    "@prostojs/infact": "",
+    "@prostojs/router": ""   
   }
 }
