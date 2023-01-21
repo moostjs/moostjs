@@ -1,6 +1,6 @@
 {
   "name": "moost",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "description": "moost",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -25,8 +25,8 @@
     "@prostojs/infact": "^0.1.7",
     "@prostojs/mate": "^0.1.13",
     "@prostojs/valido": "^0.0.2",
-    "@wooksjs/event-core": "^0.2.7",
-    "wooks": "^0.2.7"
+    "@wooksjs/event-core": "^0.2.8",
+    "wooks": "^0.2.8"
   },
   "author": "Artem Maltsev",
   "license": "MIT",

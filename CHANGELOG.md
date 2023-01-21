@@ -1,3 +1,12 @@
+## [0.2.15](https://github.com/moostjs/moostjs/compare/v0.2.14...v0.2.15) (2023-01-21)
+
+
+### Features
+
+* **http:** add http server to provide registry ([f429ebe](https://github.com/moostjs/moostjs/commit/f429ebebb98bbe8d66fca8e838ace8b93ad30487))
+
+
+
 ## [0.2.14](https://github.com/moostjs/moostjs/compare/v0.2.13...v0.2.14) (2023-01-19)
 
 
