@@ -1,3 +1,12 @@
+## [0.2.17](https://github.com/moostjs/moostjs/compare/v0.2.16...v0.2.17) (2023-01-24)
+
+
+### Bug Fixes
+
+* **http:** return error when cought on interceptors init ([ef00ebd](https://github.com/moostjs/moostjs/commit/ef00ebda557679a1be60fd3387f31d40fc369349))
+
+
+
 ## [0.2.16](https://github.com/moostjs/moostjs/compare/v0.2.15...v0.2.16) (2023-01-21)
 
 
