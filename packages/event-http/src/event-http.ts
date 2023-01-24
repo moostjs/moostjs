@@ -81,7 +81,11 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     let response: unknown
                     const interceptorHandler = await opts.getIterceptorHandler()
                     restoreCtx()
-                    await interceptorHandler.init()
+                    try {
+                        await interceptorHandler.init()
+                    } catch (e) {
+                        return e
+                    }
 
                     // params
                     let args: unknown[] = []
