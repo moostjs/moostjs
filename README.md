@@ -9,11 +9,11 @@
 </a>
 </p>
 
-Moost is a Metadata driven Web App Framework inspired by [nestjs](https://nestjs.com/) and powered by [wooks](https://github.com/wooksjs/wooks).
+Moost is a Metadata driven Web App Framework inspired by [nestjs](https://nestjs.com/) and powered by [wooks](https://github.com/wooksjs/wooksjs).
 
 The main ideas behind Moost are:
 1. Use the power of TS decorators to describe your app
-2. Use the power of [wooks](https://github.com/wooksjs/wooks) to process events
+2. Use the power of [wooks](https://github.com/wooksjs/wooksjs) to process events
 3. Make it easier to control dependency injections
 4. Use as less external dependencies as possible
 
