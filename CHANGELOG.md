@@ -1,3 +1,13 @@
+## [0.2.18](https://github.com/moostjs/moostjs/compare/v0.2.16...v0.2.18) (2023-02-06)
+
+
+### Bug Fixes
+
+* **http:** restore ctx before interceptor:after ([8d163fe](https://github.com/moostjs/moostjs/commit/8d163fea5547816c2fc1889899ad128392e02da6))
+* **http:** return error when cought on interceptors init ([ef00ebd](https://github.com/moostjs/moostjs/commit/ef00ebda557679a1be60fd3387f31d40fc369349))
+
+
+
 ## [0.2.17](https://github.com/moostjs/moostjs/compare/v0.2.16...v0.2.17) (2023-01-24)
 
 

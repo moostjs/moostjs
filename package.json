@@ -1,6 +1,6 @@
 {
   "name": "moostjs",
-  "version": "0.2.17",
+  "version": "0.2.18",
   "description": "Metadata driven Event Framework inspired by nestjs and powered by wooksjs",
   "main": "index.js",
   "type": "module",
@@ -15,7 +15,7 @@
     "version": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
     "docs": "vitepress dev docs",
     "docs-build": "vitepress build docs",
-    "docs-serve": "vitepress serve docs",    
+    "docs-serve": "vitepress serve docs",
     "jiti": "node ./scripts/jiti.js",
     "jiti:dev": "node ./scripts/jiti.js --dev"
   },
