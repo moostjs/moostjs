@@ -13,6 +13,9 @@
     "lint": "eslint --ext .ts packages/**/src/**/**.ts",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "version": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
+    "docs": "vitepress dev docs",
+    "docs-build": "vitepress build docs",
+    "docs-serve": "vitepress serve docs",    
     "jiti": "node ./scripts/jiti.js",
     "jiti:dev": "node ./scripts/jiti.js --dev"
   },
@@ -65,10 +68,10 @@
     "@types/node": "^18.11.9",
     "@typescript-eslint/eslint-plugin": "^5.42.0",
     "@typescript-eslint/parser": "^5.0.0",
-    "@wooksjs/event-cli": "^0.2.9",
-    "@wooksjs/event-core": "^0.2.9",
-    "@wooksjs/event-http": "^0.2.9",
-    "@wooksjs/http-body": "^0.2.9",
+    "@wooksjs/event-cli": "^0.2.11",
+    "@wooksjs/event-core": "^0.2.11",
+    "@wooksjs/event-http": "^0.2.11",
+    "@wooksjs/http-body": "^0.2.11",
     "babel-plugin-dynamic-import-node": "^2.3.3",
     "babel-plugin-parameter-decorator": "^1.0.16",
     "babel-plugin-typescript-decorators": "^1.0.3",
@@ -89,7 +92,8 @@
     "ts-jest": "^29.0.3",
     "tslib": "^2.4.1",
     "typescript": "^4.9.3",
-    "wooks": "^0.2.9",
-    "yorkie": "^2.0.0"
+    "wooks": "^0.2.11",
+    "yorkie": "^2.0.0",
+    "vitepress": "^1.0.0-alpha.40"
   }
 }

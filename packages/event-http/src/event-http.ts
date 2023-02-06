@@ -112,7 +112,9 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     }
 
                     // fire after interceptors
+                    restoreCtx()
                     response = await interceptorHandler.fireAfter(response)
+
                     return response
                 }
             }
