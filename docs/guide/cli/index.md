@@ -1,0 +1,3 @@
+# Moost CLI
+
+⚒ documentation is coming...
