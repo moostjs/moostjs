@@ -46,8 +46,19 @@ export function Params() {
  * @param label - label of the field
  * @paramType unknown
  */
-export function Const(value: unknown, label?: string) {
+export function Const<T>(value: T, label?: string) {
     return Resolve(() => value, label)
+}
+
+/**
+ * Provide Const Value from Factory fn
+ * @decorator
+ * @param factory - value Factory fn
+ * @param label - label of the field
+ * @paramType unknown
+ */
+export function ConstFactory<T>(factory: () => T | Promise<T>, label?: string) {
+    return Resolve(async () => await factory(), label)
 }
 
 function fillLabel(target: TObject, key: string | symbol, index?: number, name?: string) {

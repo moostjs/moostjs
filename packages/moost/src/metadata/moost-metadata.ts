@@ -64,6 +64,7 @@ export interface TInterceptorData {
 export interface TMoostParamsMetadata extends TCommonMetaFields, TCommonMoostMeta {
     circular?: () => TAny
     inject?: string | symbol | TClassConstructor
+    nullable?: boolean
 }
 
 const moostMate = new Mate<TMoostMetadata, TMoostMetadata, TMoostMetadata & TMoostParamsMetadata>(METADATA_WORKSPACE, {
