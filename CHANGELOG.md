@@ -1,3 +1,12 @@
+## [0.2.19](https://github.com/moostjs/moostjs/compare/v0.2.18...v0.2.19) (2023-04-06)
+
+
+### Features
+
+* add ConstFactory decorator and new infact ver ([9b6e9f1](https://github.com/moostjs/moostjs/commit/9b6e9f10fc59806e0b984a1a8381d95cb9468788))
+
+
+
 ## [0.2.18](https://github.com/moostjs/moostjs/compare/v0.2.16...v0.2.18) (2023-02-06)
 
 
