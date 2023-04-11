@@ -66,7 +66,7 @@ export function ConstFactory<T>(factory: () => T | Promise<T>, label?: string) {
  * @param topic
  * @returns Resolver to '@wooksjs/event-core' (EventLogger)
  */
-export function EventLogger(topic?: string) {
+export function InjectEventLogger(topic?: string) {
     return Resolve(() => useEventLogger(topic))
 }
 
