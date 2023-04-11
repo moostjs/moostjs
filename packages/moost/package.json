@@ -1,6 +1,6 @@
 {
   "name": "moost",
-  "version": "0.2.20",
+  "version": "0.2.21",
   "description": "moost",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",

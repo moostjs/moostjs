@@ -1,3 +1,12 @@
+## [0.2.21](https://github.com/moostjs/moostjs/compare/v0.2.20...v0.2.21) (2023-04-11)
+
+
+### Bug Fixes
+
+* rename InjectEventLogger ([1090344](https://github.com/moostjs/moostjs/commit/10903447c29704b02b3c997aff97385207d85bfa))
+
+
+
 ## [0.2.20](https://github.com/moostjs/moostjs/compare/v0.2.19...v0.2.20) (2023-04-11)
 
 
