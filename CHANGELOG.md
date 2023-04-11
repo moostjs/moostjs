@@ -1,3 +1,12 @@
+## [0.2.20](https://github.com/moostjs/moostjs/compare/v0.2.19...v0.2.20) (2023-04-11)
+
+
+### Features
+
+* switch to prostojs logger ([1305ba4](https://github.com/moostjs/moostjs/commit/1305ba43e6f98dadbcbd90a3ec3197f659b90da6))
+
+
+
 ## [0.2.19](https://github.com/moostjs/moostjs/compare/v0.2.18...v0.2.19) (2023-04-06)
 
 
