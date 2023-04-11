@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/event-cli",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "description": "@moostjs/event-cli",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -28,11 +28,11 @@
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-cli#readme",
   "peerDependencies": {
-    "moost": "0.2.18",
-    "wooks": "^0.2.12",
-    "@wooksjs/event-core": "^0.2.12"
+    "moost": "0.2.19",
+    "wooks": "^0.2.14",
+    "@wooksjs/event-core": "^0.2.14"
   },
   "dependencies": {
-    "@wooksjs/event-cli": "^0.2.12"
+    "@wooksjs/event-cli": "^0.2.14"
   }
 }
