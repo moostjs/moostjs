@@ -8,7 +8,6 @@ export interface TMoostAdapterOptions<H extends object, T extends object> {
     prefix: string,
     fakeInstance: T,
     getInstance: () => Promise<T>
-    silent: boolean
     method: keyof T
     handlers: TMoostHandler<H>[]
     getIterceptorHandler: () => Promise<InterceptorHandler>

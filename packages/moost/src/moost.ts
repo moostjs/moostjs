@@ -11,13 +11,17 @@ import { Valido } from '@prostojs/valido'
 import { getMoostValido } from './metadata/valido'
 import { TMoostAdapter } from './adapter'
 import { useEventContext } from '@wooksjs/event-core'
+import { ProstoLogger, TConsoleBase } from '@prostojs/logger'
+import { getDefaultLogger } from 'common'
 
 export interface TMoostOptions {
     globalPrefix?: string
-    silent?: boolean
+    logger?: TConsoleBase
 }
 
 export class Moost {
+    protected logger: TConsoleBase
+
     protected pipes: TPipeData[] = [...sharedPipes]
 
     protected interceptors: TInterceptorData[] = []
@@ -33,9 +37,17 @@ export class Moost {
     protected unregisteredControllers: (TObject | TFunction)[] = []
 
     constructor(protected options?: TMoostOptions) {
-        if (options?.silent) {
-            getMoostInfact().silent(options?.silent)
+        this.logger = options?.logger || getDefaultLogger('moost')
+        getMoostInfact().setLogger(this.getLogger('infact'))
+        // const mate = getMoostMate()
+        // Object.assign(mate, { logger: this.getLogger('mate') })
+    }
+
+    public getLogger(topic: string) {
+        if (this.logger instanceof ProstoLogger) {
+            return this.logger.createTopic(topic)
         }
+        return this.logger
     }
 
     public adapter<T extends object, A extends TMoostAdapter<T>>(a: A) {
@@ -62,6 +74,8 @@ export class Moost {
     }
 
     protected async bindControllers() {
+        const infact = getMoostInfact()
+        infact.setLogger(this.logger)
         const meta = getMoostMate()
         const thisMeta = meta.read(this)
         const provide = { ...(thisMeta?.provide || {}), ...this.provide }
@@ -72,8 +86,8 @@ export class Moost {
     }
 
     protected async bindController(controller: TFunction | TObject, provide: TProvideRegistry, globalPrefix: string, replaceOwnPrefix?: string) {
-        const meta = getMoostMate()
-        const classMeta = meta.read(controller)
+        const mate = getMoostMate()
+        const classMeta = mate.read(controller)
         const infact = getMoostInfact()
         const isControllerConsructor = isConstructor(controller)
 
@@ -90,10 +104,10 @@ export class Moost {
         // getInstance - instance factory for resolving SINGLETON and FOR_EVENT instance
         const getInstance = instance ? () => Promise.resolve(instance as TObject) : async (): Promise<TObject> => {
             // if (!instance) {
-            infact.silent(this.options?.silent || 'logs')
+            infact.silent(true)
             const { restoreCtx } = useEventContext()
             const instance = await infact.get(controller as TClassConstructor<TAny>, { ...infactOpts, syncContextFn: restoreCtx }) as Promise<TObject>
-            infact.silent(!!this.options?.silent)
+            infact.silent(false)
             // }
             return instance
         }
@@ -103,12 +117,12 @@ export class Moost {
             getInstance,
             classConstructor,
             adapters: this.adapters,
-            silent: !!this.options?.silent,
             globalPrefix,
             replaceOwnPrefix,
             interceptors: [...this.interceptors],
             pipes,
             provide: classMeta?.provide || {},
+            logger: this.logger,
         })
         if (classMeta && classMeta.importController) {
             const prefix = typeof replaceOwnPrefix === 'string' ? replaceOwnPrefix : classMeta?.controller?.prefix

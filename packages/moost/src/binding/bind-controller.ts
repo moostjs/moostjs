@@ -4,22 +4,22 @@ import { TAny, TClassConstructor, TObject } from 'common'
 import { getInstanceOwnMethods } from './utils'
 import { TInterceptorFn } from '../decorators'
 import { getCallableFn } from '../class-function/class-function'
-import { log } from 'common'
 import { InterceptorHandler, TMoostAdapter } from '../adapter'
 import { runPipes } from '../pipes/run-pipes'
 import { useEventContext } from '@wooksjs/event-core'
 import { getMoostInfact } from '../metadata/infact'
+import { TConsoleBase } from '@prostojs/logger'
 
 export interface TBindControllerOptions {
     getInstance: () => Promise<TObject>
     classConstructor: TClassConstructor
     adapters: TMoostAdapter<TAny>[]
-    silent: boolean
     globalPrefix?: string
     replaceOwnPrefix?: string
     provide?: TMoostMetadata['provide']
     interceptors?: TMoostMetadata['interceptors']
     pipes?: TPipeData[]
+    logger: TConsoleBase
 }
 
 export async function bindControllerMethods(options: TBindControllerOptions) {
@@ -52,7 +52,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                         const { restoreCtx } = useEventContext()
                         const targetInstance = await getInstance()
                         restoreCtx()
-                        return (await getCallableFn(targetInstance, handler, restoreCtx, pipes, options.silent))(...args)
+                        return (await getCallableFn(targetInstance, handler, restoreCtx, pipes, options.logger))(...args)
                     })
                 } else {
                     interceptorHandlers.push(handler as TInterceptorFn)
@@ -94,7 +94,6 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             await adapter.bindHandler({
                 prefix,
                 fakeInstance,
-                silent: opts.silent,
                 getInstance,
                 registerEventScope: (scopeId: string) => {
                     const infact = getMoostInfact()
@@ -105,7 +104,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                 handlers: methodMeta.handlers,
                 getIterceptorHandler,
                 resolveArgs,
-                logHandler: opts.silent ? () => {} : (eventName: string) => log(`• ${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${classConstructor.name}.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`),
+                logHandler: (eventName: string) => options.logger.info(`• ${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${classConstructor.name}.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`),
             })
         }
     }
