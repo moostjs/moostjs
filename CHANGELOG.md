@@ -1,3 +1,13 @@
+## [0.2.25](https://github.com/moostjs/moostjs/compare/v0.2.24...v0.2.25) (2023-04-12)
+
+
+### Bug Fixes
+
+* move args to main fn scope ([6c201c9](https://github.com/moostjs/moostjs/commit/6c201c9df8b7389e9c055540684ed1ca8c0f5338))
+* process after interceptors when failed on init ([cab78d4](https://github.com/moostjs/moostjs/commit/cab78d4afcbd5ca886368883a97d2936695b06e2))
+
+
+
 ## [0.2.24](https://github.com/moostjs/moostjs/compare/v0.2.23...v0.2.24) (2023-04-12)
 
 
