@@ -92,19 +92,21 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                         await interceptorHandler.init()
                     } catch (e) {
                         logger.error(e)
-                        return e
+                        response = e
                     }
 
-                    // params
-                    let args: unknown[] = []
-                    restoreCtx()
-                    try {
-                        logger.trace(`resolving method args for "${ opts.method as string }"`)
-                        args = await opts.resolveArgs()
-                        logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
-                    } catch (e) {
-                        logger.error(e)
-                        response = e
+                    if (!response) {
+                        // params
+                        let args: unknown[] = []
+                        restoreCtx()
+                        try {
+                            logger.trace(`resolving method args for "${ opts.method as string }"`)
+                            args = await opts.resolveArgs()
+                            logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
+                        } catch (e) {
+                            logger.error(e)
+                            response = e
+                        }
                     }
 
                     if (!response) {
