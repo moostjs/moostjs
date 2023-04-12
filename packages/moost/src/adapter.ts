@@ -3,6 +3,7 @@ import { TObject } from 'common'
 import { useEventContext } from '@wooksjs/event-core'
 import { TMoostHandler } from './metadata'
 import { TProvideRegistry } from '@prostojs/infact'
+import { TConsoleBase } from '@prostojs/logger'
 
 export interface TMoostAdapterOptions<H extends object, T extends object> {
     prefix: string,

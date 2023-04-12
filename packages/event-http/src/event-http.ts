@@ -4,6 +4,8 @@ import { TProstoRouterPathBuilder } from '@prostojs/router'
 import { createProvideRegistry } from '@prostojs/infact'
 import { Server as HttpServer } from 'http'
 import { Server as HttpsServer } from 'https'
+import { threadId } from 'worker_threads'
+import { useEventLogger } from '@wooksjs/event-core'
 
 export interface THttpHandlerMeta {
     method: string
@@ -54,6 +56,10 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         )
     }
 
+    getLogger() {
+        return this.getHttpApp().getLogger('moost-http')
+    }
+
     bindHandler<T extends object = object>(opts: TMoostAdapterOptions<THttpHandlerMeta, T>): void | Promise<void> {
         let fn
         for (const handler of opts.handlers) {
@@ -66,6 +72,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     const { restoreCtx } = useHttpContext()
                     const { reqId, rawRequest } = useRequest()
                     const scopeId = reqId()
+                    const logger = useEventLogger('moost-http')
 
                     rawRequest.on('end', opts.registerEventScope(scopeId))
 
@@ -82,30 +89,38 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     const interceptorHandler = await opts.getIterceptorHandler()
                     restoreCtx()
                     try {
+                        logger.trace('initializing interceptors')
                         await interceptorHandler.init()
                     } catch (e) {
+                        logger.error(e)
                         return e
                     }
 
                     // params
                     let args: unknown[] = []
+                    restoreCtx()
                     try {
-                        restoreCtx()
+                        logger.trace(`resolving method args for "${ opts.method as string }"`)
                         args = await opts.resolveArgs()
+                        logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
                     } catch (e) {
+                        logger.error(e)
                         response = e
                     }
 
                     if (!response) {
                         restoreCtx()
                         // fire before interceptors
+                        logger.trace('firing before interceptors')
                         response = await interceptorHandler.fireBefore(response)
                         // fire request handler
                         if (!interceptorHandler.responseOverwritten) {
                             try {
                                 restoreCtx()
+                                logger.trace(`firing method "${ opts.method as string }"`)
                                 response = await (instance[opts.method] as unknown as (...a: typeof args) => unknown)(...args)
                             } catch (e) {
+                                logger.error(e)
                                 response = e
                             }
                         }
@@ -113,7 +128,13 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
 
                     // fire after interceptors
                     restoreCtx()
-                    response = await interceptorHandler.fireAfter(response)
+                    try {
+                        logger.trace('firing after interceptors')
+                        response = await interceptorHandler.fireAfter(response)
+                    } catch (e) {
+                        logger.error(e)
+                        throw e
+                    }
 
                     return response
                 }
