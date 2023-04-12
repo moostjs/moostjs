@@ -95,9 +95,9 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                         response = e
                     }
 
+                    let args: unknown[] = []
                     if (!response) {
                         // params
-                        let args: unknown[] = []
                         restoreCtx()
                         try {
                             logger.trace(`resolving method args for "${ opts.method as string }"`)
