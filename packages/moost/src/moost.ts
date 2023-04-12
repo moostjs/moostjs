@@ -39,8 +39,8 @@ export class Moost {
     constructor(protected options?: TMoostOptions) {
         this.logger = options?.logger || getDefaultLogger('moost')
         getMoostInfact().setLogger(this.getLogger('infact'))
-        // const mate = getMoostMate()
-        // Object.assign(mate, { logger: this.getLogger('mate') })
+        const mate = getMoostMate()
+        Object.assign(mate, { logger: this.getLogger('mate') })
     }
 
     public getLogger(topic: string) {
