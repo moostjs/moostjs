@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/event-http",
-  "version": "0.2.22",
+  "version": "0.2.23",
   "description": "@moostjs/event-http",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -29,9 +29,9 @@
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-http#readme",
   "peerDependencies": {},
   "dependencies": {
-    "moost": "0.2.22",
-    "@wooksjs/event-core": "^0.2.15",
-    "@wooksjs/event-http": "^0.2.15",
+    "moost": "0.2.23",
+    "@wooksjs/event-core": "^0.2.16",
+    "@wooksjs/event-http": "^0.2.16",
     "@prostojs/infact": "^0.1.11",
     "@prostojs/router": "^0.0.16"
   }
