@@ -1,3 +1,12 @@
+## [0.2.24](https://github.com/moostjs/moostjs/compare/v0.2.23...v0.2.24) (2023-04-12)
+
+
+### Features
+
+* add more trace logs to http-adapter ([bec5d23](https://github.com/moostjs/moostjs/commit/bec5d23abbc801608c78300a9008023da985e4d8))
+
+
+
 ## [0.2.23](https://github.com/moostjs/moostjs/compare/v0.2.22...v0.2.23) (2023-04-12)
 
 

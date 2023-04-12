@@ -4,7 +4,6 @@ import { TProstoRouterPathBuilder } from '@prostojs/router'
 import { createProvideRegistry } from '@prostojs/infact'
 import { Server as HttpServer } from 'http'
 import { Server as HttpsServer } from 'https'
-import { threadId } from 'worker_threads'
 import { useEventLogger } from '@wooksjs/event-core'
 
 export interface THttpHandlerMeta {
