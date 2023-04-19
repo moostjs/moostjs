@@ -16,7 +16,9 @@ export function useControllerContext<T extends object>() {
 
     const getController = () => get('instance')
     const getMethod = () => get('method')
+    // todo: add generic types to getControllerMeta
     const getControllerMeta = () => getMoostMate().read(getController())
+    // todo: add generic types to getMethodMeta
     const getMethodMeta = () => getMoostMate().read(getController(), getMethod() as string)
 
     return {
