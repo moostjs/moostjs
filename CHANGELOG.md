@@ -1,3 +1,12 @@
+## [0.2.27](https://github.com/moostjs/moostjs/compare/v0.2.26...v0.2.27) (2023-04-19)
+
+
+### Features
+
+* add controller context composables ([3908ff6](https://github.com/moostjs/moostjs/commit/3908ff6f119480409c3406a26702d63e2480bb89))
+
+
+
 ## [0.2.26](https://github.com/moostjs/moostjs/compare/v0.2.25...v0.2.26) (2023-04-19)
 
 
