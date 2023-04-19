@@ -88,7 +88,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     const interceptorHandler = await opts.getIterceptorHandler()
                     restoreCtx()
                     try {
-                        logger.trace('initializing interceptors')
+                        // logger.trace('initializing interceptors')
                         await interceptorHandler.init()
                     } catch (e) {
                         logger.error(e)
@@ -100,9 +100,9 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                         // params
                         restoreCtx()
                         try {
-                            logger.trace(`resolving method args for "${ opts.method as string }"`)
+                            // logger.trace(`resolving method args for "${ opts.method as string }"`)
                             args = await opts.resolveArgs()
-                            logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
+                            // logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
                         } catch (e) {
                             logger.error(e)
                             response = e
@@ -112,7 +112,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     if (!response) {
                         restoreCtx()
                         // fire before interceptors
-                        logger.trace('firing before interceptors')
+                        // logger.trace('firing before interceptors')
                         response = await interceptorHandler.fireBefore(response)
                         // fire request handler
                         if (!interceptorHandler.responseOverwritten) {
@@ -130,7 +130,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     // fire after interceptors
                     restoreCtx()
                     try {
-                        logger.trace('firing after interceptors')
+                        // logger.trace('firing after interceptors')
                         response = await interceptorHandler.fireAfter(response)
                     } catch (e) {
                         logger.error(e)
