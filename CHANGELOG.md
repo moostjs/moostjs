@@ -1,3 +1,13 @@
+## [0.2.26](https://github.com/moostjs/moostjs/compare/v0.2.25...v0.2.26) (2023-04-19)
+
+
+### Bug Fixes
+
+* remove trace from event-http ([c0a719e](https://github.com/moostjs/moostjs/commit/c0a719e729d2ae5e6410c3611af3a7a52fdb90fe))
+* remove trace from event-http ([edf7d3f](https://github.com/moostjs/moostjs/commit/edf7d3f64d2fd1b0a34eac5b4ebd544e361a1f80))
+
+
+
 ## [0.2.25](https://github.com/moostjs/moostjs/compare/v0.2.24...v0.2.25) (2023-04-12)
 
 
