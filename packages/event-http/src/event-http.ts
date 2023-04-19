@@ -118,7 +118,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                         if (!interceptorHandler.responseOverwritten) {
                             try {
                                 restoreCtx()
-                                logger.trace(`firing method "${ opts.method as string }"`)
+                                // logger.trace(`firing method "${ opts.method as string }"`)
                                 response = await (instance[opts.method] as unknown as (...a: typeof args) => unknown)(...args)
                             } catch (e) {
                                 logger.error(e)
