@@ -1,5 +1,5 @@
 import { createHttpApp, TWooksHttpOptions, useHttpContext, useRequest, WooksHttp } from '@wooksjs/event-http'
-import { getMoostMate, TMoostAdapter, TMoostAdapterOptions, TMoostMetadata } from 'moost'
+import { getMoostMate, setControllerContext, TMoostAdapter, TMoostAdapterOptions, TMoostMetadata } from 'moost'
 import { TProstoRouterPathBuilder } from '@prostojs/router'
 import { createProvideRegistry } from '@prostojs/infact'
 import { Server as HttpServer } from 'http'
@@ -78,11 +78,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     const instance = await opts.getInstance()
                     restoreCtx()
 
-                    // setComposableControllerContext({
-                    //     controller: instance,
-                    //     method: method as string,
-                    //     pathBuilder: pathBuilder as ReturnType<Wooks['on']>,
-                    // })
+                    setControllerContext(instance, opts.method)
 
                     let response: unknown
                     const interceptorHandler = await opts.getIterceptorHandler()

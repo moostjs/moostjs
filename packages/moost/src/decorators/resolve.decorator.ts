@@ -15,7 +15,7 @@ import { TDecoratorLevel } from './types'
 export function Resolve<T extends TObject = TEmpty>(resolver: (metas: TPipeMetas<T>, level: TDecoratorLevel) => unknown, label?: string): ParameterDecorator & PropertyDecorator {
     return (target, key, index?) => {
         const i = typeof index === 'number' ? index : undefined
-        fillLabel(target, key, i, label)
+        fillLabel(target, key || '', i, label)
         getMoostMate().decorate('resolver', resolver)(target, key, i as number)
     }
 }
