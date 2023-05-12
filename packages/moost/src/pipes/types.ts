@@ -11,11 +11,12 @@ export interface TPipeMetas<T extends TObject = TEmpty> {
     key?: string | symbol
 }
 
-export type TPipeFn<T extends TObject = TEmpty> 
-    = {
-        (value: unknown, metas: TPipeMetas<T>, level: TDecoratorLevel): unknown | Promise<unknown>
-        priority?: TPipePriority
-    }
+export type TPipeFn<T extends TObject = TEmpty> = {
+    (value: unknown, metas: TPipeMetas<T>, level: TDecoratorLevel):
+        | unknown
+        | Promise<unknown>
+    priority?: TPipePriority
+}
 
 export enum TPipePriority {
     BEFORE_RESOLVE,

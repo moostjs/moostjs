@@ -166,8 +166,8 @@ export default defineConfig({
                             text: 'Express Adapter',
                             link: '/guide/http/express',
                         },
-                    ]
-                },  
+                    ],
+                },
                 {
                     text: 'Moost CLI',
                     collapsible: true,
@@ -176,7 +176,7 @@ export default defineConfig({
                         {
                             text: 'Create CLI',
                             link: '/guide/cli/',
-                        },                        
+                        },
                     ],
                 },
                 {
@@ -187,7 +187,7 @@ export default defineConfig({
                         {
                             text: 'Event Context',
                             link: '/guide/advanced/context',
-                        },                        
+                        },
                     ],
                 },
                 // {

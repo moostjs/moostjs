@@ -3,8 +3,10 @@ import { Label, Optional } from '../common.decorator'
 export class CommonDecoratorsTestClass {
     method(
         @Label('my-label')
-            _labelled: string,
+        _labelled: string,
         @Optional()
-            _optional: string,
-    ) { /** */ }
+        _optional: string
+    ) {
+        /** */
+    }
 }

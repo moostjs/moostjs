@@ -1,5 +1,17 @@
-import { createHttpApp, TWooksHttpOptions, useHttpContext, useRequest, WooksHttp } from '@wooksjs/event-http'
-import { getMoostMate, setControllerContext, TMoostAdapter, TMoostAdapterOptions, TMoostMetadata } from 'moost'
+import {
+    createHttpApp,
+    TWooksHttpOptions,
+    useHttpContext,
+    useRequest,
+    WooksHttp,
+} from '@wooksjs/event-http'
+import {
+    getMoostMate,
+    setControllerContext,
+    TMoostAdapter,
+    TMoostAdapterOptions,
+    TMoostMetadata,
+} from 'moost'
 import { TProstoRouterPathBuilder } from '@prostojs/router'
 import { createProvideRegistry } from '@prostojs/infact'
 import { Server as HttpServer } from 'http'
@@ -50,8 +62,14 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         return createProvideRegistry(
             [WooksHttp, () => this.getHttpApp()],
             ['WooksHttp', () => this.getHttpApp()],
-            [HttpServer, () => this.getHttpApp().getServer() as unknown as HttpServer],
-            [HttpsServer, () => this.getHttpApp().getServer() as unknown as HttpsServer],
+            [
+                HttpServer,
+                () => this.getHttpApp().getServer() as unknown as HttpServer,
+            ],
+            [
+                HttpsServer,
+                () => this.getHttpApp().getServer() as unknown as HttpsServer,
+            ]
         )
     }
 
@@ -59,13 +77,23 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         return this.getHttpApp().getLogger('moost-http')
     }
 
-    bindHandler<T extends object = object>(opts: TMoostAdapterOptions<THttpHandlerMeta, T>): void | Promise<void> {
+    bindHandler<T extends object = object>(
+        opts: TMoostAdapterOptions<THttpHandlerMeta, T>
+    ): void | Promise<void> {
         let fn
         for (const handler of opts.handlers) {
             if (handler.type !== 'HTTP') continue
             const httpPath = handler.path
-            const path = typeof httpPath === 'string' ? httpPath : typeof opts.method === 'string' ? opts.method : ''
-            const targetPath = `${opts.prefix || ''}/${path}`.replace(/\/\/+/g, '/')
+            const path =
+                typeof httpPath === 'string'
+                    ? httpPath
+                    : typeof opts.method === 'string'
+                        ? opts.method
+                        : ''
+            const targetPath = `${opts.prefix || ''}/${path}`.replace(
+                /\/\/+/g,
+                '/'
+            )
             if (!fn) {
                 fn = async () => {
                     const { restoreCtx } = useHttpContext()
@@ -73,7 +101,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     const scopeId = reqId()
                     const logger = useEventLogger('moost-http')
 
-                    rawRequest.on('end', opts.registerEventScope(scopeId))
+                    rawRequest.on('end', opts.registerEventScope(scopeId)) // will unscope on request end
 
                     const instance = await opts.getInstance()
                     restoreCtx()
@@ -115,7 +143,11 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                             try {
                                 restoreCtx()
                                 // logger.trace(`firing method "${ opts.method as string }"`)
-                                response = await (instance[opts.method] as unknown as (...a: typeof args) => unknown)(...args)
+                                response = await (
+                                    instance[opts.method] as unknown as (
+                                        ...a: typeof args
+                                    ) => unknown
+                                )(...args)
                             } catch (e) {
                                 logger.error(e)
                                 response = e
@@ -137,10 +169,13 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                 }
             }
             const pathBuilder = this.httpApp.on(handler.method, targetPath, fn)
-            const methodMeta = getMoostMate().read(opts.fakeInstance, opts.method as string) || {} as TMoostMetadata
+            const methodMeta =
+                getMoostMate().read(opts.fakeInstance, opts.method as string) ||
+                ({} as TMoostMetadata)
             const id = (methodMeta.id || opts.method) as string
             if (id) {
-                const methods = this.pathBuilders[id] = this.pathBuilders[id] || {}
+                const methods = (this.pathBuilders[id] =
+                    this.pathBuilders[id] || {})
                 if (handler.method === '*') {
                     methods.GET = pathBuilder
                     methods.PUT = pathBuilder
@@ -152,7 +187,9 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                 }
             }
 
-            opts.logHandler(`${__DYE_CYAN__}(${handler.method})${ __DYE_GREEN__ }${ targetPath }`)
+            opts.logHandler(
+                `${__DYE_CYAN__}(${handler.method})${__DYE_GREEN__}${targetPath}`
+            )
         }
     }
 }

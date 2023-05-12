@@ -1,16 +1,23 @@
 import { TPipeFn, TPipePriority } from './types'
 
 export const genericTypesCastPipe = (strict?: boolean): TPipeFn => {
-    const handler: TPipeFn = (value, {paramMeta: meta}) => {
+    const handler: TPipeFn = (value, { paramMeta: meta }) => {
         if (meta?.type) {
-            if ((value === undefined || value === null || (meta.type !== String && value === '')) && meta.optional) {
+            if (
+                (value === undefined ||
+                    value === null ||
+                    (meta.type !== String && value === '')) &&
+                meta.optional
+            ) {
                 return undefined
             }
             switch (meta.type) {
                 case Date: {
                     let d
                     if (typeof value === 'string') {
-                        d = new Date(/^\d+$/.test(value) ? Number(value) : value)
+                        d = new Date(
+                            /^\d+$/.test(value) ? Number(value) : value
+                        )
                     } else {
                         d = new Date(value as string)
                     }
@@ -20,10 +27,34 @@ export const genericTypesCastPipe = (strict?: boolean): TPipeFn => {
                     return Number.isNaN(d.getTime()) ? value : d
                 }
                 case Boolean:
-                    if ([true, 'true', 'TRUE', 'True', 1, '1', 'X', 'x'].includes(value as string)) {
+                    if (
+                        [
+                            true,
+                            'true',
+                            'TRUE',
+                            'True',
+                            1,
+                            '1',
+                            'X',
+                            'x',
+                        ].includes(value as string)
+                    ) {
                         return true
                     }
-                    if ([false, 'false', 'FALSE', 'False', 0, '0', '', ' ', null, undefined].includes(value as string)) {
+                    if (
+                        [
+                            false,
+                            'false',
+                            'FALSE',
+                            'False',
+                            0,
+                            '0',
+                            '',
+                            ' ',
+                            null,
+                            undefined,
+                        ].includes(value as string)
+                    ) {
                         return false
                     }
                     if (strict) {
@@ -34,19 +65,25 @@ export const genericTypesCastPipe = (strict?: boolean): TPipeFn => {
                     if (strict && !value && value !== 0) {
                         typeError(value, 'numeric', meta.label as string)
                     }
-                    const n = typeof value === 'string' && value.length > 0 ? Number(value) : NaN
+                    const n =
+                        typeof value === 'string' && value.length > 0
+                            ? Number(value)
+                            : NaN
                     if (strict && Number.isNaN(n)) {
                         typeError(value, 'numeric', meta.label as string)
                     }
                     return Number.isNaN(n) ? value : n
                 }
                 case String:
-                    if (strict && ['object', 'function'].includes(typeof value)) {
+                    if (
+                        strict &&
+                        ['object', 'function'].includes(typeof value)
+                    ) {
                         typeError(value, 'string', meta.label)
                     }
-                    return value && String(value) || value
+                    return (value && String(value)) || value
                 default:
-                    return value    
+                    return value
             }
         }
     }
@@ -55,6 +92,8 @@ export const genericTypesCastPipe = (strict?: boolean): TPipeFn => {
 }
 
 function typeError(value: unknown, targetType: string, label?: string) {
-    const prefix = label ? `Argument "${ label }" with value ` : ''
-    throw new Error(`${prefix}${ JSON.stringify(value) } is not a ${ targetType } type`)
+    const prefix = label ? `Argument "${label}" with value ` : ''
+    throw new Error(
+        `${prefix}${JSON.stringify(value)} is not a ${targetType} type`
+    )
 }

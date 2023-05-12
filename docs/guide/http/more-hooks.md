@@ -42,7 +42,7 @@ export function useUserProfile() {
     // abstract readUser function
     function readUser(): Promise<TUser> {
         // return db.readUser(username)
-    }    
+    }
 
     return {
         username, // we have user name syncronously
@@ -70,13 +70,16 @@ import { attachHook } from '@wooksjs/event-core'
 function useHeaderHook(name: string) {
     const { setHeader, headers } = useSetHeaders()
 
-    return attachHook({
-        name,
-        type: 'header',
-    }, {
-        get: () => headers()[name] as string,
-        set: (value: string | number) => setHeader(name, value),
-    })
+    return attachHook(
+        {
+            name,
+            type: 'header',
+        },
+        {
+            get: () => headers()[name] as string,
+            set: (value: string | number) => setHeader(name, value),
+        }
+    )
 }
 
 // usage

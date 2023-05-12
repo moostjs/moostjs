@@ -1,30 +1,56 @@
-import { All, Delete, Get, HttpMethod, Patch, Post, Put } from '../http-method.decorator'
+import {
+    All,
+    Delete,
+    Get,
+    HttpMethod,
+    Patch,
+    Post,
+    Put,
+} from '../http-method.decorator'
 
 export class HttpMethodTestClass {
     @Get('')
-    root () { /** */ }
+    root() {
+        /** */
+    }
 
     @Get('path')
-    test () { /** */ }
+    test() {
+        /** */
+    }
 
     @All()
-    all () { /** */ }
+    all() {
+        /** */
+    }
 
     @Get()
-    get () { /** */ }
+    get() {
+        /** */
+    }
 
     @Put()
-    put () { /** */ }
+    put() {
+        /** */
+    }
 
     @Post()
-    post () { /** */ }
+    post() {
+        /** */
+    }
 
     @Delete()
-    delete () { /** */ }
+    delete() {
+        /** */
+    }
 
     @Patch()
-    patch () { /** */ }
+    patch() {
+        /** */
+    }
 
     @HttpMethod('OPTIONS')
-    options () { /** */ }
+    options() {
+        /** */
+    }
 }

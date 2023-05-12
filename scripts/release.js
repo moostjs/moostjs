@@ -5,7 +5,14 @@ import execa from 'execa'
 import semver from 'semver'
 const { prompt } = require('enquirer')
 
-import { packages, require, out, version as currentVersion, __dirname, mainPkg } from './utils.js'
+import {
+    packages,
+    require,
+    out,
+    version as currentVersion,
+    __dirname,
+    mainPkg,
+} from './utils.js'
 
 const args = minimist(process.argv.slice(2))
 
@@ -29,12 +36,11 @@ const versionIncrements = [
     'patch',
     'minor',
     'major',
-    ...(preId ? ['prepatch', 'preminor', 'premajor', 'prerelease'] : [])
+    ...(preId ? ['prepatch', 'preminor', 'premajor', 'prerelease'] : []),
 ]
 
-
-const inc = i => semver.inc(currentVersion, i, preId)
-const bin = name => path.resolve(__dirname, '../node_modules/.bin/' + name)
+const inc = (i) => semver.inc(currentVersion, i, preId)
+const bin = (name) => path.resolve(__dirname, '../node_modules/.bin/' + name)
 const run = (bin, args, opts = {}) =>
     execa(bin, args, { stdio: 'inherit', ...opts })
 const dryRun = (bin, args, opts = {}) =>
@@ -50,7 +56,9 @@ async function main() {
             type: 'select',
             name: 'release',
             message: 'Select release type',
-            choices: versionIncrements.map(i => `${i} (${inc(i)})`).concat(['custom'])
+            choices: versionIncrements
+                .map((i) => `${i} (${inc(i)})`)
+                .concat(['custom']),
         })
 
         if (release === 'custom') {
@@ -59,7 +67,7 @@ async function main() {
                     type: 'input',
                     name: 'version',
                     message: 'Input custom version',
-                    initial: currentVersion
+                    initial: currentVersion,
                 })
             ).version
         } else {
@@ -74,7 +82,7 @@ async function main() {
     const { yes } = await prompt({
         type: 'confirm',
         name: 'yes',
-        message: `Releasing v${targetVersion}. Confirm?`
+        message: `Releasing v${targetVersion}. Confirm?`,
     })
 
     if (!yes) {
@@ -151,7 +159,7 @@ function updateVersions(version) {
     // 1. update root package.json
     updatePackage(path.resolve(__dirname, '..', 'package.json'), version)
     // 2. update all packages
-    packages.forEach(p => updatePackage(p.pkgPath, version))
+    packages.forEach((p) => updatePackage(p.pkgPath, version))
 }
 
 function updatePackage(pkgPath, version) {
@@ -166,11 +174,8 @@ function updateDeps(pkg, depType, version) {
     const deps = pkg[depType]
     if (!deps) return
     updateDepsFrom(pkg, mainPkg, depType)
-    Object.keys(deps).forEach(dep => {
-        if (
-            dep === 'moost' ||
-            (dep.startsWith('@moostjs'))
-        ) {
+    Object.keys(deps).forEach((dep) => {
+        if (dep === 'moost' || dep.startsWith('@moostjs')) {
             out.warn(`${pkg.name} -> ${depType} -> ${dep}@${version}`)
             deps[dep] = version
         }
@@ -180,7 +185,7 @@ function updateDeps(pkg, depType, version) {
 function updateDepsFrom(targetPkg, sourcePkg, depType) {
     const deps = targetPkg[depType]
     if (!deps) return
-    Object.keys(deps).forEach(dep => {
+    Object.keys(deps).forEach((dep) => {
         if (sourcePkg.dependencies && sourcePkg.dependencies[dep]) {
             deps[dep] = sourcePkg.dependencies[dep]
         }
@@ -215,10 +220,16 @@ async function publishPackage(pkg, version, runIfNotDry) {
     out.step(`Publishing ${pkg.name}...`)
     try {
         await runIfNotDry(
-            'npm', ['publish', '--access', 'public', '--registry=https://registry.npmjs.org/'],
+            'npm',
+            [
+                'publish',
+                '--access',
+                'public',
+                '--registry=https://registry.npmjs.org/',
+            ],
             {
                 cwd: pkg.pkgRoot,
-                stdio: 'pipe'
+                stdio: 'pipe',
             }
         )
         out.success(`Successfully published ${pkg.name}@${version}`)
@@ -231,7 +242,7 @@ async function publishPackage(pkg, version, runIfNotDry) {
     }
 }
 
-main().catch(err => {
+main().catch((err) => {
     updateVersions(currentVersion)
     out.error(err)
 })

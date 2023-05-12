@@ -8,15 +8,25 @@ export function getInstanceOwnMethods<T = TAny>(instance: T): (keyof T)[] {
         ...getParentProps(getConstructor(instance) as TClassConstructor), // Inheritance support
         ...Object.getOwnPropertyNames(proto),
         ...Object.getOwnPropertyNames(instance),
-    ].filter(m => typeof instance[m as keyof typeof instance] === 'function') as (keyof T)[]
+    ].filter(
+        (m) => typeof instance[m as keyof typeof instance] === 'function'
+    ) as (keyof T)[]
 }
 
 const fnProto = Object.getPrototypeOf(Function) as TClassConstructor
 
 function getParentProps(constructor: TClassConstructor): string[] {
     const parent = Object.getPrototypeOf(constructor) as TClassConstructor
-    if (typeof parent === 'function' && parent !== fnProto && parent !== constructor && parent.prototype) {
-        return [ ...getParentProps(parent), ...Object.getOwnPropertyNames(parent.prototype) ]
+    if (
+        typeof parent === 'function' &&
+        parent !== fnProto &&
+        parent !== constructor &&
+        parent.prototype
+    ) {
+        return [
+            ...getParentProps(parent),
+            ...Object.getOwnPropertyNames(parent.prototype),
+        ]
     }
     return []
 }

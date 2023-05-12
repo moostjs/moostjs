@@ -10,7 +10,10 @@ import { insureInjectable } from './injectable.decorator'
  */
 export function Controller(prefix?: string): ClassDecorator {
     const mate = getMoostMate()
-    return mate.apply(insureInjectable, mate.decorate('controller', { prefix: prefix || '' }))
+    return mate.apply(
+        insureInjectable,
+        mate.decorate('controller', { prefix: prefix || '' })
+    )
 }
 
 /**
@@ -19,7 +22,10 @@ export function Controller(prefix?: string): ClassDecorator {
  * @param controller - target controller (instance) to import
  * @param provide - provide registry for the target controller
  */
-export function ImportController(controller: TFunction | TObject, provide?: TProvideRegistry): ClassDecorator
+export function ImportController(
+    controller: TFunction | TObject,
+    provide?: TProvideRegistry
+): ClassDecorator
 
 /**
  * Set Class as a Controller
@@ -28,12 +34,30 @@ export function ImportController(controller: TFunction | TObject, provide?: TPro
  * @param controller - point to a controller (instance) to import
  * @param provide - provide registry for the target controller
  */
-export function ImportController(prefix: string, controller: TFunction | TObject, provide?: TProvideRegistry): ClassDecorator
+export function ImportController(
+    prefix: string,
+    controller: TFunction | TObject,
+    provide?: TProvideRegistry
+): ClassDecorator
 
-export function ImportController(prefix: string | TFunction | TObject, controller?: TFunction | TObject | TProvideRegistry, provide?: TProvideRegistry): ClassDecorator {
-    return getMoostMate().decorate('importController', {
-        prefix: typeof prefix === 'string' ? prefix : undefined,
-        typeResolver: typeof prefix === 'string' ? controller as TClassConstructor : prefix as TClassConstructor,
-        provide: typeof prefix === 'string' ? provide || undefined : controller as TProvideRegistry || undefined,
-    }, true)
+export function ImportController(
+    prefix: string | TFunction | TObject,
+    controller?: TFunction | TObject | TProvideRegistry,
+    provide?: TProvideRegistry
+): ClassDecorator {
+    return getMoostMate().decorate(
+        'importController',
+        {
+            prefix: typeof prefix === 'string' ? prefix : undefined,
+            typeResolver:
+                typeof prefix === 'string'
+                    ? (controller as TClassConstructor)
+                    : (prefix as TClassConstructor),
+            provide:
+                typeof prefix === 'string'
+                    ? provide || undefined
+                    : (controller as TProvideRegistry) || undefined,
+        },
+        true
+    )
 }

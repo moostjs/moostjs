@@ -19,7 +19,9 @@ interface TValidatePipeOptions {
     errorCb?: (message: string, details: string | TObject) => unknown
 }
 
-export const validatePipe: (opts?: TValidatePipeOptions) => TPipeFn = (opts) => {
+export const validatePipe: (opts?: TValidatePipeOptions) => TPipeFn = (
+    opts
+) => {
     const pipe: TPipeFn = async (_value, metas, level) => {
         const { restoreCtx } = useEventContext()
         const valido = getMoostValido()
@@ -33,11 +35,23 @@ export const validatePipe: (opts?: TValidatePipeOptions) => TPipeFn = (opts) => 
         } else if (level === 'CLASS') {
             meta = metas.classMeta || {}
         }
-        const result = await valido.validateParam(_value, meta, metas.key, undefined, metas.instance, undefined, 0, 0, opts?.errorLimit || DEFAULT_ERROR_LIMIT, restoreCtx)
+        const result = await valido.validateParam(
+            _value,
+            meta,
+            metas.key,
+            undefined,
+            metas.instance,
+            undefined,
+            0,
+            0,
+            opts?.errorLimit || DEFAULT_ERROR_LIMIT,
+            restoreCtx
+        )
         if (result !== true) {
-            const message = typeof result === 'string' ? result : firstString(result)
+            const message =
+                typeof result === 'string' ? result : firstString(result)
             if (opts?.errorCb) {
-                opts.errorCb(message, result) 
+                opts.errorCb(message, result)
             } else {
                 throw new Error('Validation error: ' + message)
             }

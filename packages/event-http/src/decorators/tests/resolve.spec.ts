@@ -5,7 +5,9 @@ import * as wooksBody from '@wooksjs/http-body'
 import { getMoostMate } from 'moost'
 
 jest.mock('@wooksjs/event-http')
-const mWooksComposables = wooksComposables as jest.Mocked<typeof wooksComposables>
+const mWooksComposables = wooksComposables as jest.Mocked<
+    typeof wooksComposables
+>
 jest.mock('@wooksjs/event-core')
 const mEventCore = eventCore as jest.Mocked<typeof eventCore>
 jest.mock('@wooksjs/http-body')
@@ -17,36 +19,51 @@ mWooksComposables.useHeaders.mockImplementation(() => ({
     test: 'test header value',
 }))
 
-mWooksComposables.useCookies.mockImplementation(() => ({ 
-    getCookie: (name: string) => ({ test: 'test cookie value' })[name] || null,
+mWooksComposables.useCookies.mockImplementation(() => ({
+    getCookie: (name: string) => ({ test: 'test cookie value' }[name] || null),
     rawCookies: '',
 }))
 
-mEventCore.useRouteParams.mockImplementation(() => ({
-    get: () => 'test route param',
-    params: { test: 'test route param' },
-} as ReturnType<typeof mEventCore.useRouteParams>))
+mEventCore.useRouteParams.mockImplementation(
+    () =>
+        ({
+            get: () => 'test route param',
+            params: { test: 'test route param' },
+        } as ReturnType<typeof mEventCore.useRouteParams>)
+)
 
-mWooksComposables.useSearchParams.mockImplementation(() => ({
-    jsonSearchParams: () => ({ test: 'test query value' }),
-    urlSearchParams: () => ({ get: () => 'test query value'}),
-} as unknown as ReturnType<typeof wooksComposables.useSearchParams>))
+mWooksComposables.useSearchParams.mockImplementation(
+    () =>
+        ({
+            jsonSearchParams: () => ({ test: 'test query value' }),
+            urlSearchParams: () => ({ get: () => 'test query value' }),
+        } as unknown as ReturnType<typeof wooksComposables.useSearchParams>)
+)
 
-mWooksComposables.useRequest.mockImplementation(() => ({
-    url: 'test url',
-    method: 'PUT',
-    rawRequest: 'raw request',
-    rawResponse: () => 'raw response',
-} as unknown as ReturnType<typeof wooksComposables.useRequest>))
+mWooksComposables.useRequest.mockImplementation(
+    () =>
+        ({
+            url: 'test url',
+            method: 'PUT',
+            rawRequest: 'raw request',
+            rawResponse: () => 'raw response',
+        } as unknown as ReturnType<typeof wooksComposables.useRequest>)
+)
 
-mWooksComposables.useResponse.mockImplementation(() => ({
-    rawResponse: () => 'raw response',
-} as unknown as ReturnType<typeof wooksComposables.useResponse>))
+mWooksComposables.useResponse.mockImplementation(
+    () =>
+        ({
+            rawResponse: () => 'raw response',
+        } as unknown as ReturnType<typeof wooksComposables.useResponse>)
+)
 
-mWooksBody.useBody.mockImplementation(() => ({
-    parseBody: () => 'parsed body',
-    rawBody: () => 'raw body',
-} as unknown as ReturnType<typeof mWooksBody.useBody>))
+mWooksBody.useBody.mockImplementation(
+    () =>
+        ({
+            parseBody: () => 'parsed body',
+            rawBody: () => 'raw body',
+        } as unknown as ReturnType<typeof mWooksBody.useBody>)
+)
 
 const instance = new ResolveDecoratorsTestClass()
 const meta = getMoostMate().read(instance, 'method')
@@ -58,10 +75,15 @@ describe('resolve http-decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe('test header value')
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe('test header value')
             }
         }
     })
@@ -71,10 +93,15 @@ describe('resolve http-decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe('test cookie value')
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe('test cookie value')
             }
         }
     })
@@ -84,10 +111,15 @@ describe('resolve http-decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toEqual({ test: 'test query value' })
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toEqual({ test: 'test query value' })
             }
         }
     })
@@ -97,10 +129,15 @@ describe('resolve http-decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe('test url')
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe('test url')
             }
         }
     })
@@ -110,10 +147,15 @@ describe('resolve http-decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe('PUT')
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe('PUT')
             }
         }
     })
@@ -123,10 +165,15 @@ describe('resolve http-decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe('raw request')
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe('raw request')
             }
         }
     })
@@ -136,10 +183,15 @@ describe('resolve http-decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe('raw response')
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe('raw response')
             }
         }
     })
@@ -149,10 +201,15 @@ describe('resolve http-decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe('parsed body')
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe('parsed body')
             }
         }
     })
@@ -162,10 +219,15 @@ describe('resolve http-decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe('raw body')
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe('raw body')
             }
         }
     })

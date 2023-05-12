@@ -21,6 +21,8 @@ export class ResolveDecoratorsTestClass {
         @Req() _p8: string,
         @Res() _p9: string,
         @Body() _p11: string,
-        @RawBody() _p12: string,
-    ) { /** */ }
+        @RawBody() _p12: string
+    ) {
+        /** */
+    }
 }

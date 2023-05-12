@@ -7,13 +7,17 @@ function simpleTest(fnName: string, httpMethod: string, path?: string) {
     expect(meta).toHaveProperty('handlers')
     expect(meta?.handlers).toHaveLength(1)
     if (meta?.handlers) {
-        expect(meta.handlers[0]).toEqual({ method: httpMethod, path: path, type: 'HTTP' })
+        expect(meta.handlers[0]).toEqual({
+            method: httpMethod,
+            path: path,
+            type: 'HTTP',
+        })
     }
 }
 
 const tests = [
-    ['Get(\'\')', 'root', 'GET', ''],
-    ['Get(\'path\')', 'test', 'GET', 'path'],
+    ["Get('')", 'root', 'GET', ''],
+    ["Get('path')", 'test', 'GET', 'path'],
 
     ['All()', 'all', '*', undefined],
     ['Get()', 'get', 'GET', undefined],
@@ -28,8 +32,8 @@ const tests = [
 describe('http-method.decorator', () => {
     for (const t of tests as [string, string, string, string][]) {
         const s = JSON.stringify(t[3])
-        it(`@${ t[0] } must resolve to http method '${t[2]}' for "${ t[1] }" with path = ${ s }`, () => {
+        it(`@${t[0]} must resolve to http method '${t[2]}' for "${t[1]}" with path = ${s}`, () => {
             simpleTest(...(t.slice(1) as [string, string, string]))
-        })        
+        })
     }
 })

@@ -4,14 +4,15 @@ import path from 'path'
 import minimist from 'minimist'
 const args = minimist(process.argv.slice(2))
 
-const target = typeof args.dev === 'string' ? args.dev : args._ && args._[0] || 'moost'
+const target =
+    typeof args.dev === 'string' ? args.dev : (args._ && args._[0]) || 'moost'
 
 const alias = {
-    'common': path.join(__dirname, '..', 'common')
+    common: path.join(__dirname, '..', 'common'),
 }
 
 const origArgs = process.argv.slice(2)
-const passIndex = origArgs.findIndex(a => a == '--') + 1
+const passIndex = origArgs.findIndex((a) => a == '--') + 1
 let toPass = []
 if (passIndex) {
     toPass = origArgs.slice(passIndex)
@@ -19,9 +20,23 @@ if (passIndex) {
 
 packages.forEach(({ name, shortName }) => {
     if (args.dev) {
-        alias[name] = path.join(__dirname, '..', 'packages', shortName, 'src', 'index.ts')
+        alias[name] = path.join(
+            __dirname,
+            '..',
+            'packages',
+            shortName,
+            'src',
+            'index.ts'
+        )
     } else {
-        alias[name] = path.join(__dirname, '..', 'packages', shortName, 'dist', 'index.mjs')
+        alias[name] = path.join(
+            __dirname,
+            '..',
+            'packages',
+            shortName,
+            'dist',
+            'index.mjs'
+        )
     }
 })
 
@@ -51,7 +66,7 @@ async function run() {
     //             [require('@babel/plugin-proposal-export-namespace-from')]
     //           ]
     //         }
-          
+
     //         if (opts.ts) {
     //           _opts.plugins.push([require('@babel/plugin-transform-typescript'), { allowDeclareFields: true }])
     //           // `unshift` because this plugin must come before `@babel/plugin-syntax-class-properties`
@@ -59,16 +74,16 @@ async function run() {
     //           _opts.plugins.push([require('@babel/plugin-proposal-class-properties'), { loose: true }])
     //           _opts.plugins.push(require('babel-plugin-parameter-decorator'))
     //         }
-          
+
     //         if (opts.legacy) {
     //           _opts.plugins.push(require('@babel/plugin-proposal-nullish-coalescing-operator'))
     //           _opts.plugins.push(require('@babel/plugin-proposal-optional-chaining'))
     //         }
-          
+
     //         if (opts.babel && Array.isArray(opts.babel.plugins)) {
     //           _opts.plugins?.push(...opts.babel.plugins)
     //         }
-          
+
     //         try {
     //           return {
     //             code: transformSync(opts.source, _opts)?.code || ''
@@ -87,21 +102,13 @@ async function run() {
     //         }
     //       }
     // })
-    await execa(
-        'npx',
-        [
-            'jiti',
-            `./explorations/${target}/`,
-            ...toPass,
-        ],
-        {
-            stdio: 'inherit',
-            env: {
-                // JITI_DEBUG: 'true',
-                JITI_ALIAS: JSON.stringify(alias),
-            }
-        }
-    )
+    await execa('npx', ['jiti', `./explorations/${target}/`, ...toPass], {
+        stdio: 'inherit',
+        env: {
+            // JITI_DEBUG: 'true',
+            JITI_ALIAS: JSON.stringify(alias),
+        },
+    })
 }
 
 run()

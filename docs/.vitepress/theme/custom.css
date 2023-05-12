@@ -11,7 +11,6 @@
 }
 
 html.dark {
-    
     --vp-sidebar-bg-color: #0a0d17;
     --vp-code-block-bg: #0a2d3e;
     --vp-c-bg: #0c111f;
@@ -32,7 +31,6 @@ html.dark {
     --vp-c-bg-elv-mute: #182955; /* menu btn */
 
     --vp-c-bg-alt: #00121a;
-
 }
 
 img.VPImage.logo {

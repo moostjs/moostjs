@@ -4,10 +4,10 @@ This package provides `serveFile` function that returns a readable stream from f
 
 Features:
 
-- Returns a readable stream
-- Prepares all the neccessary response headers (like content-length, content-type etc)
-- Can handle etag
-- Can handle ranges
+-   Returns a readable stream
+-   Prepares all the neccessary response headers (like content-length, content-type etc)
+-   Can handle etag
+-   Can handle ranges
 
 ## Install
 
@@ -50,10 +50,10 @@ app.get('static/file.txt', () => {
 
     // when true lists files in directory
     listDirectory?: boolean,
-    
+
     // put 'index.html'
-    // to automatically serve it from the folder    
-    index?: string,           
+    // to automatically serve it from the folder
+    index?: string,
 }
 ```
 

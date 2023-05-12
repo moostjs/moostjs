@@ -3,17 +3,13 @@ import { getMoostMate } from '../../metadata/moost-metadata'
 import { TFunction } from 'common'
 
 @Controller('my-path')
-class A {
-
-}
+class A {}
 
 @ImportController(() => A)
 @ImportController('path-a', () => A)
 @ImportController(A)
 @ImportController('path-a2', A)
-class B {
-
-}
+class B {}
 
 describe('controller.decorator', () => {
     const metaA = getMoostMate().read(A)
@@ -31,12 +27,16 @@ describe('controller.decorator', () => {
             expect(metaB.importController[0].typeResolver).toBeDefined()
             expect(metaB.importController[0].prefix).toBeUndefined()
             if (metaB.importController[0].typeResolver) {
-                expect((metaB.importController[0].typeResolver as TFunction)()).toBe(A)
+                expect(
+                    (metaB.importController[0].typeResolver as TFunction)()
+                ).toBe(A)
             }
             expect(metaB.importController[1].typeResolver).toBeDefined()
             expect(metaB.importController[1].prefix).toBe('path-a')
             if (metaB.importController[1].typeResolver) {
-                expect((metaB.importController[1].typeResolver as TFunction)()).toBe(A)
+                expect(
+                    (metaB.importController[1].typeResolver as TFunction)()
+                ).toBe(A)
             }
             expect(metaB.importController[2].typeResolver).toBeDefined()
             expect(metaB.importController[2].prefix).toBeUndefined()

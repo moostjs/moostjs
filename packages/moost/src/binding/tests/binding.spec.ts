@@ -1,9 +1,13 @@
 import { getInstanceOwnMethods } from '../utils'
 
 class A {
-    method1() { /** */ }
+    method1() {
+        /** */
+    }
 
-    method2() { /** */ }
+    method2() {
+        /** */
+    }
 
     prop1 = ''
 
@@ -11,13 +15,19 @@ class A {
 
     prop3?: string
 
-    prop4 = () => { /** */ }
+    prop4 = () => {
+        /** */
+    }
 }
 
 class B extends A {
-    method1() { /** */ }
+    method1() {
+        /** */
+    }
 
-    method5() { /** */ }
+    method5() {
+        /** */
+    }
 }
 
 describe('getInstanceMethods', () => {

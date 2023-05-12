@@ -6,14 +6,16 @@ See on [github](https://github.com/wooksjs/express-adapter/).
 
 ## Get Express in Wooks
 
-``` bash
+```bash
 npm install @wooksjs/express-adapter @wooksjs/event-http
 ```
 
 There are two options to use express with wooks
 
 ## 1. Adapter for express API:
+
 This one will modify express `get`, `post`, ..., methods. Take this one if you want to keep using express app API.
+
 ```ts
 import express from 'express'
 import { applyExpressAdapter } from '@wooksjs/express-adapter'
@@ -37,6 +39,7 @@ app.listen(3000, () => console.log('listening 3000'))
 ```
 
 ## 2. Adapter for WooksHttp API:
+
 This one does not modify anything. It just applies express middleware and reroutes requests through wooks. Use this one if you want to use wooks app API (compatible with [@moostjs/event-http](https://www.npmjs.com/package/@moostjs/event-http))
 
 ```ts

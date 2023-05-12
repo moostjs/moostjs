@@ -5,7 +5,9 @@ import * as eventCore from '@wooksjs/event-core'
 import * as wooksBody from '@wooksjs/http-body'
 
 jest.mock('@wooksjs/event-http')
-const mWooksComposables = wooksComposables as jest.Mocked<typeof wooksComposables>
+const mWooksComposables = wooksComposables as jest.Mocked<
+    typeof wooksComposables
+>
 jest.mock('@wooksjs/event-core')
 const mEventCore = eventCore as jest.Mocked<typeof eventCore>
 jest.mock('@wooksjs/http-body')
@@ -17,36 +19,51 @@ mWooksComposables.useHeaders.mockImplementation(() => ({
     test: 'test header value',
 }))
 
-mWooksComposables.useCookies.mockImplementation(() => ({ 
-    getCookie: (name: string) => ({ test: 'test cookie value' })[name] || null,
+mWooksComposables.useCookies.mockImplementation(() => ({
+    getCookie: (name: string) => ({ test: 'test cookie value' }[name] || null),
     rawCookies: '',
 }))
 
-mEventCore.useRouteParams.mockImplementation(() => ({
-    get: () => 'test route param',
-    params: { test: 'test route param' },
-} as ReturnType<typeof mEventCore.useRouteParams>))
+mEventCore.useRouteParams.mockImplementation(
+    () =>
+        ({
+            get: () => 'test route param',
+            params: { test: 'test route param' },
+        } as ReturnType<typeof mEventCore.useRouteParams>)
+)
 
-mWooksComposables.useSearchParams.mockImplementation(() => ({
-    jsonSearchParams: () => ({ test: 'test query value' }),
-    urlSearchParams: () => ({ get: () => 'test query value'}),
-} as unknown as ReturnType<typeof wooksComposables.useSearchParams>))
+mWooksComposables.useSearchParams.mockImplementation(
+    () =>
+        ({
+            jsonSearchParams: () => ({ test: 'test query value' }),
+            urlSearchParams: () => ({ get: () => 'test query value' }),
+        } as unknown as ReturnType<typeof wooksComposables.useSearchParams>)
+)
 
-mWooksComposables.useRequest.mockImplementation(() => ({
-    url: 'test url',
-    method: 'PUT',
-    rawRequest: 'raw request',
-    rawResponse: () => 'raw response',
-} as unknown as ReturnType<typeof wooksComposables.useRequest>))
+mWooksComposables.useRequest.mockImplementation(
+    () =>
+        ({
+            url: 'test url',
+            method: 'PUT',
+            rawRequest: 'raw request',
+            rawResponse: () => 'raw response',
+        } as unknown as ReturnType<typeof wooksComposables.useRequest>)
+)
 
-mWooksComposables.useResponse.mockImplementation(() => ({
-    rawResponse: () => 'raw response',
-} as unknown as ReturnType<typeof wooksComposables.useResponse>))
+mWooksComposables.useResponse.mockImplementation(
+    () =>
+        ({
+            rawResponse: () => 'raw response',
+        } as unknown as ReturnType<typeof wooksComposables.useResponse>)
+)
 
-mWooksBody.useBody.mockImplementation(() => ({
-    parseBody: () => 'parsed body',
-    rawBody: () => 'raw body',
-} as unknown as ReturnType<typeof mWooksBody.useBody>))
+mWooksBody.useBody.mockImplementation(
+    () =>
+        ({
+            parseBody: () => 'parsed body',
+            rawBody: () => 'raw body',
+        } as unknown as ReturnType<typeof mWooksBody.useBody>)
+)
 
 const instance = new ResolveDecoratorsTestClass()
 const meta = getMoostMate().read(instance, 'method')
@@ -56,12 +73,17 @@ describe('resolve decorators', () => {
         const i = 0
         expect(meta?.params).toBeDefined()
         if (meta?.params) {
-            expect((meta.params)[i]).toHaveProperty('resolver')
+            expect(meta.params[i]).toHaveProperty('resolver')
             if (meta.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe('resolved')
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe('resolved')
             }
         }
     })
@@ -71,11 +93,18 @@ describe('resolve decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(eventCore.useRouteParams().get('test')).toBe('test route param')
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe('test route param')
+                expect(eventCore.useRouteParams().get('test')).toBe(
+                    'test route param'
+                )
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe('test route param')
             }
         }
     })
@@ -85,10 +114,15 @@ describe('resolve decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toEqual({ test: 'test route param' })
+                expect(
+                    meta.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toEqual({ test: 'test route param' })
             }
         }
     })
@@ -98,10 +132,15 @@ describe('resolve decorators', () => {
         if (meta?.params) {
             expect((meta?.params || [])[i]).toHaveProperty('resolver')
             if (meta?.params[i].resolver) {
-                expect(meta?.params[i].resolver({
-                    methodMeta: meta,
-                    paramMeta: meta.params[i],
-                }, 'PARAM')).toBe(10)
+                expect(
+                    meta?.params[i].resolver(
+                        {
+                            methodMeta: meta,
+                            paramMeta: meta.params[i],
+                        },
+                        'PARAM'
+                    )
+                ).toBe(10)
             }
         }
     })

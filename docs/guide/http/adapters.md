@@ -8,6 +8,7 @@ This technics can be used to write wooks adapters for other web app frameworks.
 ## Create a new Wooks HTTP Context
 
 Wooks HTTP Context is a special object that stores:
+
 1. **instance of request** - is used to get data from request
 2. **instance of response** - is used to send a response
 3. **parsed route params** - usually Web App frameworks put it to `req` (`req.params`)
@@ -44,7 +45,6 @@ function requestHandler(req, res) {
     // unless you overwrite it here
     store('routeParams').value = { name: 'value' }
 }
-
 ```
 
 ## Create a responder
@@ -56,14 +56,13 @@ Responder is a function that takes any output of the request handler and transfo
 ```ts
 import { createWooksResponder, createHttpContext } from '@wooksjs/event-http'
 
-const {createResponse, respond} = createWooksResponder(
-    /*renderer, // (optional) instance of TWooksResponseRenderer*/
-    /*errorRenderer, // (optional) instance of TWooksResponseRenderer*/
-)
+const { createResponse, respond } = createWooksResponder()
+/*renderer, // (optional) instance of TWooksResponseRenderer*/
+/*errorRenderer, // (optional) instance of TWooksResponseRenderer*/
 
 async function requestHandler(req, res) {
     // 1. create wooks context
-    const {restoreCtx, clearCtx} = createHttpContext({ req, res })
+    const { restoreCtx, clearCtx } = createHttpContext({ req, res })
     // 2. process request based on routers/handlers and get the output
     const response = await processHandlers()
     // 3. restore wooks context
@@ -85,14 +84,13 @@ async function processHandlers() {
 import http from 'http' // [!code ++]
 import { createWooksResponder, createHttpContext } from '@wooksjs/event-http'
 
-const {createResponse, respond} = createWooksResponder(
-    /*renderer, // (optional) instance of TWooksResponseRenderer*/
-    /*errorRenderer, // (optional) instance of TWooksResponseRenderer*/
-)
+const { createResponse, respond } = createWooksResponder()
+/*renderer, // (optional) instance of TWooksResponseRenderer*/
+/*errorRenderer, // (optional) instance of TWooksResponseRenderer*/
 
 async function requestHandler(req, res) {
     // 1. create wooks context
-    const {restoreCtx, clearCtx} = createHttpContext({ req, res })
+    const { restoreCtx, clearCtx } = createHttpContext({ req, res })
     // 2. process request based on routers/handlers and get the output
     const response = await processHandlers()
     // 3. restore wooks context
@@ -107,6 +105,8 @@ async function processHandlers() {
     // routing, processing, handling, ...
 }
 
-const server = http.createServer(requestHandler)    // [!code ++]
-server.listen(3000, () => { console.log('Wooks Server is up on port 3000') }) // [!code ++]
+const server = http.createServer(requestHandler) // [!code ++]
+server.listen(3000, () => {
+    console.log('Wooks Server is up on port 3000')
+}) // [!code ++]
 ```

@@ -1,7 +1,14 @@
 import { attachHook } from '@wooksjs/event-core'
 import {
-    useCookies, useHeaders, useRequest, useResponse, useSearchParams,
-    useAuthorization, useStatus, useSetHeader, useSetCookie,
+    useCookies,
+    useHeaders,
+    useRequest,
+    useResponse,
+    useSearchParams,
+    useAuthorization,
+    useStatus,
+    useSetHeader,
+    useSetCookie,
 } from '@wooksjs/event-http'
 import { useBody } from '@wooksjs/http-body'
 import { Resolve } from 'moost'
@@ -11,20 +18,26 @@ import { Resolve } from 'moost'
  * @decorator
  * @paramType TStatusHook
  */
-export const StatusHook = () => Resolve((metas, level) => {
-    const hook = useStatus()
-    if (level === 'PARAM') {
-        return hook
-    }
-    if (level === 'PROP' && metas.instance && metas.key) {
-        const initialValue = metas.instance[metas.key as keyof typeof metas.instance]
-        attachHook(metas.instance, {
-            get: () => hook.value,
-            set: (v) => hook.value = v,
-        }, metas.key)
-        return typeof initialValue === 'number' ? initialValue : 200
-    }
-}, 'statusCode')
+export const StatusHook = () =>
+    Resolve((metas, level) => {
+        const hook = useStatus()
+        if (level === 'PARAM') {
+            return hook
+        }
+        if (level === 'PROP' && metas.instance && metas.key) {
+            const initialValue =
+                metas.instance[metas.key as keyof typeof metas.instance]
+            attachHook(
+                metas.instance,
+                {
+                    get: () => hook.value,
+                    set: (v) => (hook.value = v),
+                },
+                metas.key
+            )
+            return typeof initialValue === 'number' ? initialValue : 200
+        }
+    }, 'statusCode')
 
 /**
  * Hook to the Response Header
@@ -32,22 +45,26 @@ export const StatusHook = () => Resolve((metas, level) => {
  * @param name - header name
  * @paramType THeaderHook
  */
-export const HeaderHook = (name: string) => Resolve((metas, level) => {
-    const hook = useSetHeader(name)
-    if (level === 'PARAM') {
-        return hook
-    }
-    if (level === 'PROP' && metas.instance && metas.key) {
-        const initialValue = metas.instance[metas.key as keyof typeof metas.instance]
-        attachHook(metas.instance, {
-            get: () => hook.value,
-            set: (v) => hook.value = v,
-        }, metas.key)
-        return typeof initialValue === 'string' ? initialValue : ''
-    }
-},
-name,
-)
+export const HeaderHook = (name: string) =>
+    Resolve((metas, level) => {
+        const hook = useSetHeader(name)
+        if (level === 'PARAM') {
+            return hook
+        }
+        if (level === 'PROP' && metas.instance && metas.key) {
+            const initialValue =
+                metas.instance[metas.key as keyof typeof metas.instance]
+            attachHook(
+                metas.instance,
+                {
+                    get: () => hook.value,
+                    set: (v) => (hook.value = v),
+                },
+                metas.key
+            )
+            return typeof initialValue === 'string' ? initialValue : ''
+        }
+    }, name)
 
 /**
  * Hook to the Response Cookie
@@ -55,22 +72,26 @@ name,
  * @param name - cookie name
  * @paramType TCookieHook
  */
-export const CookieHook = (name: string) => Resolve((metas, level) => {
-    const hook = useSetCookie(name)
-    if (level === 'PARAM') {
-        return hook
-    }
-    if (level === 'PROP' && metas.instance && metas.key) {
-        const initialValue = metas.instance[metas.key as keyof typeof metas.instance]
-        attachHook(metas.instance, {
-            get: () => hook.value,
-            set: (v) => hook.value = v,
-        }, metas.key)
-        return typeof initialValue === 'string' ? initialValue : ''
-    }
-},
-name,
-)
+export const CookieHook = (name: string) =>
+    Resolve((metas, level) => {
+        const hook = useSetCookie(name)
+        if (level === 'PARAM') {
+            return hook
+        }
+        if (level === 'PROP' && metas.instance && metas.key) {
+            const initialValue =
+                metas.instance[metas.key as keyof typeof metas.instance]
+            attachHook(
+                metas.instance,
+                {
+                    get: () => hook.value,
+                    set: (v) => (hook.value = v),
+                },
+                metas.key
+            )
+            return typeof initialValue === 'string' ? initialValue : ''
+        }
+    }, name)
 
 /**
  * Hook to the Response Cookie Attributes
@@ -78,25 +99,32 @@ name,
  * @param name - cookie name
  * @paramType TCookieHook
  */
-export const CookieAttrsHook = (name: string) => Resolve((metas, level) => {
-    const hook = useSetCookie(name)
-    if (level === 'PARAM') {
-        return attachHook({}, {
-            get: () => hook.attrs,
-            set: (v) => hook.attrs = v,
-        })
-    }
-    if (level === 'PROP' && metas.instance && metas.key) {
-        const initialValue = metas.instance[metas.key as keyof typeof metas.instance]
-        attachHook(metas.instance, {
-            get: () => hook.attrs,
-            set: (v) => hook.attrs = v,
-        }, metas.key)
-        return typeof initialValue === 'object' ? initialValue : {}
-    }
-},
-name,
-)
+export const CookieAttrsHook = (name: string) =>
+    Resolve((metas, level) => {
+        const hook = useSetCookie(name)
+        if (level === 'PARAM') {
+            return attachHook(
+                {},
+                {
+                    get: () => hook.attrs,
+                    set: (v) => (hook.attrs = v),
+                }
+            )
+        }
+        if (level === 'PROP' && metas.instance && metas.key) {
+            const initialValue =
+                metas.instance[metas.key as keyof typeof metas.instance]
+            attachHook(
+                metas.instance,
+                {
+                    get: () => hook.attrs,
+                    set: (v) => (hook.attrs = v),
+                },
+                metas.key
+            )
+            return typeof initialValue === 'object' ? initialValue : {}
+        }
+    }, name)
 
 /**
  * Parse Authorisation Header
@@ -104,14 +132,20 @@ name,
  * @param name - define what to take from the Auth header
  * @paramType string
  */
-export function Authorization(name: 'username' | 'password' | 'bearer' | 'raw' | 'type') {
+export function Authorization(
+    name: 'username' | 'password' | 'bearer' | 'raw' | 'type'
+) {
     return Resolve(() => {
         const auth = useAuthorization()
         switch (name) {
             case 'username':
-                return auth.isBasic() ? auth.basicCredentials()?.username : undefined
+                return auth.isBasic()
+                    ? auth.basicCredentials()?.username
+                    : undefined
             case 'password':
-                return auth.isBasic() ? auth.basicCredentials()?.password : undefined
+                return auth.isBasic()
+                    ? auth.basicCredentials()?.password
+                    : undefined
             case 'bearer':
                 return auth.isBearer() ? auth.authorization : undefined
             case 'raw':
@@ -157,7 +191,7 @@ export function Query(name?: string): ParameterDecorator {
         if (name) {
             const p = urlSearchParams()
             const value = p.get(name)
-            return value === '' && p.has(name) || value
+            return (value === '' && p.has(name)) || value
         }
         const json = jsonSearchParams() as object
         return Object.keys(json).length ? json : null

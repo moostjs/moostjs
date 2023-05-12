@@ -1,9 +1,17 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { Dto, IsArray, IsBoolean, IsNumber, IsString, IsTypeOf, Validate } from '../validate.decorator'
+import {
+    Dto,
+    IsArray,
+    IsBoolean,
+    IsNumber,
+    IsString,
+    IsTypeOf,
+    Validate,
+} from '../validate.decorator'
 
 @Dto()
 export class ValidateDecoratorTestClass {
-    @Validate(({ value }) => value === 'value' || 'expected value' )
+    @Validate(({ value }) => value === 'value' || 'expected value')
     prop: string = ''
 }
 
@@ -48,12 +56,21 @@ export class ValidateDecoratorTestArrayClass {
     prop: string[] = []
 
     @IsArray({
-        itemValidators: () => [ IsString() ],
+        itemValidators: () => [IsString()],
     })
     propStr: string[] = []
 
     @IsArray({
-        itemType: (_item, index) => index === 0 ? ValidateDecoratorTestNumberClass : ValidateDecoratorTestBooleanClass,
+        itemType: (_item, index) =>
+            index === 0
+                ? ValidateDecoratorTestNumberClass
+                : ValidateDecoratorTestBooleanClass,
     })
-    propTuple: [ValidateDecoratorTestNumberClass, ValidateDecoratorTestBooleanClass] = [new ValidateDecoratorTestNumberClass(), new ValidateDecoratorTestBooleanClass()]
+    propTuple: [
+        ValidateDecoratorTestNumberClass,
+        ValidateDecoratorTestBooleanClass
+    ] = [
+        new ValidateDecoratorTestNumberClass(),
+        new ValidateDecoratorTestBooleanClass(),
+    ]
 }

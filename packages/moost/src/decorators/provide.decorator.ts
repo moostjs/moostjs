@@ -7,8 +7,11 @@ import { TClassConstructor } from 'common'
  * @param type - string or class constructor
  * @param fn - factory function for provided value
  */
-export function Provide(type: string | TClassConstructor, fn: TProvideFn): ClassDecorator {
-    return getMoostMate().decorate(meta => {
+export function Provide(
+    type: string | TClassConstructor,
+    fn: TProvideFn
+): ClassDecorator {
+    return getMoostMate().decorate((meta) => {
         meta.provide = meta.provide || {}
         Object.assign(meta.provide, createProvideRegistry([type, fn]))
         return meta

@@ -3,7 +3,9 @@ import { TDecoratorLevel } from '../decorators/types'
 import { TPipeFn, TPipeMetas, TPipePriority } from './types'
 
 export const resolvePipe: TPipeFn = (_value, metas, level) => {
-    let resolver: ((metas: TPipeMetas<TAny>, level: TDecoratorLevel) => unknown) | undefined
+    let resolver:
+        | ((metas: TPipeMetas<TAny>, level: TDecoratorLevel) => unknown)
+        | undefined
     if (level === 'PARAM') {
         resolver = metas.paramMeta?.resolver
     } else if (level === 'PROP') {

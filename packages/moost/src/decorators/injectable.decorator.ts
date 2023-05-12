@@ -8,7 +8,9 @@ import { getMoostMate, TInjectableScope } from '../metadata/moost-metadata'
  * SINGLETON | true - will create a new instance only once
  * @param label - field label
  */
-export function Injectable(scope: true | TInjectableScope = true): ClassDecorator {
+export function Injectable(
+    scope: true | TInjectableScope = true
+): ClassDecorator {
     return getMoostMate().decorate('injectable', scope)
 }
 

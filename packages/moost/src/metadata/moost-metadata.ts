@@ -1,4 +1,7 @@
-import { TInterceptorFn, TInterceptorPriority } from '../decorators/intercept.decorator'
+import {
+    TInterceptorFn,
+    TInterceptorPriority,
+} from '../decorators/intercept.decorator'
 import { Mate } from '@prostojs/mate'
 import { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
 import { TProvideRegistry } from '@prostojs/infact'
@@ -12,6 +15,7 @@ const METADATA_WORKSPACE = 'moost'
 interface TCommonMetaFields {
     id?: string
     label?: string
+    description?: string
     optional?: boolean
     required?: boolean
 }
@@ -46,12 +50,17 @@ export interface TMoostMetadata extends TCommonMetaFields, TCommonMoostMeta {
     }
     importController?: {
         prefix?: string
-        typeResolver?: TClassConstructor | (() => TClassConstructor | TObject | Promise<TClassConstructor | TObject>)
+        typeResolver?:
+            | TClassConstructor
+            | (() =>
+                  | TClassConstructor
+                  | TObject
+                  | Promise<TClassConstructor | TObject>)
         provide?: TProvideRegistry
     }[]
-    properties?: (string | symbol)[],
+    properties?: (string | symbol)[]
     injectable?: true | TInjectableScope
-    interceptors?: TInterceptorData[],
+    interceptors?: TInterceptorData[]
     handlers?: TMoostHandler<TAny>[]
     provide?: TProvideRegistry
 }
@@ -61,13 +70,19 @@ export interface TInterceptorData {
     priority: TInterceptorPriority
 }
 
-export interface TMoostParamsMetadata extends TCommonMetaFields, TCommonMoostMeta {
+export interface TMoostParamsMetadata
+    extends TCommonMetaFields,
+        TCommonMoostMeta {
     circular?: () => TAny
     inject?: string | symbol | TClassConstructor
     nullable?: boolean
 }
 
-const moostMate = new Mate<TMoostMetadata, TMoostMetadata, TMoostMetadata & TMoostParamsMetadata>(METADATA_WORKSPACE, {
+const moostMate = new Mate<
+    TMoostMetadata,
+    TMoostMetadata,
+    TMoostMetadata & TMoostParamsMetadata
+>(METADATA_WORKSPACE, {
     readType: true,
     readReturnType: true,
     collectPropKeys: true,
@@ -76,12 +91,22 @@ const moostMate = new Mate<TMoostMetadata, TMoostMetadata, TMoostMetadata & TMoo
             return !!classMeta?.inherit
         }
         if (level === 'PROP') {
-            return !!targetMeta?.inherit || !!(classMeta?.inherit && !targetMeta)
+            return (
+                !!targetMeta?.inherit || !!(classMeta?.inherit && !targetMeta)
+            )
         }
         return !!targetMeta?.inherit
     },
 })
 
-export function getMoostMate<Class extends TObject = TEmpty, Prop extends TObject = TEmpty, Param extends TObject = TEmpty>() {
-    return moostMate as Mate<TMoostMetadata & Class, TMoostMetadata & Prop, TMoostMetadata & TMoostParamsMetadata & Param>
+export function getMoostMate<
+    Class extends TObject = TEmpty,
+    Prop extends TObject = TEmpty,
+    Param extends TObject = TEmpty
+>() {
+    return moostMate as Mate<
+        TMoostMetadata & Class,
+        TMoostMetadata & Prop,
+        TMoostMetadata & TMoostParamsMetadata & Param
+    >
 }

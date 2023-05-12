@@ -1,20 +1,20 @@
 {
-  "extends": "../../api-extractor.json",
-  "mainEntryPointFilePath": "./dist/packages/event-http/src/index.d.ts",
-  "dtsRollup": {
-    "publicTrimmedFilePath": "./dist/index.d.ts"
-  },
-  "compiler": {
-    "overrideTsconfig": {
-      "compilerOptions": {
-        "paths": {
-          "common": ["packages/event-http/dist/common"]
+    "extends": "../../api-extractor.json",
+    "mainEntryPointFilePath": "./dist/packages/event-http/src/index.d.ts",
+    "dtsRollup": {
+        "publicTrimmedFilePath": "./dist/index.d.ts"
+    },
+    "compiler": {
+        "overrideTsconfig": {
+            "compilerOptions": {
+                "paths": {
+                    "common": ["packages/event-http/dist/common"]
+                }
+            },
+            "include": [
+                "packages/event-http/dist/packages",
+                "packages/event-http/dist/common"
+            ]
         }
-      },         
-      "include": [
-        "packages/event-http/dist/packages",
-        "packages/event-http/dist/common"
-      ]
     }
-  }
 }

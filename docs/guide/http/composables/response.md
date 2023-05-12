@@ -12,6 +12,7 @@ change those headers yourself when needed.
 ## Plain Response
 
 The easiest way to respond to the request is to return some value from handler function like this:
+
 ```js
 app.get('string_response', () => {
     return 'hello world!'
@@ -39,9 +40,10 @@ app.get('json_response', () => {
 ```
 
 **Supported response types:**
-1. `string`   (text/plain, text/html, application/xml - depending on the content)
+
+1. `string` (text/plain, text/html, application/xml - depending on the content)
 2. `object/array` (application/json)
-3. `boolean`  (text/plain)
+3. `boolean` (text/plain)
 4. `readable stream` (you must specify `Content-Type` and `Content-Length` headers yourself)
 5. `fetch` (native) response (streaming body to client response)
 
@@ -52,6 +54,7 @@ If you want to take the full control of the response, use composable function `u
 When you get a raw response instance you take away the control of the response on yourself. The framework will not process the output of the handler in this case.
 
 An example of using raw response instance:
+
 ```js
 import { useResponse } from '@wooksjs/event-http'
 
@@ -73,7 +76,7 @@ import { useResponse } from '@wooksjs/event-http'
 app.get('test', () => {
     const { rawResponse } = useResponse()
     const res = rawResponse({
-        passthrough: true  // [!code hl]
+        passthrough: true, // [!code hl]
     })
     return 'ok'
 })
@@ -93,11 +96,11 @@ import { useSetHeaders } from '@wooksjs/event-http'
 
 app.get('test', async () => {
     const {
-        setHeader,      // sets header: (name: string, value: string | number) => void;
-        removeHeader,   // removes header: (name: string) => void;
+        setHeader, // sets header: (name: string, value: string | number) => void;
+        removeHeader, // removes header: (name: string) => void;
         setContentType, // sets "Content-Type": (value: string) => void;
-        headers,        // Object with response headers: Record<string, string>;
-        enableCors,     // sets "Access-Control-Allow-Origin": (origin?: string) => void;
+        headers, // Object with response headers: Record<string, string>;
+        enableCors, // sets "Access-Control-Allow-Origin": (origin?: string) => void;
     } = useSetHeaders()
 
     setContentType('application/json')
@@ -131,20 +134,20 @@ additional cookie attributes used for. If it's not the case please see [RFC6265]
 import { useSetCookies } from '@wooksjs/event-http'
 app.get('test', async () => {
     const {
-        setCookie,      // sets cookie : (name: string, value: string, attrs?) => void;
-        removeCookie,   // removes cookie from setlist : (name: string) => void;
-        clearCookies,   // removes all the cookies from setlist : () => void;
-        cookies,        // returns a value of Set-Cookie header: () => string[];
+        setCookie, // sets cookie : (name: string, value: string, attrs?) => void;
+        removeCookie, // removes cookie from setlist : (name: string) => void;
+        clearCookies, // removes all the cookies from setlist : () => void;
+        cookies, // returns a value of Set-Cookie header: () => string[];
     } = useSetCookies()
 
     setCookie('session', 'value', {
-        expires: '2029-01-01',  // Date | string | number;
-        maxAge:  '1h',          // number | TProstoTimeMultiString;
-        domain:  'my-domain',   // string;
-        path:    '/home',       // string;
-        secure:   true,         // boolean;
-        httpOnly: false,        // boolean;
-        sameSite: true,         // boolean | 'Lax' | 'None' | 'Strict';
+        expires: '2029-01-01', // Date | string | number;
+        maxAge: '1h', // number | TProstoTimeMultiString;
+        domain: 'my-domain', // string;
+        path: '/home', // string;
+        secure: true, // boolean;
+        httpOnly: false, // boolean;
+        sameSite: true, // boolean | 'Lax' | 'None' | 'Strict';
     })
 })
 ```
@@ -157,13 +160,13 @@ app.get('test', async () => {
     const session = useSetCookie('session')
     session.value = 'value'
     session.attrs = {
-        expires: '2029-01-01',  // Date | string | number;
-        maxAge:  '1h',          // number | TProstoTimeMultiString;
-        domain:  'my-domain',   // string;
-        path:    '/home',       // string;
-        secure:   true,         // boolean;
-        httpOnly: false,        // boolean;
-        sameSite: true,         // boolean | 'Lax' | 'None' | 'Strict';        
+        expires: '2029-01-01', // Date | string | number;
+        maxAge: '1h', // number | TProstoTimeMultiString;
+        domain: 'my-domain', // string;
+        path: '/home', // string;
+        secure: true, // boolean;
+        httpOnly: false, // boolean;
+        sameSite: true, // boolean | 'Lax' | 'None' | 'Strict';
     }
 })
 ```
@@ -201,11 +204,11 @@ If you don't know what Cache-Control is and what it is used for, please read [RF
 ```js
 import { useSetCacheControl } from '@wooksjs/event-http'
 app.get('static/*', () => {
-    const { 
-        setAge,             // sets Age (v: number | TProstoTimeMultiString) => void
-        setExpires,         // sets Expires (v: Date | string | number) => void
-        setPragmaNoCache,   // sets Pragma: no-cache (v: boolean) => void
-        setCacheControl,    // sets Cache-Control (data: TCacheControl) => void
+    const {
+        setAge, // sets Age (v: number | TProstoTimeMultiString) => void
+        setExpires, // sets Expires (v: Date | string | number) => void
+        setPragmaNoCache, // sets Pragma: no-cache (v: boolean) => void
+        setCacheControl, // sets Cache-Control (data: TCacheControl) => void
     } = useSetCacheControl()
 
     setAge('2h 15m')
@@ -232,12 +235,8 @@ Some advanced out-of-the-box proxy is implemented in a separate package `@wooksj
 
 See more details [here](../proxy.md)
 
-
 ## Serve Static
 
 Implementation of static files server is isolated into a separate package `@wooksjs/http-static`
 
 See more details [here](../static.md)
-
-
-

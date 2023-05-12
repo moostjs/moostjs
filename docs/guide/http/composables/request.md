@@ -34,25 +34,22 @@ URI Parameters are parsed by the router and covered in [this](../routing.md#retr
 
 Composable `useSearchParams` provides three functions:
 
-- `urlSearchParams()` — an instance of `WooksURLSearchParams` that extends standard `URLSearchParams` with `toJson` method that returns json object of query params
-- `jsonSearchParams()` — is a shortcut to `urlSearchParams().toJson()`
-- `rawSearchParams()` — is raw search param string like `?param1=value&...`
+-   `urlSearchParams()` — an instance of `WooksURLSearchParams` that extends standard `URLSearchParams` with `toJson` method that returns json object of query params
+-   `jsonSearchParams()` — is a shortcut to `urlSearchParams().toJson()`
+-   `rawSearchParams()` — is raw search param string like `?param1=value&...`
 
 ```js
 import { useSearchParams } from '@wooksjs/event-http'
 
 app.get('hello', () => {
-    const {
-        urlSearchParams,
-        jsonSearchParams,
-        rawSearchParams,
-    } = useSearchParams()
+    const { urlSearchParams, jsonSearchParams, rawSearchParams } =
+        useSearchParams()
 
     // curl http://localhost:3000/hello?name=World
     console.log(jsonSearchParams()) // { name: 'World' }
-    console.log(rawSearchParams())  // ?name=World
+    console.log(rawSearchParams()) // ?name=World
 
-    return `Hello ${ urlSearchParams().get('name') }!`
+    return `Hello ${urlSearchParams().get('name')}!`
 })
 ```
 
@@ -61,18 +58,18 @@ curl http://localhost:3000/hello?name=World
 # Hello World!
 ```
 
-
 ## Method and Headers
+
 `useRequest` provides some more shortcuts for useful data
 
 ```js
 import { useRequest } from '@wooksjs/event-http'
 app.get('test', async () => {
-    const { 
-        url,        // request url      (string) 
-        method,     // request method   (string)
-        headers,    // request headers  (object)
-        rawBody,    // request body     ((): Promise<Buffer>)
+    const {
+        url, // request url      (string)
+        method, // request method   (string)
+        headers, // request headers  (object)
+        rawBody, // request body     ((): Promise<Buffer>)
     } = useRequest()
 
     const body = await rawBody() // body as a Buffer
@@ -87,9 +84,9 @@ Cookies are not parsed unless requested. Composable function `useCookies` provid
 import { useCookies } from '@wooksjs/event-http'
 
 app.get('test', async () => {
-    const { 
+    const {
         rawCookies, // "cookie" from headers (string | undefined)
-        getCookie,  // cookie getter ((name): string | null)
+        getCookie, // cookie getter ((name): string | null)
     } = useCookies()
 
     console.log(getCookie('session'))
@@ -105,12 +102,12 @@ app.get('test', async () => {
 import { useAuthorization } from '@wooksjs/event-http'
 app.get('test', async () => {
     const {
-        authorization,      // the raw value of "authorization" header : string
-        authType,           // the auth type (Bearer/Basic) : string
+        authorization, // the raw value of "authorization" header : string
+        authType, // the auth type (Bearer/Basic) : string
         authRawCredentials, // the auth credentials that follow auth type : string
-        isBasic,            // true if authType === 'Basic' : () => boolean
-        isBearer,           // true if authType === 'Bearer' : () => boolean
-        basicCredentials,   // parsed basic auth credentials : () => { username: string, password: string }
+        isBasic, // true if authType === 'Basic' : () => boolean
+        isBearer, // true if authType === 'Bearer' : () => boolean
+        basicCredentials, // parsed basic auth credentials : () => { username: string, password: string }
     } = useAuthorization()
 
     if (isBasic()) {

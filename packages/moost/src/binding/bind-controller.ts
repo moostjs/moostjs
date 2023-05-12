@@ -33,16 +33,25 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
     const fakeInstance = Object.create(classConstructor.prototype) as TObject
     const methods = getInstanceOwnMethods(fakeInstance)
     const mate = getMoostMate()
-    const meta = mate.read(classConstructor) || {} as TMoostMetadata
-    const ownPrefix = typeof opts.replaceOwnPrefix === 'string' ? opts.replaceOwnPrefix : (meta.controller?.prefix || '')
-    const prefix = `${opts.globalPrefix}/${ ownPrefix }`
+    const meta = mate.read(classConstructor) || ({} as TMoostMetadata)
+    const ownPrefix =
+        typeof opts.replaceOwnPrefix === 'string'
+            ? opts.replaceOwnPrefix
+            : meta.controller?.prefix || ''
+    const prefix = `${opts.globalPrefix}/${ownPrefix}`
     for (const method of methods) {
         const methodMeta = getMoostMate().read(fakeInstance, method) || {}
         if (!methodMeta.handlers || !methodMeta.handlers.length) continue
 
-        const pipes = [...(opts.pipes || []), ...(methodMeta.pipes || [])].sort((a, b) => a.priority - b.priority)
+        const pipes = [...(opts.pipes || []), ...(methodMeta.pipes || [])].sort(
+            (a, b) => a.priority - b.priority
+        )
         // preparing interceptors
-        const interceptors = [...(opts.interceptors || []), ...(meta.interceptors || []), ...(methodMeta.interceptors || [])].sort((a, b) => a.priority - b.priority)
+        const interceptors = [
+            ...(opts.interceptors || []),
+            ...(meta.interceptors || []),
+            ...(methodMeta.interceptors || []),
+        ].sort((a, b) => a.priority - b.priority)
         const getIterceptorHandler = () => {
             const interceptorHandlers: TInterceptorFn[] = []
             for (const { handler } of interceptors) {
@@ -52,7 +61,15 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                         const { restoreCtx } = useEventContext()
                         const targetInstance = await getInstance()
                         restoreCtx()
-                        return (await getCallableFn(targetInstance, handler, restoreCtx, pipes, options.logger))(...args)
+                        return (
+                            await getCallableFn(
+                                targetInstance,
+                                handler,
+                                restoreCtx,
+                                pipes,
+                                options.logger
+                            )
+                        )(...args)
                     })
                 } else {
                     interceptorHandlers.push(handler as TInterceptorFn)
@@ -69,7 +86,9 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
         for (const p of methodMeta.params || []) {
             argsPipes.push({
                 meta: p,
-                pipes: [...pipes, ...(p.pipes || [])].sort((a, b) => a.priority - b.priority),
+                pipes: [...pipes, ...(p.pipes || [])].sort(
+                    (a, b) => a.priority - b.priority
+                ),
             })
         }
 
@@ -78,13 +97,19 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             const { restoreCtx } = useEventContext()
             for (let i = 0; i < argsPipes.length; i++) {
                 const { pipes, meta: paramMeta } = argsPipes[i]
-                args[i] = await runPipes(pipes, undefined, {
-                    classMeta: meta,
-                    methodMeta,
-                    paramMeta,
-                }, 'PARAM', restoreCtx)
+                args[i] = await runPipes(
+                    pipes,
+                    undefined,
+                    {
+                        classMeta: meta,
+                        methodMeta,
+                        paramMeta,
+                    },
+                    'PARAM',
+                    restoreCtx
+                )
             }
-            return args           
+            return args
         }
 
         // preparing provide
@@ -104,7 +129,14 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                 handlers: methodMeta.handlers,
                 getIterceptorHandler,
                 resolveArgs,
-                logHandler: (eventName: string) => options.logger.info(`• ${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${classConstructor.name}.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`),
+                logHandler: (eventName: string) =>
+                    options.logger.info(
+                        `• ${eventName} ${
+                            __DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__
+                        }→ ${classConstructor.name}.${__DYE_CYAN__}${
+                            method as string
+                        }${__DYE_GREEN__}()`
+                    ),
             })
         }
     }

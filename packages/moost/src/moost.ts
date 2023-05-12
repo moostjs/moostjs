@@ -4,7 +4,11 @@ import { getMoostMate, TInterceptorData } from './metadata'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
 import { TPipeData, TPipeFn, TPipePriority } from './pipes/types'
 import { TAny, TClassConstructor, TFunction, TObject } from 'common'
-import { createProvideRegistry, Infact, TProvideRegistry } from '@prostojs/infact'
+import {
+    createProvideRegistry,
+    Infact,
+    TProvideRegistry,
+} from '@prostojs/infact'
 import { getMoostInfact } from './metadata/infact'
 import { sharedPipes } from './pipes/shared-pipes'
 import { Valido } from '@prostojs/valido'
@@ -31,7 +35,7 @@ export class Moost {
     protected provide: TProvideRegistry = createProvideRegistry(
         [Infact, getMoostInfact],
         [Mate, getMoostMate],
-        [Valido, getMoostValido],
+        [Valido, getMoostValido]
     )
 
     protected unregisteredControllers: (TObject | TFunction)[] = []
@@ -60,7 +64,12 @@ export class Moost {
         for (const a of this.adapters) {
             const constructor = getConstructor(a)
             if (constructor) {
-                this.setProvideRegistry(createProvideRegistry([constructor as TClassConstructor, () => a]))
+                this.setProvideRegistry(
+                    createProvideRegistry([
+                        constructor as TClassConstructor,
+                        () => a,
+                    ])
+                )
             }
             if (typeof a.getProvideRegistry === 'function') {
                 this.setProvideRegistry(a.getProvideRegistry())
@@ -80,39 +89,64 @@ export class Moost {
         const thisMeta = meta.read(this)
         const provide = { ...(thisMeta?.provide || {}), ...this.provide }
         for (const controller of this.unregisteredControllers) {
-            await this.bindController(controller, provide, this.options?.globalPrefix || '')
+            await this.bindController(
+                controller,
+                provide,
+                this.options?.globalPrefix || ''
+            )
         }
         this.unregisteredControllers = []
     }
 
-    protected async bindController(controller: TFunction | TObject, provide: TProvideRegistry, globalPrefix: string, replaceOwnPrefix?: string) {
+    protected async bindController(
+        controller: TFunction | TObject,
+        provide: TProvideRegistry,
+        globalPrefix: string,
+        replaceOwnPrefix?: string
+    ) {
         const mate = getMoostMate()
         const classMeta = mate.read(controller)
         const infact = getMoostInfact()
         const isControllerConsructor = isConstructor(controller)
 
-        const pipes = [...this.pipes, ...(classMeta?.pipes || [])].sort((a, b) => a.priority - b.priority)
+        const pipes = [...this.pipes, ...(classMeta?.pipes || [])].sort(
+            (a, b) => a.priority - b.priority
+        )
         let instance: TObject | undefined
         const infactOpts = { provide, customData: { pipes } }
-        if (isControllerConsructor && (classMeta?.injectable === 'SINGLETON' || classMeta?.injectable === true)) {
-            instance = await infact.get(controller as TClassConstructor<TAny>, infactOpts) as Promise<TObject>
+        if (
+            isControllerConsructor &&
+            (classMeta?.injectable === 'SINGLETON' ||
+                classMeta?.injectable === true)
+        ) {
+            instance = (await infact.get(
+                controller as TClassConstructor<TAny>,
+                infactOpts
+            )) as Promise<TObject>
         } else if (!isControllerConsructor) {
             instance = controller
             infact.setProvideRegByInstance(instance, provide)
         }
 
         // getInstance - instance factory for resolving SINGLETON and FOR_EVENT instance
-        const getInstance = instance ? () => Promise.resolve(instance as TObject) : async (): Promise<TObject> => {
-            // if (!instance) {
-            infact.silent(true)
-            const { restoreCtx } = useEventContext()
-            const instance = await infact.get(controller as TClassConstructor<TAny>, { ...infactOpts, syncContextFn: restoreCtx }) as Promise<TObject>
-            infact.silent(false)
-            // }
-            return instance
-        }
+        const getInstance = instance
+            ? () => Promise.resolve(instance as TObject)
+            : async (): Promise<TObject> => {
+                  // if (!instance) {
+                  infact.silent(true)
+                  const { restoreCtx } = useEventContext()
+                  const instance = (await infact.get(
+                      controller as TClassConstructor<TAny>,
+                      { ...infactOpts, syncContextFn: restoreCtx }
+                  )) as Promise<TObject>
+                  infact.silent(false)
+                  // }
+                  return instance
+              }
 
-        const classConstructor = isConstructor(controller) ? controller : getConstructor(controller) as TClassConstructor
+        const classConstructor = isConstructor(controller)
+            ? controller
+            : (getConstructor(controller) as TClassConstructor)
         await bindControllerMethods({
             getInstance,
             classConstructor,
@@ -125,18 +159,27 @@ export class Moost {
             logger: this.logger,
         })
         if (classMeta && classMeta.importController) {
-            const prefix = typeof replaceOwnPrefix === 'string' ? replaceOwnPrefix : classMeta?.controller?.prefix
-            const mergedProvide = {...provide, ...(classMeta?.provide || {})}                
+            const prefix =
+                typeof replaceOwnPrefix === 'string'
+                    ? replaceOwnPrefix
+                    : classMeta?.controller?.prefix
+            const mergedProvide = { ...provide, ...(classMeta?.provide || {}) }
             for (const ic of classMeta.importController) {
                 if (ic.typeResolver) {
                     const isConstr = isConstructor(ic.typeResolver)
                     const isFunc = typeof ic.typeResolver === 'function'
                     await this.bindController(
                         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-                        isConstr ? ic.typeResolver : isFunc ? await (ic.typeResolver as TFunction)() : ic.typeResolver,
-                        ic.provide ? { ...mergedProvide, ...ic.provide } : mergedProvide,
-                        `${globalPrefix}/${(prefix || '')}`,
-                        ic.prefix,
+                        isConstr
+                            ? ic.typeResolver
+                            : isFunc
+                            ? await (ic.typeResolver as TFunction)()
+                            : ic.typeResolver,
+                        ic.provide
+                            ? { ...mergedProvide, ...ic.provide }
+                            : mergedProvide,
+                        `${globalPrefix}/${prefix || ''}`,
+                        ic.prefix
                     )
                 }
             }
@@ -148,7 +191,10 @@ export class Moost {
             if (typeof item === 'function') {
                 this.pipes.push({
                     handler: item,
-                    priority: typeof item.priority === 'number' ? item.priority : TPipePriority.TRANSFORM,
+                    priority:
+                        typeof item.priority === 'number'
+                            ? item.priority
+                            : TPipePriority.TRANSFORM,
                 })
             } else {
                 this.pipes.push({
@@ -160,12 +206,18 @@ export class Moost {
         return this
     }
 
-    applyGlobalInterceptors(...items: (TInterceptorData['handler'] | TInterceptorData)[]) {
+    applyGlobalInterceptors(
+        ...items: (TInterceptorData['handler'] | TInterceptorData)[]
+    ) {
         for (const item of items) {
             if (typeof item === 'function') {
                 this.interceptors.push({
                     handler: item,
-                    priority: typeof (item as TInterceptorFn).priority === 'number' ? (item as TInterceptorFn).priority as TInterceptorPriority : TInterceptorPriority.INTERCEPTOR,
+                    priority:
+                        typeof (item as TInterceptorFn).priority === 'number'
+                            ? ((item as TInterceptorFn)
+                                  .priority as TInterceptorPriority)
+                            : TInterceptorPriority.INTERCEPTOR,
                 })
             } else {
                 this.interceptors.push({
@@ -176,21 +228,21 @@ export class Moost {
         }
         return this
     }
-    
+
     /**
      * Register new entried to provide as dependency injections
      * @param provide - Provide Registry (use createProvideRegistry from '\@prostojs/infact')
-     * @returns 
+     * @returns
      */
     setProvideRegistry(provide: TProvideRegistry) {
-        this.provide = {...this.provide, ...provide}
+        this.provide = { ...this.provide, ...provide }
         return this
     }
 
     /**
      * Register controllers (similar to @ImportController decorator)
      * @param controllers - list of target controllers (instances)
-     * @returns 
+     * @returns
      */
     public registerControllers(...controllers: (TObject | TFunction)[]) {
         this.unregisteredControllers.push(...controllers)

@@ -12,12 +12,14 @@
 Moost is a Metadata driven Web App Framework inspired by [nestjs](https://nestjs.com/) and powered by [wooks](https://github.com/wooksjs/wooks).
 
 The main ideas behind Moost are:
+
 1. Use the power of TS decorators to describe your app
 2. Use the power of [wooks](https://github.com/wooksjs/wooks) to process events
 3. Make it easier to control dependency injections
 4. Use as less external dependencies as possible
 
 What's the difference to [nestjs](https://nestjs.com/)?
+
 1. It does not use additional `modules` abstraction
 2. It utilizes reusable dependency injection framework [@prostojs/infact](https://github.com/prostojs/infact)
 3. It uses metadata layer powered by [@prostojs/mate](https://github.com/prostojs/mate)
@@ -36,13 +38,15 @@ import { Moost, Param } from 'moost'
 class MyServer extends Moost {
     @Get('test/:name')
     test(@Param('name') name: string) {
-        return { message: `Hello ${ name }!` }
+        return { message: `Hello ${name}!` }
     }
 }
 
 const app = new MyServer()
 const http = new MoostHttp()
-app.adapter(http).listen(3000, () => { console.log('Up on port 3000') })
+app.adapter(http).listen(3000, () => {
+    console.log('Up on port 3000')
+})
 app.init()
 // curl http://localhost:3000/test/World
 // {"message":"Hello World!"}

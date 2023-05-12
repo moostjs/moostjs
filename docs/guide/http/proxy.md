@@ -33,7 +33,6 @@ app.get('/to-proxy', () => {
         reqCookies: { block: '*' }, // block all req cookies
     })
 })
-
 ```
 
 ## Change Response
@@ -48,7 +47,6 @@ app.get('/to-proxy', async () => {
     const data = { ...(await response.json()), newField: 'new value' }
     return data
 })
-
 ```
 
 ## Advanced Options

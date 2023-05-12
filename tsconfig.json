@@ -4,13 +4,8 @@
         "outDir": "dist",
         "moduleResolution": "node",
         "esModuleInterop": true,
-        "target": "es2015", 
-        "lib": [
-            "ESNext",
-            "DOM",
-            "WebWorker",
-            "DOM.Iterable"
-        ],
+        "target": "es2015",
+        "lib": ["ESNext", "DOM", "WebWorker", "DOM.Iterable"],
         "noUnusedLocals": true,
         "types": ["jest", "node"],
         "declaration": true,
@@ -24,15 +19,15 @@
         "experimentalDecorators": true,
         "removeComments": false,
         "paths": {
-          "@moostjs/*": ["packages/*/src"],
-          "moost": ["packages/moost/src"],
-          "common": ["common/index"]
+            "@moostjs/*": ["packages/*/src"],
+            "moost": ["packages/moost/src"],
+            "common": ["common/index"]
         }
     },
     "include": [
-      "packages/*/src",
-      "packages/*/__tests__",
-      "common/*.ts",
-      "explorations"
+        "packages/*/src",
+        "packages/*/__tests__",
+        "common/*.ts",
+        "explorations"
     ]
 }

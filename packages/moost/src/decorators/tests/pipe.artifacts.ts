@@ -5,6 +5,8 @@ export class PipeDecoratorTestClass {
     @Pipe(() => 'test pipe 2')
     method(
         @Pipe(() => 'test pipe 3')
-            a: string
-    ) {/** */}
+        a: string
+    ) {
+        /** */
+    }
 }

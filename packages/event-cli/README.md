@@ -35,8 +35,6 @@ app.init()
 // "command run with flag test=true"
 ```
 
-
-
 ## Install
 
 `npm install moost @moostjs/event-cli`

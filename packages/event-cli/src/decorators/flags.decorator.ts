@@ -1,6 +1,7 @@
 import { useFlags } from '@wooksjs/event-cli'
 import { Resolve } from 'moost'
 import { getCliMate } from '../meta-types'
+import { formatParams } from '../utils'
 
 /**
  * Get Cli Flag
@@ -21,18 +22,13 @@ export function Flags() {
     return Resolve(() => useFlags(), 'flags')
 }
 
-function formatParams(keys: string | [string, string] | [string]) {
-    const names = [keys].flat()
-    return names.map(n => n.length === 1 ? '-' + n : '--' + n)
-}
-
-export function CliParam(keys: string | [string, string], descr?: string) {
+export function CliParam(...keys: string[]): ParameterDecorator {
     const mate = getCliMate()
     return mate.apply(
-        mate.decorate('cliParams', { keys, descr }, true),
+        mate.decorate('cliParamKeys', keys, false),
         Resolve(() => {
             const flags = useFlags()
-            const names = [keys].flat() as [string, string]
+            const names = keys
             const vals = []
             for (const name of names) {
                 if (flags[name]) {
@@ -40,12 +36,16 @@ export function CliParam(keys: string | [string, string], descr?: string) {
                 }
             }
             if (vals.length > 1) {
-                throw new Error(`Options ${formatParams(names).join(' and ')} are synonyms. Please use only one of them.`)
+                throw new Error(
+                    `Options ${formatParams(names).join(
+                        ' and '
+                    )} are synonyms. Please use only one of them.`
+                )
             }
             if (vals.length === 0) {
                 return false
             }
             return vals[0]
-        }, formatParams(keys).join(', '))        
+        }, formatParams(keys).join(', '))
     )
 }

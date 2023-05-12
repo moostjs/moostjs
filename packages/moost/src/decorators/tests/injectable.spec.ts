@@ -2,9 +2,7 @@ import { getMoostMate } from '../../metadata/moost-metadata'
 import { Injectable } from '../injectable.decorator'
 
 @Injectable()
-class A {
-
-}
+class A {}
 
 describe('controller.decorator', () => {
     const metaA = getMoostMate().read(A)

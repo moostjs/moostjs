@@ -1,4 +1,4 @@
-# Moost HTTP 
+# Moost HTTP
 
 ::: warning
 The work on Moost is still in progress. It is already suitable for
@@ -16,15 +16,15 @@ You can read an overview of how Wooks approaches the event processing in general
 Wooks HTTP allows you to create an http server with beauty of composable functions and fast [routing](../#event-routing).
 It ships many http-specific composables built-in, such as:
 
-- URL query params parser
-- Cookie parser
-- Body parser (many formats work out-of-the-box: `json`, `url-encoded`, `form`, ...)
-- Static files
-- Response Status
-- Response Cookies
-- Response Headers
-- Cache Control
-- ...
+-   URL query params parser
+-   Cookie parser
+-   Body parser (many formats work out-of-the-box: `json`, `url-encoded`, `form`, ...)
+-   Static files
+-   Response Status
+-   Response Cookies
+-   Response Headers
+-   Cache Control
+-   ...
 
 None of these composables is triggered unless you want it. This makes Wooks HTTP extremely flexible and performant.
 
@@ -57,12 +57,14 @@ import { createHttpApp } from '@wooksjs/event-http'
 
 const app = createHttpApp()
 
-app.on('GET', 'hello/:name', () => `Hello ${ useRouteParams().get('name') }!`)
+app.on('GET', 'hello/:name', () => `Hello ${useRouteParams().get('name')}!`)
 
 // or use a shortcut for get method:
 // app.get('hello/:name', () => `Hello ${ useRouteParams().get('name') }!`)
 
-app.listen(3000, () => { console.log('Wooks Server is up on port 3000') })
+app.listen(3000, () => {
+    console.log('Wooks Server is up on port 3000')
+})
 ```
 
 ```js [CommonJS]
@@ -71,28 +73,31 @@ const { createHttpApp } = require('@wooksjs/event-http')
 
 const app = createHttpApp()
 
-app.on('GET', 'hello/:name', () => `Hello ${ useRouteParams().get('name') }!`)
+app.on('GET', 'hello/:name', () => `Hello ${useRouteParams().get('name')}!`)
 
 // or use a shortcut for get method:
 // app.get('hello/:name', () => `Hello ${ useRouteParams().get('name') }!`)
 
-app.listen(3000, () => { console.log('Wooks Server is up on port 3000') })
+app.listen(3000, () => {
+    console.log('Wooks Server is up on port 3000')
+})
 ```
 
 :::
 
 Call the endpoint to see the result:
+
 ```bash
 curl http://localhost:3000/hello/World
 # Hello World!
 ```
-
 
 ## Use `http` directly
 
 You can create http(s) server manually and pass server callback from the wooks http app:
 
 ::: code-group
+
 ```js [ESM]
 import { useRouteParams } from 'wooks'
 import { createHttpApp } from '@wooksjs/event-http'
@@ -100,11 +105,14 @@ import http from 'http' // or https
 
 const app = createHttpApp()
 
-app.get('hello/:name', () => `Hello ${ useRouteParams().get('name') }!`)
+app.get('hello/:name', () => `Hello ${useRouteParams().get('name')}!`)
 
 const server = http.createServer(app.getServerCb()) // [!code hl]
-server.listen(3000, () => { console.log('Wooks Server is up on port 3000') }) // [!code hl]
+server.listen(3000, () => {
+    console.log('Wooks Server is up on port 3000')
+}) // [!code hl]
 ```
+
 ```js [CommonJS]
 const { useRouteParams } = require('wooks')
 const { createHttpApp } = require('@wooksjs/event-http')
@@ -112,9 +120,12 @@ const http = require('http') // or https
 
 const app = createHttpApp()
 
-app.get('hello/:name', () => `Hello ${ useRouteParams().get('name') }!`)
+app.get('hello/:name', () => `Hello ${useRouteParams().get('name')}!`)
 
 const server = http.createServer(app.getServerCb()) // [!code hl]
-server.listen(3000, () => { console.log('Wooks Server is up on port 3000') }) // [!code hl]
+server.listen(3000, () => {
+    console.log('Wooks Server is up on port 3000')
+}) // [!code hl]
 ```
+
 :::

@@ -16,7 +16,12 @@ describe('moost', () => {
         moost.adapter(moostHttp)
         moost
             .applyGlobalInterceptors(globalInterceptor)
-            .setProvideRegistry(createProvideRegistry([E2eInterceptor, () => new E2eInterceptor(e2eInterceptor)]))
+            .setProvideRegistry(
+                createProvideRegistry([
+                    E2eInterceptor,
+                    () => new E2eInterceptor(e2eInterceptor),
+                ])
+            )
         await moostHttp.listen(request.PORT)
         await moost.init()
     })
@@ -58,15 +63,21 @@ describe('moost', () => {
             const response = await request.get('nestedControllerMethod?value=1')
             expect(response.status()).toBe(200)
             expect(await response.body()).toEqual('{"value":"1"}')
-            const response2 = await request.get('nestedControllerMethod?newValue=2')
+            const response2 = await request.get(
+                'nestedControllerMethod?newValue=2'
+            )
             expect(response2.status()).toBe(200)
             expect(await response2.body()).toEqual('{"newValue":"2"}')
         })
         it('must call (FOR_EVENT) Nested Controller Method', async () => {
-            const response = await request.get('req/nestedControllerMethod?value=3')
+            const response = await request.get(
+                'req/nestedControllerMethod?value=3'
+            )
             expect(response.status()).toBe(200)
             expect(await response.body()).toEqual('{"value":"3"}')
-            const response2 = await request.get('req/nestedControllerMethod?newValue=4')
+            const response2 = await request.get(
+                'req/nestedControllerMethod?newValue=4'
+            )
             expect(response2.status()).toBe(200)
             expect(await response2.body()).toEqual('{"newValue":"4"}')
         })
@@ -86,7 +97,9 @@ describe('moost', () => {
         it('must inject common dependency (same instance)', async () => {
             // compare internalSecret of common dependency to make sure it's the same instance
             const response = await request.get('common_dep/internal_secret')
-            const response2 = await request.get('req/common_dep/internal_secret')
+            const response2 = await request.get(
+                'req/common_dep/internal_secret'
+            )
             expect(response.status()).toBe(200)
             expect(response2.status()).toBe(200)
             expect(await response.body()).toEqual(await response2.body())
@@ -115,10 +128,16 @@ describe('moost', () => {
         it('must call (FOR_EVENT) local interceptor', async () => {
             const response = await request.get('intercept/for_request')
             expect(response.status()).toEqual(200)
-            expect(await response.body()).toEqual('intercepted for url /intercept/for_request')
-            const response2 = await request.get('intercept/for_request?second_time')
+            expect(await response.body()).toEqual(
+                'intercepted for url /intercept/for_request'
+            )
+            const response2 = await request.get(
+                'intercept/for_request?second_time'
+            )
             expect(response2.status()).toEqual(200)
-            expect(await response2.body()).toEqual('intercepted for url /intercept/for_request?second_time')
+            expect(await response2.body()).toEqual(
+                'intercepted for url /intercept/for_request?second_time'
+            )
         })
     })
 
@@ -126,4 +145,3 @@ describe('moost', () => {
         void moostHttp?.getHttpApp().close()
     })
 })
-

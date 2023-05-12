@@ -12,7 +12,10 @@ import { TDecoratorLevel } from './types'
  * @param label - field label
  * @paramType unknown
  */
-export function Resolve<T extends TObject = TEmpty>(resolver: (metas: TPipeMetas<T>, level: TDecoratorLevel) => unknown, label?: string): ParameterDecorator & PropertyDecorator {
+export function Resolve<T extends TObject = TEmpty>(
+    resolver: (metas: TPipeMetas<T>, level: TDecoratorLevel) => unknown,
+    label?: string
+): ParameterDecorator & PropertyDecorator {
     return (target, key, index?) => {
         const i = typeof index === 'number' ? index : undefined
         fillLabel(target, key || '', i, label)
@@ -70,11 +73,20 @@ export function InjectEventLogger(topic?: string) {
     return Resolve(() => useEventLogger(topic))
 }
 
-function fillLabel(target: TObject, key: string | symbol, index?: number, name?: string) {
+function fillLabel(
+    target: TObject,
+    key: string | symbol,
+    index?: number,
+    name?: string
+) {
     if (name) {
         const meta = getMoostMate().read(target, key)
         if (typeof index === 'number') {
-            if (!meta?.params || !meta?.params[index] || !meta?.params[index].label) {
+            if (
+                !meta?.params ||
+                !meta?.params[index] ||
+                !meta?.params[index].label
+            ) {
                 Label(name)(target, key, index)
             }
         } else {

@@ -5,7 +5,9 @@ import execa from 'execa'
 
 import { packages, require, out } from './utils.js'
 
-const allTargets = packages.filter(({ pkg }) => pkg && !pkg.private).map(({ shortName }) => shortName)
+const allTargets = packages
+    .filter(({ pkg }) => pkg && !pkg.private)
+    .map(({ shortName }) => shortName)
 const args = minimist(process.argv.slice(2))
 const targets = args._
 
@@ -55,13 +57,9 @@ async function build(target) {
             '-c',
             'rollup.config.js',
             '--environment',
-            [
-                `NODE_ENV:${env}`,
-                `TARGET:${target}`,
-                `PROJECT:${pkg.name}`,
-            ]
+            [`NODE_ENV:${env}`, `TARGET:${target}`, `PROJECT:${pkg.name}`]
                 .filter(Boolean)
-                .join(',')
+                .join(','),
         ],
         { stdio: 'inherit' }
     )
@@ -70,13 +68,29 @@ async function build(target) {
         out.step(`Rolling up type definitions for ${target}...`)
 
         // build types
-        const { Extractor, ExtractorConfig } = require('@microsoft/api-extractor')
+        const {
+            Extractor,
+            ExtractorConfig,
+        } = require('@microsoft/api-extractor')
 
         try {
-            const filePath = path.join(pkgDir, 'dist', 'packages', target, 'src', 'index.d.ts')
+            const filePath = path.join(
+                pkgDir,
+                'dist',
+                'packages',
+                target,
+                'src',
+                'index.d.ts'
+            )
             const file = (await fs.readFile(filePath)).toString()
-            await fs.writeFile(filePath, file.replace(/['"]@moostjs\/([^'"]+)/g, '\'../../$1/src'))
-            const extractorConfigPath = path.resolve(pkgDir, `api-extractor.json`)
+            await fs.writeFile(
+                filePath,
+                file.replace(/['"]@moostjs\/([^'"]+)/g, "'../../$1/src")
+            )
+            const extractorConfigPath = path.resolve(
+                pkgDir,
+                `api-extractor.json`
+            )
             const extractorConfig =
                 ExtractorConfig.loadFileAndPrepare(extractorConfigPath)
             const extractorResult = Extractor.invoke(extractorConfig, {
@@ -90,7 +104,7 @@ async function build(target) {
             } else {
                 out.error(
                     `API Extractor completed with ${extractorResult.errorCount} errors` +
-                    ` and ${extractorResult.warningCount} warnings`
+                        ` and ${extractorResult.warningCount} warnings`
                 )
                 process.exitCode = 1
             }

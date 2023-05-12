@@ -9,9 +9,6 @@ This section describes the basic ideas and a concept of Moost with no dive into 
 
 ## Overview
 
-
-
-
 ## Your First Moost Project
 
 Currently there are two event types covered by Moost:

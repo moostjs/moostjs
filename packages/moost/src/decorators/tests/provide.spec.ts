@@ -7,13 +7,21 @@ describe('provide.decorator', () => {
         const key = Symbol.for(ToInjectTestClass as unknown as string)
         expect(meta).toHaveProperty('provide')
         if (meta?.provide) {
-            expect(Object.getOwnPropertySymbols(meta.provide).includes(key)).toBe(true)
+            expect(
+                Object.getOwnPropertySymbols(meta.provide).includes(key)
+            ).toBe(true)
             if (meta.provide[key]) {
-                expect(meta.provide[key].fn()).toHaveProperty('type', 'via class')
+                expect(meta.provide[key].fn()).toHaveProperty(
+                    'type',
+                    'via class'
+                )
             }
             expect(meta.provide).toHaveProperty('to-inject')
             if (meta.provide['to-inject']) {
-                expect(meta.provide['to-inject'].fn()).toHaveProperty('type', 'via string')
+                expect(meta.provide['to-inject'].fn()).toHaveProperty(
+                    'type',
+                    'via string'
+                )
             }
         }
     })

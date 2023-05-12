@@ -20,13 +20,15 @@ import { Moost, Param } from 'moost'
 class MyServer extends Moost {
     @Get('test/:name')
     test(@Param('name') name: string) {
-        return { message: `Hello ${ name }!` }
+        return { message: `Hello ${name}!` }
     }
 }
 
 const app = new MyServer()
 const http = new MoostHttp()
-app.adapter(http).listen(3000, () => { console.log('Up on port 3000') })
+app.adapter(http).listen(3000, () => {
+    console.log('Up on port 3000')
+})
 app.init()
 // curl http://localhost:3000/test/World
 // {"message":"Hello World!"}

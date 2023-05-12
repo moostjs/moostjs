@@ -10,7 +10,13 @@ describe('pipe.decorator', () => {
         expect(meta?.pipes).toHaveLength(1)
         expect(methodMeta?.params).toBeDefined()
         if (methodMeta?.params) {
-            expect((meta?.pipes as TPipeData[])[0].handler(undefined, { paramMeta: methodMeta?.params[0] }, 'PARAM')).toBe('test pipe 1')
+            expect(
+                (meta?.pipes as TPipeData[])[0].handler(
+                    undefined,
+                    { paramMeta: methodMeta?.params[0] },
+                    'PARAM'
+                )
+            ).toBe('test pipe 1')
         }
     })
     it('@Pipe must set pipe for method', () => {
@@ -18,7 +24,13 @@ describe('pipe.decorator', () => {
         expect(methodMeta?.pipes).toHaveLength(1)
         expect(methodMeta?.params).toBeDefined()
         if (methodMeta?.params) {
-            expect((methodMeta?.pipes as TPipeData[])[0].handler(undefined, { paramMeta: methodMeta?.params[0] }, 'PARAM')).toBe('test pipe 2')
+            expect(
+                (methodMeta?.pipes as TPipeData[])[0].handler(
+                    undefined,
+                    { paramMeta: methodMeta?.params[0] },
+                    'PARAM'
+                )
+            ).toBe('test pipe 2')
         }
     })
     it('@Pipe must set pipe for method argument', () => {
@@ -27,7 +39,13 @@ describe('pipe.decorator', () => {
         if (methodMeta?.params) {
             expect(methodMeta?.params[0]).toHaveProperty('pipes')
             expect(methodMeta?.params[0].pipes).toHaveLength(1)
-            expect((methodMeta?.params[0].pipes as TPipeData[])[0].handler(undefined, { paramMeta: methodMeta.params[0] }, 'PARAM')).toBe('test pipe 3')
+            expect(
+                (methodMeta?.params[0].pipes as TPipeData[])[0].handler(
+                    undefined,
+                    { paramMeta: methodMeta.params[0] },
+                    'PARAM'
+                )
+            ).toBe('test pipe 3')
         }
     })
 })

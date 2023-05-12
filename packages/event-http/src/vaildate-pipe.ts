@@ -15,7 +15,7 @@ export function httpValidatePipe(opts: Parameters<typeof validatePipe>) {
                 message,
                 error: 'Validation Error',
                 details,
-            })            
+            })
         },
         ...opts[0],
     })

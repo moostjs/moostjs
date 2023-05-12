@@ -23,15 +23,15 @@ It's possible to specify RegExp for parameters `'/api/time/:hours(\\d{2})h:minut
 
 ```js
 // simple single param
-app.get('/api/vars/:key', () =>  'ok')
+app.get('/api/vars/:key', () => 'ok')
 // two params separated with hyphen
-app.get('/api/vars/:key1-:key2', () =>  'ok')
+app.get('/api/vars/:key1-:key2', () => 'ok')
 // two params with regex
-app.get('/api/time/:hours(\\d{2})h:minutes(\\d{2})m', () =>  'ok')
+app.get('/api/time/:hours(\\d{2})h:minutes(\\d{2})m', () => 'ok')
 // two params separated with slash
-app.get('/api/user/:name1/:name2', () =>  'ok')
+app.get('/api/user/:name1/:name2', () => 'ok')
 // three params with the same name (leads to an array as a value)
-app.get('/api/array/:name/:name/:name', () =>  'ok')
+app.get('/api/array/:name/:name/:name', () => 'ok')
 ```
 
 ## Wildcards
@@ -47,18 +47,18 @@ There are several options available:
 ```js
 // the most common usage (will match all the URIs that
 // start with `/static/`)
-app.get('/static/*', () =>  'ok')
+app.get('/static/*', () => 'ok')
 
 // will match all the URIs that start with `/static/`
 // and end with `.js`
-app.get('/static/*.js', () =>  'ok')
+app.get('/static/*.js', () => 'ok')
 
 // will match all the URIs that start with `/static/`
 // and have `/test/` in the middle
-app.get('/static/*/test/*', () =>  'ok')
+app.get('/static/*/test/*', () => 'ok')
 
 // will match all the URIs that start with `/static/[numbers]`
-app.get('/static/*(\\d+)', () =>  'ok')
+app.get('/static/*(\\d+)', () => 'ok')
 ```
 
 ## Retrieving URI params
@@ -67,34 +67,41 @@ When using parametric routes it's usefull to get access to the params.
 Here's the first composable function `useRouteParams` from `wooks`.
 
 It returns an object that contains params as `JSON` and a getter function `get`:
+
 ```ts
-function useRouteParams<T extends object = Record<string, string | string[]>>(): {
-    params: T;
-    get: <K extends keyof T>(name: K) => T[K];
+function useRouteParams<
+    T extends object = Record<string, string | string[]>
+>(): {
+    params: T
+    get: <K extends keyof T>(name: K) => T[K]
 }
 ```
 
 Usage of `useRouteParams`
 
 ::: code-group
+
 ```js [ESM]
 import { useRouteParams } from 'wooks'
 app.get('hello/:name', () => {
     const { get } = useRouteParams()
-    return `Hello ${ get('name') }!`
+    return `Hello ${get('name')}!`
 })
 ```
+
 ```js [CommonJS]
 const { useRouteParams } = require('wooks')
 app.get('hello/:name', () => {
     const { get } = useRouteParams()
-    return `Hello ${ get('name') }!`
+    return `Hello ${get('name')}!`
 })
 ```
+
 :::
 
 For repeated param name it returns an array:
 ::: code-group
+
 ```js [ESM]
 import { useRouteParams } from 'wooks'
 app.get('hello/:name/:name', () => {
@@ -102,6 +109,7 @@ app.get('hello/:name/:name', () => {
     return get('name') // array of names
 })
 ```
+
 ```js [CommonJS]
 const { useRouteParams } = require('wooks')
 app.get('hello/:name/:name', () => {
@@ -109,10 +117,12 @@ app.get('hello/:name/:name', () => {
     return get('name') // array of names
 })
 ```
+
 :::
 
 For wildcard the name of param is `*`:
 ::: code-group
+
 ```js [ESM]
 import { useRouteParams } from 'wooks'
 app.get('hello/*', () => {
@@ -120,6 +130,7 @@ app.get('hello/*', () => {
     return get('*') // returns everything that follows hello/
 })
 ```
+
 ```js [CommonJS]
 const { useRouteParams } = require('wooks')
 app.get('hello/*', () => {
@@ -127,35 +138,43 @@ app.get('hello/*', () => {
     return get('*') // returns everything that follows hello/
 })
 ```
+
 :::
 
 Multiple wildcards are stored as an array (similar to repeated param name)
 
 ## Path builders
 
-When you define a new route you receive a path builder for it. 
+When you define a new route you receive a path builder for it.
 Path builder can be used to build a path based on URI params.
 
 ::: code-group
+
 ```js [javascript]
 const pathBuilder = app.get('/api/path', () => 'ok')
 console.log(pathBuilder()) // /api/path
 
 const userPathBuilder = app.get('/api/user/:name', () => 'ok')
-console.log(userPathBuilder({
-    name: 'John'
-})) // /api/user/John
+console.log(
+    userPathBuilder({
+        name: 'John',
+    })
+) // /api/user/John
 
 const wildcardBuilder = app.get('/static/*', () => 'ok')
-console.log(wildcardBuilder({
-    '*': 'index.html'
-})) // /static/index.html
+console.log(
+    wildcardBuilder({
+        '*': 'index.html',
+    })
+) // /static/index.html
 
 const multiParamsBuilder = app.get('/api/asset/:type/:type/:id', () => 'ok')
-console.log(userPathBuilder({
-    type: ['CJ', 'REV'],
-    id: '443551'
-})) // /api/asset/CJ/REV/443551
+console.log(
+    userPathBuilder({
+        type: ['CJ', 'REV'],
+        id: '443551',
+    })
+) // /api/asset/CJ/REV/443551
 ```
 
 ```ts [typescript]
@@ -168,6 +187,7 @@ console.log(userPathBuilder({
 }))
 // /api/user/John
 ```
+
 :::
 
 ## Query Parameters

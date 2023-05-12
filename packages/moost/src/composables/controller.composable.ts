@@ -1,7 +1,9 @@
 import { useEventContext } from '@wooksjs/event-core'
 import { getMoostMate } from '../metadata'
 
-interface TControllerContext<T> { controller: { instance: T, method: keyof T } }
+interface TControllerContext<T> {
+    controller: { instance: T; method: keyof T }
+}
 
 export function setControllerContext<T>(controller: T, method: keyof T) {
     const { store } = useEventContext<TControllerContext<T>>()
@@ -19,7 +21,8 @@ export function useControllerContext<T extends object>() {
     // todo: add generic types to getControllerMeta
     const getControllerMeta = () => getMoostMate().read(getController())
     // todo: add generic types to getMethodMeta
-    const getMethodMeta = () => getMoostMate().read(getController(), getMethod() as string)
+    const getMethodMeta = () =>
+        getMoostMate().read(getController(), getMethod() as string)
 
     return {
         getController,

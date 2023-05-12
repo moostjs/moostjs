@@ -8,4 +8,6 @@ export interface TClassFunctionConstructor<T extends TAnyFn = TAnyFn> {
     new (...a: TAny[]): TClassFunction<T>
 }
 
-export type TCallableClassFunction<T extends TAnyFn = TAnyFn> = T | TClassFunctionConstructor
+export type TCallableClassFunction<T extends TAnyFn = TAnyFn> =
+    | T
+    | TClassFunctionConstructor

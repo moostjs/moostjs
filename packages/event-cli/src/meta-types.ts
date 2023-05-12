@@ -1,7 +1,7 @@
 import { getMoostMate } from 'moost'
 
 export interface TCliClassMeta {
-    cliParams: { keys: string | [string, string], descr?: string }[]
+    cliParamKeys: string[]
 }
 
 export function getCliMate() {

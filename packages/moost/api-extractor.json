@@ -1,20 +1,20 @@
 {
-  "extends": "../../api-extractor.json",
-  "mainEntryPointFilePath": "./dist/packages/moost/src/index.d.ts",
-  "dtsRollup": {
-    "publicTrimmedFilePath": "./dist/index.d.ts"
-  },
-  "compiler": {
-    "overrideTsconfig": {
-      "compilerOptions": {
-        "paths": {
-          "common": ["packages/moost/dist/common"]
+    "extends": "../../api-extractor.json",
+    "mainEntryPointFilePath": "./dist/packages/moost/src/index.d.ts",
+    "dtsRollup": {
+        "publicTrimmedFilePath": "./dist/index.d.ts"
+    },
+    "compiler": {
+        "overrideTsconfig": {
+            "compilerOptions": {
+                "paths": {
+                    "common": ["packages/moost/dist/common"]
+                }
+            },
+            "include": [
+                "packages/moost/dist/packages",
+                "packages/moost/dist/common"
+            ]
         }
-      },         
-      "include": [
-        "packages/moost/dist/packages",
-        "packages/moost/dist/common"
-      ]
     }
-  }
 }

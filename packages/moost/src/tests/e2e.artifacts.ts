@@ -1,15 +1,21 @@
 import { useRequest } from '@wooksjs/event-http'
 import { TClassFunction } from '../class-function'
-import { Controller, Injectable, ImportController, Inject, Provide, TInterceptorFn, Intercept } from '../decorators'
+import {
+    Controller,
+    Injectable,
+    ImportController,
+    Inject,
+    Provide,
+    TInterceptorFn,
+    Intercept,
+} from '../decorators'
 import { Delete, Get, Patch, Post, Url, Query } from '@moostjs/event-http'
 import { Moost } from '../moost'
 import { TFunction } from 'common'
 
 @Injectable()
 export class E2eInterceptor implements TClassFunction<TInterceptorFn> {
-    constructor(private trackableFn: TFunction) {
-
-    }
+    constructor(private trackableFn: TFunction) {}
 
     handler() {
         const { url } = useRequest()
@@ -19,9 +25,7 @@ export class E2eInterceptor implements TClassFunction<TInterceptorFn> {
 
 @Injectable('FOR_EVENT')
 class E2eInterceptorForRequest implements TClassFunction<TInterceptorFn> {
-    constructor(@Url() private url: string) {
-
-    }
+    constructor(@Url() private url: string) {}
 
     handler: TInterceptorFn = (before) => {
         before((reply) => {
@@ -50,9 +54,7 @@ class E2eCommonDep {
 @Injectable()
 @Controller()
 class E2eController {
-    constructor(private commonDep: E2eCommonDep) {
-
-    }
+    constructor(private commonDep: E2eCommonDep) {}
 
     @Get('nestedControllerMethod')
     nestedControllerMethod(@Query() query: string) {
@@ -74,10 +76,11 @@ class E2eController {
 @Injectable('FOR_EVENT')
 @Controller('req')
 class E2eRequestController {
-    constructor(@Query() private query: string, private commonDep: E2eCommonDep) {
+    constructor(
+        @Query() private query: string,
+        private commonDep: E2eCommonDep
+    ) {}
 
-    }
-    
     @Get('nestedControllerMethod')
     nestedControllerMethod() {
         return this.query

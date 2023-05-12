@@ -6,41 +6,36 @@ export const __dirname = path.dirname(__filename)
 
 export default {
     preset: 'ts-jest',
-    moduleFileExtensions: [
-      "ts",
-      "js"
-    ],
+    moduleFileExtensions: ['ts', 'js'],
     rootDir: __dirname,
-    testRegex: ".spec.ts$",
+    testRegex: '.spec.ts$',
     transform: {
-      "^.+\\.(t|j)s$": "ts-jest"
+        '^.+\\.(t|j)s$': 'ts-jest',
     },
     coverageDirectory: 'coverage',
     coverageReporters: ['html', 'lcov', 'text'],
-    collectCoverageFrom: [
-        'packages/**/src/**/*.ts',
-    ],
+    collectCoverageFrom: ['packages/**/src/**/*.ts'],
     watchPathIgnorePatterns: ['/node_modules/', '/dist/', '/.git/'],
-    testEnvironment: "node",
+    testEnvironment: 'node',
     moduleNameMapper: {
-      '^@moostjs/(.*?)$': '<rootDir>/packages/$1/src',
-      '^moost$': '<rootDir>/packages/moost/src',
-      '^common$': '<rootDir>/common'
+        '^@moostjs/(.*?)$': '<rootDir>/packages/$1/src',
+        '^moost$': '<rootDir>/packages/moost/src',
+        '^common$': '<rootDir>/common',
     },
     globals: {
-      __DYE_RED_BRIGHT__: dye('red-bright').open,
-      __DYE_BOLD__: dye('bold').open,
-      __DYE_RESET__: dye.reset,
-      __DYE_RED__: dye('red').open,
-      __DYE_CYAN__: dye('cyan').open,
-      __DYE_COLOR_OFF__: dye('red').close,
-      __DYE_GREEN__: dye('green').open,
-      __DYE_GREEN_BRIGHT__: dye('green-bright').open,
-      __DYE_BLUE__: dye('blue').open,
-      __DYE_YELLOW__: dye('yellow').open,
-      __DYE_DIM__: dye('dim').open,
-      __DYE_DIM_OFF__: dye('dim').close,
-      __VERSION__: 'JEST_TEST',
-      __PROJECT__: 'jest-test',
-    }
+        __DYE_RED_BRIGHT__: dye('red-bright').open,
+        __DYE_BOLD__: dye('bold').open,
+        __DYE_RESET__: dye.reset,
+        __DYE_RED__: dye('red').open,
+        __DYE_CYAN__: dye('cyan').open,
+        __DYE_COLOR_OFF__: dye('red').close,
+        __DYE_GREEN__: dye('green').open,
+        __DYE_GREEN_BRIGHT__: dye('green-bright').open,
+        __DYE_BLUE__: dye('blue').open,
+        __DYE_YELLOW__: dye('yellow').open,
+        __DYE_DIM__: dye('dim').open,
+        __DYE_DIM_OFF__: dye('dim').close,
+        __VERSION__: 'JEST_TEST',
+        __PROJECT__: 'jest-test',
+    },
 }
