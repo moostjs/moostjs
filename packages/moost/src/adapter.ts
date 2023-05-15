@@ -9,7 +9,7 @@ import { useEventContext } from '@wooksjs/event-core'
 import { TMoostHandler } from './metadata'
 import { TProvideRegistry } from '@prostojs/infact'
 
-export interface TMoostAdapterOptions<H extends object, T extends object> {
+export interface TMoostAdapterOptions<H, T> {
     prefix: string
     fakeInstance: T
     getInstance: () => Promise<T>
@@ -21,7 +21,7 @@ export interface TMoostAdapterOptions<H extends object, T extends object> {
     logHandler: (eventName: string) => void
 }
 
-export interface TMoostAdapter<H extends object> {
+export interface TMoostAdapter<H> {
     bindHandler<T extends TObject = TObject>(
         options: TMoostAdapterOptions<H, T>
     ): void | Promise<void>

@@ -30,7 +30,7 @@ export function Resolve<T extends TObject = TEmpty>(
  * @paramType string
  */
 export function Param(name: string) {
-    return Resolve(() => useRouteParams().get(name), name)
+    return getMoostMate().apply(getMoostMate().decorate('isRouteParam', name), Resolve(() => useRouteParams().get(name), name))
 }
 
 /**

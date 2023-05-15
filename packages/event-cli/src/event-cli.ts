@@ -10,6 +10,7 @@ import {
     useCliContext,
 } from '@wooksjs/event-cli'
 import { useEventId, useEventLogger } from '@wooksjs/event-core'
+import { getCliMate } from './meta-types'
 
 export interface TCliHandlerMeta {
     path: string
@@ -49,8 +50,6 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                 '/'
             )
 
-            // todo: gather cli commands for help renderer
-
             if (!fn) {
                 fn = async () => {
                     const { restoreCtx } = useCliContext()
@@ -62,6 +61,8 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                     restoreCtx()
 
                     setControllerContext(instance, opts.method)
+
+                    console.log(JSON.stringify(helpObject, null, '  '))
 
                     let response: unknown
                     const interceptorHandler = await opts.getIterceptorHandler()
@@ -125,8 +126,28 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                     return response
                 }
             }
-            this.cliApp.cli(targetPath, fn)
+            const { getArgs, getStaticPart } = this.cliApp.cli(targetPath, fn)
+            console.log((opts.method as string) + ' args:', getArgs())
+
+            // todo: gather cli commands for help renderer
+            const meta = getCliMate().read(opts.fakeInstance, opts.method as string)
+            helpObject[targetPath] = {
+                description: meta?.description || '',
+                command: getStaticPart().replace(/\//g, ' ').trim(),
+                params: meta?.params?.filter(param => !!param.cliParamKeys && param.cliParamKeys.length > 0).map(param => ({
+                    keys: param.cliParamKeys,
+                    description: param.description || '',
+                })) || [],
+                args: getArgs(),
+            }
             // opts.logHandler(`${__DYE_CYAN__}(CLI)${ __DYE_GREEN__ }${ targetPath }`)
         }
     }
 }
+
+const helpObject: Record<string, {
+    description: string
+    command: string
+    params: { keys: string[], description: string }[]
+    args: string[]
+}> = {}

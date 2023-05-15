@@ -38,7 +38,7 @@ export interface TValidateArrayOptions<T = unknown> {
 }
 
 export type TInjectableScope = 'FOR_EVENT' | 'SINGLETON'
-export type TMoostHandler<T extends object> = T & {
+export type TMoostHandler<T> = T & {
     type: string
 }
 
@@ -76,6 +76,7 @@ export interface TMoostParamsMetadata
     circular?: () => TAny
     inject?: string | symbol | TClassConstructor
     nullable?: boolean
+    isRouteParam?: string
 }
 
 const moostMate = new Mate<

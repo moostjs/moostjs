@@ -168,7 +168,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     return response
                 }
             }
-            const pathBuilder = this.httpApp.on(handler.method, targetPath, fn)
+            const { getPath: pathBuilder } = this.httpApp.on(handler.method, targetPath, fn)
             const methodMeta =
                 getMoostMate().read(opts.fakeInstance, opts.method as string) ||
                 ({} as TMoostMetadata)

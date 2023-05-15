@@ -54,7 +54,7 @@ export class Moost {
         return this.logger
     }
 
-    public adapter<T extends object, A extends TMoostAdapter<T>>(a: A) {
+    public adapter<T>(a: TMoostAdapter<T>) {
         this.adapters.push(a)
         return a
     }
@@ -132,17 +132,17 @@ export class Moost {
         const getInstance = instance
             ? () => Promise.resolve(instance as TObject)
             : async (): Promise<TObject> => {
-                  // if (!instance) {
-                  infact.silent(true)
-                  const { restoreCtx } = useEventContext()
-                  const instance = (await infact.get(
+                // if (!instance) {
+                infact.silent(true)
+                const { restoreCtx } = useEventContext()
+                const instance = (await infact.get(
                       controller as TClassConstructor<TAny>,
                       { ...infactOpts, syncContextFn: restoreCtx }
-                  )) as Promise<TObject>
-                  infact.silent(false)
-                  // }
-                  return instance
-              }
+                )) as Promise<TObject>
+                infact.silent(false)
+                // }
+                return instance
+            }
 
         const classConstructor = isConstructor(controller)
             ? controller
@@ -173,8 +173,8 @@ export class Moost {
                         isConstr
                             ? ic.typeResolver
                             : isFunc
-                            ? await (ic.typeResolver as TFunction)()
-                            : ic.typeResolver,
+                                ? await (ic.typeResolver as TFunction)()
+                                : ic.typeResolver,
                         ic.provide
                             ? { ...mergedProvide, ...ic.provide }
                             : mergedProvide,
@@ -216,7 +216,7 @@ export class Moost {
                     priority:
                         typeof (item as TInterceptorFn).priority === 'number'
                             ? ((item as TInterceptorFn)
-                                  .priority as TInterceptorPriority)
+                                .priority as TInterceptorPriority)
                             : TInterceptorPriority.INTERCEPTOR,
                 })
             } else {
