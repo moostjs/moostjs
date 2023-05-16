@@ -33,6 +33,7 @@
         "@wooksjs/event-core": "^0.2.18"
     },
     "dependencies": {
-        "@wooksjs/event-cli": "^0.2.18"
+        "@wooksjs/event-cli": "^0.2.18",
+        "@prostojs/cli-help": ""
     }
 }

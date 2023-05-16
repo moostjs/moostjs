@@ -8,9 +8,11 @@ import {
     TWooksCliOptions,
     createCliApp,
     useCliContext,
+    useFlag,
 } from '@wooksjs/event-cli'
 import { useEventId, useEventLogger } from '@wooksjs/event-core'
 import { getCliMate } from './meta-types'
+import { CliHelpRenderer } from '@prostojs/cli-help'
 
 export interface TCliHandlerMeta {
     path: string
@@ -57,12 +59,14 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                     const logger = useEventLogger('moost-cli')
                     const unscope = opts.registerEventScope(scopeId)
 
+                    // if (useFlag('help')) {
+                    //     cliHelp.print('', true)
+                    // }
+
                     const instance = await opts.getInstance()
                     restoreCtx()
 
                     setControllerContext(instance, opts.method)
-
-                    console.log(JSON.stringify(helpObject, null, '  '))
 
                     let response: unknown
                     const interceptorHandler = await opts.getIterceptorHandler()
@@ -131,23 +135,18 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
 
             // todo: gather cli commands for help renderer
             const meta = getCliMate().read(opts.fakeInstance, opts.method as string)
-            helpObject[targetPath] = {
+            cliHelp.addEntry({
                 description: meta?.description || '',
                 command: getStaticPart().replace(/\//g, ' ').trim(),
-                params: meta?.params?.filter(param => !!param.cliParamKeys && param.cliParamKeys.length > 0).map(param => ({
+                options: meta?.params?.filter(param => !!param.cliParamKeys && param.cliParamKeys.length > 0).map(param => ({
                     keys: param.cliParamKeys,
                     description: param.description || '',
                 })) || [],
                 args: getArgs(),
-            }
+            })
             // opts.logHandler(`${__DYE_CYAN__}(CLI)${ __DYE_GREEN__ }${ targetPath }`)
         }
     }
 }
 
-const helpObject: Record<string, {
-    description: string
-    command: string
-    params: { keys: string[], description: string }[]
-    args: string[]
-}> = {}
+const cliHelp = new CliHelpRenderer()
