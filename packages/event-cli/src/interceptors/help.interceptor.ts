@@ -51,17 +51,21 @@ export const cliHelpInterceptor = (opts?: {
         if (opts?.helpWithArgs || opts?.helpWithIncompleteCmd) {
             const { getMethod } = useControllerContext()
             if (!getMethod()) {
-                const pathParams = useCliContext().store('event').get('pathParams').join(' ')
+                const parts = useCliContext().store('event').get('pathParams')
                 const cliHelp = useCliHelp().getCliHelp()
                 const cmd = cliHelp.getCliName()
                 let data
-                try {
-                    data = cliHelp.match(pathParams)
-                } catch (e) {
-                    if (opts?.helpWithIncompleteCmd) {
-                        const variants = cliHelp.lookup(pathParams)
-                        if (variants.length) {
-                            throw new Error(`Command is incomplete, did you mean:\n${variants.slice(0, 7).map(c => `  $ ${cmd} ${c.main.command}`).join('\n')}`)
+                for (let i = 0; i < Math.min(parts.length, 4); i++) {
+                    const pathParams = parts.slice(0, i ? -i : parts.length).join(' ')
+                    try {
+                        data = cliHelp.match(pathParams)
+                        break
+                    } catch (e) {
+                        if (opts?.helpWithIncompleteCmd) {
+                            const variants = cliHelp.lookup(pathParams)
+                            if (variants.length) {
+                                throw new Error(`Wrong command, did you mean:\n${variants.slice(0, 7).map(c => `  $ ${cmd} ${c.main.command}`).join('\n')}`)
+                            }
                         }
                     }
                 }
@@ -69,8 +73,8 @@ export const cliHelpInterceptor = (opts?: {
                     const { main, children } = data
                     if (opts?.helpWithArgs && main.args && Object.keys(main.args).length) {
                         throw new Error(`Arguments expected: ${Object.keys(main.args).map(l => `<${l}>`).join(', ')}`)
-                    } else if (opts?.helpWithIncompleteCmd && children) {
-                        throw new Error(`Command is incomplete, did you mean:\n${children.slice(0, 7).map(c => `  $ ${ cmd } ${ c.command }`).join('\n')}`)
+                    } else if (opts?.helpWithIncompleteCmd && children && children.length) {
+                        throw new Error(`Wrong command, did you mean:\n${children.slice(0, 7).map(c => `  $ ${ cmd } ${ c.command }`).join('\n')}`)
                     }
                 }
             }            

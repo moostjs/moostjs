@@ -11,7 +11,7 @@ import {
     createCliApp,
     useCliContext,
 } from '@wooksjs/event-cli'
-import { getCliMate } from './meta-types'
+import { CliHelpRendererWithFn, getCliMate } from './meta-types'
 import { CliHelpRenderer, TCliHelpOptions } from '@prostojs/cli-help'
 import { setCliHelpForEvent } from './composables'
 
@@ -27,11 +27,15 @@ export interface TMoostCliOpts {
     /**
      * CliHelpRenderer options or instance
      */
-    cliHelp?: CliHelpRenderer | TCliHelpOptions
+    cliHelp?: CliHelpRendererWithFn | TCliHelpOptions
     /**
      * more internal logs are printed when true
      */
     debug?: boolean
+    /**
+     * Array of cli options applicable to every cli command
+     */
+    globalCliOptions?: { keys: string[], description?: string }[]
 }
 
 const LOGGER_TITLE = 'moost-cli'
@@ -70,7 +74,7 @@ const CONTEXT_TYPE = 'CLI'
 export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
     protected cliApp: WooksCli
 
-    protected cliHelp: CliHelpRenderer
+    protected cliHelp: CliHelpRendererWithFn
 
     constructor(protected opts?: TMoostCliOpts) {
         const cliAppOpts = opts?.wooksCli
@@ -121,6 +125,16 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
 
     onInit(moost: Moost) {
         this.moost = moost
+        for (const [alias, entry] of Object.entries(this.cliHelp.getComputedAliases())) {
+            if (entry.custom) {
+                const vars = Object.keys(entry.args || {}).map(k => ':' + k).join('/')
+                const path = '/' + alias.replace(/\s+/g, '/').replace(/:/g, '\\:') + (vars ? '/' + vars : '')
+                this.cliApp.cli(path, entry.custom.fn)
+                if (this.opts?.debug) {
+                    entry.custom.log(`${__DYE_CYAN__}(CLI-alias*)${__DYE_GREEN__}${path}`)
+                }
+            }
+        }
         void this.cliApp.run()
     }
 
@@ -136,7 +150,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                     : typeof opts.method === 'string'
                         ? opts.method
                         : ''
-            const targetPath = `${opts.prefix.replace(/\s+/g, '/') || ''}/${path}`
+            const makePath = (p: string) => `${opts.prefix.replace(/\s+/g, '/') || ''}/${p}`
                 .replace(/\/\/+/g, '/')
                 // avoid interpreting "cmd:tail" as "cmd/:tail"
                 .replace(/\/\\:/g, '\\:')
@@ -157,29 +171,52 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                     },
                 })
             }
+            const targetPath = makePath(path)
             const { getArgs, getStaticPart } = this.cliApp.cli(targetPath, fn)
             const meta = getCliMate().read(opts.fakeInstance, opts.method as string)
-             
+            const classMeta = getCliMate().read(opts.fakeInstance)
+
             const args: Record<string, string> = {}
             getArgs().forEach(a => {
                 const argParam = meta?.params?.find(p => p.label === a && p.description)
                 args[a] = argParam?.description || ''
             })
             cliCommand = getStaticPart().replace(/\//g, ' ').trim()
-            this.cliHelp.addEntry({
-                description: meta?.description || '',
-                command: cliCommand,
-                options: meta?.params?.filter(param => !!param.cliParamKeys && param.cliParamKeys.length > 0).map(param => ({
+
+            const cliOptions = new Map<string, { keys: string[], description?: string, value?: string }>()
+            ;[
+                ...(this.opts?.globalCliOptions?.length ? this.opts.globalCliOptions : []),
+                ...(classMeta?.cliOptions || []),
+                ...(meta?.params?.filter(param => !!param.cliParamKeys && param.cliParamKeys.length > 0).map(param => ({
                     keys: param.cliParamKeys,
                     value: typeof param.value === 'string' ? param.value : '',
                     description: param.description || '',
-                })) || [],
-                args,
-                aliases: meta?.cliAliases,
-            })
+                })) || []),
+            ].forEach(o => cliOptions.set(o.keys[0], o))
+            
             if (this.opts?.debug) {
                 opts.logHandler(`${__DYE_CYAN__}(CLI)${ __DYE_GREEN__ }${ targetPath }`)
             }
+            const aliases = []
+            if (meta?.cliAliases) {
+                for (const alias of meta.cliAliases) {
+                    const targetPath = makePath(alias)
+                    const { getStaticPart } = this.cliApp.cli(targetPath, fn)
+                    aliases.push(getStaticPart().replace(/\//g, ' ').trim())
+                    if (this.opts?.debug) {
+                        opts.logHandler(`${__DYE_CYAN__}(CLI-alias)${__DYE_GREEN__}${targetPath}`)
+                    }
+                }
+            }
+            this.cliHelp.addEntry({
+                description: meta?.description || '',
+                command: cliCommand,
+                options: Array.from(cliOptions.values()),
+                args,
+                aliases: aliases,
+                custom: { fn, log: opts.logHandler },
+                examples: meta?.cliExamples || [],
+            })
         }
     }
 }

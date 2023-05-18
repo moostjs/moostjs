@@ -49,3 +49,15 @@ export function CliOption(...keys: string[]): ParameterDecorator {
         }, formatParams(keys).join(', '))
     )
 }
+
+/**
+ * ## Define Global CLI Option
+ * ### @ClassDecorator
+ * The option described here will appear in every command instructions
+ * @param option keys and description of CLI option
+ * @returns 
+ */
+export function CliGlobalOption(option: { keys: string[], description?: string, value?: string }): ClassDecorator {
+    const mate = getCliMate()
+    return mate.decorate('cliOptions', option, true)
+}

@@ -1,13 +1,13 @@
-import { CliHelpRenderer } from '@prostojs/cli-help'
 import { useCliContext } from '@wooksjs/event-cli'
+import { CliHelpRendererWithFn } from '../meta-types'
 
 /**
  * ### setCliHelpForEvent
  * Used internally to set CliHelpRenderer instance for an event state
  * @param cliHelp CliHelpRenderer
  */
-export function setCliHelpForEvent(cliHelp: CliHelpRenderer) {
-    useCliContext<{ event: { cliHelp: CliHelpRenderer } }>().store('event').set('cliHelp', cliHelp)
+export function setCliHelpForEvent(cliHelp: CliHelpRendererWithFn) {
+    useCliContext<{ event: { cliHelp: CliHelpRendererWithFn } }>().store('event').set('cliHelp', cliHelp)
 }
 
 /**
@@ -21,7 +21,7 @@ export function setCliHelpForEvent(cliHelp: CliHelpRenderer) {
  * @returns 
  */
 export function useCliHelp() {
-    const event = useCliContext<{ event: { cliHelp: CliHelpRenderer } }>().store('event')
+    const event = useCliContext<{ event: { cliHelp: CliHelpRendererWithFn } }>().store('event')
     const getCliHelp = () => event.get('cliHelp')
     return {
         getCliHelp,
