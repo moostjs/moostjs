@@ -4,25 +4,25 @@ import { getCliMate } from '../meta-types'
 import { formatParams } from '../utils'
 
 /**
- * Get Cli Flag
- * @decorator
- * @param name - flag name
- * @paramType string
+ * ## Define CLI Option
+ * ### @ParameterDecorator
+ * Use together with @Description('...') to document cli option
+ * 
+ * ```ts
+ * │   @Cli('command')
+ * │   command(
+ * │      @Description('Test flag...')
+ * │      @CliOption('test', 't')
+ * │      test: boolean,
+ * │   ) {
+ * │       return `test=${ test }`
+ * │   }
+ * ```
+ * 
+ * @param keys list of keys (short and long alternatives)
+ * @returns 
  */
-export function Flag(name: string) {
-    return Resolve(() => useFlags()[name], name)
-}
-
-/**
- * Get Cli Flags
- * @decorator
- * @paramType object
- */
-export function Flags() {
-    return Resolve(() => useFlags(), 'flags')
-}
-
-export function CliParam(...keys: string[]): ParameterDecorator {
+export function CliOption(...keys: string[]): ParameterDecorator {
     const mate = getCliMate()
     return mate.apply(
         mate.decorate('cliParamKeys', keys, false),

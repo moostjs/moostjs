@@ -4,8 +4,9 @@ import { TClassConstructor, TFunction, TObject } from 'common'
 import { insureInjectable } from './injectable.decorator'
 
 /**
+ * ## Controller
+ * ### @Decorator
  * Set Class as a Controller
- * @decorator
  * @param prefix - define the prefix for all the paths of this controller
  */
 export function Controller(prefix?: string): ClassDecorator {
@@ -17,8 +18,9 @@ export function Controller(prefix?: string): ClassDecorator {
 }
 
 /**
- * Set Class as a Controller
- * @decorator
+ * ## ImportController
+ * ### @Decorator
+ * Attach sub-controller
  * @param controller - target controller (instance) to import
  * @param provide - provide registry for the target controller
  */
@@ -28,8 +30,9 @@ export function ImportController(
 ): ClassDecorator
 
 /**
- * Set Class as a Controller
- * @decorator
+ * ## ImportController
+ * ### @Decorator
+ * Attach sub-controller
  * @param prefix - redefine the prefix for all the paths of this controller
  * @param controller - point to a controller (instance) to import
  * @param provide - provide registry for the target controller

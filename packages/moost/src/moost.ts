@@ -20,10 +20,63 @@ import { getDefaultLogger } from 'common'
 import { getIterceptorHandlerFactory } from './utils'
 
 export interface TMoostOptions {
+    /**
+     * Prefix that is used for each event path
+     */
     globalPrefix?: string
     logger?: TConsoleBase
 }
 
+/**
+ * ## Moost
+ * Main moostjs class that serves as a shell for Moost Adapters
+ * 
+ * ### Usage with HTTP Adapter
+ * ```ts
+ * │  // HTTP server example
+ * │  import { MoostHttp, Get } from '@moostjs/event-http'
+ * │  import { Moost, Param } from 'moost'
+ * │  
+ * │  class MyServer extends Moost {
+ * │      @Get('test/:name')
+ * │      test(@Param('name') name: string) {
+ * │          return { message: `Hello ${name}!` }
+ * │      }
+ * │  }
+ * │  
+ * │  const app = new MyServer()
+ * │  const http = new MoostHttp()
+ * │  app.adapter(http).listen(3000, () => {
+ * │      app.getLogger('MyApp').log('Up on port 3000')
+ * │  })
+ * │  app.init()
+ * ```
+ * ### Usage with CLI Adapter
+ * ```ts
+ * │  // CLI example
+ * │  import { MoostCli, Cli, CliOption, cliHelpInterceptor } from '@moostjs/event-cli'
+ * │  import { Moost, Param } from 'moost'
+ * │  
+ * │  class MyApp extends Moost {
+ * │      @Cli('command/:arg')
+ * │      command(
+ * │         @Param('arg')
+ * │         arg: string,
+ * │         @CliOption('test', 't')
+ * │         test: boolean,
+ * │      ) {
+ * │          return `command run with flag arg=${ arg }, test=${ test }`
+ * │      }
+ * │  }
+ * │  
+ * │  const app = new MyApp()
+ * │  app.applyGlobalInterceptors(cliHelpInterceptor())
+ * │  
+ * │  const cli = new MoostCli()
+ * │  app.adapter(cli)
+ * │  app.init()
+ * ```
+ */
 export class Moost {
     protected logger: TConsoleBase
 
@@ -48,6 +101,17 @@ export class Moost {
         Object.assign(mate, { logger: this.getLogger('mate') })
     }
 
+    /**
+     * ### getLogger
+     * Provides application logger
+     * ```js
+     * // get logger with topic = "App"
+     * const logger = app.getLogger('App')
+     * logger.log('...')
+     * ```
+     * @param topic 
+     * @returns 
+     */
     public getLogger(topic: string) {
         if (this.logger instanceof ProstoLogger) {
             return this.logger.createTopic(topic)
@@ -60,6 +124,10 @@ export class Moost {
         return a
     }
 
+    /**
+     * ### init
+     * Ititializes adapter. Must be called after adapters are attached.
+     */
     public async init() {
         this.setProvideRegistry(createProvideRegistry([Moost, () => this]))
         for (const a of this.adapters) {

@@ -1,8 +1,9 @@
 import { TAny } from 'common'
 import { TDecoratorLevel } from '../decorators/types'
-import { TPipeFn, TPipeMetas, TPipePriority } from './types'
+import { TPipeMetas, TPipePriority } from './types'
+import { definePipeFn } from '../define'
 
-export const resolvePipe: TPipeFn = (_value, metas, level) => {
+export const resolvePipe = definePipeFn((_value, metas, level) => {
     let resolver:
         | ((metas: TPipeMetas<TAny>, level: TDecoratorLevel) => unknown)
         | undefined
@@ -19,6 +20,4 @@ export const resolvePipe: TPipeFn = (_value, metas, level) => {
         return resolver(metas, level) as Promise<unknown>
     }
     return undefined
-}
-
-resolvePipe.priority = TPipePriority.RESOLVE
+}, TPipePriority.RESOLVE)

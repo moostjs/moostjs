@@ -1,6 +1,14 @@
 import { getMoostMate } from '../metadata/moost-metadata'
 import { TPipeFn, TPipePriority } from '../pipes/types'
 
+/**
+ * ## Pipe
+ * ### @Decorator
+ * Attach pipe
+ * @param handler pipe handler
+ * @param priority pipe priority
+ * @returns 
+ */
 export function Pipe(
     handler: TPipeFn,
     priority?: TPipePriority

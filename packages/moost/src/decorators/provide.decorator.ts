@@ -3,6 +3,8 @@ import { getMoostMate } from '../metadata/moost-metadata'
 import { TClassConstructor } from 'common'
 
 /**
+ * ## Provide
+ * ### @Decorator
  * Defines provide registry for class (and all the children)
  * @param type - string or class constructor
  * @param fn - factory function for provided value
@@ -19,6 +21,8 @@ export function Provide(
 }
 
 /**
+ * ## Inject
+ * ### @Decorator
  * Defines a key from provide registry to inject value
  * (For optional values use with @Nullable())
  * @param type - string or class constructor
@@ -28,6 +32,8 @@ export function Inject(type: string | TClassConstructor): ParameterDecorator {
 }
 
 /**
+ * ## Nullable
+ * ### @Decorator
  * Makes injectable value optional
  * @param value default true
  */

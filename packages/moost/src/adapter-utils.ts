@@ -22,6 +22,7 @@ export interface TMoostEventHandlerOptions<T> {
     controllerMethod?: keyof T
     callControllerMethod?: (args: unknown[]) => unknown
     resolveArgs?: () => Promise<unknown[]> | unknown[]
+    logErrors?: boolean
     manualUnscope?: boolean
     hooks?: {
         init?: (opts: TMoostEventHandlerHookOptions<T>) => unknown
@@ -72,7 +73,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
                 response = await interceptorHandler.init()
                 if (typeof response !== 'undefined') return endWithResponse()
             } catch (e) {
-                logger.error(e)
+                options.logErrors && logger.error(e)
                 response = e
                 return endWithResponse()
             }
@@ -87,7 +88,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
                 args = await options.resolveArgs()
                 // logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
             } catch (e) {
-                logger.error(e)
+                options.logErrors && logger.error(e)
                 response = e
                 return endWithResponse()
             }
@@ -114,7 +115,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         try {
             response = callControllerMethod()
         } catch (e) {
-            logger.error(e)
+            options.logErrors && logger.error(e)
             response = e
         }
 
@@ -126,7 +127,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
                     // logger.trace('firing after interceptors')
                     response = await interceptorHandler.fireAfter(response)
                 } catch (e) {
-                    logger.error(e)
+                    options.logErrors && logger.error(e)
                     if (!options.manualUnscope) { unscope() }
                     throw e
                 }

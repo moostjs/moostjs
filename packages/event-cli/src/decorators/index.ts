@@ -1,2 +1,2 @@
-export * from './flags.decorator'
+export * from './option.decorator'
 export * from './cli.decorator'

@@ -1,8 +1,9 @@
 import { getMoostMate, TInjectableScope } from '../metadata/moost-metadata'
 
 /**
+ * ## Injectable
+ * ### @Decorator
  * Mark the Class as Injectable to enable it to be used in dependency injection
- * @decorator
  * @param scope - Scope for injection ("FOR_EVENT" | "SINGLETON" | true)
  * FOR_EVENT - will create a new instance for each incoming request
  * SINGLETON | true - will create a new instance only once

@@ -36,6 +36,14 @@ export enum TInterceptorPriority {
     AFTER_ALL,
 }
 
+/**
+ * ## Intercept
+ * ### @Decorator
+ * Set interceptor
+ * @param handler interceptor fn (use defineInterceptorFn)
+ * @param priority interceptor priority
+ * @returns 
+ */
 export function Intercept(
     handler: TCallableClassFunction<TInterceptorFn>,
     priority?: TInterceptorPriority

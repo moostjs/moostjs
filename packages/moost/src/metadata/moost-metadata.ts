@@ -15,6 +15,7 @@ const METADATA_WORKSPACE = 'moost'
 interface TCommonMetaFields {
     id?: string
     label?: string
+    value?: unknown
     description?: string
     optional?: boolean
     required?: boolean

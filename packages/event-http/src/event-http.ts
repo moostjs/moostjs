@@ -26,6 +26,31 @@ export interface THttpHandlerMeta {
 const LOGGER_TITLE = 'moost-http'
 const CONTEXT_TYPE = 'HTTP'
 
+/**
+ * ## Moost HTTP Adapter
+ * 
+ * Moost Adapter for HTTP events
+ * 
+ * ```ts
+ * │  // HTTP server example
+ * │  import { MoostHttp, Get } from '@moostjs/event-http'
+ * │  import { Moost, Param } from 'moost'
+ * │  
+ * │  class MyServer extends Moost {
+ * │      @Get('test/:name')
+ * │      test(@Param('name') name: string) {
+ * │          return { message: `Hello ${name}!` }
+ * │      }
+ * │  }
+ * │  
+ * │  const app = new MyServer()
+ * │  const http = new MoostHttp()
+ * │  app.adapter(http).listen(3000, () => {
+ * │      app.getLogger('MyApp').log('Up on port 3000')
+ * │  })
+ * │  app.init()
+ * ```
+ */
 export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     protected httpApp: WooksHttp
 
@@ -76,6 +101,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         if (!response) {
             throw new HttpError(404, 'Resource Not Found')
         }
+        return response
     }
 
     protected moost?: Moost
