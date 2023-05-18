@@ -18,7 +18,7 @@ export type TInterceptorFn = {
         before: (fn: TInterceptorBefore) => void,
         after: (fn: TInterceptorAfter) => void,
         onError: (fn: TInterceptorOnError) => void
-    ): void | Promise<void>
+    ): unknown | Promise<unknown>
     priority?: TInterceptorPriority
 }
 

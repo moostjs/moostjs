@@ -1,13 +1,14 @@
 import {
     createHttpApp,
+    HttpError,
     TWooksHttpOptions,
-    useHttpContext,
     useRequest,
     WooksHttp,
 } from '@wooksjs/event-http'
 import {
+    defineMoostEventHandler,
     getMoostMate,
-    setControllerContext,
+    Moost,
     TMoostAdapter,
     TMoostAdapterOptions,
     TMoostMetadata,
@@ -16,12 +17,14 @@ import { TProstoRouterPathBuilder } from '@prostojs/router'
 import { createProvideRegistry } from '@prostojs/infact'
 import { Server as HttpServer } from 'http'
 import { Server as HttpsServer } from 'https'
-import { useEventLogger } from '@wooksjs/event-core'
 
 export interface THttpHandlerMeta {
     method: string
     path: string
 }
+
+const LOGGER_TITLE = 'moost-http'
+const CONTEXT_TYPE = 'HTTP'
 
 export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     protected httpApp: WooksHttp
@@ -30,9 +33,14 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         if (httpApp && httpApp instanceof WooksHttp) {
             this.httpApp = httpApp
         } else if (httpApp) {
-            this.httpApp = createHttpApp(httpApp)
+            this.httpApp = createHttpApp({
+                ...httpApp,
+                onNotFound: this.onNotFound.bind(this),
+            })
         } else {
-            this.httpApp = createHttpApp()
+            this.httpApp = createHttpApp({
+                onNotFound: this.onNotFound.bind(this),
+            })
         }
     }
 
@@ -57,6 +65,24 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
             DELETE?: TProstoRouterPathBuilder<Record<string, string | string[]>>
         }
     } = {}
+
+    async onNotFound() {
+        const response = await defineMoostEventHandler({
+            loggerTitle: LOGGER_TITLE,
+            getIterceptorHandler: () => this.moost?.getGlobalInterceptorHandler(),
+            getControllerInstance: () => this.moost,
+            callControllerMethod: () => undefined,
+        })()
+        if (!response) {
+            throw new HttpError(404, 'Resource Not Found')
+        }
+    }
+
+    protected moost?: Moost
+
+    onInit(moost: Moost) {
+        this.moost = moost
+    }    
 
     getProvideRegistry() {
         return createProvideRegistry(
@@ -95,78 +121,21 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                 '/'
             )
             if (!fn) {
-                fn = async () => {
-                    const { restoreCtx } = useHttpContext()
-                    const { reqId, rawRequest } = useRequest()
-                    const scopeId = reqId()
-                    const logger = useEventLogger('moost-http')
-
-                    rawRequest.on('end', opts.registerEventScope(scopeId)) // will unscope on request end
-
-                    const instance = await opts.getInstance()
-                    restoreCtx()
-
-                    setControllerContext(instance, opts.method)
-
-                    let response: unknown
-                    const interceptorHandler = await opts.getIterceptorHandler()
-                    restoreCtx()
-                    try {
-                        // logger.trace('initializing interceptors')
-                        await interceptorHandler.init()
-                    } catch (e) {
-                        logger.error(e)
-                        response = e
-                    }
-
-                    let args: unknown[] = []
-                    if (!response) {
-                        // params
-                        restoreCtx()
-                        try {
-                            // logger.trace(`resolving method args for "${ opts.method as string }"`)
-                            args = await opts.resolveArgs()
-                            // logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
-                        } catch (e) {
-                            logger.error(e)
-                            response = e
-                        }
-                    }
-
-                    if (!response) {
-                        restoreCtx()
-                        // fire before interceptors
-                        // logger.trace('firing before interceptors')
-                        response = await interceptorHandler.fireBefore(response)
-                        // fire request handler
-                        if (!interceptorHandler.responseOverwritten) {
-                            try {
-                                restoreCtx()
-                                // logger.trace(`firing method "${ opts.method as string }"`)
-                                response = await (
-                                    instance[opts.method] as unknown as (
-                                        ...a: typeof args
-                                    ) => unknown
-                                )(...args)
-                            } catch (e) {
-                                logger.error(e)
-                                response = e
-                            }
-                        }
-                    }
-
-                    // fire after interceptors
-                    restoreCtx()
-                    try {
-                        // logger.trace('firing after interceptors')
-                        response = await interceptorHandler.fireAfter(response)
-                    } catch (e) {
-                        logger.error(e)
-                        throw e
-                    }
-
-                    return response
-                }
+                fn = defineMoostEventHandler({
+                    contextType: CONTEXT_TYPE,
+                    loggerTitle: LOGGER_TITLE,
+                    getIterceptorHandler: opts.getIterceptorHandler,
+                    getControllerInstance: opts.getInstance,
+                    controllerMethod: opts.method,
+                    resolveArgs: opts.resolveArgs,
+                    manualUnscope: true,
+                    hooks: {
+                        init: ({ unscope }) => {
+                            const { rawRequest } = useRequest()
+                            rawRequest.on('end', unscope) // will unscope on request end
+                        },
+                    },
+                })
             }
             const { getPath: pathBuilder } = this.httpApp.on(handler.method, targetPath, fn)
             const methodMeta =

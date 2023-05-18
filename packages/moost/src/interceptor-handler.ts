@@ -4,30 +4,7 @@ import {
     TInterceptorFn,
     TInterceptorOnError,
 } from './decorators'
-import { TObject } from 'common'
 import { useEventContext } from '@wooksjs/event-core'
-import { TMoostHandler } from './metadata'
-import { TProvideRegistry } from '@prostojs/infact'
-
-export interface TMoostAdapterOptions<H, T> {
-    prefix: string
-    fakeInstance: T
-    getInstance: () => Promise<T>
-    method: keyof T
-    handlers: TMoostHandler<H>[]
-    getIterceptorHandler: () => Promise<InterceptorHandler>
-    registerEventScope: (scopeId: string) => () => void
-    resolveArgs: () => Promise<unknown[]>
-    logHandler: (eventName: string) => void
-}
-
-export interface TMoostAdapter<H> {
-    bindHandler<T extends TObject = TObject>(
-        options: TMoostAdapterOptions<H, T>
-    ): void | Promise<void>
-    onInit?: () => void | Promise<void>
-    getProvideRegistry?: () => TProvideRegistry
-}
 
 export class InterceptorHandler {
     constructor(protected handlers: TInterceptorFn[]) {}
@@ -51,7 +28,7 @@ export class InterceptorHandler {
         const { restoreCtx } = useEventContext()
         for (const handler of this.handlers) {
             restoreCtx()
-            await handler(
+            const response = await handler(
                 (fn) => {
                     this.before.push(fn)
                 },
@@ -62,6 +39,7 @@ export class InterceptorHandler {
                     this.onError.unshift(fn)
                 }
             )
+            if (typeof response !== 'undefined') return response
         }
     }
 

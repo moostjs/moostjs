@@ -1,6 +1,6 @@
 import { bindControllerMethods } from './binding/bind-controller'
 import { TInterceptorFn, TInterceptorPriority } from './decorators'
-import { getMoostMate, TInterceptorData } from './metadata'
+import { getMoostMate, TInterceptorData, TMoostHandler } from './metadata'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
 import { TPipeData, TPipeFn, TPipePriority } from './pipes/types'
 import { TAny, TClassConstructor, TFunction, TObject } from 'common'
@@ -13,10 +13,11 @@ import { getMoostInfact } from './metadata/infact'
 import { sharedPipes } from './pipes/shared-pipes'
 import { Valido } from '@prostojs/valido'
 import { getMoostValido } from './metadata/valido'
-import { TMoostAdapter } from './adapter'
+import { InterceptorHandler } from './interceptor-handler'
 import { useEventContext } from '@wooksjs/event-core'
 import { ProstoLogger, TConsoleBase } from '@prostojs/logger'
 import { getDefaultLogger } from 'common'
+import { getIterceptorHandlerFactory } from './utils'
 
 export interface TMoostOptions {
     globalPrefix?: string
@@ -78,7 +79,7 @@ export class Moost {
         this.unregisteredControllers.unshift(this)
         await this.bindControllers()
         for (const a of this.adapters) {
-            await (a.onInit && a.onInit())
+            await (a.onInit && a.onInit(this))
         }
     }
 
@@ -203,7 +204,30 @@ export class Moost {
                 })
             }
         }
+        this.globalInterceptorHandler = undefined
         return this
+    }
+
+    protected globalInterceptorHandler?: Promise<InterceptorHandler>
+
+    /**
+     * Provides InterceptorHandler with global interceptors and pipes.
+     * Used to process interceptors when event handler was not found.
+     * 
+     * @returns array of interceptors
+     */
+    getGlobalInterceptorHandler() {
+        if (!this.globalInterceptorHandler) {
+            const mate = getMoostMate()
+            const thisMeta = mate.read(this)
+            const pipes = [...(this.pipes || []), ...(thisMeta?.pipes || [])].sort(
+                (a, b) => a.priority - b.priority
+            )            
+            const interceptors = [...this.interceptors, ...(thisMeta?.interceptors || [])]
+                .sort((a, b) => a.priority - b.priority)
+            this.globalInterceptorHandler = getIterceptorHandlerFactory(interceptors, () => Promise.resolve(this as unknown as TObject), pipes, this.logger)()
+        }
+        return this.globalInterceptorHandler
     }
 
     applyGlobalInterceptors(
@@ -226,6 +250,7 @@ export class Moost {
                 })
             }
         }
+        this.globalInterceptorHandler = undefined
         return this
     }
 
@@ -248,4 +273,23 @@ export class Moost {
         this.unregisteredControllers.push(...controllers)
         return this
     }
+}
+
+export interface TMoostAdapterOptions<H, T> {
+    prefix: string
+    fakeInstance: T
+    getInstance: () => Promise<T>
+    method: keyof T
+    handlers: TMoostHandler<H>[]
+    getIterceptorHandler: () => Promise<InterceptorHandler>
+    resolveArgs: () => Promise<unknown[]>
+    logHandler: (eventName: string) => void
+}
+
+export interface TMoostAdapter<H> {
+    bindHandler<T extends TObject = TObject>(
+        options: TMoostAdapterOptions<H, T>
+    ): void | Promise<void>
+    onInit?: (moost: Moost) => void | Promise<void>
+    getProvideRegistry?: () => TProvideRegistry
 }

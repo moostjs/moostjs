@@ -1,26 +1,11 @@
 import { getMoostMate, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { TPipeData } from '../pipes'
-import { TAny, TClassConstructor, TObject } from 'common'
+import { TObject } from 'common'
 import { getInstanceOwnMethods } from './utils'
-import { TInterceptorFn } from '../decorators'
-import { getCallableFn } from '../class-function/class-function'
-import { InterceptorHandler, TMoostAdapter } from '../adapter'
 import { runPipes } from '../pipes/run-pipes'
 import { useEventContext } from '@wooksjs/event-core'
-import { getMoostInfact } from '../metadata/infact'
-import { TConsoleBase } from '@prostojs/logger'
-
-export interface TBindControllerOptions {
-    getInstance: () => Promise<TObject>
-    classConstructor: TClassConstructor
-    adapters: TMoostAdapter<TAny>[]
-    globalPrefix?: string
-    replaceOwnPrefix?: string
-    provide?: TMoostMetadata['provide']
-    interceptors?: TMoostMetadata['interceptors']
-    pipes?: TPipeData[]
-    logger: TConsoleBase
-}
+import { getIterceptorHandlerFactory } from '../utils'
+import { TBindControllerOptions } from './bind-types'
 
 export async function bindControllerMethods(options: TBindControllerOptions) {
     const opts = options || {}
@@ -52,31 +37,8 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             ...(meta.interceptors || []),
             ...(methodMeta.interceptors || []),
         ].sort((a, b) => a.priority - b.priority)
-        const getIterceptorHandler = () => {
-            const interceptorHandlers: TInterceptorFn[] = []
-            for (const { handler } of interceptors) {
-                const interceptorMeta = mate.read(handler)
-                if (interceptorMeta?.injectable) {
-                    interceptorHandlers.push(async (...args) => {
-                        const { restoreCtx } = useEventContext()
-                        const targetInstance = await getInstance()
-                        restoreCtx()
-                        return (
-                            await getCallableFn(
-                                targetInstance,
-                                handler,
-                                restoreCtx,
-                                pipes,
-                                options.logger
-                            )
-                        )(...args)
-                    })
-                } else {
-                    interceptorHandlers.push(handler as TInterceptorFn)
-                }
-            }
-            return Promise.resolve(new InterceptorHandler(interceptorHandlers))
-        }
+
+        const getIterceptorHandler = getIterceptorHandlerFactory(interceptors, getInstance, pipes, options.logger)
 
         // preparing pipes
         const argsPipes: {
@@ -120,11 +82,6 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                 prefix,
                 fakeInstance,
                 getInstance,
-                registerEventScope: (scopeId: string) => {
-                    const infact = getMoostInfact()
-                    infact.registerScope(scopeId)
-                    return () => infact.unregisterScope(scopeId)
-                },
                 method,
                 handlers: methodMeta.handlers,
                 getIterceptorHandler,
