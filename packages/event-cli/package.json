@@ -1,39 +1,39 @@
 {
-    "name": "@moostjs/event-cli",
-    "version": "0.2.27",
-    "description": "@moostjs/event-cli",
-    "main": "dist/index.cjs",
-    "module": "dist/index.mjs",
-    "types": "dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/moostjs/moostjs.git",
-        "directory": "packages/event-cli"
-    },
-    "keywords": [
-        "moost",
-        "moostjs",
-        "composables",
-        "framework",
-        "wooksjs",
-        "prostojs"
-    ],
-    "author": "Artem Maltsev",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/moostjs/moostjs/issues"
-    },
-    "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-cli#readme",
-    "peerDependencies": {
-        "moost": "0.2.27",
-        "wooks": "^0.2.18",
-        "@wooksjs/event-core": "^0.2.18"
-    },
-    "dependencies": {
-        "@wooksjs/event-cli": "^0.2.18",
-        "@prostojs/cli-help": ""
-    }
+  "name": "@moostjs/event-cli",
+  "version": "0.2.28",
+  "description": "@moostjs/event-cli",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/event-cli"
+  },
+  "keywords": [
+    "moost",
+    "moostjs",
+    "composables",
+    "framework",
+    "wooksjs",
+    "prostojs"
+  ],
+  "author": "Artem Maltsev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-cli#readme",
+  "peerDependencies": {
+    "moost": "0.2.28",
+    "wooks": "^0.2.22",
+    "@wooksjs/event-core": "^0.2.22"
+  },
+  "dependencies": {
+    "@wooksjs/event-cli": "^0.2.22",
+    "@prostojs/cli-help": "^0.0.7"
+  }
 }

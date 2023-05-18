@@ -1,3 +1,12 @@
+## [0.2.28](https://github.com/moostjs/moostjs/compare/v0.2.27...v0.2.28) (2023-05-18)
+
+
+### Features
+
+* **event-cli:** add cliHelp, add cliHelp interceptor ([a0e4aec](https://github.com/moostjs/moostjs/commit/a0e4aec87c0c488b0677d315e15636a896a2fcbd))
+
+
+
 ## [0.2.27](https://github.com/moostjs/moostjs/compare/v0.2.26...v0.2.27) (2023-04-19)
 
 ### Features

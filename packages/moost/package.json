@@ -1,38 +1,38 @@
 {
-    "name": "moost",
-    "version": "0.2.27",
-    "description": "moost",
-    "main": "dist/index.cjs",
-    "module": "dist/index.mjs",
-    "types": "dist/index.d.ts",
-    "files": [
-        "dist"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/moostjs/moostjs.git",
-        "directory": "packages/moost"
-    },
-    "keywords": [
-        "moost",
-        "moostjs",
-        "composables",
-        "framework",
-        "wooksjs",
-        "prostojs"
-    ],
-    "dependencies": {
-        "@prostojs/infact": "^0.1.11",
-        "@prostojs/mate": "^0.1.14",
-        "@prostojs/logger": "^0.3.4",
-        "@prostojs/valido": "^0.0.2",
-        "@wooksjs/event-core": "^0.2.18",
-        "wooks": "^0.2.18"
-    },
-    "author": "Artem Maltsev",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/moostjs/moostjs/issues"
-    },
-    "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/moost#readme"
+  "name": "moost",
+  "version": "0.2.28",
+  "description": "moost",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/moost"
+  },
+  "keywords": [
+    "moost",
+    "moostjs",
+    "composables",
+    "framework",
+    "wooksjs",
+    "prostojs"
+  ],
+  "dependencies": {
+    "@prostojs/infact": "^0.1.11",
+    "@prostojs/mate": "^0.1.14",
+    "@prostojs/logger": "^0.3.4",
+    "@prostojs/valido": "^0.0.2",
+    "@wooksjs/event-core": "^0.2.22",
+    "wooks": "^0.2.22"
+  },
+  "author": "Artem Maltsev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/moost#readme"
 }
