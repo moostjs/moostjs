@@ -12,7 +12,7 @@ import {
     useCliContext,
 } from '@wooksjs/event-cli'
 import { CliHelpRendererWithFn, getCliMate } from './meta-types'
-import { CliHelpRenderer, TCliHelpOptions } from '@prostojs/cli-help'
+import { CliHelpRenderer, TCliEntry, TCliHelpOptions } from '@prostojs/cli-help'
 import { setCliHelpForEvent } from './composables'
 
 export interface TCliHandlerMeta {
@@ -150,7 +150,8 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                     : typeof opts.method === 'string'
                         ? opts.method
                         : ''
-            const makePath = (p: string) => `${opts.prefix.replace(/\s+/g, '/') || ''}/${p}`
+            const prefix = opts.prefix.replace(/\s+/g, '/') || ''            
+            const makePath = (p: string) => `${ prefix }/${p}`
                 .replace(/\/\/+/g, '/')
                 // avoid interpreting "cmd:tail" as "cmd/:tail"
                 .replace(/\/\\:/g, '\\:')
@@ -217,6 +218,15 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                 custom: { fn, log: opts.logHandler },
                 examples: meta?.cliExamples || [],
             })
+            // if (prefix && !classMeta?.cliHelpUsed && classMeta?.description) {
+            //     classMeta.cliHelpUsed = true
+            //     this.cliHelp.addEntry({
+            //         fake: true,
+            //         description: classMeta.description,
+            //         command: prefix.replace(/\//g, ' '),
+            //         examples: classMeta?.cliExamples || [],
+            //     } as Omit<TCliEntry<any>, 'fake'>)
+            // }
         }
     }
 }

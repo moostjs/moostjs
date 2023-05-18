@@ -7,6 +7,7 @@ export interface TCliClassMeta {
     cliAliases: string[]
     cliExamples: { cmd: string, description?: string }[]
     cliOptions: { keys: string[], description?: string, value?: string }[]
+    // cliHelpUsed?: boolean
 }
 
 export function getCliMate() {
