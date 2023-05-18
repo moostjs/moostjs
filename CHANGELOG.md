@@ -1,3 +1,12 @@
+## [0.2.29](https://github.com/moostjs/moostjs/compare/v0.2.28...v0.2.29) (2023-05-18)
+
+
+### Features
+
+* **event-cli:** add global options and aliases ([d9d81ee](https://github.com/moostjs/moostjs/commit/d9d81ee2eb63f03a395eef18c04e076876e08f0a))
+
+
+
 ## [0.2.28](https://github.com/moostjs/moostjs/compare/v0.2.27...v0.2.28) (2023-05-18)
 
 
