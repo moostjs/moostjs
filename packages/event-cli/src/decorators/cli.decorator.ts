@@ -9,6 +9,7 @@ import { getCliMate } from '../meta-types'
  * For example the folowing path are interpreted the same:
  * - "command test use:dev :name"
  * - "command/test/use:dev/:name"
+ * 
  * Where name will become an argument
  * 
  * @param path - command path

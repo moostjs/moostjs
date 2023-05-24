@@ -1,6 +1,5 @@
 import { Intercept, TInterceptorPriority, defineInterceptorFn, useControllerContext } from 'moost'
-import { useCliContext, useFlag } from '@wooksjs/event-cli'
-import { useCliHelp } from '../composables'
+import { useAutoHelp, useCommandLookupHelp } from '@wooksjs/event-cli'
 
 /**
  * ### Interceptor Factory for CliHelpRenderer
@@ -27,57 +26,23 @@ export const cliHelpInterceptor = (opts?: {
      */
     colors?: boolean
     /**
-     * Enable help message when arguments are missing
+     * Enable lookup for a command
      */
-    helpWithArgs?: boolean
-    /**
-     * Enable help message when command is incomplete
-     * and it is possible to suggest related commands
-     */
-    helpWithIncompleteCmd?: boolean
+    lookupLevel?: number
 }) => {
     return defineInterceptorFn(() => {
-        const helpOptions = opts?.helpOptions || ['help']
-        for (const option of helpOptions) {
-            if (useFlag(option) === true) {
-                try {
-                    useCliHelp().print(opts?.colors)
-                    return ''
-                } catch (e) {
-                    //
-                }
+        try {
+            if (useAutoHelp(opts?.helpOptions, opts?.colors)) {
+                return ''
             }
+        } catch(e) {
+            //
         }
-        if (opts?.helpWithArgs || opts?.helpWithIncompleteCmd) {
+        if (opts?.lookupLevel) {
             const { getMethod } = useControllerContext()
             if (!getMethod()) {
-                const parts = useCliContext().store('event').get('pathParams')
-                const cliHelp = useCliHelp().getCliHelp()
-                const cmd = cliHelp.getCliName()
-                let data
-                for (let i = 0; i < Math.min(parts.length, 4); i++) {
-                    const pathParams = parts.slice(0, i ? -i : parts.length).join(' ')
-                    try {
-                        data = cliHelp.match(pathParams)
-                        break
-                    } catch (e) {
-                        if (opts?.helpWithIncompleteCmd) {
-                            const variants = cliHelp.lookup(pathParams)
-                            if (variants.length) {
-                                throw new Error(`Wrong command, did you mean:\n${variants.slice(0, 7).map(c => `  $ ${cmd} ${c.main.command}`).join('\n')}`)
-                            }
-                        }
-                    }
-                }
-                if (data) {
-                    const { main, children } = data
-                    if (opts?.helpWithArgs && main.args && Object.keys(main.args).length) {
-                        throw new Error(`Arguments expected: ${Object.keys(main.args).map(l => `<${l}>`).join(', ')}`)
-                    } else if (opts?.helpWithIncompleteCmd && children && children.length) {
-                        throw new Error(`Wrong command, did you mean:\n${children.slice(0, 7).map(c => `  $ ${ cmd } ${ c.command }`).join('\n')}`)
-                    }
-                }
-            }            
+                useCommandLookupHelp(opts.lookupLevel)
+            }    
         }
     }, TInterceptorPriority.BEFORE_ALL)
 }
