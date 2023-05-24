@@ -1,3 +1,12 @@
+## [0.2.30](https://github.com/moostjs/moostjs/compare/v0.2.29...v0.2.30) (2023-05-24)
+
+
+### Bug Fixes
+
+* **event-cli:** update to wooks 0.3.1 ([0b5d208](https://github.com/moostjs/moostjs/commit/0b5d208df336114c9e0f7599be23345c36be1a47))
+
+
+
 ## [0.2.29](https://github.com/moostjs/moostjs/compare/v0.2.28...v0.2.29) (2023-05-18)
 
 
