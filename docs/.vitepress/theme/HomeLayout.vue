@@ -28,9 +28,7 @@ const actions = [
                             alt="Moost"
                             style="width: 400px; margin-bottom: 32px"
                         />
-                        <p class="text">
-                            Metadata Driven Event Processing Framework
-                        </p>
+                        <p class="text">Metadata Driven Event Processing Framework</p>
                         <p class="tagline">
                             Get the
                             <strong style="color: #ff269b">moost</strong> out of

@@ -35,6 +35,10 @@ export default defineConfig({
     themeConfig: {
         logo: '/moost-full-logo.png', //'/logo.svg',
 
+        search: {
+            provider: 'local'
+        },
+
         editLink: {
             pattern: 'https://github.com/moostjs/moostjs/edit/main/docs/:path',
             text: 'Suggest changes to this page',
@@ -111,83 +115,33 @@ export default defineConfig({
                     ],
                 },
                 {
-                    text: 'Moost HTTP',
-                    collapsible: true,
+                    text: 'Web Application',
                     collapsed: true,
                     items: [
                         {
-                            text: 'HTTP Server',
+                            text: 'Quick Start of Web App',
                             link: '/guide/http/',
-                        },
-                        {
-                            text: 'Routing',
-                            link: '/guide/http/routing',
-                        },
-                        {
-                            text: 'Composables',
-                            link: '/guide/http/composables/',
-                            items: [
-                                {
-                                    text: 'Request',
-                                    link: '/guide/http/composables/request',
-                                },
-                                {
-                                    text: 'Response',
-                                    link: '/guide/http/composables/response',
-                                },
-                                {
-                                    text: 'Body Parser',
-                                    link: '/guide/http/body',
-                                },
-                                {
-                                    text: 'Proxy Requests',
-                                    link: '/guide/http/proxy',
-                                },
-                                {
-                                    text: 'Serve Static',
-                                    link: '/guide/http/static',
-                                },
-                            ],
-                        },
-                        {
-                            text: 'Advanced',
-                            items: [
-                                {
-                                    text: 'Context and Hooks',
-                                    link: '/guide/http/more-hooks',
-                                },
-                                {
-                                    text: 'Create an Adapter',
-                                    link: '/guide/http/adapters',
-                                },
-                            ],
-                        },
-                        {
-                            text: 'Express Adapter',
-                            link: '/guide/http/express',
                         },
                     ],
                 },
                 {
                     text: 'Moost CLI',
-                    collapsible: true,
                     collapsed: true,
                     items: [
                         {
-                            text: 'Create CLI',
+                            text: 'Quick Start CLI',
                             link: '/guide/cli/',
                         },
                     ],
                 },
                 {
                     text: 'Advanced',
-                    collapsible: true,
                     collapsed: true,
                     items: [
-                        {
-                            text: 'Event Context',
-                            link: '/guide/advanced/context',
-                        },
+                        // {
+                        //     text: 'Event Context',
+                        //     link: '/guide/advanced/context',
+                        // },
                     ],
                 },
                 // {

@@ -1,49 +1,50 @@
 # Why Moost
 
 ::: warning
-The work on Moost is still in progress. It is already suitable for
-out-of-the-box use for HTTP events, but some of the APIs can still change.
+Work on Moost is still in progress. While it is suitable for out-of-the-box use, some APIs may undergo changes.
 :::
 
-When building large enterprise applications developers often
-come to the point when the code becomes very hard to maintain.
-They start to call it "legacy code" which has lots of "spaghetti" in it 🍝.
+## Introduction
+When developing large enterprise applications, developers often
+encounter challenges in maintaining their codebase.
+The code becomes difficult to manage, leading to what is commonly
+referred to as "legacy code" with a tangled mess of dependencies and complexities.
 
-With the help of Moost we want to avoid that. Is it guaranteed
-that we can avoid all the problems? Of course not. But Moost provides
-several techniques that help building robust applications and increase overall speed of development.
+To address these issues, Moost offers a solution.
+While it cannot completely eliminate all problems, Moost provides several
+techniques that contribute to building robust applications and increasing
+overall development speed.
 
-## The problems
+## Understanding the Problems
 
-Why does the code become legacy and hard to maintain?
-Well, there are several reasons:
+Why does code become legacy and difficult to maintain?
+There are several reasons:
 
--   It could be that the app was initially poorly designed with tightly coupled components, the code then is fragile: you touch one piece -> another piece is broken.
--   Sometimes well-designed app can be spoiled with lots of small patches that create spaghetti code.
--   It could also be that the app structure is extremely complex due to complex tasks that it solves, so developers can't physically trace all the complexity when working on it.
+-   _Poor initial design_: If the application is poorly designed with tightly coupled components, modifying one part can unintentionally break other parts.
+-   _Accumulation of patches_: Well-designed applications can become burdened with numerous small patches that introduce spaghetti code.
+-   _Complex structure_: Applications dealing with complex tasks can have intricate structures that make it challenging for developers to comprehend and work with.
 
-Whatever happens to your application, it's good until the code becomes fragile and tightly coupled. What can we do about that?
-There is well-known [SOLID](https://en.wikipedia.org/wiki/SOLID) principles that we can apply to our code to keep our apps in a good shape for a long run.
+Regardless of the reasons, the critical point is when code becomes fragile and tightly coupled.
+What can be done to address this? One solution is to apply well-known software design principles,
+such as the [SOLID](https://en.wikipedia.org/wiki/SOLID) principles, to keep applications in good shape over the long term.
 
-Is there already a solution that has built-in support for common design patterns such as the SOLID principles?
-Yes, it's `nestjs`, ispired by `angular` and decorators and metadata.
-Although it has extremely confusing system of modules, it provides a very nice approach for apps development.
+Are there existing solutions that provide built-in support for common design patterns like the SOLID principles?
+Yes, there is `nestjs`, which draws inspiration from `angular` and leverages decorators and metadata.
+While `nestjs` offers a compelling approach to application development, its module system can be confusing.
 
-## What's the difference with Moost?
 
-Moost was inspired by `nestjs` and also has built-in support for common design patterns
-such as the SOLID principles, which can help to ensure that the application is designed in a way
-that is easy to understand, flexible, and maintainable.
+## Moost's Approach
+Moost draws inspiration from `nestjs` and also provides built-in support for common design patterns,
+including the **SOLID** principles, to ensure applications are designed in an understandable,
+flexible, and maintainable manner. However, Moost differentiates itself in the following ways:
 
-At the same time Moost is different:
+-   _No additional modules abstraction_: Moost eliminates the need for an additional module abstraction, making it simpler and easier to work with and understand.
+-   _Utilization of reusable dependency injection framework_: Moost leverages the reusable dependency injection framework [@prostojs/infact](https://github.com/prostojs/infact).
+-   _Metadata layer with [@prostojs/mate](https://github.com/prostojs/mate)_: Moost employs a metadata layer powered by `@prostojs/mate`, enabling effortless interaction with metadata.
+-   _Support for [DTOs](https://en.wikipedia.org/wiki/Data_transfer_object) and validations_: Moost supports DTOs and validations through [@prostojs/valido](https://github.com/prostojs/valido).
+-   _Independence from `express` or `fastify`_: While Moost can be used with `express` or `fastify` via an adapter, it does not rely on these frameworks directly.
+-   _Leveraging the power of **Wooks Composables**_: As Moost is built on top of [Wooks](https://wooksjs.org), it benefits from the powerful features provided by Wooks Composables.
 
--   It does not use additional `modules` abstraction (like `angular` or `nestjs`). It's much easier to work with and to understand.
--   It utilizes reusable dependency injection framework [@prostojs/infact](https://github.com/prostojs/infact).
--   It uses metadata layer powered by [@prostojs/mate](https://github.com/prostojs/mate). It was never as easy to work with metadata.
--   It supports [DTOs](https://en.wikipedia.org/wiki/Data_transfer_object) and validations powered by [@prostojs/valido](https://github.com/prostojs/valido).
--   It does not use `express` or `fastify` (although you can use express/fastify via an adapter).
--   As Moost is built on top of [Wooks](https://wooksjs.org) it benefints from power of Wooks Composables.
-
-Overall, Moost provides a solid foundation for building large, scalable server-side applications,
-and its use of TypeScript and @Metadata makes it easy for developers to quickly get up to speed
-and start building large applications.
+Overall, Moost offers a solid foundation for developing large, scalable server-side applications.
+Its utilization of `TypeScript` and `@Metadata` simplifies the learning curve for developers,
+enabling them to quickly build robust applications.

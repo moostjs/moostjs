@@ -119,7 +119,7 @@ export class Moost {
         return this.logger
     }
 
-    public adapter<T>(a: TMoostAdapter<T>) {
+    public adapter<T extends TMoostAdapter<TAny>>(a: T) {
         this.adapters.push(a)
         return a
     }
