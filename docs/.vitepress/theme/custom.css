@@ -5,15 +5,14 @@
     --vp-c-brand-lighter: #88a7f5;
     --vp-c-brand-dark: #274080;
     --vp-c-brand-darker: #182955;
-    --vp-code-block-bg: #0a2d3e;
+    --vp-code-block-bg: #343f5c;
 
-    --vp-code-block-bg: #244352;
 }
 
 html.dark {
-    --vp-sidebar-bg-color: #0a0d17;
-    --vp-code-block-bg: #0a2d3e;
-    --vp-c-bg: #0c111f;
+    --vp-sidebar-bg-color: #08102b; /* sidebar */
+    --vp-code-block-bg: #07112c;
+    --vp-c-bg: #151e38;
     --vp-c-bg-elv: #252529;
     --vp-c-bg-elv-up: #313136;
     --vp-c-bg-elv-down: #1e1e20;
@@ -30,7 +29,7 @@ html.dark {
     --vp-c-bg-elv: #274080; /* menu */
     --vp-c-bg-elv-mute: #182955; /* menu btn */
 
-    --vp-c-bg-alt: #00121a;
+    --vp-c-bg-alt: #07112c; /* search */
 }
 
 img.VPImage.logo {
@@ -51,4 +50,16 @@ a.title {
 
 .VPNavBar.has-sidebar a.title {
     background-image: none;
+}
+
+.language-terminal {
+    font-size: 14px;
+    padding: 0 24px;
+    line-height: 20px;
+}
+.language-terminal .info {
+    color: #199364;
+}
+.language-terminal .cyan {
+    color: #1b839b;
 }

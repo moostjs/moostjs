@@ -4,7 +4,6 @@
 Work on Moost is still in progress. While it is suitable for out-of-the-box use, some APIs may undergo changes.
 :::
 
-## Introduction
 When developing large enterprise applications, developers often
 encounter challenges in maintaining their codebase.
 The code becomes difficult to manage, leading to what is commonly

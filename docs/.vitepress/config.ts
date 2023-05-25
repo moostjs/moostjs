@@ -122,6 +122,10 @@ export default defineConfig({
                             text: 'Quick Start of Web App',
                             link: '/guide/http/',
                         },
+                        {
+                            text: 'Controllers',
+                            link: '/guide/http/controllers',
+                        },
                     ],
                 },
                 {
