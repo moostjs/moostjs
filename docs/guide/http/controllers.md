@@ -107,7 +107,7 @@ export class MainController {
     }
 }
 ```
-```ts [Singleton version]
+```ts [SINGLETON]
 import { Get } from '@moostjs/event-http'
 import { Controller, Param } from 'moost'
 
@@ -119,7 +119,7 @@ export class MainController {
     }
 }
 ```
-```ts [FOR_EVENT version]
+```ts [FOR_EVENT]
 import { Get } from '@moostjs/event-http'
 import { Controller, Injectable, Param } from 'moost'
 
@@ -136,6 +136,6 @@ export class MainController {
 }
 ```
 :::
-With `@Injectable('FOR_EVENT')` setup, since the controller instance is unique for each event,
+With `FOR_EVENT` option, the controller instance is unique for each event,
 you can use the `@Param('name')` decorator at the class property level
 and access it within the event handler using `this.name`.

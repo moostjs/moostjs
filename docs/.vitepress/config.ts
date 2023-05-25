@@ -57,6 +57,8 @@ export default defineConfig({
 
         nav: [
             { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
+            { text: 'HTTP', link: '/guide/http/', activeMatch: '/guide/http/' },
+            { text: 'CLI', link: '/guide/cli/', activeMatch: '/guide/cli/' },
             // { text: 'Config', link: '/config/', activeMatch: '/config/' },
             // { text: 'Plugins', link: '/plugins/', activeMatch: '/plugins/' },
             {
@@ -79,7 +81,7 @@ export default defineConfig({
                             //   },
                             {
                                 text: 'Changelog',
-                                link: 'https://github.com/moostjs/moostjs/blob/main/packages/moost/CHANGELOG.md',
+                                link: 'https://github.com/moostjs/moostjs/blob/main/CHANGELOG.md',
                             },
                         ],
                     },
@@ -125,6 +127,10 @@ export default defineConfig({
                         {
                             text: 'Controllers',
                             link: '/guide/http/controllers',
+                        },
+                        {
+                            text: 'Request Data',
+                            link: '/guide/http/request',
                         },
                     ],
                 },
