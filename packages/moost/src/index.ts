@@ -7,3 +7,5 @@ export * from './interceptor-handler'
 export * from './composables'
 export * from './adapter-utils'
 export * from './define'
+export { THook } from '@wooksjs/event-core'
+

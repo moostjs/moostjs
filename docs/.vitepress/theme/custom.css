@@ -11,25 +11,25 @@
 
 html.dark {
     --vp-sidebar-bg-color: #08102b; /* sidebar */
-    --vp-code-block-bg: #07112c;
+    --vp-code-block-bg: #1c2b59;
     --vp-c-bg: #151e38;
     --vp-c-bg-elv: #252529;
     --vp-c-bg-elv-up: #313136;
     --vp-c-bg-elv-down: #1e1e20;
     --vp-c-bg-elv-mute: #313136;
     --vp-c-bg-soft: #1c3067;
-    --vp-c-bg-soft-up: #08122f; /* feature hover */
+    --vp-c-bg-soft-up: var(--vp-code-block-bg); /* feature hover */
     --vp-c-bg-soft-down: #0e1c41;
     --vp-c-bg-soft-mute: #313136;
 
-    --vp-c-mute: #0e1c41; /* btn */
+    --vp-c-mute: var(--vp-code-block-bg); /* btn */
     --vp-c-mute-dark: #0c111f; /* hover */
     --vp-c-mute-darker: #3d61be; /* active */
 
     --vp-c-bg-elv: #274080; /* menu */
     --vp-c-bg-elv-mute: #182955; /* menu btn */
 
-    --vp-c-bg-alt: #07112c; /* search */
+    --vp-c-bg-alt: #1c2b59; /* search */
 }
 
 img.VPImage.logo {
@@ -52,6 +52,31 @@ a.title {
     background-image: none;
 }
 
+/* navigation to external resources */
+a[target="_blank"]:not(.VPSocialLink):not(.VPFeature):after {
+    content: ' ';
+    width: 18px;
+    height: 14px;
+    display: inline-block;
+    background-position: 100% 50%;
+    background-repeat: no-repeat;
+    transform: translateY(1px);
+    transition: opacity 0.2s linear;
+}
+
+a[target="_blank"]:after {
+    background-image: url("data: image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' fill='rgba(0, 0, 0, .8)' width='14' height='14' viewBox='-12 52 364 364'><path d='M 0 64 L 0 96 L 0 352 L 0 384 L 320 384 L 320 352 L 320 256 L 288 256 L 288 352 L 32 352 L 32 96 L 128 96 L 128 64 L 32 64 L 0 64 z ' /><path d='M 192 64 L 192 96 L 265.18555 96 L 128 233.63672 L 150.91992 256 L 288 118.46875 L 288 192 L 320 192 L 320 86.363281 L 320 64 L 297.08008 64 L 192 64 z ' /></svg>");
+}
+
+.dark a[target="_blank"]:after {
+    background-image: url("data: image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' fill='rgba(255,255,255,.8)' width='14' height='14' viewBox='-12 52 364 364'><path d='M 0 64 L 0 96 L 0 352 L 0 384 L 320 384 L 320 352 L 320 256 L 288 256 L 288 352 L 32 352 L 32 96 L 128 96 L 128 64 L 32 64 L 0 64 z ' /><path d='M 192 64 L 192 96 L 265.18555 96 L 128 233.63672 L 150.91992 256 L 288 118.46875 L 288 192 L 320 192 L 320 86.363281 L 320 64 L 297.08008 64 L 192 64 z ' /></svg>");
+}
+
+a[target="_blank"]:hover:after {
+    opacity: 0.6;
+}
+
+/* console log visualisation */
 .language-terminal {
     font-size: 14px;
     padding: 0 24px;

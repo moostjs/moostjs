@@ -56,9 +56,9 @@ export default defineConfig({
         },
 
         nav: [
-            { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
-            { text: 'HTTP', link: '/guide/http/', activeMatch: '/guide/http/' },
-            { text: 'CLI', link: '/guide/cli/', activeMatch: '/guide/cli/' },
+            { text: 'Moost', link: '/moost/', activeMatch: '/moost/' },
+            { text: 'Web App', link: '/webapp/', activeMatch: '/webapp/' },
+            { text: 'CLI App', link: '/cliapp/', activeMatch: '/cliapp/' },
             // { text: 'Config', link: '/config/', activeMatch: '/config/' },
             // { text: 'Plugins', link: '/plugins/', activeMatch: '/plugins/' },
             {
@@ -94,75 +94,67 @@ export default defineConfig({
         ],
 
         sidebar: {
-            '/guide/': [
+            '/moost/': [
                 {
-                    text: 'Guide',
+                    text: 'Moost',
                     items: [
                         {
                             text: 'Why Moost',
-                            link: '/guide/why',
+                            link: '/moost/why',
                         },
                         {
-                            text: 'Getting Started',
-                            link: '/guide/',
+                            text: 'Introduction',
+                            link: '/moost/',
                         },
-                        // {
-                        //     text: 'Features',
-                        //     link: '/guide/features',
-                        // },
-                        // {
-                        //   text: 'CLI',
-                        //   link: '/guide/cli',
-                        // },
+                        {
+                            text: 'Advanced',
+                            items: [
+                                {
+                                    text: 'Interceptors',
+                                    link: '/moost/advanced/interceptors',
+                                },
+                                {
+                                    text: 'Logging',
+                                    link: '/moost/advanced/logging',
+                                },
+                            ],
+                        },
                     ],
-                },
-                {
+                }],
+            '/webapp/': [{
                     text: 'Web Application',
-                    collapsed: true,
                     items: [
                         {
-                            text: 'Quick Start of Web App',
-                            link: '/guide/http/',
+                            text: 'Quick Start',
+                            link: '/webapp/',
                         },
                         {
                             text: 'Controllers',
-                            link: '/guide/http/controllers',
+                            link: '/webapp/controllers',
                         },
                         {
                             text: 'Request Data',
-                            link: '/guide/http/request',
+                            link: '/webapp/request',
+                        },
+                        {
+                            text: 'Response',
+                            link: '/webapp/response',
+                        },
+                        {
+                            text: 'Interceptors',
+                            link: '/webapp/interceptors',
                         },
                     ],
-                },
-                {
-                    text: 'Moost CLI',
-                    collapsed: true,
+                }],
+            '/cliapp/': [{
+                    text: 'CLI Application',
                     items: [
                         {
-                            text: 'Quick Start CLI',
-                            link: '/guide/cli/',
+                            text: 'Quick Start',
+                            link: '/cliapp/',
                         },
                     ],
                 },
-                {
-                    text: 'Advanced',
-                    collapsed: true,
-                    items: [
-                        // {
-                        //     text: 'Event Context',
-                        //     link: '/guide/advanced/context',
-                        // },
-                    ],
-                },
-                // {
-                //     text: 'APIs',
-                //     items: [
-                //         {
-                //             text: 'Plugin API',
-                //             link: '/guide/api-plugin',
-                //         },
-                //     ],
-                // },
             ],
             // '/config/': [
             //     {

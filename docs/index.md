@@ -28,11 +28,11 @@ features:
     - icon: 🕸
       title: Build Web App
       details: With the power of @moostjs/event-http you can easily and quickly build a web app.
-      link: /guide/http/
+      link: /webapp/
     - icon: 💻
       title: Build CLI
       details: With the help of @moostjs/event-cli manage your cli events.
-      link: /guide/cli/
+      link: /cliapp/
     - icon:
           src: /wooks-logo.svg
           alt: WooksJS

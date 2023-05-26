@@ -4,8 +4,8 @@ import VPButton from 'vitepress/dist/client/theme-default/components/VPButton.vu
 
 const { Layout } = DefaultTheme
 const actions = [
-    { theme: 'brand', text: 'Get Started', link: '/guide/' },
-    { theme: 'alt', text: 'Why Moost?', link: '/guide/why' },
+    { theme: 'brand', text: 'Get Started with Web App', link: '/webapp/' },
+    { theme: 'alt', text: 'Why Moost?', link: '/moost/why' },
     {
         theme: 'alt',
         text: 'View on GitHub',

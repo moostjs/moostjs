@@ -1,4 +1,4 @@
-import { attachHook } from '@wooksjs/event-core'
+import { THook, attachHook } from '@wooksjs/event-core'
 import {
     useCookies,
     useHeaders,
@@ -9,6 +9,7 @@ import {
     useStatus,
     useSetHeader,
     useSetCookie,
+    TCookieAttributes as TCookieAttributesRequired,
 } from '@wooksjs/event-http'
 import { useBody } from '@wooksjs/http-body'
 import { Resolve } from 'moost'
@@ -97,7 +98,7 @@ export const CookieHook = (name: string) =>
  * Hook to the Response Cookie Attributes
  * @decorator
  * @param name - cookie name
- * @paramType TCookieHook
+ * @paramType TCookieAttributes
  */
 export const CookieAttrsHook = (name: string) =>
     Resolve((metas, level) => {
@@ -226,6 +227,16 @@ export function Req() {
 }
 
 /**
+ * Get Raw Response Instance
+ * @decorator
+ * @param opts (optional) { passthrough: boolean }
+ * @paramType ServerResponse
+ */
+export function Res(opts?: { passthrough: boolean }) {
+    return Resolve(() => useResponse().rawResponse(opts), 'response')
+}
+
+/**
  * Get Request Unique Identificator (UUID)
  * @decorator
  * @paramType string
@@ -253,16 +264,6 @@ export function IpList() {
 }
 
 /**
- * Get Raw Response Object
- * @decorator
- * @param options - passthrough options
- * @paramType string
- */
-export function Res(options?: { passthrough: boolean }) {
-    return Resolve(() => useResponse().rawResponse(options), 'response')
-}
-
-/**
  * Get Parsed Request Body
  * @decorator
  * @paramType object | string | unknown
@@ -279,3 +280,8 @@ export function Body() {
 export function RawBody() {
     return Resolve(() => useBody().rawBody(), 'body')
 }
+
+export type TStatusHook = THook<number>
+export type THeaderHook = THook
+export type TCookieAttributes = Partial<TCookieAttributesRequired>
+export type TCookieHook = THook & Partial<THook<TCookieAttributes, 'attrs'>>
