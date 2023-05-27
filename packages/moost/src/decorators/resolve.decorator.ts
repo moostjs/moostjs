@@ -18,8 +18,14 @@ export function Resolve<T extends TObject = TEmpty>(
 ): ParameterDecorator & PropertyDecorator {
     return (target, key, index?) => {
         const i = typeof index === 'number' ? index : undefined
-        fillLabel(target, key || '', i, label)
-        getMoostMate().decorate('resolver', resolver)(target, key, i as number)
+        getMoostMate().decorate('resolver', (metas, level) => {
+            let newLabel = label
+            if (!newLabel && level === 'PROP' && typeof metas.key === 'string') {
+                newLabel = metas.key
+            }
+            fillLabel(target, key || '', i, newLabel)
+            return resolver(metas as TPipeMetas<T>, level)
+        })(target, key, i as number)
     }
 }
 

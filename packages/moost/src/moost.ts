@@ -276,13 +276,13 @@ export class Moost {
         return this
     }
 
-    protected globalInterceptorHandler?: Promise<InterceptorHandler>
+    protected globalInterceptorHandler?: () => Promise<InterceptorHandler>
 
     /**
      * Provides InterceptorHandler with global interceptors and pipes.
      * Used to process interceptors when event handler was not found.
      * 
-     * @returns array of interceptors
+     * @returns IterceptorHandler
      */
     getGlobalInterceptorHandler() {
         if (!this.globalInterceptorHandler) {
@@ -293,9 +293,9 @@ export class Moost {
             )            
             const interceptors = [...this.interceptors, ...(thisMeta?.interceptors || [])]
                 .sort((a, b) => a.priority - b.priority)
-            this.globalInterceptorHandler = getIterceptorHandlerFactory(interceptors, () => Promise.resolve(this as unknown as TObject), pipes, this.logger)()
+            this.globalInterceptorHandler = getIterceptorHandlerFactory(interceptors, () => Promise.resolve(this as unknown as TObject), pipes, this.logger)
         }
-        return this.globalInterceptorHandler
+        return this.globalInterceptorHandler()
     }
 
     applyGlobalInterceptors(

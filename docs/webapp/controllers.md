@@ -1,5 +1,12 @@
 # Controllers
 
+::: info
+The Controllers in Moost are an integral part of the Dependency Injection functionality.
+It is important to have a good understanding of Dependency Injection in general before diving into the details of Controllers.
+To familiarize yourself with the concepts and principles of Dependency Injection, we recommend reading the [Dependency Injection documentation](/moost/di).
+This will provide a solid foundation and enhance your understanding of how Controllers leverage Dependency Injection in the Moost framework.
+:::
+
 ## Introduction
 
 In a Moost application, a controller is a class that groups a set of event handlers.
@@ -39,7 +46,7 @@ The first option is to use the `@ImportController` decorator on another controll
 import { ImportController } from 'moost'
 import { MainController } from './main.controller'
 
-@ImportController(MainController)
+@ImportController(MainController)  // [!code hl]
 class MyServer extends Moost {
     //...
 }
@@ -58,7 +65,7 @@ import { Moost } from 'moost'
 import { MainController } from './main.controller'
 
 const app = new Moost()
-app.registerControllers(MainController)
+app.registerControllers(MainController)  // [!code hl]
 app.adapter(new MoostHttp()).listen(3000)
 app.init()
 ```

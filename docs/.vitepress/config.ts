@@ -106,20 +106,42 @@ export default defineConfig({
                             text: 'Introduction',
                             link: '/moost/',
                         },
-                        {
-                            text: 'Advanced',
-                            items: [
-                                {
-                                    text: 'Interceptors',
-                                    link: '/moost/advanced/interceptors',
-                                },
-                                {
-                                    text: 'Logging',
-                                    link: '/moost/advanced/logging',
-                                },
-                            ],
-                        },
                     ],
+                }, {
+                    text: 'Foundation',
+                    items: [
+                        {
+                            text: 'Dependency Injection',
+                            link: '/moost/di',
+                            items: [{
+                                text: 'Circular Dependencies',
+                                link: '/moost/circular',
+                            },{
+                                text: 'Provide-Inject',
+                                link: '/moost/provide-inject',
+                            }],
+                        },
+                        {
+                            text: 'Controllers',
+                            link: '/moost/controllers',
+                        },
+                        {
+                            text: 'Resolvers',
+                            link: '/moost/resolvers',
+                        },
+                        {
+                            text: 'Interceptors',
+                            link: '/moost/interceptors',
+                        },
+                        {
+                            text: 'Pipelines',
+                            link: '/moost/pipelines',
+                        },
+                        {
+                            text: 'Logging',
+                            link: '/moost/logging',
+                        },
+                    ]
                 }],
             '/webapp/': [{
                     text: 'Web Application',
@@ -133,7 +155,7 @@ export default defineConfig({
                             link: '/webapp/controllers',
                         },
                         {
-                            text: 'Request Data',
+                            text: 'Request',
                             link: '/webapp/request',
                         },
                         {
@@ -142,7 +164,17 @@ export default defineConfig({
                         },
                         {
                             text: 'Interceptors',
-                            link: '/webapp/interceptors',
+                            link: '/webapp/interceptors/',
+                            items: [
+                                {
+                                    text: 'Guard Example',
+                                    link: '/webapp/interceptors/guards',
+                                },
+                                {
+                                    text: 'Logger Example',
+                                    link: '/webapp/interceptors/logger',
+                                },
+                            ]
                         },
                     ],
                 }],
