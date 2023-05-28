@@ -248,6 +248,10 @@ export default defineConfig({
                             link: '/cliapp/',
                         },
                         {
+                            text: 'Routing',
+                            link: '/cliapp/routing',
+                        },
+                        {
                             text: 'Controllers',
                             link: '/cliapp/controllers',
                         },

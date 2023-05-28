@@ -1,5 +1,7 @@
 # Quick Start
 
+<span class="cli-header"><span class="cli-path">/cliapp</span><span class="cli-invite">$</span> moost cli --quick-start<span class="cli-blink">|</span></span>
+
 This guide provides a quick overview of how to start your CLI project using Moost CLI.
 By following these steps, you will be able to create a basic CLI application that responds to different commands.
 

@@ -1,47 +1,49 @@
 # Introduction to Moost
 
 ::: warning
-Work on Moost is still in progress. While it is suitable for out-of-the-box use, some APIs may undergo changes.
+Work on Moost is ongoing. While it is primed for immediate use, please note that some APIs may be subject to further enhancements.
 :::
 
-## Overview
+Moost, a metadata-driven event processing framework, is designed to streamline event handling within your applications. Built upon the robust foundation of [Wooks](https://wooksjs.org), Moost leverages the power of Wooks' composable structure and functionality, transforming it into a versatile toolkit for event-processing applications.
 
-Moost is a metadata-driven event processing framework that provides a unified approach to handling events in your applications.
-Built on top of [Wooks](https://wooksjs.org), Moost leverages Wooks' composables and features, making it a powerful and flexible framework for event-processing apps.
+### @ Decoding the Metadata Magic
+Moost's innovative use of decorators to define metadata underpins its unique event processing flow. Decorators applied to classes and methods pave the way for the creation of controllers, interceptors, and event handlers, thereby simplifying the task of organizing and managing your application's event processing logic.
 
-### @ Metadata-Driven Approach
-Moost relies on decorators to define metadata that drives the event processing flow.
-By decorating classes and methods with specific decorators, you can define controllers, interceptors, and event handlers, making it easy to organize and manage your application's event processing logic.
+### 🚀 Embracing Controllers, Interceptors, and Event Handlers
+Introducing the concept of controllers, interceptors, and event handlers, Moost makes event processing a breeze. Controllers serve as an organizing structure, grouping related event handlers together. Interceptors offer the possibility to intercept and modify events before they reach their assigned event handlers. Event handlers, being the heart of the operation, process events and execute the appropriate logic.
 
-### 🚀 Controllers, Interceptors, and Event Handlers
-Moost introduces the concept of controllers, interceptors, and event handlers to streamline event processing.
-Controllers group related event handlers together and provide a clear structure for organizing your application's logic.
-Interceptors allow you to intercept and modify events before they reach the event handlers.
-Event handlers are the core components that process events and execute the desired logic.
+### 💉 Effortless Dependency Injection and Scoped Instances
+One of the key offerings of Moost is its seamless support for dependency injection and scoped instances. Moost shoulders the responsibility of managing singletons and event-scoped instances, letting you concentrate on creating your application's business logic without the distraction of manual dependency management.
 
-### 💉 Dependency Injection and Scoped Instances
-One of Moost's key features is its built-in support for dependency injection and scoped instances.
-It takes care of managing singletons, event-scoped instances, and other dependencies, allowing you to focus on writing your application's business logic without worrying about managing dependencies manually.
+### 🧩 Customization and Extensibility
+The true power of Moost lies in its customization capabilities. Whether you need to create custom decorators, add bespoke interceptors, or integrate with other libraries or frameworks, Moost's extensible nature is designed to meet your specific needs.
 
-### 🧩 Extensibility
-Moost is highly extensible, allowing you to customize and extend its functionality to fit your specific needs.
-You can create your own decorators, add custom interceptors, and even integrate with other frameworks or libraries to enhance Moost's capabilities.
+With its distinct metadata-driven approach, extensive dependency injection support, and array of features, Moost provides a simplified path to building powerful and scalable event-processing applications.
 
-With Moost, you can build robust and scalable event-processing applications with ease, thanks to its metadata-driven approach, support for dependency injection, and extensive feature set.
+Ready to delve deeper into Moost's core concepts? Let's explore how you can effectively utilize controllers, interceptors, and event handlers in your applications.
 
-Next, let's dive into the core concepts of Moost and explore how to effectively use controllers, interceptors, and event handlers in your applications.
+## 🕸️ Craft your Web App with Moost HTTP
 
-## 🕸️ Build your Web App with Moost HTTP
-
-If you're building a web application and want to handle events through HTTP requests,
-`@moostjs/event-http` is the package to use.
-It provides a comprehensive set of tools and features to create web-based event-driven applications with ease.
+Building a web application with Moost is a seamless experience, thanks to the `@moostjs/event-http` package. It comes loaded with a complete suite of tools and features to facilitate the creation of web-based event-driven applications.
 
 [Get Started with Web Application](/webapp/)
 
-## 💻 Build your CLI App with Moost CLI
+## 💻 Forge your CLI App with Moost CLI
 
-For command-line interface (CLI) applications that rely on event processing, `@moostjs/event-cli` is the ideal choice.
-It enables you to build robust CLI tools based on metadata defined commands.
+For command-line interface (CLI) applications, `@moostjs/event-cli` is your go-to choice. With its focus on metadata-defined commands, it simplifies the creation of robust CLI tools.
 
 [Get Started with CLI](/cliapp/)
+
+## 📚 Learn More
+
+Want to learn more about how Moost works? Check out these helpful guides:
+
+- [Dependency Injection](/moost/di/): Understand how Moost manages dependencies.
+- [Controllers](/moost/controllers): Learn about these key components that handle events.
+- [Resolver Decorators](/moost/resolvers): Explore the decorators that help resolve data.
+- [Interceptors](/moost/interceptors): Find out how Moost processes events before they reach their handlers.
+- [Metadata](/moost/meta/): See how Moost uses metadata to handle events.
+- [Logging](/moost/logging): Learn about the tools Moost provides for tracking events.
+
+Each guide will give you a deeper understanding of Moost and how to use its features. Enjoy your journey with Moost!
+

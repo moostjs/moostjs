@@ -1,5 +1,7 @@
 # Controllers
 
+<span class="cli-header"><span class="cli-path">/cliapp</span><span class="cli-invite">$</span> moost cli --controllers<span class="cli-blink">|</span></span>
+
 Just like HTTP controllers in Moost, Moost CLI provides a powerful way to organize command handlers using controllers. A CLI Controller is a class that contains several methods, each of which corresponds to a specific command that can be issued to your CLI application.
 
 ## Controller

@@ -96,3 +96,41 @@ a[target="_blank"]:hover:after {
 .language-terminal .cyan {
     color: #1b839b;
 }
+
+.cli-invite {
+    color: var(--vp-c-text-1);
+    font-weight: bold;
+}
+
+.cli-path {
+    color: #3B78FF;
+    font-weight: bold;
+}
+
+.cli-header {
+    color: var(--vp-c-text-2);
+    font-family: consolas;
+    background-color: var(--vp-c-bg-alt);
+}
+
+.cli-blink {
+    animation: cli-blink 1s infinite;
+}
+
+@keyframes cli-blink {
+    0% {
+        opacity: 0
+    }
+
+    49% {
+        opacity: 0
+    }
+
+    50% {
+        opacity: 1
+    }
+
+    100% {
+        opacity: 1
+    }
+}

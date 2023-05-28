@@ -23,26 +23,26 @@ titleTemplate: Home | :title
 
 features:
     - icon: '@'
-      title: Write less code using @Metadata
-      details: Benefit from easy dependency injections and easy testing when using decorators.
+      title: Harness the Power of @Metadata
+      details: Streamline your coding with efficient dependency injections and simplified testing via decorators.
     - icon: 🕸
-      title: Build Web App
-      details: With the power of @moostjs/event-http you can easily and quickly build a web app.
+      title: Easily Create Web Apps
+      details: Leverage @moostjs/event-http to swiftly build interactive web applications.
       link: /webapp/
     - icon: 💻
-      title: Build CLI
-      details: With the help of @moostjs/event-cli manage your cli events.
+      title: Master CLI Development
+      details: Employ @moostjs/event-cli to handle your command line interface events seamlessly.
       link: /cliapp/
     - icon:
           src: /wooks-logo.svg
           alt: WooksJS
-      title: Use the power of Wooks Composables
-      details: Moost is built on top of Wooks, so all the Wooks Composables work organically.
+      title: Unlock the Potential of Wooks Composables
+      details: Since Moost is built on Wooks, you can naturally use all Wooks Composables for a seamless development experience.
       link: https://wooksjs.org
     - icon: ✍
-      title: Write your own @Decorators
-      details: Take a part of your app logic to a separate @Decorators for easy reuse.
+      title: Craft Custom @Decorators
+      details: Encapsulate reusable parts of your app logic into bespoke @Decorators to enhance modularity and readability.
     - icon: 🔑
-      title: TS by design
-      details: Fully typed APIs with TypeScript.
+      title: Designed with TypeScript
+      details: Experience the ease and precision of fully-typed APIs with TypeScript.
 ---

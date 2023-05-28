@@ -1,5 +1,7 @@
 # Command Usage
 
+<span class="cli-header"><span class="cli-path">/cliapp</span><span class="cli-invite">$</span> moost cli --help<span class="cli-blink">|</span></span>
+
 ::: info
 Creating a great command-line interface (CLI) is not just about functionality but also about usability.
 Moost CLI provides a set of decorators to help you define rich command metadata and examples.
