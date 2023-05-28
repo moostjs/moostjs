@@ -1,4 +1,4 @@
-# Response
+# General Response
 
 In Moost, the output of a handler method is processed by the [Wooks HTTP responder](https://wooksjs.org/webapp/composables/response.html).
 The responder interprets the output and handles it accordingly to generate the appropriate HTTP response.

@@ -3,7 +3,7 @@
 ::: info
 The Controllers in Moost are an integral part of the Dependency Injection functionality.
 It is important to have a good understanding of Dependency Injection in general before diving into the details of Controllers.
-To familiarize yourself with the concepts and principles of Dependency Injection, we recommend reading the [Dependency Injection documentation](/moost/di).
+To familiarize yourself with the concepts and principles of Dependency Injection, we recommend reading the [Dependency Injection documentation](/moost/di/).
 This will provide a solid foundation and enhance your understanding of how Controllers leverage Dependency Injection in the Moost framework.
 :::
 

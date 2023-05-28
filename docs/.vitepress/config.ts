@@ -112,14 +112,17 @@ export default defineConfig({
                     items: [
                         {
                             text: 'Dependency Injection',
-                            link: '/moost/di',
+                            link: '/moost/di/',
                             items: [{
-                                text: 'Circular Dependencies',
-                                link: '/moost/circular',
-                            },{
-                                text: 'Provide-Inject',
-                                link: '/moost/provide-inject',
-                            }],
+                                    text: 'Circular Dependencies',
+                                    link: '/moost/di/circular',
+                                }, {
+                                    text: 'Provide-Inject',
+                                    link: '/moost/di/provide-inject',
+                                }, {
+                                    text: 'Functional Instantiation',
+                                    link: '/moost/di/functional',
+                                }],
                         },
                         {
                             text: 'Controllers',
@@ -138,7 +141,28 @@ export default defineConfig({
                             link: '/moost/pipelines',
                         },
                         {
-                            text: 'Logging',
+                            text: 'Metadata',
+                            items: [
+                                {
+                                    text: 'Overview',
+                                    link: '/moost/meta/'
+                                },
+                                {
+                                    text: 'Common Fields',
+                                    link: '/moost/meta/common'
+                                },
+                                {
+                                    text: 'Controller Metadata',
+                                    link: '/moost/meta/controller'
+                                },
+                                {
+                                    text: 'Enhancing Metadata',
+                                    link: '/moost/meta/enhancing'
+                                },
+                            ]
+                        },
+                        {
+                            text: 'Logs',
                             link: '/moost/logging',
                         },
                     ]
@@ -160,12 +184,32 @@ export default defineConfig({
                         },
                         {
                             text: 'Response',
-                            link: '/webapp/response',
+                            items: [
+                                {
+                                    text: 'General Response',
+                                    link: '/webapp/response',
+                                },
+                                {
+                                    text: 'Handling Errors',
+                                    link: '/webapp/errors',
+                                },
+                                {
+                                    text: 'Static Files',
+                                    link: '/webapp/static',
+                                },
+                                {
+                                    text: 'Proxy',
+                                    link: '/webapp/proxy',
+                                },
+                            ]
                         },
                         {
                             text: 'Interceptors',
-                            link: '/webapp/interceptors/',
                             items: [
+                                {
+                                    text: 'Introduction to Interceptors',
+                                    link: '/webapp/interceptors/',
+                                },
                                 {
                                     text: 'Guard Example',
                                     link: '/webapp/interceptors/guards',
@@ -173,6 +217,24 @@ export default defineConfig({
                                 {
                                     text: 'Logger Example',
                                     link: '/webapp/interceptors/logger',
+                                },
+                                {
+                                    text: 'Error Handler',
+                                    link: '/webapp/interceptors/errors',
+                                },
+                            ]
+                        },
+                        {
+                            text: 'Adapters',
+                            collapsed: true,
+                            items: [
+                                {
+                                    text: 'Express',
+                                    link: '/webapp/adapters/express',
+                                },
+                                {
+                                    text: 'Fastify',
+                                    link: '/webapp/adapters/fastify',
                                 },
                             ]
                         },
@@ -184,6 +246,10 @@ export default defineConfig({
                         {
                             text: 'Quick Start',
                             link: '/cliapp/',
+                        },
+                        {
+                            text: 'Controllers',
+                            link: '/cliapp/controllers',
                         },
                     ],
                 },

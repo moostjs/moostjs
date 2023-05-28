@@ -37,7 +37,7 @@ export function useControllerContext<T extends object>() {
         getMethodMeta,
         getPropertiesList: () => getControllerMeta()?.properties || [],
         getScope: () => getControllerMeta()?.injectable || 'SINGLETON',
-        getParamsMeta: () => getControllerMeta()?.params || [],
+        getParamsMeta: () => getMethodMeta()?.params || [],
         getPropMeta: (name: string) => getMethodMeta(name),
     }
 }

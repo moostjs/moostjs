@@ -12,7 +12,11 @@ Guards are a specific use case of interceptors and play a crucial role in ensuri
 
 [[toc]]
 
+
 ## Guard Interceptor
+
+> Please note that all the examples provided in this documentation are for illustration purposes and may need to be adjusted based on the specific requirements and environment of your application. It is important to understand the concepts and principles demonstrated and adapt them to suit your needs. Consider the examples as a starting point and make the necessary modifications to align with your application's architecture, business logic, and security requirements. Always ensure that you thoroughly test and validate your implementation to guarantee its correctness and security in a production environment.
+
 To create a guard interceptor, you can define a plain interceptor with a priority set to `GUARD`.
 The GUARD priority indicates that the interceptor will be executed before the event handler and is specifically designed for authorization checks.
 

@@ -59,9 +59,8 @@ Now, let's transform our functional interceptor into a class-based interceptor t
 
 ```ts
 // time-logger.interceptor.ts
-import { Method, ReqId, Url } from '@wooksjs/event-http';
-import { InjectEventLogger, Injectable, TClassFunction, TInterceptorFn } from 'moost';
-import { EventLogger } from '@wooksjs/event-core';
+import { Method, ReqId, Url } from '@moostjs/event-http';
+import { EventLogger, InjectEventLogger, Injectable, TClassFunction, TInterceptorFn } from 'moost';
 
 @Injectable('FOR_EVENT')    
 export class TimeLogger implements TClassFunction<TInterceptorFn> {  
