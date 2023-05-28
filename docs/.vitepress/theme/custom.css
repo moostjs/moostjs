@@ -78,12 +78,20 @@ a[target="_blank"]:hover:after {
 
 /* console log visualisation */
 .language-terminal {
+    color: rgb(200, 200, 200);
     font-size: 14px;
     padding: 0 24px;
     line-height: 20px;
 }
 .language-terminal .info {
     color: #199364;
+}
+.language-terminal .warn {
+    color: #e0dc02;
+}
+.language-terminal .bright {
+    color: white;
+    /* font-weight: bolder; */
 }
 .language-terminal .cyan {
     color: #1b839b;

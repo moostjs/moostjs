@@ -10,15 +10,12 @@ This will provide a solid foundation and enhance your understanding of how Contr
 ## Introduction
 
 In a Moost application, a controller is a class that groups a set of event handlers.
-Controllers allow you to logically organize your code into separate units.
-They can be imported into each other, creating a nested hierarchy.
-Controllers can also have a prefix that affects the routes of their handlers.
-Nested controllers inherit the prefix of their parent controller.
+Controllers enable logical organization of your code into separate units, and with the help of prefixes and nested controllers, you can create complex routing structures.
 
-## Define Controller
+## Define Controller with Prefix
 
-To define a controller in Moost, you need to annotate a class with the `@Controller()` decorator.
-Optionally, you can provide a path prefix as an argument to the decorator.
+To define a controller in Moost, you use the `@Controller()` decorator and provide a path prefix as an argument.
+This prefix will apply to all routes defined within the controller.
 
 ::: code-group
 ```ts [main.controller.ts]
@@ -35,18 +32,53 @@ export class MainController {
 ```
 :::
 
-## Import Controller
+In the above code, `MainController` is defined with a prefix `api`. So the `hello` endpoint becomes `/api/hello/:name`.
+
+## Nested Controllers and Prefix Inheritance
+
+Controllers can be imported into each other, forming a nested hierarchy.
+Nested controllers will automatically inherit the prefix of their parent controller.
+
+```ts
+// user.controller.ts
+import { Get } from '@moostjs/event-http'
+import { Controller, Param } from 'moost'
+
+@Controller('user')
+export class UserController {
+    @Get(':id')
+    getUser(@Param('id') id: string) {
+        return `User id: ${id}`;
+    }
+}
+
+// api.controller.ts
+import { Controller } from 'moost'
+import { ImportController } from '@moostjs/event-http'
+import { UserController } from './user.controller'
+
+@Controller('api')
+@ImportController(UserController)
+export class ApiController { }
+```
+
+In this example, `UserController` is nested inside `ApiController` using `@ImportController(UserController)`.
+`UserController` has a prefix `user` and since it is nested within `ApiController` which has a prefix `api`,
+any route within `UserController` will have a prefixed path beginning with `api/user`.
+So the `getUser` endpoint becomes `/api/user/:id`.
+
+## Importing Controller
 
 There are two options for importing a Controller into your Moost application.
 
-The first option is to use the `@ImportController` decorator on another controller or on your own Moost child class.
+First option is to use the `@ImportController` decorator on another controller or on your Moost child class.
 
 ::: code-group
 ```ts [server.ts]
 import { ImportController } from 'moost'
-import { MainController } from './main.controller'
+import { ApiController } from './api.controller'
 
-@ImportController(MainController)  // [!code hl]
+@ImportController(ApiController)
 class MyServer extends Moost {
     //...
 }
@@ -54,78 +86,42 @@ class MyServer extends Moost {
 :::
 
 The second option is to use the `registerControllers` method on your Moost application instance.
-This option is useful if you're not extending the `Moost` class and instead creating an instance of the original `Moost`.
-
-Here's an example:
+This is useful if you're not extending the `Moost` class and instead creating an instance of the original `Moost`.
 
 ::: code-group
 ```ts{6} [server.ts]
 import { MoostHttp } from '@moostjs/event-http'
 import { Moost } from 'moost'
-import { MainController } from './main.controller'
+import { ApiController } from './api.controller'
 
 const app = new Moost()
-app.registerControllers(MainController)  // [!code hl]
+app.registerControllers(ApiController)
 app.adapter(new MoostHttp()).listen(3000)
 app.init()
 ```
 :::
 
-If you run the `server.ts` file with the imported `MainController`, you will see the following lines in your console:
+If you run the `server.ts` file with the imported `ApiController`, you will see the following lines in your console:
 
 <div class="language-terminal">
 <span class="lang">terminal</span>
 <pre>
-<span class="info">[moost][2023-01-01 12:30:45] Class "MainController" instantiated with: <span class="cyan">[]</span></span>
-<span class="info">[moost][2023-01-01 12:30:45] • <span class="cyan">(GET)</span>/api/hello/:name → MainController.<span class="cyan">hello</span>()</span>
+<span class="info">[moost][2023-01-01 12:30:45] Class "ApiController" instantiated with: <span class="cyan">[]</span></span>
+<span class="info">[moost][2023-01-01 12:30:45] • <span class="cyan">(GET)</span>/api/hello/:name → ApiController.<span class="cyan">hello</span>()</span>
 </pre>
 </div>
 
-This indicates that an instance of the `MainController` class was created during the initialization phase,
-and the `/api/hello/:name` route was mapped to the `hello` method of the `MainController`.
+This indicates that an instance of the `ApiController` class was created during the initialization phase,
+and the `/api/hello/:name` route was mapped to the `hello` method of the `ApiController`.
 Note that the prefix `api` provided in the `@Controller` decorator affected the endpoint path of hello.
 
 ## Controller Scope
 
 By default, every controller in Moost is a singleton.
-However, it's possible to create a new instance of a controller for each event.
-To achieve this, use the `@Injectable` decorator with the argument `'FOR_EVENT'`.
+However, you can create a new instance of a controller for each event
+by using the `@Injectable` decorator with the argument `'FOR_EVENT'`.
 
 ::: code-group
-```ts [Diffs]
-import { Get } from '@moostjs/event-http'
-import {
-    Controller,
-    Injectable,     // [!code ++]
-    Param
-} from 'moost'
-
-@Injectable('FOR_EVENT') // [!code ++]
-@Controller('api')
-export class MainController {
-    @Param('name')   // [!code ++]
-    name = ''        // [!code ++]
-                     // [!code ++]
-    @Get('hello/:name')
-    hello(@Param('name') name: string) {  // [!code --]
-    hello() { // [!code ++]
-        return `Hello, ${name}!`  // [!code --]
-        return `Hello, ${this.name}!`  // [!code ++]
-    }
-}
-```
-```ts [SINGLETON]
-import { Get } from '@moostjs/event-http'
-import { Controller, Param } from 'moost'
-
-@Controller('api')
-export class MainController {
-    @Get('hello/:name')
-    hello(@Param('name') name: string) {
-        return `Hello, ${name}!`
-    }
-}
-```
 ```ts [FOR_EVENT]
 import { Get } from '@moostjs/event-http'
 import { Controller, Injectable, Param } from 'moost'
@@ -143,6 +139,7 @@ export class MainController {
 }
 ```
 :::
-With `FOR_EVENT` option, the controller instance is unique for each event,
-you can use the `@Param('name')` decorator at the class property level
-and access it within the event handler using `this.name`.
+
+With `FOR_EVENT` option, the controller instance is unique for each event, and you can use the `@Param('name')` decorator at the class property level and access it within the event handler using `this.name`.
+
+Nested controllers and prefixes offer a way to structure your routes in a clean and maintainable manner, making Moost a powerful tool for building well-organized applications.

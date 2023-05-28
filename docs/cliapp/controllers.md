@@ -19,8 +19,8 @@ export class ExampleController {
     }
 
     @Cli('add/:num1/:num2')
-    add(@Param('num1') num1: number, @Param('num2') num2: number) {
-        return num1 + num2;
+    add(@Param('num1') num1: string, @Param('num2') num2: string) {
+        return Number.parseFloat(num1) + Number.parseFloat(num2);
     }
 }
 ```

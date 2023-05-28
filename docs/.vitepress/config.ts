@@ -251,6 +251,10 @@ export default defineConfig({
                             text: 'Controllers',
                             link: '/cliapp/controllers',
                         },
+                        {
+                            text: 'Command Usage',
+                            link: '/cliapp/help',
+                        },
                     ],
                 },
             ],
