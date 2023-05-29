@@ -25,26 +25,26 @@ actions:
 
 features:
     - icon: '@'
-      title: Harness the Power of @Metadata
-      details: Streamline your coding with efficient dependency injections and simplified testing via decorators.
+      title: Make the Moost of @Metadata
+      details: Make your coding smoother with smart dependency injections and easy testing through decorators.
     - icon: 🕸
-      title: Easily Create Web Apps
-      details: Leverage @moostjs/event-http to swiftly build interactive web applications.
+      title: Build Web Apps with Ease
+      details: Use @moostjs/event-http to quickly make interactive web applications.
       link: /webapp/
     - icon: 💻
-      title: Master CLI Development
-      details: Employ @moostjs/event-cli to handle your command line interface events seamlessly.
+      title: Become a Pro at CLI
+      details: Use @moostjs/event-cli to manage your command line interface events like a boss.
       link: /cliapp/
     - icon:
           src: /wooks-logo.svg
           alt: WooksJS
-      title: Unlock the Potential of Wooks Composables
-      details: Since Moost is built on Wooks, you can naturally use all Wooks Composables for a seamless development experience.
+      title: Discover the Power of Wooks Composables
+      details: Moost is built on Wooks, which means you can use all Wooks Composables for a smoother development process.
       link: https://wooksjs.org
     - icon: ✍
-      title: Craft Custom @Decorators
-      details: Encapsulate reusable parts of your app logic into bespoke @Decorators to enhance modularity and readability.
+      title: Create Your Own @Decorators
+      details: Make your app's logic reusable with your own @Decorators to boost structure and readability.
     - icon: 🔑
-      title: Designed with TypeScript
-      details: Experience the ease and precision of fully-typed APIs with TypeScript.
+      title: Built with TypeScript
+      details: Enjoy the simplicity and accuracy of fully-typed APIs with TypeScript.
 ---

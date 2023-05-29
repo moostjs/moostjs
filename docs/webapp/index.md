@@ -1,37 +1,37 @@
-# Quick Start of Web Application
+# Quick Start Guide
 
 ::: warning
-Work on Moost is still in progress. While it is suitable for out-of-the-box use, some APIs may undergo changes.
+We're still working on Moost. It's ready to use, but some parts might change a bit.
 :::
 
-This guide will walk you through the process of setting up a web application using Moost HTTP.
+This guide will show you how to make a web application using Moost HTTP.
 
 ## Prerequisites
-Before getting started, make sure you have the following installed:
+Before you begin, make sure you have these things installed:
 
--   Node.js (version 14 or above)
--   npm (Node Package Manager)
+-   Node.js (version 14 or higher)
+-   npm (this is the Node Package Manager)
 
-## Step 1: Project Setup with `create-moost`
+## Step 1: Set Up Your Project
 
-To create a new Moost HTTP project, run the following command:
-
-```bash
-npm create moost --http
-```
-
-Or you can provide a project name in the command:
+To start a new Moost HTTP project, type this command:
 
 ```bash
-npm create moost my-web-app --http
+npm create moost -- --http
 ```
 
-This command will initiate a CLI wizard which will ask you several questions, such as:
+Or you can add a name for your project in the command:
 
-- If you need eslint and prettier
-- Which bundler to use: esbuild or rollup
+```bash
+npm create moost my-web-app -- --http
+```
 
-Once you have provided your preferences, `create-moost` will generate a project with the following structure:
+This command will start a helpful tool that will ask you questions like:
+
+- Do you want eslint and prettier?
+- Which bundler do you want to use: esbuild or rollup?
+
+After you answer these questions, app initializer will scaffold a project that looks like this:
 
 ```
 my-web-app/
@@ -45,14 +45,14 @@ my-web-app/
 └── [optional files...]
 ```
 
-**Optional files** are generated based on your choices in the CLI wizard:
+**Optional files** are created based on your answers:
 
-- If you opted for eslint and prettier: `.eslintrc.json`, `.prettierrc`, `.prettierignore`
-- If you chose rollup as your bundler: `rollup.config.js`
+- If you picked eslint and prettier: `.eslintrc.json`, `.prettierrc`, `.prettierignore`
+- If you picked rollup as your bundler: `rollup.config.js`
 
-## Step 2: Inspect Your Generated Code
+## Step 2: Let's see what we've got
 
-Two crucial parts of your application are scaffolded in the `src` directory: `main.ts` (your app entry point) and `app.controller.ts` (your basic "Hello, World!" controller).
+Two important parts of your application are created in the `src` directory: `main.ts` (the starting point for your app) and `app.controller.ts` (a basic "Hello, World!" controller).
 
 `main.ts`:
 ```ts
@@ -88,31 +88,31 @@ export class AppController {
 }
 ```
 
-## Step 3: Install Dependencies and Run Your App
+## Step 3: Install and dev
 
-Once you have your project scaffolded, navigate into your project directory and run the following command to install the dependencies:
+After your project is set up, go into your project directory and run this command to get the dependencies:
 
 ```bash
 npm install
 ```
 
-After the installation is completed, start your application in development mode with the following command:
+Once that's done, start your application in development mode with this command:
 
 ```bash
 npm run dev
 ```
 
-Your application will be up and running on http://localhost:3000.
-You should be able to visit http://localhost:3000/hello/John and see the greeting "Hello, John!".
+Your application will be live at http://localhost:3000.
+You can go to http://localhost:3000/hello/John and see the message "Hello, John!".
 
-## What Next?
+## What's Next?
 
-Now that you have your application up and running, you can extend your project with additional features.
-Here are some of the steps you can take:
+Now that your application is running, you can add more features to your project.
+Here are some steps you can follow:
 
-- Add more [controllers](./controllers/) in the `src/controllers` directory. Remember to register them in your `main.ts` file with the `registerControllers` method.
-- Adjust your application configurations based on your needs. If you chose eslint, prettier, or a specific bundler, make sure to update the respective configuration files.
-- Implement different types of request handling by using other HTTP decorators like `@Post`, `@Put`, `@Delete`, etc.
-- Leverage Moost's advanced features such as [dependency injection](/moost/di/), [interceptors](/moost/interceptors), validators, and more to build a robust, scalable application.
+- Add more [controllers](./controllers/) in the `src/controllers` directory. Don't forget to register them in your `main.ts` file with the `registerControllers` method.
+- Change your application settings to fit your needs. If you chose eslint, prettier, or a specific bundler, make sure to update the respective configuration files.
+- Use different types of [request handling](/webapp/handlers) by using other HTTP decorators like `@Post`, `@Put`, `@Delete`, etc.
+- Use Moost's cool features like [dependency injection](/moost/di/), [interceptors](/moost/interceptors), validators, and more to build a strong, scalable application.
 
-👏👏👏 Enjoy your coding!
+👏👏👏 Happy coding!

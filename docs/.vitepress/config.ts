@@ -15,6 +15,8 @@ export default defineConfig({
     title: ' ',
     description: 'Metadata Driven Event Processing Framework',
 
+    ignoreDeadLinks: 'localhostLinks',
+
     titleTemplate: ':title | Moost',
 
     // locales: {

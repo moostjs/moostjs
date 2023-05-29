@@ -2,7 +2,7 @@
 
 Moost provides a variety of **resolver** decorators that allow you to extract and use different properties
 from the request object within your request handlers.
-These resolver decorators can be applied to class properties (only for [event-scoped](./controllers#controller-scope) instances) and request handler arguments (for all the controllers).
+These resolver decorators can be applied to class properties (only for [event-scoped](./controllers/#controller-scope) instances) and request handler arguments (for all the controllers).
 
 Additionally, you can use the composable functions from Wooks inside request handlers.
 For more details, refer to the [Wooks Request Composables](https://wooksjs.org/webapp/composables/request.html) documentation.

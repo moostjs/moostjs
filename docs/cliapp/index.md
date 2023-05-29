@@ -17,13 +17,13 @@ Before getting started, make sure you have the following installed:
 To create a new Moost CLI project, run the following command:
 
 ```bash
-npm create moost --cli
+npm create moost -- --cli
 ```
 
 Or you can provide a project name in the command:
 
 ```bash
-npm create moost my-cli-app --cli
+npm create moost my-cli-app -- --cli
 ```
 
 This command will initiate a CLI wizard which will ask you several questions, such as:
