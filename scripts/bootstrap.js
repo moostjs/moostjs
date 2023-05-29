@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 
 import { packages, version, packagesDir, out } from './utils.js'
+import { PROJECT } from './constants.js'
 
 packages.forEach(({ shortName, name, pkg, pkgPath }) => {
     if (pkg?.private) return
@@ -19,12 +20,12 @@ packages.forEach(({ shortName, name, pkg, pkgPath }) => {
             files: ['dist'],
             repository: {
                 type: 'git',
-                url: 'git+https://github.com/moostjs/moostjs.git',
+                url: `git+https://github.com/${ PROJECT }js/${ PROJECT }js.git`,
                 directory: 'packages/' + shortName,
             },
             keywords: [
-                'moost',
-                'moostjs',
+                PROJECT,
+                PROJECT + 'js',
                 'composables',
                 'framework',
                 'wooksjs',
@@ -33,9 +34,9 @@ packages.forEach(({ shortName, name, pkg, pkgPath }) => {
             author: 'Artem Maltsev',
             license: 'MIT',
             bugs: {
-                url: 'https://github.com/moostjs/moostjs/issues',
+                url: `https://github.com/${ PROJECT }js/${ PROJECT }js/issues`,
             },
-            homepage: `https://github.com/moostjs/moostjs/tree/main/packages/${shortName}#readme`,
+            homepage: `https://github.com/${ PROJECT }js/${ PROJECT }js/tree/main/packages/${shortName}#readme`,
         }
 
         fs.writeFileSync(pkgPath, JSON.stringify(json, null, 2))
@@ -45,7 +46,7 @@ packages.forEach(({ shortName, name, pkg, pkgPath }) => {
             pkg.name = name
             pkg.version = version
             pkg.repository.directory = 'packages/' + shortName
-            pkg.homepage = `https://github.com/moostjs/moostjs/tree/main/packages/${shortName}#readme`
+            pkg.homepage = `https://github.com/${ PROJECT }js/${ PROJECT }js/tree/main/packages/${shortName}#readme`
             fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2))
             out.success(`⚠️ package.json fixed`)
         } else {

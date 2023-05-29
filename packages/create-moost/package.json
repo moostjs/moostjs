@@ -1,0 +1,40 @@
+{
+  "name": "create-moost",
+  "version": "0.2.31",
+  "description": "create-moost",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "create-moost": "./bin.js"
+  },
+  "files": [
+    "dist", "bin.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/create-moost"
+  },
+  "keywords": [
+    "moost",
+    "moostjs",
+    "composables",
+    "framework",
+    "wooksjs",
+    "prostojs"
+  ],
+  "author": "Artem Maltsev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/create-moost#readme",
+  "dependencies": {
+    "@moostjs/event-cli": "",
+    "@wooksjs/event-cli": "",
+    "@prostojs/rewrite": "",
+    "moost": "",
+    "prompts": ""
+  }
+}

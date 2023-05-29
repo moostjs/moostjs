@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Meet the Team
-description: The development of Vite is guided by an international team.
+description: The development of Moost is guided by a single software engineer.
 ---
 
 <script setup>
@@ -17,7 +17,7 @@ const core = [{
     title: 'Creator',
     // org: 'Booking.com',
     // orgLink: '',
-    desc: 'Fullstack software developer',
+    desc: 'Fullstack Software Engineer',
     links: [
       { icon: 'github', link: 'https://github.com/mav-rik' },
       { icon: 'twitter', link: 'https://twitter.com/MAVrik7' },

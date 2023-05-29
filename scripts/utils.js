@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { createRequire } from 'module'
 import { dye } from '@prostojs/dye'
+import { PROJECT } from './constants.js'
 
 export const require = createRequire(import.meta.url)
 export const __filename = fileURLToPath(import.meta.url)
@@ -22,7 +23,7 @@ export const packages = files
         const pkgRoot = path.join(packagesDir, shortName)
         const pkgPath = path.join(pkgRoot, `package.json`)
         return {
-            name: shortName === `moost` ? shortName : `@moostjs/${shortName}`,
+            name: shortName === PROJECT || shortName === `create-${ PROJECT }` ? shortName : `@${ PROJECT }js/${shortName}`,
             shortName,
             pkgPath,
             pkgRoot,

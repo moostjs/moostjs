@@ -1,0 +1,78 @@
+{
+    "name": "{{ packageName }}",
+    "version": "1.0.0",
+    "description": "",
+    "main": "dist/main.js",
+    //=IF (type === 'cli')
+    "bin": {
+        "{{ packageName }}": "./bin.js"
+    },
+    "files": [
+        "dist",
+        "bin.js"
+    ],
+    //=END IF
+    "scripts": {
+        //=IF (bundler === 'rollup')
+            //=IF (type === 'http')
+        "dev": "NODE_OPTIONS=--enable-source-maps rollup -c=./rollup.config.js --watch",
+            //=END IF
+            //=IF (type === 'cli')
+        "dev": "npm run build && ./bin.js",
+            //=END IF
+        "build": "rollup -c=./rollup.config.js",
+        //=END IF
+        //=IF (bundler === 'esbuild')
+            //=IF (type === 'http')
+        "dev": "npm-run-all --parallel build:watch nodemon",
+            //=END IF
+            //=IF (type === 'cli')
+        "dev": "npm run build && ./bin.js",
+            //=END IF
+        "nodemon": "NODE_OPTIONS=--enable-source-maps nodemon ./dist/main",
+        "build": "esbuild ./src/main.ts --bundle --outdir=dist --platform=node --packages=external",
+        "build:watch": "esbuild ./src/main.ts --bundle --outdir=dist --watch --platform=node --packages=external --sourcemap",
+        //=END IF
+        //=IF (prettier)
+        "prettify": "prettier . --write && lint --fix",
+        //=END IF
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+//=IF (type === 'http')
+        "@moostjs/event-http": "^{{ version }}",
+//=END IF
+//=IF (type === 'cli')
+        "@moostjs/event-cli": "^{{ version }}",
+//=END IF
+        "moost": "^{{ version }}"
+    },
+    "devDependencies": {
+//=IF (bundler === 'rollup')
+        //=IF (type === 'http')
+        "@rollup/plugin-run": "^3.0.1",
+        //=END IF
+        "@rollup/plugin-typescript": "^11.1.1",
+        "rollup": "^3.23.0",
+        "tslib": "^2.5.2",
+//=END IF
+//=IF (bundler === 'esbuild')
+        "esbuild": "^0.17.19",
+        //=IF (type === 'http')
+        "nodemon": "^2.0.22",
+        "npm-run-all": "^4.1.5",
+        //=END IF
+//=END IF
+//=IF (eslint)
+        "@typescript-eslint/eslint-plugin": "^5.59.7",
+        "eslint": "^8.41.0",
+        "eslint-config-prettier": "^8.8.0",
+//=END IF
+//=IF (prettier)
+        "prettier": "^2.8.8",
+//=END IF
+        "typescript": "^5.0.4"
+    }
+}

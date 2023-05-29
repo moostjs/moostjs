@@ -1,17 +1,25 @@
 <script setup>
+import { useData } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
 import VPButton from 'vitepress/dist/client/theme-default/components/VPButton.vue'
 
 const { Layout } = DefaultTheme
-const actions = [
-    { theme: 'brand', text: 'Get Started with Web App', link: '/webapp/' },
-    { theme: 'alt', text: 'Why Moost?', link: '/moost/why' },
-    {
-        theme: 'alt',
-        text: 'View on GitHub',
-        link: 'https://github.com/moostjs/moostjs',
-    },
-]
+// const actions = [
+//     { theme: 'brand', text: 'Get Started with Web App', link: '/webapp/' },
+//     { theme: 'alt', text: 'Why Moost?', link: '/moost/why' },
+//     {
+//         theme: 'alt',
+//         text: 'View on GitHub',
+//         link: 'https://github.com/moostjs/moostjs',
+//     },
+// ]
+const { frontmatter } = useData()
+
+// frontmatter.hero.text
+// frontmatter.hero.tl1
+// frontmatter.hero.tlhl
+// frontmatter.hero.tl2
+
 </script>
 
 <template>
@@ -28,16 +36,16 @@ const actions = [
                             alt="Moost"
                             style="width: 400px; margin-bottom: 32px"
                         />
-                        <p class="text">Metadata Driven Event Processing Framework</p>
+                        <p class="text">{{ frontmatter.hero2.text }}</p>
                         <p class="tagline">
-                            Get the
-                            <strong style="color: #ff269b">moost</strong> out of
-                            your app.
+                            {{ frontmatter.hero2.tl1 }}
+                            <strong style="color: #ff269b">{{ frontmatter.hero2.tlhl }}</strong>
+                            {{ frontmatter.hero2.tl2 }}
                         </p>
 
-                        <div v-if="actions" class="actions">
+                        <div v-if="frontmatter.actions" class="actions">
                             <div
-                                v-for="action in actions"
+                                v-for="action in frontmatter.actions"
                                 :key="action.link"
                                 class="action"
                             >

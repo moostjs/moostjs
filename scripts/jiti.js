@@ -2,10 +2,11 @@ import { __dirname, packages, require } from './utils.js'
 import execa from 'execa'
 import path from 'path'
 import minimist from 'minimist'
+import { PROJECT } from './constants.js'
 const args = minimist(process.argv.slice(2))
 
 const target =
-    typeof args.dev === 'string' ? args.dev : (args._ && args._[0]) || 'moost'
+    typeof args.dev === 'string' ? args.dev : (args._ && args._[0]) || PROJECT
 
 const alias = {
     common: path.join(__dirname, '..', 'common'),

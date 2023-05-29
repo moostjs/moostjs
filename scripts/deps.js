@@ -1,3 +1,4 @@
+import { PROJECT } from './constants.js'
 import { packages, require } from './utils.js'
 import { dye } from '@prostojs/dye'
 
@@ -23,7 +24,7 @@ function run() {
             Object.entries(pkg.dependencies)
                 .map((e) => [e[0], print.gray(e[1])].join('\t'))
                 .forEach((i) =>
-                    i.startsWith('@moostjs') ? print.item2(i) : print.item(i)
+                    i.startsWith(`@${ PROJECT }js`) ? print.item2(i) : print.item(i)
                 )
         }
         if (pkg.devDependencies) {
@@ -31,7 +32,7 @@ function run() {
             Object.entries(pkg.devDependencies)
                 .map((e) => [e[0], print.gray(e[1])].join('\t'))
                 .forEach((i) =>
-                    i.startsWith('@moostjs') ? print.item2(i) : print.item(i)
+                    i.startsWith(`@${ PROJECT }js`) ? print.item2(i) : print.item(i)
                 )
         }
         if (pkg.peerDependencies) {
@@ -39,7 +40,7 @@ function run() {
             Object.entries(pkg.peerDependencies)
                 .map((e) => [e[0], print.gray(e[1])].join('\t'))
                 .forEach((i) =>
-                    i.startsWith('@moostjs') ? print.item2(i) : print.item(i)
+                    i.startsWith(`@${ PROJECT }js`) ? print.item2(i) : print.item(i)
                 )
         }
         console.log()

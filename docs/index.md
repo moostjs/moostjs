@@ -3,23 +3,25 @@ layout: home
 
 title: Moost
 titleTemplate: Home | :title
-# hero:
-# name: Moost
-# text: Metadata Driven Event Processing Framework
-# tagline: Get ready for hooks in web apps.
+hero2:
+  name: Moost
+  text: Metadata Driven Event Processing Framework
+  tl1: Get the
+  tlhl: moost
+  tl2: out of your app.
 # image:
 #   src: /Moost.png
 #   alt: MoostJS
-# actions:
-#   - theme: brand
-#     text: Get Started
-#     link: /guide/
-#   - theme: alt
-#     text: Why Moost?
-#     link: /guide/why
-#   - theme: alt
-#     text: View on GitHub
-#     link: https://github.com/moostjs/moostjs
+actions:
+  - theme: brand
+    text: Get Started with Web App
+    link: /webapp/
+  - theme: alt
+    text: Why Moost?
+    link: /moost/why
+  - theme: alt
+    text: View on GitHub
+    link: https://github.com/moostjs/moostjs
 
 features:
     - icon: '@'

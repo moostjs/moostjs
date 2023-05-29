@@ -12,7 +12,9 @@
         "scripts/*",
         "**/dist/*",
         "explorations/*",
-        "**/explorations/*"
+        "**/explorations/*",
+        "**/templates/**/*",
+        "bin.js"
     ],
     "plugins": ["@typescript-eslint/eslint-plugin"],
     "extends": [

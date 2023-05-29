@@ -1,4 +1,5 @@
 import { defineConfig, DefaultTheme } from 'vitepress'
+// import { configRu } from './config.ru'
 
 const ogDescription = 'Metadata Driven Event Processing Framework'
 const ogImage = 'https://moost.dev/og-image.png'
@@ -16,6 +17,20 @@ export default defineConfig({
 
     titleTemplate: ':title | Moost',
 
+    // locales: {
+    //     root: {
+    //         label: 'English',
+    //         lang: 'en',
+    //         link: '/',
+    //     },
+    //     ru: {
+    //         label: 'Russian',
+    //         lang: 'ru', // optional, will be added  as `lang` attribute on `html` tag
+    //         link: '/ru/', // default /ru/ -- shows on navbar translations menu, can be external
+    //         ...configRu,
+    //     }
+    // },
+
     head: [
         ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
         ['meta', { property: 'og:type', content: 'website' }],
@@ -29,7 +44,7 @@ export default defineConfig({
     ],
 
     vue: {
-        reactivityTransform: true,
+        // reactivityTransform: true,
     },
 
     themeConfig: {
@@ -192,6 +207,10 @@ export default defineConfig({
                                     link: '/webapp/controllers/scope',
                                 },
                             ],
+                        },
+                        {
+                            text: 'Request Handlers',
+                            link: '/webapp/handlers',
                         },
                         {
                             text: 'Request',

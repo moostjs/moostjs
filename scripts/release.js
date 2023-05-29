@@ -13,6 +13,7 @@ import {
     __dirname,
     mainPkg,
 } from './utils.js'
+import { PROJECT } from './constants.js'
 
 const args = minimist(process.argv.slice(2))
 
@@ -175,7 +176,7 @@ function updateDeps(pkg, depType, version) {
     if (!deps) return
     updateDepsFrom(pkg, mainPkg, depType)
     Object.keys(deps).forEach((dep) => {
-        if (dep === 'moost' || dep.startsWith('@moostjs')) {
+        if (dep === PROJECT || dep.startsWith(`@${ PROJECT }js`)) {
             out.warn(`${pkg.name} -> ${depType} -> ${dep}@${version}`)
             deps[dep] = version
         }
