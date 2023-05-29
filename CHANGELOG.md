@@ -1,3 +1,12 @@
+## [0.2.33](https://github.com/moostjs/moostjs/compare/v0.2.32...v0.2.33) (2023-05-29)
+
+
+### Bug Fixes
+
+* **create-moost:** add templates ([61a3958](https://github.com/moostjs/moostjs/commit/61a3958bd0c223f7b2ce2da6213267afab635c7a))
+
+
+
 ## [0.2.32](https://github.com/moostjs/moostjs/compare/v0.2.31...v0.2.32) (2023-05-29)
 
 
