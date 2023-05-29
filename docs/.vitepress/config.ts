@@ -176,7 +176,22 @@ export default defineConfig({
                         },
                         {
                             text: 'Controllers',
-                            link: '/webapp/controllers',
+                            collapsed: true,
+                            items: [
+                                {
+                                    text: 'Controllers Overview',
+                                    link: '/webapp/controllers/',
+                                }, {
+                                    text: 'Using Controllers',
+                                    link: '/webapp/controllers/usage',
+                                }, {
+                                    text: 'Reuse of Controllers',
+                                    link: '/webapp/controllers/reuse',
+                                }, {
+                                    text: 'Scope of Controller',
+                                    link: '/webapp/controllers/scope',
+                                },
+                            ],
                         },
                         {
                             text: 'Request',
@@ -184,6 +199,7 @@ export default defineConfig({
                         },
                         {
                             text: 'Response',
+                            collapsed: true,
                             items: [
                                 {
                                     text: 'General Response',
@@ -205,6 +221,7 @@ export default defineConfig({
                         },
                         {
                             text: 'Interceptors',
+                            collapsed: true,
                             items: [
                                 {
                                     text: 'Introduction to Interceptors',
