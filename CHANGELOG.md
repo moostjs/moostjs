@@ -1,3 +1,12 @@
+## [0.2.32](https://github.com/moostjs/moostjs/compare/v0.2.31...v0.2.32) (2023-05-29)
+
+
+### Features
+
+* **create-moost:** add app initializer ([cc46517](https://github.com/moostjs/moostjs/commit/cc465173bb4c925aab2767d5e8235f67903c822b))
+
+
+
 ## [0.2.31](https://github.com/moostjs/moostjs/compare/v0.2.30...v0.2.31) (2023-05-25)
 
 
