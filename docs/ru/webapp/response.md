@@ -1,6 +1,6 @@
 # General Response
 
-In Moost, the output of a handler method is processed by the [Wooks HTTP responder](https://wooksjs.org/webapp/composables/response.html).
+In Moost, the output of a handler method is processed by the [Wooks HTTP responder](https://wooks.moost.org/webapp/composables/response.html).
 The responder interprets the output and handles it accordingly to generate the appropriate HTTP response.
 The responder automatically converts JSON objects to a JSON response, strings to a string response,
 and takes care of setting the proper `content-type` header and `content-length`.
@@ -78,7 +78,7 @@ export class ExampleController {
 }
 ```
 In the above example, the `my-cookie` cookie is set with a value of `my-value` and a maximum age of 10 minutes.
-Refer to [Wooks Http Response Cookies](https://wooksjs.org/webapp/composables/response.html#set-cookies)
+Refer to [Wooks Http Response Cookies](https://wooks.moost.org/webapp/composables/response.html#set-cookies)
 documentation page for more details about available cookies attributes.
 
 ### SetHeader

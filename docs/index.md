@@ -40,7 +40,7 @@ features:
           alt: WooksJS
       title: Discover the Power of Wooks Composables
       details: Moost is built on Wooks, which means you can use all Wooks Composables for a smoother development process.
-      link: https://wooksjs.org
+      link: https://wooks.moost.org
     - icon: ✍
       title: Create Your Own @Decorators
       details: Make your app's logic reusable with your own @Decorators to boost structure and readability.

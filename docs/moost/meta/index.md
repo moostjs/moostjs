@@ -1,31 +1,28 @@
 # Metadata in Moost
 
-Moost leverages the use of metadata to facilitate the initialization and management
-of various components within your application.
-Metadata provides valuable information about classes, methods, and properties,
-which is used by Moost during the app initialization process.
+Moost uses metadata to make setting up and managing different parts of your app easier. Metadata gives Moost useful details about classes, methods, and properties during the app's setup phase.
 
 ## Introduction to Metadata
-To handle metadata in Moost, we utilize the [@prostojs/mate](https://github.com/prostojs/mate) npm module.
-This module provides a robust and efficient way to store and access metadata for classes, methods, methods arguments and properties.
-By using decorators provided by Moost, you can populate the metadata fields with relevant values,
-enabling Moost to perform tasks such as finding controllers, setting up the provide registry, interceptors, resolvers, and more.
+
+Moost manages metadata using the [@prostojs/mate](https://github.com/prostojs/mate) npm module. This module makes it simple to save and find metadata for classes, methods, method arguments, and properties. By using Moost's decorators, you can add useful details to the metadata. This helps Moost find controllers, set up the provide registry, interceptors, resolvers, and more.
 
 ## Metadata Structure
-The metadata in Moost is organized based on the following structure:
 
--   Class Metadata: Metadata associated with a class.
--   Method Metadata: Metadata associated with a method within a class.
--   Method Props Metadata: Metadata associated with a method arguments within a class.
--   Property Metadata: Metadata associated with a property within a class.
+Moost's metadata is organized like this:
 
-By populating these metadata fields, Moost gains valuable insights into the structure and dependencies of your application.
+-   Class Metadata: Data related to a class.
+-   Method Metadata: Data related to a method in a class.
+-   Method Props Metadata: Data related to method arguments in a class.
+-   Property Metadata: Data related to a property in a class.
+
+By filling in these metadata fields, Moost gets a better understanding of your app's structure and dependencies.
 
 ## Benefits of Metadata
-The use of metadata in Moost offers several benefits:
 
--   Automatic Discovery: Moost can automatically discover controllers, event handlers, and other components by inspecting the metadata.
--   Dependency Resolution: Metadata helps Moost resolve dependencies between classes and ensure proper instantiation of instances.
--   Customization and Extension: You can extend Moost by creating your own decorators and populating metadata with custom information to enhance the functionality of your application.
+Metadata in Moost offers several advantages:
 
-By leveraging metadata, Moost simplifies the initialization and management of components in your application, enabling you to focus on building robust and scalable systems.
+-   Automatic Discovery: Moost can automatically find controllers, event handlers, and other parts by looking at the metadata.
+-   Dependency Resolution: Metadata helps Moost figure out the connections between classes and make sure instances are created properly.
+-   Customization and Extension: You can add to Moost by creating your own decorators and adding custom details to the metadata. This can give your app more features.
+
+By using metadata, Moost makes setting up and managing parts of your app simpler, so you can concentrate on building strong and scalable systems.

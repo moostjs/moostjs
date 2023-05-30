@@ -1,102 +1,71 @@
-# Dependency Injection
+# Dependency Injection (DI)
 
-Dependency Injection (DI) is a design pattern that allows the instantiation and management of class instances
-to be handled by a framework.
-Moost provides built-in support for dependency injection, making it easier to manage and inject dependencies into your application's components.
+Dependency Injection (DI) is a clever trick to help you create and manage classes more easily. Moost comes with built-in support for DI, helping you smoothly handle dependencies in your app.
 
-## Basics of Dependency Injection
-At its core, DI simplifies the process of creating and using instances of classes by delegating the responsibility
-of instantiation to the framework.
-Instead of manually creating instances and managing dependencies, you can rely on the framework to automatically
-instantiate and inject the required dependencies.
+## DI Basics
+DI takes care of making and using class instances for you. So instead of creating and managing these instances yourself, you let the framework do it for you. This simplifies your code and makes everything run more smoothly.
 
-## Making a Class Injectable
-To make a class injectable in Moost, you can use the `@Injectable()` decorator.
-By applying this decorator to a class, you indicate that the class should be managed and instantiated by the Moost framework.
+## How to Make a Class Injectable
+In Moost, you can use the `@Injectable()` decorator to make a class injectable. When you put this decorator on a class, you're telling Moost to handle that class for you.
 
-Here's an example of how to make a class injectable:
+Here's how you do it:
 ```ts
 import { Injectable } from 'moost';
 
 @Injectable()
 class MyService {
-  // Class implementation
+  // The rest of your class
 }
 ```
 
-In the above example, the `MyService` class is decorated with `@Injectable()`,
-indicating that it should be managed by the framework.
-By default, the class is treated as a singleton, meaning that only one instance
-of the class will be created and shared across all injection points.
+In this example, the `MyService` class has `@Injectable()`, so Moost will take care of it. Usually, Moost makes one instance of your class and shares it across your whole app.
 
-## Injectable Scope
-Moost provides options to control the scope of injectable instances.
-By default, an injectable class is treated as a singleton,
-meaning that a single instance is created and shared across all injection points.
-However, you can also specify the `FOR_EVENT` scope, which creates a new instance for each event.
+## Changing Injectable Scope
+Moost lets you control how many instances of your injectable class it makes. By default, Moost makes one instance and shares it everywhere (this is called a singleton). But you can also tell Moost to make a new instance for each event.
 
-To specify the scope of an injectable class, you can pass an argument to the `@Injectable()` decorator.
-The argument can be either `'SINGLETON'` or `'FOR_EVENT'`.
-If no argument is provided, `'SINGLETON'` is used as the default scope.
+To do this, you pass an argument to the `@Injectable()` decorator. This argument can be `'SINGLETON'` or `'FOR_EVENT'`. If you don't give an argument, Moost defaults to `'SINGLETON'`.
 
-Here's an example of specifying the scope of an injectable class:
+Here's how to change the scope of an injectable class:
 ```ts
 import { Injectable } from 'moost';
 
 @Injectable(`FOR_EVENT`)
 class MyScopedService {
-  // Class implementation
+  // The rest of your class
 }
 ```
-In the above example, the `MyScopedService` class is decorated with `@Injectable('FOR_EVENT')`,
-indicating that a new instance of the class should be created for each event within the lifecycle of that event.
-This allows the injected instance to behave like a singleton within the scope of a single event.
+In this example, the `MyScopedService` class has `@Injectable('FOR_EVENT')`, so Moost makes a new instance of this class for each event. This way, your class works like a singleton for each individual event.
 
 ::: warning
-When using Moost's dependency injection, please note that a class with the `SINGLETON` scope should not
-depend on a class with the `FOR_EVENT` scope.
-This is because singleton dependencies are instantiated only once, and it is not possible to create a new instance for each event.
-Therefore, using `FOR_EVENT` dependencies within a `SINGLETON` class will result in the same instance being shared across
-multiple events, potentially leading to unexpected behavior.
+When using DI in Moost, a singleton class should not rely on a `FOR_EVENT` class. This is because singleton instances are made once and can't make a new instance for each event. If you try to use a `FOR_EVENT` dependency in a singleton class, the same instance will be used across different events, which can cause problems.
 
-However, the reverse scenario is allowed and encouraged. Instances with the `FOR_EVENT` scope can depend on instances
-with the `SINGLETON` scope without any issues.
-The singleton instance will be available throughout the lifecycle of the event, ensuring consistency and predictable behavior.
-
-To ensure proper usage and avoid potential conflicts, it is recommended to carefully manage the dependencies between classes of different scopes.
+But you can use singleton dependencies in a `FOR_EVENT` class without any trouble. The singleton instance will work as expected during the event. To keep everything running smoothly, make sure to manage dependencies carefully.
 :::
 
-## Injecting Dependencies
-Once a class is marked as injectable, you can easily inject its instance into
-other classes or components that require it.
-Moost's DI system automatically resolves and injects the dependencies based on the constructor signature.
+## How to Inject Dependencies
+After you've made a class injectable, you can inject its instance into other classes or components that need it. Moost's DI system does this for you based on the constructor signature.
 
-Here's an example of injecting a dependency:
+Here's how to inject a dependency:
 ```ts
 import { Injectable } from 'moost';
 
 @Injectable()
 class MyService {
-  // Class implementation
+  // The rest of your class
 }
 
 @Controller()
 class MyController {
   constructor(private myService: MyService) {
-    // Dependency is automatically injected
+    // Dependency is injected for you
   }
 }
 ```
 
-In the above example, the `MyController` class has a dependency on `MyService`,
-which is marked as injectable.
-Moost's DI system automatically resolves the dependency and injects an instance of `MyService` into the constructor of `MyController`.
+In this example, the `MyController` class needs `MyService`, which is injectable. Moost's DI system automatically injects an instance of `MyService` into `MyController`.
 
 ::: tip
-Every controller in Moost is automatically injectable by default.
-The `@Controller()` decorator, which is applied to controllers, internally applies the `@Injectable()` decorator.
-As a result, there is no need to explicitly use the `@Injectable()` decorator for controllers.
-However, if you want a controller to have the `FOR_EVENT` scope, you need to explicitly apply the `@Injectable('FOR_EVENT')` decorator.
+Every controller in Moost is automatically injectable. The `@Controller()` decorator makes this happen. So you don't need to use `@Injectable()` for controllers. But if you want a controller to have the `FOR_EVENT` scope, you need to use `@Injectable('FOR_EVENT')`.
 :::
 
-By relying on dependency injection, you can easily manage and decouple the dependencies between your classes, promoting modular and reusable code.
+With dependency injection, managing and separating your classes becomes easier, helping you write modular and reusable code.

@@ -4,7 +4,7 @@
 Moost is an ongoing project. It's ready to use, but be aware that we're still working on improving some of its parts.
 :::
 
-Moost is a smart tool designed to help you handle events in your applications more efficiently. It's built on [Wooks](https://wooksjs.org), which gives it a lot of flexibility and power. 
+Moost is a smart tool designed to help you handle events in your applications more efficiently. It's built on [Wooks](https://wooks.moost.org), which gives it a lot of flexibility and power. 
 
 ### @ The Magic of Metadata
 Moost uses something called "decorators" to define metadata, which is what makes its event handling so special. Decorators can be applied to classes and methods, helping you set up controllers, interceptors, and event handlers. This makes managing your application's events much easier.

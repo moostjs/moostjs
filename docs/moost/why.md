@@ -29,6 +29,6 @@ Like `nestjs`, Moost supports good design principles, including SOLID. This help
 -   _Metadata layer with [@prostojs/mate](https://github.com/prostojs/mate)_: Moost includes a handy metadata layer, making it easier to work with metadata.
 -   _Support for [DTOs](https://en.wikipedia.org/wiki/Data_transfer_object) and validations_: Moost helps you manage data transfer objects (DTOs) and validate your data with [@prostojs/valido](https://github.com/prostojs/valido).
 -   _Framework independence_: Moost can work with `express` or `fastify`, but it doesn't depend on them directly.
--   _Built on the **Wooks Composables** foundation_: Moost is built on [Wooks](https://wooksjs.org), so you can benefit from all the features offered by Wooks Composables.
+-   _Built on the **Wooks Composables** foundation_: Moost is built on [Wooks](https://wooks.moost.org), so you can benefit from all the features offered by Wooks Composables.
 
 In short, Moost gives you a solid foundation for building big, scalable server-side applications. It leverages the power of `TypeScript` and `@Metadata` to make development easier and faster. With Moost, you can leave the legacy code behind and enjoy a smoother, more manageable coding experience!

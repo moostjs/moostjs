@@ -1,19 +1,19 @@
 # Using Controllers
 
-## Defining Controllers 
+## Define Controller
 
-To define a controller in a Moost application, we use the `@Controller()` decorator on a class. This decorator can take an optional argument which serves as a path prefix for all routes defined within the controller. 
+To create a controller in Moost, we apply the `@Controller()` decorator to a class. This decorator can take an optional argument, which acts as a path prefix for all routes within the controller. 
 
 ### Controller with a Prefix
 
-Let's see an example where a controller is defined with a prefix:
+Here's an example of a controller with a prefix:
 
 ::: code-group
 ```ts [api.controller.ts]
 import { Get } from '@moostjs/event-http'
 import { Controller, Param } from 'moost'
 
-@Controller('api')  // [!code hl]
+@Controller('api') 
 export class ApiController {
     @Get('hello/:name')
     hello(@Param('name') name: string) {
@@ -23,18 +23,18 @@ export class ApiController {
 ```
 :::
 
-In this example, `ApiController` is defined with the prefix `api`. Therefore, the `hello` method maps to the `/api/hello/:name` endpoint.
+In this case, `ApiController` has the prefix `api`, so the `hello` method goes to the `/api/hello/:name` endpoint.
 
 ### Controller without a Prefix
 
-You can also define a controller without providing a prefix. In this case, the routes defined within the controller won't have a path prefix:
+You can also create a controller without a prefix. Then the routes within the controller won't have a path prefix:
 
 ::: code-group
 ```ts [greet.controller.ts]
 import { Get } from '@moostjs/event-http'
 import { Controller, Param } from 'moost'
 
-@Controller()  // [!code hl]
+@Controller()  
 export class GreetController {
     @Get('hello/:name')
     hello(@Param('name') name: string) {
@@ -44,15 +44,15 @@ export class GreetController {
 ```
 :::
 
-In this example, the `GreetController` is defined without a prefix. So the `hello` method maps to the `/hello/:name` endpoint.
+Here, `GreetController` has no prefix, so the `hello` method points to the `/hello/:name` endpoint.
 
-## Importing Controller
+## Register Controller
 
-Once you've defined your controllers, the next step is to import them into your Moost application. This can be done in two ways:
+After defining your controllers, you need to include them in your Moost application. You can do this in two ways:
 
 ### Using the `@ImportController` decorator
 
-You can use the `@ImportController` decorator on your Moost child class. This decorator allows you to import one or multiple controllers:
+Apply the `@ImportController` decorator to your Moost child class to import one or more controllers:
 
 ::: code-group
 ```ts [main.ts]
@@ -60,14 +60,14 @@ import { Moost } from 'moost'
 import { ImportController } from 'moost'
 import { ApiController } from './api.controller'
 
-@ImportController(ApiController)    // [!code hl]
+@ImportController(ApiController)   
 class MyServer extends Moost {
     // ...
 }
 ```
 :::
 
-In the above example, the `ApiController` is imported into the `MyServer` application using the `@ImportController` decorator.
+In this example, `MyServer` application imports `ApiController` using the `@ImportController` decorator.
 
 ### Using the `registerControllers` method
 
@@ -79,23 +79,23 @@ import { Moost } from 'moost'
 import { ApiController } from './api.controller'
 
 const app = new Moost()
-app.registerControllers(ApiController) // [!code hl]
+app.registerControllers(ApiController) 
 // ...
 ```
 :::
 
-In this example, the `ApiController` is registered with the `Moost` application instance using the `registerControllers` method.
+Here, the `Moost` application instance registers `ApiController` using the `registerControllers` method.
 
 ## Nested Controllers
 
-Controllers in Moost can be imported into each other to create a nested hierarchy. Nested controllers inherit the route prefixes of their parent controllers. Here is an example:
+You can import controllers into each other in Moost to create a nested hierarchy. Nested controllers inherit their parent controllers' route prefixes. Here's an example:
 
 ```ts
 // user.controller.ts
 import { Get } from '@moostjs/event-http'
 import { Controller, Param } from 'moost'
 
-@Controller('user')   // [!code hl]
+@Controller('user')   
 export class UserController {
     @Get(':id')
     getUser(@Param('id') id: string) {
@@ -105,17 +105,14 @@ export class UserController {
 
 // api.controller.ts
 import { Controller } from 'moost'
-import { ImportController } from '@moostjs/event-http
-
-'
+import { ImportController } from '@moostjs/event-http'
 import { UserController } from './user.controller'
 
-@Controller('api') // [!code hl]
-@ImportController(UserController) // [!code hl]
+@Controller('api') 
+@ImportController(UserController) 
 export class ApiController {}
 ```
 
-In this example, the `UserController` is imported into the `ApiController`. Since `ApiController` has the prefix `api` and `UserController` has the prefix `user`, the `getUser` method of `UserController` maps to the `/api/user/:id` endpoint.
+In this case, `UserController` is imported into `ApiController`. With `ApiController` having the prefix `api` and `UserController` the prefix `user`, the `getUser` method of `UserController` points to the `/api/user/:id` endpoint.
 
-Using controllers in this way allows you to build a structured and easily understandable route hierarchy in your Moost application. This method provides flexibility in defining your application's routing logic while keeping your code organized and manageable.
-
+By using controllers this way, you can build a clear, easily readable route hierarchy in your Moost app. This method ensures flexible routing logic definition and organized, manageable code.

@@ -5,7 +5,7 @@ from the request object within your request handlers.
 These resolver decorators can be applied to class properties (only for [event-scoped](./controllers/#controller-scope) instances) and request handler arguments (for all the controllers).
 
 Additionally, you can use the composable functions from Wooks inside request handlers.
-For more details, refer to the [Wooks Request Composables](https://wooksjs.org/webapp/composables/request.html) documentation.
+For more details, refer to the [Wooks Request Composables](https://wooks.moost.org/webapp/composables/request.html) documentation.
 
 ::: info
 To learn more about the foundation of **resolver** decorators please read the [Moost Resolvers Documentation](/moost/resolvers).
@@ -20,7 +20,7 @@ To learn more about the foundation of **resolver** decorators please read the [M
 Route parameters are defined in the router using colons (`:`) or asterisks (`*`) and can be resolved using the `@Param` or `@Params` decorators.
 
 ::: tip
-Moost utilizes Wooks under the hood, so you can find documentation on routing patterns at the [Wooks HTTP Routing Documentation](https://wooksjs.org/webapp/routing.html) page.
+Moost utilizes Wooks under the hood, so you can find documentation on routing patterns at the [Wooks HTTP Routing Documentation](https://wooks.moost.org/webapp/routing.html) page.
 :::
 
 ### Named Route Parameter
@@ -285,7 +285,7 @@ export class ExampleController {
 }
 ```
 The `body` argument will contain the parsed request body, which can be an object, string, or an unknown data type, depending on the content of the request body.
-To learn more about body parsing please refer to [Wooks Http Body Documentation](https://wooksjs.org/webapp/body.html) page.
+To learn more about body parsing please refer to [Wooks Http Body Documentation](https://wooks.moost.org/webapp/body.html) page.
 
 ## Raw Body
 

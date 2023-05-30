@@ -111,7 +111,6 @@ Now that your application is running, you can add more features to your project.
 Here are some steps you can follow:
 
 - Add more [controllers](./controllers/) in the `src/controllers` directory. Don't forget to register them in your `main.ts` file with the `registerControllers` method.
-- Change your application settings to fit your needs. If you chose eslint, prettier, or a specific bundler, make sure to update the respective configuration files.
 - Use different types of [request handling](/webapp/handlers) by using other HTTP decorators like `@Post`, `@Put`, `@Delete`, etc.
 - Use Moost's cool features like [dependency injection](/moost/di/), [interceptors](/moost/interceptors), validators, and more to build a strong, scalable application.
 

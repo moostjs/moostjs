@@ -3,7 +3,7 @@
 
 <span class="cli-header"><span class="cli-path">/cliapp</span><span class="cli-invite">$</span> moost cli --routing<span class="cli-blink">|</span></span>
 
-Moost CLI leverages the power of [Wooks CLI](https://wooksjs.org/cliapp/introduction.html) to offer a robust routing system for managing command-line interface (CLI) commands effortlessly. This guide will walk you through defining routes, processing arguments, and working with options in Moost CLI.
+Moost CLI leverages the power of [Wooks CLI](https://wooks.moost.org/cliapp/introduction.html) to offer a robust routing system for managing command-line interface (CLI) commands effortlessly. This guide will walk you through defining routes, processing arguments, and working with options in Moost CLI.
 
 ::: info
 Moost, built on the robust Wooks framework, utilizes [@prostojs/router](https://github.com/prostojs/router) for routing. Its documentation has been partially incorporated here for your convenience.

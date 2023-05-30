@@ -1,7 +1,5 @@
 # @moostjs/event-http
 
-**!!! This is work-in-progress library, breaking changes are expected !!!**
-
 <p align="center">
 <img src="../../moost-logo.png" width="450px"><br>
 <a  href="https://github.com/moostjs/moostjs/blob/main/LICENSE">
@@ -9,31 +7,51 @@
 </a>
 </p>
 
-`event-http` is a moostjs wrapper of [@wooksjs/event-http](https://github.com/wooksjs/wooksjs/tree/main/packages/event-http) with corresponding decorators for composable functions.
+Welcome to `@moostjs/event-http`, a Moostjs library that serves as a wrapper for [@wooksjs/event-http](https://github.com/wooksjs/wooksjs/tree/main/packages/event-http). This package provides decorators for composing functions, thereby enhancing the simplicity and efficiency of your Moost application.
 
-## Quick Start
+**Note:** As `@moostjs/event-http` is under active development, breaking changes can be expected.
 
-```ts
-import { MoostHttp, Get } from '@moostjs/event-http'
-import { Moost, Param } from 'moost'
+## Overview
 
-class MyServer extends Moost {
-    @Get('test/:name')
-    test(@Param('name') name: string) {
-        return { message: `Hello ${name}!` }
-    }
-}
+The `@moostjs/event-http` module plays a crucial role in making Moost apps receptive to HTTP events. By employing it in your project, you can create handlers for HTTP events in a declarative, structured manner.
 
-const app = new MyServer()
-const http = new MoostHttp()
-app.adapter(http).listen(3000, () => {
-    app.getLogger('MyApp').log('Up on port 3000')
-})
-app.init()
-// curl http://localhost:3000/test/World
-// {"message":"Hello World!"}
+## Getting Started
+
+Starting a new Moost HTTP project is quite simple. All you need to do is run the following command:
+
+```bash
+npm create moost -- --http
 ```
 
-## Install
+You can also provide a name for your project:
 
-`npm install moost @moostjs/event-http`
+```bash
+npm create moost my-web-app -- --http
+```
+
+This command will initiate a setup tool that will guide you through the project initialization process. It will prompt you to make certain choices such as:
+
+- Whether you want to integrate eslint and prettier.
+- Which bundler you prefer to use: esbuild or rollup.
+
+## [Official Documentation](https://moost.org/webapp/)
+
+## Contributing
+
+We are excited to welcome contributors who are passionate about improving Moostjs. No matter your level of experience, your unique perspective and skills can make valuable contributions to our growing community.
+
+Here are some basic steps to get you started:
+
+1. **Fork the Repo:** Navigate to [moostjs](https://github.com/moostjs/moostjs) and fork the repository to your own GitHub account.
+
+2. **Clone the Repo:** Clone the forked repository to your local machine.
+
+3. **Create a Branch:** Make a new branch for your feature or bug fix.
+
+4. **Make your Changes:** Implement your feature or fix the bug and commit the changes to your branch.
+
+5. **Make a Pull Request:** Navigate back to your forked repo and press the "New pull request" button.
+
+Don't hesitate to ask for help if you need it. We believe in fostering a friendly and respectful environment for all contributors.
+
+Thank you for your interest in Moostjs. We look forward to building something amazing together!

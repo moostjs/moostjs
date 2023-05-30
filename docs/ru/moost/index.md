@@ -4,7 +4,7 @@
 Work on Moost is ongoing. While it is primed for immediate use, please note that some APIs may be subject to further enhancements.
 :::
 
-Moost, a metadata-driven event processing framework, is designed to streamline event handling within your applications. Built upon the robust foundation of [Wooks](https://wooksjs.org), Moost leverages the power of Wooks' composable structure and functionality, transforming it into a versatile toolkit for event-processing applications.
+Moost, a metadata-driven event processing framework, is designed to streamline event handling within your applications. Built upon the robust foundation of [Wooks](https://wooks.moost.org), Moost leverages the power of Wooks' composable structure and functionality, transforming it into a versatile toolkit for event-processing applications.
 
 ### @ Decoding the Metadata Magic
 Moost's innovative use of decorators to define metadata underpins its unique event processing flow. Decorators applied to classes and methods pave the way for the creation of controllers, interceptors, and event handlers, thereby simplifying the task of organizing and managing your application's event processing logic.

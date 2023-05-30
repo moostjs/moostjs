@@ -1,63 +1,52 @@
 # Circular Dependencies
 
-Circular dependencies occur when two or more classes depend on each other,
-creating a cyclic reference.
-This can pose a challenge when resolving class types during runtime.
-However, Moost provides a workaround for handling circular dependencies using the `@Circular` decorator.
+Roundabout, or circular, dependencies happen when two or more classes lean on each other. This can make a spinning circle that's tricky to handle when your program is running. But don't worry, Moost has a trick to handle this using the `@Circular` decorator.
 
-## Resolving Circular Dependencies
+## Breaking the Roundabout
 
-The @Circular decorator is used to provide a hint to the framework about the class type to inject when resolving circular dependencies.
-It accepts a callback function that returns the class type before instantiation.
+The `@Circular` decorator is like a friendly traffic cop that tells Moost what class type to use when there's a circular dependency. It uses a callback function to return the class type before it's created.
 
-Here's an example to illustrate how to use the `@Circular` decorator in classes with circular dependencies:
+Here's how to use the `@Circular` decorator when you have circular dependencies:
 ```ts
 import { Injectable, Circular } from 'moost';
 
 @Injectable()
 class ClassA {
   constructor(@Circular(() => ClassB) private classB: ClassB) {
-    // ClassA logic
+    // What ClassA does
   }
 }
 
 @Injectable()
 class ClassB {
   constructor(@Circular(() => ClassA) private classA: ClassA) {
-    // ClassB logic
+    // What ClassB does
   }
 }
 ```
 
-In the above example, `ClassA` depends on `ClassB`, and `ClassB` depends on `ClassA`.
-By applying the `@Circular` decorator with the corresponding class type callback, we inform the framework about the circular dependency.
+In this example, `ClassA` depends on `ClassB`, and `ClassB` depends on `ClassA`. By using the `@Circular` decorator with the right class type callback, we tell Moost about the circular dependency.
 
 ::: warning
-It's crucial to be aware of the order of dependency injection.
-In the case of circular dependencies, the injection of dependent classes occurs after the constructor call.
-This means that it's unsafe to access and use those dependencies directly within the constructor.
+It's super important to remember the order of dependency injection. With circular dependencies, Moost injects dependent classes after the constructor call. So you shouldn't try to use these dependencies in the constructor.
 
-Due to the nature of circular dependencies and the way they are resolved,
-accessing dependent classes in the constructor can lead to unexpected behavior or runtime errors.
-
-By deferring the usage of dependent classes until after the constructor has executed and the circular dependencies have been resolved,
-you ensure a more reliable and predictable execution flow within your application.
+If you do, you might run into problems or errors because of the circular dependencies and how they're resolved. It's better to wait until after the constructor has run and the circular dependencies have been sorted out. That way, your app will run more reliably and predictably.
 :::
 
-## How does it work?
-When resolving circular dependencies, Moost follows a two-step process:
+## Behind the Scenes
+When Moost is dealing with circular dependencies, it has a two-step plan:
 
-1. It creates a proxy instance for the class with the circular dependency.
-2. It resolves the circular dependency using the class type provided by the `@Circular` decorator.
+1. It makes a proxy instance for the class with the circular dependency.
+2. It uses the class type from the `@Circular` decorator to sort out the circular dependency.
 
-By following this approach, Moost can successfully resolve circular dependencies and instantiate the classes without runtime errors.
+By doing this, Moost can successfully handle circular dependencies and create the classes without any errors.
 
-## Important Note
+## Don't Forget
 
-It is important to note that circular dependencies, in general, should be avoided as they can introduce complexity and make your codebase more difficult to maintain. Circular dependencies occur when two or more classes depend on each other, forming a cycle of dependencies.
+Circular dependencies should generally be avoided because they can make your code more complex and harder to manage. They happen when two or more classes depend on each other, forming a circular pattern of dependencies.
 
-While Moost provides a mechanism to handle circular dependencies using the `@Circular` decorator, it is recommended to use this approach only when there is no alternative solution available. Circular dependencies can complicate the understanding of code flow, increase the risk of introducing bugs, and make testing and debugging more challenging.
+While Moost can handle circular dependencies using the `@Circular` decorator, it's best to only use this when you have no other options. Circular dependencies can make your code harder to understand, increase the chance of bugs, and make testing and debugging more difficult.
 
-Ideally, it is advisable to analyze your codebase and architecture to identify opportunities for refactoring and reducing or eliminating circular dependencies. By restructuring your code and breaking down dependencies, you can achieve a more modular and maintainable design.
+Ideally, you should look at your code and structure to find ways to cut down or get rid of circular dependencies. By rearranging your code and breaking up dependencies, you can make your design easier to manage and more flexible.
 
-While the `@Circular` decorator can provide a workaround for circular dependencies, it should be used judiciously and as a last resort. Strive to design your application in a way that minimizes complex dependencies and promotes a clear and understandable codebase.
+Even though the `@Circular` decorator can help with circular dependencies, it should be used sparingly and only as a last resort. Try to design your app to keep complex dependencies to a minimum and make your code easier to understand.

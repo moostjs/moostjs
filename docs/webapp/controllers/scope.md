@@ -1,15 +1,15 @@
-# Scope of Controller
+# Controller Scope
 
-The scope of a controller in Moost refers to the lifecycle of its instance. There are two main types of scopes in Moost:
+In Moost, a controller's scope refers to the lifecycle of its instance. There are two primary scopes:
 
-- **SINGLETON**: By default, every controller in Moost has a singleton scope. This means that a single instance of the controller is created and reused across different events. In fact, you don't need to do anything to create a singleton controller, as it's the default behaviour.
-- **FOR_EVENT**: When a controller is defined in the 'FOR_EVENT' scope, a new instance of the controller is created for each event. This can be useful when you need to maintain certain state or use event-based resolvers at the class level during the lifecycle of an event.
+- **SINGLETON**: By default, each Moost controller is a singleton. It means a single controller instance is created and reused for different events. You don't need to do anything for this; it's the default behavior.
+- **FOR_EVENT**: A new controller instance is created for each event when its scope is defined as 'FOR_EVENT'. This is useful if you need to maintain a state or use event-based resolvers at the class level during an event's lifecycle.
 
-## For Event Scope
+## Defining 'FOR_EVENT' Scope
 
-To define a controller in the 'FOR_EVENT' scope, you need to use the `@Injectable('FOR_EVENT')` decorator before the `@Controller()` decorator.
+To specify a controller's scope as 'FOR_EVENT', apply the `@Injectable('FOR_EVENT')` decorator before the `@Controller()` decorator.
 
-Let's look at an example:
+Here's an example:
 
 ::: code-group
 ```ts [event.controller.ts]
@@ -29,10 +29,8 @@ export class EventController {
 ```
 :::
 
-In this example, the `EventController` is defined with the 'FOR_EVENT' scope by using the `@Injectable('FOR_EVENT')` decorator. Because of the 'FOR_EVENT' scope, we can use the `@Param('name')` resolver on the class level. In the `hello` method, `this.name` will contain the value of the 'name' parameter from the event.
+In this case, the `EventController` is defined with 'FOR_EVENT' scope using `@Injectable('FOR_EVENT')` decorator. Because of the 'FOR_EVENT' scope, the `@Param('name')` resolver is usable at the class level. In the `hello` method, `this.name` will contain the 'name' parameter value from the event.
 
 ::: warning
-It's important to avoid dependencies between controllers with different scopes. If a controller is in the `SINGLETON` scope, it should not depend on a class in the `FOR_EVENT` scope.
-This is because singleton dependencies are instantiated only once, and it's not possible to create a new instance for each event.
-However, the reverse scenario is allowed, where a controller in the `FOR_EVENT` scope can depend on a class in the `SINGLETON` scope.
+Avoid dependencies between controllers with differing scopes. If a controller is in `SINGLETON` scope, it shouldn't depend on a class in `FOR_EVENT` scope. Since singleton dependencies are instantiated only once, creating a new instance for each event isn't possible. However, a controller in `FOR_EVENT` scope can depend on a class in `SINGLETON` scope.
 :::

@@ -1,37 +1,37 @@
-# Reuse of Controllers
+# Controller Reusability
 
-The Moost framework provides a powerful feature that allows you to overwrite the prefix of a controller when importing it. This offers you additional flexibility in defining your application's routing structure, and it opens up possibilities for more efficient code reuse.
+Moost framework offers a feature to overwrite a controller's prefix when importing it. This provides more flexibility in defining your app's routing structure and enables efficient code reuse.
 
-## Overwriting a Controller's Prefix
+## Changing a Controller's Prefix
 
-When importing a controller using the `@ImportController()` decorator, you can specify a new prefix for the controller. This new prefix will overwrite any prefix defined in the controller itself with the `@Controller()` decorator.
+When using the `@ImportController()` decorator to import a controller, you can set a new prefix for the controller. This new prefix replaces any prefix defined in the controller using the `@Controller()` decorator.
 
-Here's an example of how you can use this feature:
+For instance:
 
 ```ts
 @ImportController('new-prefix', ExampleController)
 ```
 
-In this case, if `ExampleController` had a prefix defined by `@Controller('prefix')`, the `new-prefix` will be used instead, effectively overwriting the original prefix.
+If `ExampleController` has a prefix defined by `@Controller('prefix')`, then `new-prefix` will replace the original prefix.
 
-## Reusing Controllers with Different Prefixes
+## Reusing Controllers with Varied Prefixes
 
-One powerful application of this feature is that it allows you to reuse the same controller class with different prefixes, differentiating the controllers based on constructor arguments. This is particularly useful when you have controllers that share similar structure but operate on different data.
+You can use this feature to reuse a single controller class with different prefixes, distinguishing the controllers based on constructor parameters. This is useful when your controllers share a similar structure but handle different data.
 
-Take a look at the following example:
+Consider this example:
 
 ```ts
 @ImportController('users', () => new DbCollection('users'))
 @ImportController('roles', () => new DbCollection('roles'))
 ```
 
-In this case, we're reusing the `DbCollection` controller for two different prefixes, `users` and `roles`. We're also passing a different argument to the constructor each time to differentiate the two instances of the controller.
+Here, we're reusing the `DbCollection` controller for two different prefixes, `users` and `roles`. We're also passing different arguments to the constructor each time to distinguish the two controller instances.
 
-Here's what `DbCollection` might look like:
+The `DbCollection` might look something like this:
 
 ```ts
-import { Controller } from 'moost'
-import { Get, Put, Post, Delete } from '@moostjs/event-http'
+import { Controller, Param } from 'moost'
+import { Get, Put, Post, Delete, Body } from '@moostjs/event-http'
 
 interface TCollectionsSchema {
     users: TUserCollectionSchema,
@@ -67,16 +67,16 @@ export class DbCollection<T extends keyof TCollectionsSchema> {
 }
 ```
 
-In this example, the `DbCollection` controller is designed to operate on a generic collection, and we create specific instances of the controller for users and roles. Each instance is responsible for performing CRUD operations on its assigned collection, hence drastically increasing code reuse and providing a clear, flexible structure for our application.
+In this scenario, the `DbCollection` controller operates on a generic collection, and we create specific controller instances for users and roles. Each instance handles CRUD operations on its assigned collection, enhancing code reuse and providing a clear, flexible structure for our app.
 
-> Please note that all the examples provided in this documentation are for illustration purposes and may need to be adjusted based on the specific requirements and environment of your application. It is important to understand the concepts and principles demonstrated and adapt them to suit your needs. Consider the examples as a starting point and make the necessary modifications to align with your application's architecture, business logic, and security requirements. Always ensure that you thoroughly test and validate your implementation to guarantee its correctness and security in a production environment.
+> Note that these examples are illustrative and may need adjustments based on your application's specific requirements and environment. The aim is to understand the demonstrated concepts and principles and adapt them to your needs. Consider the examples as starting points and make necessary modifications to align with your app's architecture, business logic, and security requirements. Always ensure to thoroughly test and validate your implementation for correctness and security in a production environment.
 
-## Use Cases and Ideas
+## Potential Applications
 
-The ability to overwrite prefixes and reuse controllers with different constructor arguments offers a high degree of flexibility. Here are some potential use cases and ideas:
+The ability to change prefixes and reuse controllers with different constructor arguments offers flexibility. Here are some potential applications:
 
-- **Modular Multi-Tenant Applications**: In a multi-tenant application, you could have a separate controller instance for each tenant, each with its own prefix. This would allow you to keep your controller logic clean and reusable while catering to different tenants.
+- **Modular Multi-Tenant Apps**: In a multi-tenant app, you could create a separate controller instance for each tenant, each with its own prefix. This keeps your controller logic clean and reusable while catering to different tenants.
 
-- **Versioning**: You could use this feature to maintain different versions of your API. By creating different instances of your controllers with different prefixes (e.g., `v1`, `v2`, etc.), you can keep your versioning logic clean and organized.
+- **Versioning**: You could maintain different versions of your API using this feature. By creating different controller instances with different prefixes (e.g., `v1`, `v2`, etc.), your versioning logic stays clean and organized.
 
-- **Theming**: If you have a web application that supports theming, you could create different instances of your controllers for each theme. Each instance could use a different set of views or templates, all while reusing the same controller logic.
+- **Theming**: If your web app supports theming, you could create different controller instances for each theme. Each instance could use a different set of views or templates, reusing the same controller logic.

@@ -67,4 +67,4 @@ class MyController {
 In the example above, any request to the `/static/*` route will serve the corresponding file from the file system.
 The file path is extracted from the wildcard route parameter, and the `cacheControl` option is used to set the caching behavior of the response.
 
-You can refer to the [Cache Control documentation](https://wooksjs.org/webapp/composables/response.html#cache-control) in Wooks for more details on how to configure the cache control directives.
+You can refer to the [Cache Control documentation](https://wooks.moost.org/webapp/composables/response.html#cache-control) in Wooks for more details on how to configure the cache control directives.

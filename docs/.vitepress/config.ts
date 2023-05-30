@@ -202,13 +202,17 @@ export default defineConfig({
                                     text: 'Using Controllers',
                                     link: '/webapp/controllers/usage',
                                 }, {
-                                    text: 'Reuse of Controllers',
+                                    text: 'Controller Reusability',
                                     link: '/webapp/controllers/reuse',
                                 }, {
                                     text: 'Scope of Controller',
                                     link: '/webapp/controllers/scope',
                                 },
                             ],
+                        },
+                        {
+                            text: 'Routing',
+                            link: '/webapp/routing',
                         },
                         {
                             text: 'Request Handlers',

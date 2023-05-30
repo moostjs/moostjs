@@ -96,5 +96,5 @@ instance injected using the `@InjectEventLogger` decorator. The event logger can
 be used to log messages within the event handler.
 
 For more details on logging in Moost, please refer to the
-[Logging in Wooks](https://wooksjs.org/wooks/advanced/logging.html) page as
+[Logging in Wooks](https://wooks.moost.org/wooks/advanced/logging.html) page as
 Moost logging is based on the Wooks logging mechanism.
