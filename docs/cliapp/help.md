@@ -26,7 +26,7 @@ import { Controller, Description, Param, Value } from 'moost'
 import { Cli, CliOption, CliAlias, CliExample } from '@moostjs/event-cli'
 
 @Controller()
-export class GptController {
+export class CliController {
     @Cli('start')
     @CliAlias('begin') // Command alias
     start() {

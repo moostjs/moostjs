@@ -1,10 +1,11 @@
 import { defineConfig, DefaultTheme } from 'vitepress'
 // import { configRu } from './config.ru'
 
-const ogDescription = 'Metadata Driven Event Processing Framework'
-const ogImage = 'https://moost.dev/og-image.png'
+const ogDescription = 'Moost is a Metadata Driven Event Processing Framework. Official Documentation Website.'
+const ogImage = 'https://moost.org/og-moost.png'
+const twitterImage = 'https://moost.org/moostjs-small.png'
 const ogTitle = 'Moost'
-const ogUrl = 'https://moost.dev'
+const ogUrl = 'https://moost.org'
 
 // netlify envs
 // const deployURL = process.env.DEPLOY_PRIME_URL || ''
@@ -40,8 +41,9 @@ export default defineConfig({
         ['meta', { property: 'og:image', content: ogImage }],
         ['meta', { property: 'og:url', content: ogUrl }],
         ['meta', { property: 'og:description', content: ogDescription }],
-        ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-        ['meta', { name: 'twitter:site', content: '@moostjs' }],
+        ['meta', { name: 'twitter:card', content: 'summary' }],
+        ['meta', { name: 'twitter:site', content: '@MAVrik7' }],
+        ['meta', { name: 'twitter:image', content: twitterImage }],
         ['meta', { name: 'theme-color', content: '#3d61be' }],
     ],
 
