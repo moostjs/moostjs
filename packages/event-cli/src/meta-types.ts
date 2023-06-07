@@ -5,9 +5,10 @@ export interface TCliClassMeta {
     cliAliases: string[]
     cliExamples: { cmd: string, description?: string }[]
     cliOptions: { keys: string[], description?: string, value?: string }[]
+    params: TCliClassMeta[]
     // cliHelpUsed?: boolean
 }
 
 export function getCliMate() {
-    return getMoostMate<TCliClassMeta, TCliClassMeta, TCliClassMeta>()
+    return getMoostMate<TCliClassMeta, TCliClassMeta>()
 }

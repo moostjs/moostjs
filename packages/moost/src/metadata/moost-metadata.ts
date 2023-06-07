@@ -2,7 +2,7 @@ import {
     TInterceptorFn,
     TInterceptorPriority,
 } from '../decorators/intercept.decorator'
-import { Mate } from '@prostojs/mate'
+import { Mate, TMateParamMeta } from '@prostojs/mate'
 import { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
 import { TProvideRegistry } from '@prostojs/infact'
 import { TPipeData, TPipeMetas } from '../pipes'
@@ -12,23 +12,36 @@ import { TDecoratorLevel } from '../decorators/types'
 
 const METADATA_WORKSPACE = 'moost'
 
-interface TCommonMetaFields {
-    id?: string
-    label?: string
-    value?: unknown
-    description?: string
-    optional?: boolean
-    required?: boolean
+export interface TMoostMetadata<H extends TObject = TEmpty> extends TCommonMetaFields, TCommonMoostMeta {
+    dto?: TValidoDtoOptions
+    requiredProps?: (string | symbol)[]
+    controller?: {
+        prefix?: string
+    }
+    importController?: {
+        prefix?: string
+        typeResolver?:
+        | TClassConstructor
+        | (() =>
+            | TClassConstructor
+            | TObject
+            | Promise<TClassConstructor | TObject>)
+        provide?: TProvideRegistry
+    }[]
+    properties?: (string | symbol)[]
+    injectable?: true | TInjectableScope
+    interceptors?: TInterceptorData[]
+    handlers?: TMoostHandler<H>[]
+    provide?: TProvideRegistry
+    params: (TMateParamMeta & TMoostParamsMetadata)[]
 }
 
-interface TCommonMoostMeta {
-    inherit?: boolean
-    pipes?: TPipeData[]
-    resolver?: (metas: TPipeMetas<TAny>, level: TDecoratorLevel) => unknown
-    type?: TFunction
-    validators?: TValidoFn<TAny>[]
-    validatorsOfItem?: TValidoFn<TAny>[]
-    arrayType?: true | TValidateArrayOptions<TAny>
+export interface TMoostParamsMetadata extends TCommonMetaFields, TCommonMoostMeta {
+    circular?: () => TAny
+    inject?: string | symbol | TClassConstructor
+    nullable?: boolean
+    isRouteParam?: string
+    isQueryParam?: string
 }
 
 export interface TValidateArrayOptions<T = unknown> {
@@ -39,51 +52,19 @@ export interface TValidateArrayOptions<T = unknown> {
 }
 
 export type TInjectableScope = 'FOR_EVENT' | 'SINGLETON'
-export type TMoostHandler<T> = T & {
+export type TMoostHandler<T> = {
     type: string
-}
-
-export interface TMoostMetadata extends TCommonMetaFields, TCommonMoostMeta {
-    dto?: TValidoDtoOptions
-    requiredProps?: (string | symbol)[]
-    controller?: {
-        prefix?: string
-    }
-    importController?: {
-        prefix?: string
-        typeResolver?:
-            | TClassConstructor
-            | (() =>
-                  | TClassConstructor
-                  | TObject
-                  | Promise<TClassConstructor | TObject>)
-        provide?: TProvideRegistry
-    }[]
-    properties?: (string | symbol)[]
-    injectable?: true | TInjectableScope
-    interceptors?: TInterceptorData[]
-    handlers?: TMoostHandler<TAny>[]
-    provide?: TProvideRegistry
-}
+    path?: string
+} & T
 
 export interface TInterceptorData {
     handler: TCallableClassFunction<TInterceptorFn>
     priority: TInterceptorPriority
 }
 
-export interface TMoostParamsMetadata
-    extends TCommonMetaFields,
-        TCommonMoostMeta {
-    circular?: () => TAny
-    inject?: string | symbol | TClassConstructor
-    nullable?: boolean
-    isRouteParam?: string
-}
-
 const moostMate = new Mate<
     TMoostMetadata,
-    TMoostMetadata,
-    TMoostMetadata & TMoostParamsMetadata
+    TMoostMetadata
 >(METADATA_WORKSPACE, {
     readType: true,
     readReturnType: true,
@@ -106,9 +87,27 @@ export function getMoostMate<
     Prop extends TObject = TEmpty,
     Param extends TObject = TEmpty
 >() {
-    return moostMate as Mate<
-        TMoostMetadata & Class,
-        TMoostMetadata & Prop,
-        TMoostMetadata & TMoostParamsMetadata & Param
+    return moostMate as unknown as Mate<
+        TMoostMetadata & Class & { params: (Param & TMateParamMeta)[] },
+        TMoostMetadata & Prop & { params: (Param & TMateParamMeta)[] }
     >
+}
+
+interface TCommonMetaFields {
+    id?: string
+    label?: string
+    value?: unknown
+    description?: string
+    optional?: boolean
+    required?: boolean
+}
+
+interface TCommonMoostMeta {
+    inherit?: boolean
+    pipes?: TPipeData[]
+    resolver?: (metas: TPipeMetas<TAny>, level: TDecoratorLevel) => unknown
+    type?: TFunction
+    validators?: TValidoFn<TAny>[]
+    validatorsOfItem?: TValidoFn<TAny>[]
+    arrayType?: true | TValidateArrayOptions<TAny>
 }

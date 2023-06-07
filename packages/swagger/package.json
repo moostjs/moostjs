@@ -1,0 +1,41 @@
+{
+  "name": "@moostjs/swagger",
+  "version": "0.2.33",
+  "description": "@moostjs/swagger",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/swagger"
+  },
+  "keywords": [
+    "moost",
+    "moostjs",
+    "composables",
+    "framework",
+    "wooksjs",
+    "prostojs"
+  ],
+  "author": "Artem Maltsev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/swagger#readme",
+  "peerDependencies": {
+    "moost": "",
+    "@moostjs/event-http": ""
+  },
+  "dependencies": {
+    "swagger-ui-dist": "",
+    "@wooksjs/http-static": ""
+  },
+  "devDependencies": {
+    "@types/swagger-ui-dist": ""
+  }
+}

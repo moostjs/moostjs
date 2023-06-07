@@ -12,7 +12,7 @@ import {
     TCookieAttributes as TCookieAttributesRequired,
 } from '@wooksjs/event-http'
 import { useBody } from '@wooksjs/http-body'
-import { Resolve } from 'moost'
+import { Resolve, getMoostMate } from 'moost'
 
 /**
  * Hook to the Response Status
@@ -187,7 +187,7 @@ export function Cookie(name: string) {
  * @paramType string | object
  */
 export function Query(name?: string): ParameterDecorator {
-    return Resolve(() => {
+    return getMoostMate().apply(getMoostMate().decorate('isQueryParam', name), Resolve(() => {
         const { jsonSearchParams, urlSearchParams } = useSearchParams()
         if (name) {
             const p = urlSearchParams()
@@ -196,7 +196,7 @@ export function Query(name?: string): ParameterDecorator {
         }
         const json = jsonSearchParams() as object
         return Object.keys(json).length ? json : null
-    }, name || 'Query')
+    }, name || 'Query'))
 }
 
 /**

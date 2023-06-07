@@ -3,7 +3,7 @@ import { TInterceptorFn, TInterceptorPriority } from './decorators'
 import { getMoostMate, TInterceptorData, TMoostHandler } from './metadata'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
 import { TPipeData, TPipeFn, TPipePriority } from './pipes/types'
-import { TAny, TClassConstructor, TFunction, TObject } from 'common'
+import { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
 import {
     createProvideRegistry,
     Infact,
@@ -18,6 +18,7 @@ import { useEventContext } from '@wooksjs/event-core'
 import { ProstoLogger, TConsoleBase } from '@prostojs/logger'
 import { getDefaultLogger } from 'common'
 import { getIterceptorHandlerFactory } from './utils'
+import { TControllerOverview } from './types'
 
 export interface TMoostOptions {
     /**
@@ -86,13 +87,15 @@ export class Moost {
 
     protected adapters: TMoostAdapter<TAny>[] = []
 
+    protected controllersOverview: TControllerOverview[] = []
+
     protected provide: TProvideRegistry = createProvideRegistry(
         [Infact, getMoostInfact],
         [Mate, getMoostMate],
         [Valido, getMoostValido]
     )
 
-    protected unregisteredControllers: (TObject | TFunction)[] = []
+    protected unregisteredControllers: (TObject | TFunction | [string, TObject | TFunction])[] = []
 
     constructor(protected options?: TMoostOptions) {
         this.logger = options?.logger || getDefaultLogger('moost')
@@ -124,12 +127,17 @@ export class Moost {
         return a
     }
 
+    public getControllersOverview() {
+        return this.controllersOverview
+    }
+
     /**
      * ### init
      * Ititializes adapter. Must be called after adapters are attached.
      */
     public async init() {
         this.setProvideRegistry(createProvideRegistry([Moost, () => this]))
+        console.log('Provided Moost Registry')
         for (const a of this.adapters) {
             const constructor = getConstructor(a)
             if (constructor) {
@@ -157,11 +165,18 @@ export class Moost {
         const meta = getMoostMate()
         const thisMeta = meta.read(this)
         const provide = { ...(thisMeta?.provide || {}), ...this.provide }
-        for (const controller of this.unregisteredControllers) {
+        for (const _controller of this.unregisteredControllers) {
+            let newPrefix: string | undefined = undefined
+            let controller = _controller
+            if (Array.isArray(_controller) && typeof _controller[0] === 'string') {
+                newPrefix = _controller[0]
+                controller = _controller[1] as TObject
+            }
             await this.bindController(
                 controller,
                 provide,
-                this.options?.globalPrefix || ''
+                this.options?.globalPrefix || '',
+                newPrefix,
             )
         }
         this.unregisteredControllers = []
@@ -216,7 +231,7 @@ export class Moost {
         const classConstructor = isConstructor(controller)
             ? controller
             : (getConstructor(controller) as TClassConstructor)
-        await bindControllerMethods({
+        this.controllersOverview.push(await bindControllerMethods({
             getInstance,
             classConstructor,
             adapters: this.adapters,
@@ -226,7 +241,7 @@ export class Moost {
             pipes,
             provide: classMeta?.provide || {},
             logger: this.logger,
-        })
+        }))
         if (classMeta && classMeta.importController) {
             const prefix =
                 typeof replaceOwnPrefix === 'string'
@@ -337,7 +352,7 @@ export class Moost {
      * @param controllers - list of target controllers (instances)
      * @returns
      */
-    public registerControllers(...controllers: (TObject | TFunction)[]) {
+    public registerControllers(...controllers: (TObject | TFunction | [string, TObject | TFunction])[]) {
         this.unregisteredControllers.push(...controllers)
         return this
     }
@@ -352,6 +367,7 @@ export interface TMoostAdapterOptions<H, T> {
     getIterceptorHandler: () => Promise<InterceptorHandler>
     resolveArgs: () => Promise<unknown[]>
     logHandler: (eventName: string) => void
+    register: (handler: TMoostHandler<TEmpty>, path: string, args: string[]) => void
 }
 
 export interface TMoostAdapter<H> {

@@ -43,7 +43,7 @@ const Arr = (value: string) =>
 @Foo("custom class metadata") // Assign 'foo' value for class metadata
 class MyClass {
   @Get()
-  @Bar("custom method metadata") // Assign 'bar' value for method metadata
+  @Bar(123) // Assign 'bar' value for method metadata
   handler(
     @Arr("line 1") // Assign 'arr' value for parameter metadata (appends array with provided value)
     @Arr("line 2")
@@ -82,7 +82,7 @@ Method metadata:
 
 ```js
 {
-  bar: 'custom method metadata',
+  bar: 123,
   params: [
     {
       type: String,

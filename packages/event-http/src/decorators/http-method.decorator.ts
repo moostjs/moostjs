@@ -1,4 +1,5 @@
-import { getMoostMate } from 'moost'
+import { TEmpty } from 'common'
+import { TMoostMetadata, getMoostMate } from 'moost'
 
 export function HttpMethod(
     method:
@@ -12,7 +13,7 @@ export function HttpMethod(
         | 'OPTIONS',
     path?: string
 ): MethodDecorator {
-    return getMoostMate().decorate(
+    return getMoostMate<TEmpty, TMoostMetadata<{ method: typeof method }>>().decorate(
         'handlers',
         { method, path, type: 'HTTP' },
         true

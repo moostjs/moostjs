@@ -1,11 +1,13 @@
-import { getMoostMate, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
+import { getMoostMate, TMoostHandler, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { TPipeData } from '../pipes'
-import { TObject } from 'common'
+import { TEmpty, TObject } from 'common'
 import { getInstanceOwnMethods } from './utils'
 import { runPipes } from '../pipes/run-pipes'
 import { useEventContext } from '@wooksjs/event-core'
 import { getIterceptorHandlerFactory } from '../utils'
 import { TBindControllerOptions } from './bind-types'
+import { TControllerOverview } from '../types'
+import { THandlerOverview } from '../types'
 
 export async function bindControllerMethods(options: TBindControllerOptions) {
     const opts = options || {}
@@ -24,8 +26,16 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             ? opts.replaceOwnPrefix
             : meta.controller?.prefix || ''
     const prefix = `${opts.globalPrefix}/${ownPrefix}`
+
+    const controllerOverview: TControllerOverview = {
+        meta,
+        computedPrefix: prefix,
+        handlers: [],
+    }
+
     for (const method of methods) {
-        const methodMeta = getMoostMate().read(fakeInstance, method) || {}
+        const methodMeta = getMoostMate().read(fakeInstance, method as string) || {} as TMoostMetadata
+        methodMeta.handlers
         if (!methodMeta.handlers || !methodMeta.handlers.length) continue
 
         const pipes = [...(opts.pipes || []), ...(methodMeta.pipes || [])].sort(
@@ -45,7 +55,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             meta: TMoostParamsMetadata
             pipes: TPipeData[]
         }[] = []
-        for (const p of methodMeta.params || []) {
+        for (const p of methodMeta.params || [] as TMoostParamsMetadata[]) {
             argsPipes.push({
                 meta: p,
                 pipes: [...pipes, ...(p.pipes || [])].sort(
@@ -74,8 +84,20 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             return args
         }
 
-        // preparing provide
-        // const provide = {...(opts.provide || {}), ...(meta.provide || {})}
+        const wm = new WeakMap<Required<(typeof methodMeta)>['handlers'][0], THandlerOverview>()
+
+        controllerOverview.handlers.push(...methodMeta.handlers.map(h => {
+            const data: THandlerOverview = {
+                meta: methodMeta,
+                path: h.path,
+                type: h.type,
+                method,
+                handler: h,
+                registeredAs: [],
+            }
+            wm.set(h, data)
+            return data
+        }))
 
         for (const adapter of adapters) {
             await adapter.bindHandler({
@@ -94,7 +116,17 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                             method as string
                         }${__DYE_GREEN__}()`
                     ),
+                register(h: TMoostHandler<TEmpty>, path: string, args: string[]) {
+                    const data = wm.get(h)
+                    if (data) {
+                        data.registeredAs.push({
+                            path,
+                            args,
+                        })
+                    }
+                },    
             })
         }
     }
+    return controllerOverview
 }

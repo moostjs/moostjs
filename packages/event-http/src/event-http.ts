@@ -131,7 +131,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
 
     bindHandler<T extends object = object>(
         opts: TMoostAdapterOptions<THttpHandlerMeta, T>
-    ): void | Promise<void> {
+    ): void {
         let fn
         for (const handler of opts.handlers) {
             if (handler.type !== 'HTTP') continue
@@ -145,7 +145,8 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
             const targetPath = `${opts.prefix || ''}/${path}`.replace(
                 /\/\/+/g,
                 '/'
-            )
+            ) + `${ path.endsWith('//') ? '/' : '' }` // explicit double slash "//" -> force url to end with slash
+
             if (!fn) {
                 fn = defineMoostEventHandler({
                     contextType: CONTEXT_TYPE,
@@ -163,7 +164,8 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
                     },
                 })
             }
-            const { getPath: pathBuilder } = this.httpApp.on(handler.method, targetPath, fn)
+            const routerBinding = this.httpApp.on(handler.method, targetPath, fn)
+            const { getPath: pathBuilder } = routerBinding
             const methodMeta =
                 getMoostMate().read(opts.fakeInstance, opts.method as string) ||
                 ({} as TMoostMetadata)
@@ -185,6 +187,10 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
             opts.logHandler(
                 `${__DYE_CYAN__}(${handler.method})${__DYE_GREEN__}${targetPath}`
             )
+            const args = routerBinding.getArgs()
+            const params: Record<string, string> = {}
+            args.forEach(a => params[a] = `{${ a }}`)
+            opts.register(handler, routerBinding.getPath(params), args)
         }
     }
 }
