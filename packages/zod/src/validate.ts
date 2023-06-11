@@ -11,12 +11,12 @@ import { TClassConstructor, TFunction, TObject, TPrimitives } from 'common'
  * @returns A promise that resolves to the validated data or a safe parse result.
  */
 export async function validate<T extends (TObject | z.ZodType), S extends boolean>(
-    data: unknown, dto: (new () => T) | z.ZodType<T>,
+    data: unknown,
+    dto: (new () => T) | z.ZodType<T>,
     opts?: TZodOpts & { _meta: TZodMate },
     safe?: S,
 ): Promise<S extends true ? z.SafeParseReturnType<unknown, T> : T> {
     if (dto instanceof z.ZodType) {
-        console.log('validating against ', dto)
         return (safe === true ? await dto.safeParseAsync(data) : await dto.parseAsync(data)) as unknown as Promise<S extends true ? z.SafeParseReturnType<unknown, T> : T>
     }
     const zodType = zodByClass(dto, opts)
@@ -24,6 +24,40 @@ export async function validate<T extends (TObject | z.ZodType), S extends boolea
         return await validate(data, zodType, opts, safe) as Promise<S extends true ? z.SafeParseReturnType<unknown, T> : T>
     }
     return (safe === true ? { data, success: true } as z.SafeParseReturnType<unknown, T> : data) as Promise<S extends true ? z.SafeParseReturnType<unknown, T> : T>
+}
+
+export function getClassPropsZodType(target: TFunction, propName: string, argIndex: number | undefined, opts: TZodOpts & { _meta: ReturnType<typeof mate.read> }): z.ZodType {
+    if (!typeClassPropsMap.get(target)) {
+        typeClassPropsMap.set(target, {
+            params: new Map(),
+            props: new Map(),
+        })
+    }
+    const classProps = typeClassPropsMap.get(target)
+    if (classProps) {
+        if (typeof argIndex === 'number') {
+            // arguments
+            let type = classProps.params.get(propName)
+            if (!type) {
+                type = []
+                classProps.params.set(propName, type)
+            }
+            if (!type[argIndex]) {
+                type[argIndex] = applyZodModifiers(zodOrPrimitiveOrClass((opts._meta.zodType || opts._meta.type) as z.ZodType, opts), opts._meta)
+            }
+            return type[argIndex]
+        } else {
+            // prop
+            let type = classProps.props.get(propName)
+            if (!type) {
+                type = applyZodModifiers(zodOrPrimitiveOrClass((opts._meta.zodType || opts._meta.type) as z.ZodType, opts), opts._meta)
+                classProps.props.set(propName, type)
+            }
+            return type
+        }
+    } else {
+        throw new Error('getClassPropsZodType abort')
+    }
 }
 
 const mate = getZodMate()
@@ -173,4 +207,11 @@ export interface TZodOpts {
     errorMap?: z.ZodErrorMap;
     invalid_type_error?: string;
     required_error?: string;
+}
+
+const typeClassPropsMap = new WeakMap<TFunction['prototype'], TClassPropsMap>()
+
+interface TClassPropsMap {
+    props: Map<string, z.ZodType>
+    params: Map<string, z.ZodType[]>
 }

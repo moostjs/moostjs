@@ -41,14 +41,17 @@ export function getNewMoostInfact() {
                 TMoostMetadata
             return infactMeta
         },
-        resolveParam({ paramMeta, classMeta, customData }) {
+        resolveParam({ paramMeta, classMeta, customData, classConstructor, index }) {
             if (paramMeta && customData && customData.pipes) {
                 return runPipes(
                     customData.pipes,
                     undefined,
                     {
                         paramMeta,
+                        type: classConstructor,
+                        key: 'constructor',
                         classMeta: classMeta as unknown as TMoostMetadata,
+                        index,
                     },
                     'PARAM'
                 )
@@ -65,6 +68,7 @@ export function getNewMoostInfact() {
             propMeta,
             classMeta,
             customData,
+            classConstructor,
         }) {
             if (propMeta && customData && customData.pipes) {
                 return runPipes(
@@ -72,6 +76,7 @@ export function getNewMoostInfact() {
                     initialValue,
                     {
                         instance,
+                        type: classConstructor,
                         key,
                         propMeta,
                         classMeta: classMeta as unknown as TMoostMetadata,

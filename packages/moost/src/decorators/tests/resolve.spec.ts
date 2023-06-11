@@ -79,7 +79,9 @@ describe('resolve decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: ResolveDecoratorsTestClass,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -100,7 +102,9 @@ describe('resolve decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: ResolveDecoratorsTestClass,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -118,7 +122,9 @@ describe('resolve decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: ResolveDecoratorsTestClass,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -136,7 +142,9 @@ describe('resolve decorators', () => {
                     meta?.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: ResolveDecoratorsTestClass,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )

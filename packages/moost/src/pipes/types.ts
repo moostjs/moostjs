@@ -1,6 +1,6 @@
 import { TDecoratorLevel } from '../decorators/types'
 import { TMoostMetadata, TMoostParamsMetadata } from '../metadata'
-import { TEmpty, TObject } from 'common'
+import { TEmpty, TFunction, TObject } from 'common'
 
 export interface TPipeMetas<T extends TObject = TEmpty> {
     classMeta?: TMoostMetadata & T
@@ -8,7 +8,9 @@ export interface TPipeMetas<T extends TObject = TEmpty> {
     propMeta?: TMoostMetadata & T
     paramMeta?: TMoostParamsMetadata & T
     instance?: TObject
-    key?: string | symbol
+    type: TFunction
+    index?: number
+    key: string | symbol
 }
 
 export type TPipeFn<T extends TObject = TEmpty> = {

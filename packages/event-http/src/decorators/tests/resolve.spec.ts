@@ -79,7 +79,9 @@ describe('resolve http-decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: Object,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -97,7 +99,9 @@ describe('resolve http-decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: Object,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -115,7 +119,9 @@ describe('resolve http-decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: Object,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -133,7 +139,9 @@ describe('resolve http-decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: Object,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -151,7 +159,9 @@ describe('resolve http-decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: Object,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -169,7 +179,9 @@ describe('resolve http-decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: Object,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -187,7 +199,9 @@ describe('resolve http-decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: Object,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -205,7 +219,9 @@ describe('resolve http-decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: Object,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )
@@ -223,7 +239,9 @@ describe('resolve http-decorators', () => {
                     meta.params[i].resolver(
                         {
                             methodMeta: meta,
+                            type: Object,
                             paramMeta: meta.params[i],
+                            key: '',
                         },
                         'PARAM'
                     )

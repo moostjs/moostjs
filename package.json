@@ -58,7 +58,7 @@
     "@microsoft/api-extractor": "^7.33.6",
     "@prostojs/cli-help": "^0.0.10",
     "@prostojs/dye": "^0.3.0",
-    "@prostojs/infact": "^0.1.11",
+    "@prostojs/infact": "^0.1.12",
     "@prostojs/logger": "^0.3.4",
     "@prostojs/mate": "^0.2.1",
     "@prostojs/rewrite": "^0.0.4",
