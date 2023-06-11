@@ -2,6 +2,10 @@ import { getMoostMate } from 'moost'
 import { TFunction, TPrimitives } from 'common'
 import { z } from 'zod'
 
+/**
+ * Get Mate instance with zod-specific types (TZodMate)
+ * @returns Mate
+ */
 export function getZodMate() {
     return getMoostMate<TZodMate, TZodMate, TZodMate>()
 }

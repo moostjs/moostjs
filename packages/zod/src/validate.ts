@@ -1,13 +1,22 @@
 import { z } from 'zod'
-import { getZodMate } from './zod.mate'
+import { TZodMate, getZodMate } from './zod.mate'
 import { TClassConstructor, TFunction, TObject, TPrimitives } from 'common'
 
+/**
+ * Validates the input data against a Zod type or a class with Zod metadata.
+ * @param data - The data to validate.
+ * @param dto - The Zod type or class with Zod metadata.
+ * @param opts - Options for Zod validation.
+ * @param safe - Indicates whether to use safeParseAsync for safe parsing.
+ * @returns A promise that resolves to the validated data or a safe parse result.
+ */
 export async function validate<T extends (TObject | z.ZodType), S extends boolean>(
     data: unknown, dto: (new () => T) | z.ZodType<T>,
-    opts?: TZodOpts,
+    opts?: TZodOpts & { _meta: TZodMate },
     safe?: S,
 ): Promise<S extends true ? z.SafeParseReturnType<unknown, T> : T> {
     if (dto instanceof z.ZodType) {
+        console.log('validating against ', dto)
         return (safe === true ? await dto.safeParseAsync(data) : await dto.parseAsync(data)) as unknown as Promise<S extends true ? z.SafeParseReturnType<unknown, T> : T>
     }
     const zodType = zodByClass(dto, opts)
@@ -95,6 +104,12 @@ typeConstructorMap.set(Date, (opts?: TZodOpts) => z.array(z.date(), opts))
 // typeConstructorMap.set(Promise, z.)
 // typeConstructorMap.set(Function, z.)
 
+/**
+ * Resolves a Zod type based on a primitive type name, class, or Zod type.
+ * @param type - The primitive type name, class, or Zod type.
+ * @param opts - Options for resolving the Zod type.
+ * @returns The resolved Zod type.
+ **/
 export function zodOrPrimitiveOrClass(type: TFunction | z.ZodType | TPrimitives, opts?: TZodOpts): z.ZodType {
     if (type instanceof z.ZodType) {
         return type
@@ -105,6 +120,12 @@ export function zodOrPrimitiveOrClass(type: TFunction | z.ZodType | TPrimitives,
     return zodByClass(type, opts)
 }
 
+/**
+ * Resolves a Zod type based on a class.
+ * @param type - The class for which to resolve the Zod type.
+ * @param opts - Options for resolving the Zod type.
+ * @returns The resolved Zod type
+ */
 export function zodByClass(type: TFunction, opts?: TZodOpts): z.ZodType {
     const zodFactory = typeConstructorMap.get(type)
     return zodFactory && zodFactory(opts) || resolveZodType(type, opts)
