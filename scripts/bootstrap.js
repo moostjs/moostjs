@@ -14,6 +14,7 @@ packages.forEach(({ shortName, name, pkg, pkgPath }) => {
             name,
             version,
             description: name,
+            sideEffects: false,
             main: 'dist/index.cjs',
             module: 'dist/index.mjs',
             types: 'dist/index.d.ts',

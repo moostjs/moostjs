@@ -9,3 +9,5 @@ export type TFunction = Function
 export type TClassConstructor<T = unknown> = new (...args: TAny[]) => T
 
 export interface TEmpty {}
+
+export type TPrimitives = 'undefined' | 'boolean' | 'number' | 'bigint' | 'string' | 'symbol'

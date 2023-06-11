@@ -1,0 +1,20 @@
+{
+  "extends": "../../api-extractor.json",
+  "mainEntryPointFilePath": "./dist/packages/zod/src/index.d.ts",
+  "dtsRollup": {
+    "publicTrimmedFilePath": "./dist/index.d.ts"
+  },
+  "compiler": {
+    "overrideTsconfig": {
+      "compilerOptions": {
+        "paths": {
+          "common": ["packages/zod/dist/common"]
+        }
+      },         
+      "include": [
+        "packages/zod/dist/packages",
+        "packages/zod/dist/common"
+      ]
+    }
+  }
+}

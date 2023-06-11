@@ -1,7 +1,7 @@
 {
-  "name": "@moostjs/swagger",
+  "name": "@moostjs/zod",
   "version": "0.2.33",
-  "description": "@moostjs/swagger",
+  "description": "@moostjs/zod",
   "sideEffects": false,
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -12,7 +12,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/moostjs.git",
-    "directory": "packages/swagger"
+    "directory": "packages/zod"
   },
   "keywords": [
     "moost",
@@ -27,16 +27,11 @@
   "bugs": {
     "url": "https://github.com/moostjs/moostjs/issues"
   },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/swagger#readme",
-  "peerDependencies": {
-    "moost": "",
-    "@moostjs/event-http": ""
-  },
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/zod#readme",
   "dependencies": {
-    "swagger-ui-dist": "",
-    "@wooksjs/http-static": ""
+    "zod": ""
   },
-  "devDependencies": {
-    "@types/swagger-ui-dist": ""
+  "peerDependencies": {
+    "moost": ""
   }
 }
