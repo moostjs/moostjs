@@ -11,8 +11,6 @@ import {
 } from '@prostojs/infact'
 import { getMoostInfact } from './metadata/infact'
 import { sharedPipes } from './pipes/shared-pipes'
-import { Valido } from '@prostojs/valido'
-import { getMoostValido } from './metadata/valido'
 import { InterceptorHandler } from './interceptor-handler'
 import { useEventContext } from '@wooksjs/event-core'
 import { ProstoLogger, TConsoleBase } from '@prostojs/logger'
@@ -92,7 +90,6 @@ export class Moost {
     protected provide: TProvideRegistry = createProvideRegistry(
         [Infact, getMoostInfact],
         [Mate, getMoostMate],
-        [Valido, getMoostValido]
     )
 
     protected unregisteredControllers: (TObject | TFunction | [string, TObject | TFunction])[] = []

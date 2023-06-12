@@ -2,11 +2,18 @@ import { TPipeFn, TPipePriority, definePipeFn, useEventContext } from 'moost'
 import { getZodMate } from './zod.mate'
 import { z } from 'zod'
 import { getZodTypeForProp } from './validate'
+import { TZodOpts } from './primitives'
 
+/**
+ * Validations pipeline powered by zod
+ *
+ * @param opts - options object
+ *  - formatError: callback to format error
+ * @returns Validation Pipeline
+ */
 export const ZodPipeline = (opts?: {
     formatError?: ((e: z.ZodError, ...args: Parameters<TPipeFn>) => Error)
-    coerce?: boolean
-}) => definePipeFn(async (value, metas, level) => {
+} & TZodOpts) => definePipeFn(async (value, metas, level) => {
     const { restoreCtx } = useEventContext()
     type TMeta = ReturnType<ReturnType<typeof getZodMate>['read']>
     let targetMeta: TMeta = {} as TMeta
@@ -27,9 +34,7 @@ export const ZodPipeline = (opts?: {
         }, {
             type: targetMeta.type,
             additionalMeta: targetMeta,
-        }, {
-            coerce: opts?.coerce || targetMeta.zodCoerce,
-        })
+        }, opts)
         const check = await zodType.spa(value)
         restoreCtx()
         if (check.success) {

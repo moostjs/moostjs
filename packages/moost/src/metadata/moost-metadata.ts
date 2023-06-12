@@ -7,13 +7,11 @@ import { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
 import { TProvideRegistry } from '@prostojs/infact'
 import { TPipeData, TPipeMetas } from '../pipes'
 import { TCallableClassFunction } from '../class-function/types'
-import { TValidoDtoOptions, TValidoFn } from '@prostojs/valido'
 import { TDecoratorLevel } from '../decorators/types'
 
 const METADATA_WORKSPACE = 'moost'
 
 export interface TMoostMetadata<H extends TObject = TEmpty> extends TCommonMetaFields, TCommonMoostMeta {
-    dto?: TValidoDtoOptions
     requiredProps?: (string | symbol)[]
     controller?: {
         prefix?: string
@@ -42,13 +40,6 @@ export interface TMoostParamsMetadata extends TCommonMetaFields, TCommonMoostMet
     nullable?: boolean
     isRouteParam?: string
     isQueryParam?: string
-}
-
-export interface TValidateArrayOptions<T = unknown> {
-    itemType?: (item: T, index: number) => Promise<TFunction> | TFunction
-    itemValidators?: () => (PropertyDecorator | ParameterDecorator)[]
-    minLength?: number
-    maxLength?: number
 }
 
 export type TInjectableScope = 'FOR_EVENT' | 'SINGLETON'
@@ -107,7 +98,4 @@ interface TCommonMoostMeta {
     pipes?: TPipeData[]
     resolver?: (metas: TPipeMetas<TAny>, level: TDecoratorLevel) => unknown
     type?: TFunction
-    validators?: TValidoFn<TAny>[]
-    validatorsOfItem?: TValidoFn<TAny>[]
-    arrayType?: true | TValidateArrayOptions<TAny>
 }

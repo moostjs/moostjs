@@ -38,6 +38,14 @@ export async function validate<T extends (TObject | z.ZodType), S extends boolea
     return (safe === true ? { data, success: true } as z.SafeParseReturnType<unknown, T> : data) as Promise<S extends true ? z.SafeParseReturnType<unknown, T> : T>
 }
 
+/**
+ * Get ZodType for class property (method parameter)
+ * 
+ * @param origin - origin class, prop key and param index
+ * @param target - target type and/or value to check
+ * @param opts - Zod Options
+ * @returns ZodType
+ */
 export function getZodTypeForProp(origin: { type: TFunction, key: string | symbol, index?: number }, target: { type?: TFunction, value?: unknown, additionalMeta?: TZodMetadata }, opts?: TZodOpts): z.ZodType {
     let store = cachedPropsTypes.get(origin.type)
     if (!store) {
@@ -72,12 +80,12 @@ export function getZodTypeForProp(origin: { type: TFunction, key: string | symbo
     }
 }
 
-export function toZodType(type: TFunction | z.ZodType | TPrimitives, opts?: TZodOpts): z.ZodType {
-    if (type instanceof z.ZodType) return type
-    if (typeof type === 'string') return resolveZodPrimitive(type)
-    return getZodType({ type }, opts)
-}
-
+/**
+ * Get ZodType 
+ * @param target - target type and/or value to check
+ * @param opts - ZodOptions
+ * @returns ZodType
+ */
 export function getZodType(target: { type?: TFunction, value?: unknown, additionalMeta?: TZodMetadata }, opts?: TZodOpts): z.ZodType {
     const { type, value, additionalMeta } = target
     const typeOfValue = (typeof value) as TPrimitives

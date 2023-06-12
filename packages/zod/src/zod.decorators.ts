@@ -1,7 +1,8 @@
 import { TFunction, TPrimitives } from 'common'
 import { TZodMate, getZodMate } from './zod.mate'
 import { z } from 'zod'
-import { toZodType } from './validate'
+import { getZodType } from './validate'
+import { TZodOpts, resolveZodPrimitive } from './primitives'
 
 const mate = getZodMate()
 
@@ -512,3 +513,9 @@ export const And = (type: TFunction | z.ZodType | TPrimitives) => mate.decorate(
  * @returns Zod Type decorator
  */
 export const Or = (type: TFunction | z.ZodType | TPrimitives) => mate.decorate('zodFn', (t) => t.or(toZodType(type)), true)
+
+function toZodType(type: TFunction | z.ZodType | TPrimitives, opts?: TZodOpts): z.ZodType {
+    if (type instanceof z.ZodType) return type
+    if (typeof type === 'string') return resolveZodPrimitive(type)
+    return getZodType({ type }, opts)
+}
