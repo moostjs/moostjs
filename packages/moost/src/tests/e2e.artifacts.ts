@@ -8,6 +8,7 @@ import {
     Provide,
     TInterceptorFn,
     Intercept,
+    Optional,
 } from '../decorators'
 import { Delete, Get, Patch, Post, Url, Query } from '@moostjs/event-http'
 import { Moost } from '../moost'
@@ -77,7 +78,8 @@ class E2eController {
 @Controller('req')
 class E2eRequestController {
     constructor(
-        @Query() private query: string,
+        @Optional()
+        @Query() private query: string | undefined,
         private commonDep: E2eCommonDep
     ) {}
 

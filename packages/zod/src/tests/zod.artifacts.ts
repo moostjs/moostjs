@@ -1,35 +1,35 @@
 // deno-lint-ignore-file
-import { IsArray, Refine, Zod } from '../zod.decorators'
+import { Coerce, IsArray, IsTuple, Refine, Zod, IsString } from '../zod.decorators'
 import { getZodMate } from '../zod.mate'
 import { z } from 'zod'
 
 const mate = getZodMate()
 
-export class ValidoTestClass {
+export class ZodTestClass {
     name: string = ''
 
     age: number = 0
 }
 
 @mate.decorate('inherit', true)
-export class ValidoTestClass2 extends ValidoTestClass {
+export class ZodTestClass2 extends ZodTestClass {
     @mate.decorate('optional', true)
     @mate.decorate('default', '')
     lastName?: string = ''
 }
 
-export class ValidoTestClassArray {
-    @IsArray(() => ValidoTestClass2)
-    children: ValidoTestClass2[] = []
+export class ZodTestClassArray {
+    @IsArray(ZodTestClass2)
+    children: ZodTestClass2[] = []
 
-    @IsArray(() => String)
+    @IsArray(String)
     tags: string[] = []
 
-    @IsArray(() => [String, Number, Boolean])
+    @IsTuple([String, Number, Boolean])
     tuple: [string, number, boolean] = ['1', 1, true]
 }
 
-export class ValidoTestClassZod {
+export class ZodTestClassZod {
     @Zod(z.string().email())
     email = ''
 
@@ -37,15 +37,72 @@ export class ValidoTestClassZod {
     age = 0
 }
 
-export class ValidoTestClassRefine {
+export class ZodTestClassRefine {
     @Refine((val) => val.length <= 50, {
         message: 'String can\'t be more than 50 characters',
     })
     myString = ''
 }
 
-// Using the Zod decorator
-export class SingleZod {
-    @Zod(z.string())
-    value = ''
+// export class ZodTestClassCoerce {
+//     @Coerce()
+//     primitive = ''
+
+//     @Coerce()
+//     typed: string = ''
+
+//     @IsString()
+//     @Coerce()
+//     decorated: string = ''
+
+//     @Coerce()
+//     @IsArray()
+//     primitiveArray = ['']
+
+//     @Coerce()
+//     // @IsArray()
+//     typedArray: string[] = ['']
+
+//     @IsString()
+//     @Coerce()
+//     // @IsArray()
+//     decoratedArray: string[] = ['']
+// }
+export class ZodTestClassCoercePrimitive {
+    @Coerce()
+    primitive = ''
+}
+
+export class ZodTestClassCoerceTyped {
+    @Coerce()
+    typed: string = ''
+}
+
+export class ZodTestClassCoerceDecorated {
+    @IsString()
+    @Coerce()
+    decorated: string = ''
+}
+
+export class ZodTestClassCoercePrimitiveArray {
+    @Coerce()
+    primitiveArray = ['']
+}
+
+export class ZodTestClassCoerceTypedArray {
+    @Coerce()
+    @IsArray()
+    typedArray: string[] = ['']
+}
+
+export class ZodTestClassCoerceDecoratedArray {
+    @IsString()
+    @IsArray()
+    @Coerce()
+    decoratedArray: string[] = []
+}
+
+export class ZodTestClassStringArray {
+    @IsString()
+    a!: string[]
 }

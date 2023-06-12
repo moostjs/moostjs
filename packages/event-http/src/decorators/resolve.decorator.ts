@@ -12,6 +12,7 @@ import {
     TCookieAttributes as TCookieAttributesRequired,
 } from '@wooksjs/event-http'
 import { useBody } from '@wooksjs/http-body'
+import { TObject } from 'common'
 import { Resolve, getMoostMate } from 'moost'
 
 /**
@@ -192,10 +193,10 @@ export function Query(name?: string): ParameterDecorator {
         if (name) {
             const p = urlSearchParams()
             const value = p.get(name)
-            return (value === '' && p.has(name)) || value
+            return value === null ? undefined : value
         }
-        const json = jsonSearchParams() as object
-        return Object.keys(json).length ? json : null
+        const json = jsonSearchParams() as TObject
+        return Object.keys(json).length ? json : undefined
     }, name || 'Query'))
 }
 

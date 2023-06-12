@@ -1,7 +1,7 @@
 import { TFunction, TPrimitives } from 'common'
 import { TZodMate, getZodMate } from './zod.mate'
 import { z } from 'zod'
-import { zodOrPrimitiveOrClass } from './validate'
+import { toZodType } from './validate'
 
 const mate = getZodMate()
 
@@ -15,7 +15,7 @@ export const Zod = (type: TZodMate['zodType']) => mate.decorate('zodType', type)
  * Decorator to lazily specify the Zod type for a property, use when have recursive or circular deps https://zod.dev/?id=recursive-types
  * @param fn - A function that returns the Zod type
  */
-export const Lazy = (fn: TZodMate['zodLazy']) => mate.decorate('zodLazy', fn)
+export const LazyType = <T extends (TFunction | z.ZodType)>(getter: () => T, opts?: Parameters<typeof z.lazy>[1]) => Zod((_opts) => z.lazy(() => toZodType(getter()), { ...(opts || {}), ...(_opts || {}) }))
 
 /**
  * Decorator to enable coercion for a property https://zod.dev/?id=coercion-for-primitives
@@ -26,7 +26,25 @@ export const Coerce = () => mate.decorate('zodCoerce', true)
  * Decorator to specify that the property should be an array https://zod.dev/?id=arrays or tuple https://zod.dev/?id=tuples
  * @param typesfn - A function that returns an array of Zod types
  */
-export const IsArray = (typesfn: TZodMate['zodArray']) => mate.decorate('zodArray', typesfn)
+export const IsArray = (types?: (TFunction | z.ZodType | TPrimitives) | (TFunction | z.ZodType | TPrimitives)[], opts?: { coerce?: true }) => {
+    const decorators = [
+        mate.decorate('zodFn', (t) => t.array(), true),
+        mate.decorate('zodMarkedAsArray', true),
+    ]
+    if (types) {
+        if (Array.isArray(types)) {
+            if (types.length > 1) {
+                const zodType = z.union(types.map(t => toZodType(t, opts)) as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]])
+                decorators.push(Zod(zodType))
+            } else if (types.length === 1) {
+                decorators.push(Zod(toZodType(types[0], opts)))
+            }
+        } else {
+            decorators.push(Zod(toZodType(types, opts)))
+        }
+    }
+    return mate.apply(...decorators)
+}
 
 /**
  * Decorator to refine the Zod type with additional constraints https://zod.dev/?id=refine
@@ -264,88 +282,95 @@ export const Includes = (...args: Parameters<ReturnType<typeof z.string>['includ
  * @param args - Arguments for the `string` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsString = (...args: Parameters<typeof z.string>) => Zod(z.string(...args))
+export const IsString = (...args: Parameters<typeof z.string>) => Zod((opts) => z.string(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value should be a number.
  * @param args - Arguments for the `number` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsNumber = (...args: Parameters<typeof z.number>) => Zod(z.number(...args))
+export const IsNumber = (...args: Parameters<typeof z.number>) => Zod((opts) => z.number(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value should be a bigint.
  * @param args - Arguments for the `bigint` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsBigint = (...args: Parameters<typeof z.bigint>) => Zod(z.bigint(...args))
+export const IsBigint = (...args: Parameters<typeof z.bigint>) => Zod((opts) => z.bigint(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value should be a boolean.
  * @param args - Arguments for the `boolean` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsBoolean = (...args: Parameters<typeof z.boolean>) => Zod(z.boolean(...args))
+export const IsBoolean = (...args: Parameters<typeof z.boolean>) => Zod((opts) => z.boolean(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value should be a date.
  * @param args - Arguments for the `date` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsDate = (...args: Parameters<typeof z.date>) => Zod(z.date(...args))
+export const IsDate = (...args: Parameters<typeof z.date>) => Zod((opts) => z.date(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value should be a symbol.
  * @param args - Arguments for the `symbol` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsSymbol = (...args: Parameters<typeof z.symbol>) => Zod(z.symbol(...args))
+export const IsSymbol = (...args: Parameters<typeof z.symbol>) => Zod((opts) => z.symbol(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value should be undefined.
  * @param args - Arguments for the `undefined` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsUndefined = (...args: Parameters<typeof z.undefined>) => Zod(z.undefined(...args))
+export const IsUndefined = (...args: Parameters<typeof z.undefined>) => Zod((opts) => z.undefined(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value should be null.
  * @param args - Arguments for the `null` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsNull = (...args: Parameters<typeof z.null>) => Zod(z.null(...args))
+export const IsNull = (...args: Parameters<typeof z.null>) => Zod((opts) => z.null(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value should be void.
  * @param args - Arguments for the `void` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsVoid = (...args: Parameters<typeof z.void>) => Zod(z.void(...args))
+export const IsVoid = (...args: Parameters<typeof z.void>) => Zod((opts) => z.void(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value can be any type.
  * @param args - Arguments for the `any` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsAny = (...args: Parameters<typeof z.any>) => Zod(z.any(...args))
+export const IsAny = (...args: Parameters<typeof z.any>) => Zod((opts) => z.any(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value should be an unknown type.
  * @param args - Arguments for the `unknown` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsUnknown = (...args: Parameters<typeof z.unknown>) => Zod(z.unknown(...args))
+export const IsUnknown = (...args: Parameters<typeof z.unknown>) => Zod((opts) => z.unknown(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * Decorator to specify that the value should be a never type.
  * @param args - Arguments for the `never` method of Zod.
  * @returns Zod Type decorator
  */
-export const IsNever = (...args: Parameters<typeof z.never>) => Zod(z.never(...args))
+export const IsNever = (...args: Parameters<typeof z.never>) => Zod((opts) => z.never(...(opts ? [{ ...args[0], ...opts }, ...args.slice(1)] : args)))
 
 /**
  * ADVANCED TYPES
  */
+
+/**
+ * Decorator to specify that the value should be a Tuple type https://zod.dev/?id=tuples
+ * @param args - Arguments for the `tuple` method of Zod
+ * @returns Zod Type decorator
+ */
+export const IsTuple = (schemas: (TFunction | z.ZodType | TPrimitives)[]) => Zod(z.tuple(schemas.map(s => toZodType(s)) as [z.ZodTypeAny, ...z.ZodTypeAny[]]))
 
 /**
  * Decorator to specify that the value should be an enum type.
@@ -366,7 +391,7 @@ export const IsNativeEnum = (...args: Parameters<typeof z.nativeEnum>) => Zod(z.
  * @param type - The type of items in the set.
  * @returns Zod Type decorator
  */
-export const IsSet = (type: TFunction | z.ZodType | TPrimitives) => Zod(z.set(zodOrPrimitiveOrClass(type)))
+export const IsSet = (type: TFunction | z.ZodType | TPrimitives) => Zod(z.set(toZodType(type)))
 
 /**
  * Decorator to specify that the value should be a map.
@@ -374,7 +399,7 @@ export const IsSet = (type: TFunction | z.ZodType | TPrimitives) => Zod(z.set(zo
  * @param type2 - The type of values in the map.
  * @returns Zod Type decorator
  */
-export const IsMap = (type: TFunction | z.ZodType | TPrimitives, type2: TFunction | z.ZodType | TPrimitives) => Zod(z.map(zodOrPrimitiveOrClass(type), zodOrPrimitiveOrClass(type2)))
+export const IsMap = (type: TFunction | z.ZodType | TPrimitives, type2: TFunction | z.ZodType | TPrimitives) => Zod(z.map(toZodType(type), toZodType(type2)))
 
 /**
  * Decorator to specify that the value should be a literal.
@@ -399,7 +424,7 @@ export const IsNaN = (...args: Parameters<typeof z.nan>) => Zod(z.nan(...args))
 export const IsRecord = (
     type: TFunction | z.ZodType | TPrimitives,
     type2?: TFunction | z.ZodType | TPrimitives,
-) => Zod(z.record(zodOrPrimitiveOrClass(type), type2 ? zodOrPrimitiveOrClass(type2) : undefined))
+) => Zod(z.record(toZodType(type), type2 ? toZodType(type2) : undefined))
 
 /**
  * Decorator to specify that the value should be a union of multiple types https://zod.dev/?id=unions
@@ -407,7 +432,7 @@ export const IsRecord = (
  * @returns Zod Type decorator
  */
 export const IsUnion = (...types: [(TFunction | z.ZodType | TPrimitives), (TFunction | z.ZodType | TPrimitives), ...(TFunction | z.ZodType | TPrimitives)[]]) => Zod(
-    z.union(types.map(t => zodOrPrimitiveOrClass(t)) as unknown as (readonly [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]))
+    z.union(types.map(t => toZodType(t)) as unknown as (readonly [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]))
 )
 
 /**
@@ -419,7 +444,7 @@ export const IsUnion = (...types: [(TFunction | z.ZodType | TPrimitives), (TFunc
 export const IsDiscriminatedUnion = (discriminator: string, options: [(TFunction | z.ZodType | TPrimitives), (TFunction | z.ZodType | TPrimitives), ...(TFunction | z.ZodType | TPrimitives)[]]) => Zod(
     z.discriminatedUnion(
         discriminator,
-        options.map(t => zodOrPrimitiveOrClass(t)) as unknown as [z.ZodDiscriminatedUnionOption<string>, z.ZodDiscriminatedUnionOption<string>, ...z.ZodDiscriminatedUnionOption<string>[]],
+        options.map(t => toZodType(t)) as unknown as [z.ZodDiscriminatedUnionOption<string>, z.ZodDiscriminatedUnionOption<string>, ...z.ZodDiscriminatedUnionOption<string>[]],
     )
 )
 
@@ -430,7 +455,7 @@ export const IsDiscriminatedUnion = (discriminator: string, options: [(TFunction
  * @returns Zod Type decorator
  */
 export const IsIntersection = (left: (TFunction | z.ZodType | TPrimitives), right: (TFunction | z.ZodType | TPrimitives)) => Zod(
-    z.intersection(zodOrPrimitiveOrClass(left), zodOrPrimitiveOrClass(right))
+    z.intersection(toZodType(left), toZodType(right))
 )
 
 /**
@@ -438,15 +463,34 @@ export const IsIntersection = (left: (TFunction | z.ZodType | TPrimitives), righ
  * @param type - The type of the promise value.
  * @returns Zod Type decorator
  */
-export const IsPromise = (type: TFunction | z.ZodType | TPrimitives) => Zod(z.promise(zodOrPrimitiveOrClass(type)))
+export const IsPromise = (type: TFunction | z.ZodType | TPrimitives) => Zod(z.promise(toZodType(type)))
 
 /**
  * Decorator to specify that the value should be preprocessed with a function https://zod.dev/?id=preprocess
  * @param fn - The preprocessing function
  * @param type - The type of the preprocessed value
- * @returns Zod Type decorator
+ * @returns Zod Preprocess Decorator
  */
-export const IsPreprocessed = <T>(fn: ((arg: unknown) => T), type: TFunction | z.ZodType | TPrimitives) => Zod(z.preprocess(fn, zodOrPrimitiveOrClass(type)))
+export const Preprocess = <T>(fn: ((arg: unknown) => T)) => mate.decorate('zodPreprocess', fn, true)
+
+/**
+ * Preoprocess (cast to number) Zod value before check. Works stricter than coerce, only valid numbers pass.
+ * @returns Zod Preprocess Decorator
+ */
+export const ToNumber = () => Preprocess((val: unknown) => typeof val === 'string' && !!val ? Number(val) : val)
+
+/**
+ * Preoprocess (cast to boolean) Zod value before check. Works stricter than coerce, can be adjusted.
+ * @param truthful - list of truthful values, default: ['true', 'True', 'TRUE', 1]
+ * @param falsy - list of falsy values, default: ['false', 'False', 'FALSE', 0]
+ * @returns Zod Preprocess Decorator
+ */
+export const ToBoolean = (truthful: unknown[] = ['true', 'True', 'TRUE', 1], falsy: unknown[] = ['false', 'False', 'FALSE', 0]) => Preprocess((val: unknown) => {
+    if (typeof val !== 'boolean') return val
+    if (truthful.includes(val)) return true
+    if (falsy.includes(val)) return false
+    return val
+})
 
 /**
  * Decorator to specify that the value should be a custom type https://zod.dev/?id=custom-schemas
@@ -460,11 +504,11 @@ export const IsCustom = (...args: Parameters<typeof z.custom>) => Zod(z.custom(.
  * @param type - The type to intersect
  * @returns Zod Type decorator
  */
-export const And = (type: TFunction | z.ZodType | TPrimitives) => mate.decorate('zodFn', (t) => t.and(zodOrPrimitiveOrClass(type)), true)
+export const And = (type: TFunction | z.ZodType | TPrimitives) => mate.decorate('zodFn', (t) => t.and(toZodType(type)), true)
 
 /**
  * Decorator for creating union type https://zod.dev/?id=or
  * @param type - The type to union
  * @returns Zod Type decorator
  */
-export const Or = (type: TFunction | z.ZodType | TPrimitives) => mate.decorate('zodFn', (t) => t.or(zodOrPrimitiveOrClass(type)), true)
+export const Or = (type: TFunction | z.ZodType | TPrimitives) => mate.decorate('zodFn', (t) => t.or(toZodType(type)), true)

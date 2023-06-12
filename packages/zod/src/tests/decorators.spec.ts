@@ -16,7 +16,7 @@ describe('zod with decorators', () => {
             fromDate: new Date(2010, 0, 1),
             toDate: new Date(2022, 0, 1),
             nullableValue: null,
-            nullishValue: null,
+            nullishValue: undefined,
             email: 'test@example.com',
             url: 'https://example.com',
             emoji: '😀',
@@ -65,7 +65,7 @@ describe('zod with decorators', () => {
             discriminatedUnionType: { type: 'A', value: 'string' },
             intersectionType: { prop1: 'string', prop2: 123 },
             promiseType: Promise.resolve('promise'),
-            preprocessedType: 'preprocessed',
+            preprocessedType: true,
             customType: 'custom',
             andType: { prop1: 'str', prop2: 123 },
             orType: { prop2: 123 },
@@ -78,7 +78,8 @@ describe('zod with decorators', () => {
         expect(result.success).toBe(true)
         if (result.success) {
             data.upperName = 'UPPER AND TRIMMED'
-            data.tags = ['tag1', 'tag2', '123', '456'],
+            data.tags = ['tag1', 'tag2', '123', '456']
+            data.preprocessedType = 'true' as unknown as boolean
             expect(result.data).toEqual(data)
         }
     })
@@ -96,8 +97,8 @@ describe('zod with decorators', () => {
             limitedNumber: 150, // Exceeds maximum
             fromDate: '2022-01-01', // Invalid type
             toDate: '2022-12-31', // Invalid type
-            nullableValue: 'value', // Invalid type
-            nullishValue: 'value', // Invalid type
+            nullableValue: undefined, // Invalid type
+            nullishValue: false, // Invalid type
             email: 'test@example', // Invalid format
             url: 'example.com', // Invalid format
             emoji: 'invalid', // Invalid format
@@ -215,21 +216,21 @@ describe('zod with decorators', () => {
   },
   {
     "code": "invalid_type",
-    "expected": "undefined",
-    "received": "string",
+    "expected": "string",
+    "received": "undefined",
     "path": [
       "nullableValue"
     ],
-    "message": "Expected undefined, received string"
+    "message": "Required"
   },
   {
     "code": "invalid_type",
-    "expected": "undefined",
-    "received": "string",
+    "expected": "string",
+    "received": "boolean",
     "path": [
       "nullishValue"
     ],
-    "message": "Expected undefined, received string"
+    "message": "Expected string, received boolean"
   },
   {
     "validation": "email",

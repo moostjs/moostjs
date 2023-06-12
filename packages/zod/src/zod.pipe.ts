@@ -1,7 +1,7 @@
 import { TPipeFn, TPipePriority, definePipeFn, useEventContext } from 'moost'
 import { getZodMate } from './zod.mate'
-import { getClassPropsZodType, validate } from './validate'
 import { z } from 'zod'
+import { getZodTypeForProp } from './validate'
 
 export const ZodPipeline = (opts?: {
     formatError?: ((e: z.ZodError, ...args: Parameters<TPipeFn>) => Error)
@@ -20,13 +20,17 @@ export const ZodPipeline = (opts?: {
         targetMeta = (metas.classMeta || {}) as TMeta
     }
     if (targetMeta.zodType || targetMeta.type) {
-        const check = await validate(
-            value,
-            getClassPropsZodType(metas.type, metas.key as string, level === 'PARAM' ? metas.index : undefined,
-                { coerce: opts?.coerce || targetMeta.zodCoerce, _meta: targetMeta }),
-            undefined,
-            true
-        )
+        const zodType = getZodTypeForProp({
+            type: metas.type,
+            key: metas.key,
+            index: metas.index,
+        }, {
+            type: targetMeta.type,
+            additionalMeta: targetMeta,
+        }, {
+            coerce: opts?.coerce || targetMeta.zodCoerce,
+        })
+        const check = await zodType.spa(value)
         restoreCtx()
         if (check.success) {
             return check.data

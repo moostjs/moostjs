@@ -27,6 +27,7 @@ export function getNewMoostInfact() {
     >({
         describeClass(classConstructor) {
             const meta = getMoostMate().read(classConstructor)
+            console.log(classConstructor.name + ' meta?.params', meta?.params)
             const infactMeta = {
                 injectable: !!meta?.injectable,
                 global: false,

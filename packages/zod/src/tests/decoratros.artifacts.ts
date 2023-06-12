@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import {
     Zod,
-    Lazy,
+    LazyType,
     Coerce,
     IsArray,
     Refine,
@@ -64,7 +64,7 @@ import {
     IsDiscriminatedUnion,
     IsIntersection,
     IsPromise,
-    IsPreprocessed,
+    Preprocess,
     IsCustom,
     And,
     Or,
@@ -80,11 +80,12 @@ export class ValidoDecoratorsTestClass {
     @Zod(z.string())
     name!: string
 
-    @Lazy(() => Number)
+    @LazyType(() => Number)
     age!: number
 
     @Coerce()
-    @IsArray(() => 'string')
+    @IsString()
+    @IsArray()
     tags!: string[]
 
     @Refine((value) => value === 'admin')
@@ -115,9 +116,11 @@ export class ValidoDecoratorsTestClass {
     @DateTo(new Date(2023, 0, 1))
     toDate!: Date
 
+    @IsString()
     @IsNullable()
     nullableValue!: string | null
 
+    @IsString()
     @IsNullish()
     nullishValue!: string | null | undefined
 
@@ -273,7 +276,7 @@ export class ValidoDecoratorsTestClass {
     @IsPromise(z.string())
     promiseType!: Promise<string>
 
-    @IsPreprocessed((value: unknown) => String(value), String)
+    @Preprocess((value: unknown) => String(value))
     preprocessedType!: string
 
     @IsCustom((value: unknown) => value === 'custom')

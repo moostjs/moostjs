@@ -1,4 +1,4 @@
-import { validate } from '..'
+import { validate } from '../validate'
 import { CircularTest } from './circular.artifacts'
 
 describe('zod circular', () => {

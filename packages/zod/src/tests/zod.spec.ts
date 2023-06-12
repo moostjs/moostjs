@@ -1,25 +1,25 @@
-import { validate } from '..'
-import { ValidoTestClass, ValidoTestClass2, ValidoTestClassArray, ValidoTestClassRefine, ValidoTestClassZod } from './zod.artifacts'
+import { validate } from '../validate'
+import { ZodTestClass, ZodTestClass2, ZodTestClassArray, ZodTestClassCoerceDecorated, ZodTestClassCoerceDecoratedArray, ZodTestClassCoercePrimitive, ZodTestClassCoercePrimitiveArray, ZodTestClassCoerceTyped, ZodTestClassCoerceTypedArray, ZodTestClassRefine, ZodTestClassStringArray, ZodTestClassZod } from './zod.artifacts'
 
 describe('zod', () => {
     it('must validate generic types', async () => {
         expect(await validate({
             name: 'John', age: 23,
-        }, ValidoTestClass))
+        }, ZodTestClass))
             .toEqual({
                 name: 'John', age: 23,
             })
-            
+
         expect(await validate({
             name: 'John', age: 23,
-        }, ValidoTestClass2))
+        }, ZodTestClass2))
             .toEqual({
                 name: 'John', age: 23, lastName: '',
             })
-            
+
         expect(await validate({
             name: 'John2', age: 27,
-        }, ValidoTestClass2))
+        }, ZodTestClass2))
             .toEqual({
                 name: 'John2', age: 27, lastName: '',
             })
@@ -30,7 +30,7 @@ describe('zod', () => {
             tags: ['t1', 't2'],
             tuple: ['123', 321, false],
             children: [{ name: 'John', age: 23 }, { name: 'Jason', age: 15 }],
-        }, ValidoTestClassArray))
+        }, ZodTestClassArray))
             .toEqual({
                 tags: ['t1', 't2'],
                 tuple: ['123', 321, false],
@@ -40,7 +40,7 @@ describe('zod', () => {
             tags: ['t1', 33],
             tuple: ['123', '321', false],
             children: [{ name: 'John', age: 23 }, { name: 55, age: 15 }],
-        }, ValidoTestClassArray, undefined, true))
+        }, ZodTestClassArray, undefined, true))
             .toMatchInlineSnapshot(`
 {
   "error": [ZodError: [
@@ -85,7 +85,7 @@ describe('zod', () => {
         expect(await validate({
             email: 'abcd@mail.com',
             age: 16,
-        }, ValidoTestClassZod))
+        }, ZodTestClassZod))
             .toEqual({
                 email: 'abcd@mail.com',
                 age: 16,
@@ -93,7 +93,7 @@ describe('zod', () => {
         expect(await validate({
             email: 'abcdmail.com',
             age: 15,
-        }, ValidoTestClassZod, undefined, true))
+        }, ZodTestClassZod, undefined, true))
             .toMatchInlineSnapshot(`
 {
   "error": [ZodError: [
@@ -123,8 +123,8 @@ describe('zod', () => {
     })
 
     it('must validate with zod refine', async () => {
-        expect(await validate({ myString: 'test string' }, ValidoTestClassRefine)).toEqual({ myString: 'test string' })
-        expect(await validate({ myString: 'test string long string longer thatn 50 characters!!!' }, ValidoTestClassRefine, undefined, true)).toMatchInlineSnapshot(`
+        expect(await validate({ myString: 'test string' }, ZodTestClassRefine)).toEqual({ myString: 'test string' })
+        expect(await validate({ myString: 'test string long string longer thatn 50 characters!!!' }, ZodTestClassRefine, undefined, true)).toMatchInlineSnapshot(`
 {
   "error": [ZodError: [
   {
@@ -138,6 +138,55 @@ describe('zod', () => {
   "success": false,
 }
 `)
+    })
+
+    it('must apply Coerce decorator for primitive property', async () => {
+        expect(await validate({ primitive: 1 }, ZodTestClassCoercePrimitive, undefined, true)).toEqual({
+            success: true,
+            data: { primitive: '1' },
+        })
+    })
+
+    it('must apply Coerce decorator for typed property', async () => {
+        expect(await validate({ typed: 2 }, ZodTestClassCoerceTyped, undefined, true)).toEqual({
+            success: true,
+            data: { typed: '2' },
+        })
+    })
+
+    it('must apply Coerce decorator for decorated property', async () => {
+        expect(await validate({ decorated: 3 }, ZodTestClassCoerceDecorated, undefined, true)).toEqual({
+            success: true,
+            data: { decorated: '3' },
+        })
+    })
+
+    it('must apply Coerce decorator for primitiveArray property', async () => {
+        expect(await validate({ primitiveArray: [1, 5] }, ZodTestClassCoercePrimitiveArray, undefined, true)).toEqual({
+            success: true,
+            data: { primitiveArray: ['1', '5'] },
+        })
+    })
+
+    it('must apply Coerce decorator for typedArray property', async () => {
+        expect(await validate({ typedArray: [2, 5] }, ZodTestClassCoerceTypedArray, undefined, true)).toEqual({
+            success: true,
+            data: { typedArray: ['2', '5'] },
+        })
+    })
+
+    it('must apply Coerce decorator for decoratedArray property', async () => {
+        expect(await validate({ decoratedArray: [3, 5] }, ZodTestClassCoerceDecoratedArray, undefined, true)).toEqual({
+            success: true,
+            data: { decoratedArray: ['3', '5'] },
+        })
+    })
+
+    it('must figure out that the type is array just by array runtime type', async () => {
+        expect(await validate({ a: ['first', 'last'] }, ZodTestClassStringArray, undefined, true)).toEqual({
+            success: true,
+            data: { a: ['first', 'last'] },
+        })
     })
 })
 

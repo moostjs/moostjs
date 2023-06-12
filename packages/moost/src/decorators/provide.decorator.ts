@@ -24,19 +24,9 @@ export function Provide(
  * ## Inject
  * ### @Decorator
  * Defines a key from provide registry to inject value
- * (For optional values use with @Nullable())
+ * (For optional values use with @Optional())
  * @param type - string or class constructor
  */
 export function Inject(type: string | TClassConstructor): ParameterDecorator {
     return getMoostMate().decorate('inject', type)
-}
-
-/**
- * ## Nullable
- * ### @Decorator
- * Makes injectable value optional
- * @param value default true
- */
-export function Nullable(v = true): ParameterDecorator {
-    return getMoostMate().decorate('nullable', v)
 }
