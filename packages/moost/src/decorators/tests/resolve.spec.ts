@@ -81,6 +81,7 @@ describe('resolve decorators', () => {
                             methodMeta: meta,
                             type: ResolveDecoratorsTestClass,
                             paramMeta: meta.params[i],
+                            targetMeta: meta.params[i],
                             key: '',
                         },
                         'PARAM'
@@ -104,6 +105,7 @@ describe('resolve decorators', () => {
                             methodMeta: meta,
                             type: ResolveDecoratorsTestClass,
                             paramMeta: meta.params[i],
+                            targetMeta: meta.params[i],
                             key: '',
                         },
                         'PARAM'
@@ -124,6 +126,7 @@ describe('resolve decorators', () => {
                             methodMeta: meta,
                             type: ResolveDecoratorsTestClass,
                             paramMeta: meta.params[i],
+                            targetMeta: meta.params[i],
                             key: '',
                         },
                         'PARAM'
@@ -144,6 +147,7 @@ describe('resolve decorators', () => {
                             methodMeta: meta,
                             type: ResolveDecoratorsTestClass,
                             paramMeta: meta.params[i],
+                            targetMeta: meta.params[i],
                             key: '',
                         },
                         'PARAM'

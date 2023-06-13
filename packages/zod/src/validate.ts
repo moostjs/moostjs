@@ -91,6 +91,7 @@ export function getZodType(target: { type?: TFunction, value?: unknown, addition
     const typeOfValue = (typeof value) as TPrimitives
     const ownMeta = type && mate.read(type) || undefined
     let needToCache = false
+    let toWrapIntoArray = false
 
     const overrideZodType = additionalMeta?.zodType
     if (!overrideZodType) {
@@ -98,7 +99,12 @@ export function getZodType(target: { type?: TFunction, value?: unknown, addition
         if (cached) return processResult(cached)
     }
     const zodInitialType = resolveInitialType()
-    return processResult(ownMeta ? applyZodFunctions(zodInitialType, ownMeta) : zodInitialType)
+    return processResult(ownMeta ? applyZodFunctions(zodInitialType, {
+        description: ownMeta.description,
+        zodDefault: ownMeta.zodDefault,
+        zodPreprocess: ownMeta.zodPreprocess,
+        zodFn: ownMeta.zodFn,
+    }) : zodInitialType)
 
     // functions:
     function lookupInCache(): z.ZodType | undefined {
@@ -110,8 +116,8 @@ export function getZodType(target: { type?: TFunction, value?: unknown, addition
     function resolveInitialType(): z.ZodType {
         if (overrideZodType) {
             const overridenType = typeof overrideZodType === 'function' ? overrideZodType(opts) : overrideZodType
-            if (type === Array && !additionalMeta?.zodMarkedAsArray && !(overridenType instanceof z.ZodTuple)) {
-                return overridenType.array()
+            if (type === Array && !(overridenType instanceof z.ZodTuple)) {
+                toWrapIntoArray = true
             }
             return overridenType
         }
@@ -120,7 +126,9 @@ export function getZodType(target: { type?: TFunction, value?: unknown, addition
                 // When class prop has pre-defined value with no explicit type,
                 // it results to widening type in runtime to Object.
                 // This fallback results in type by value determination:
-                return resolveZodTypeByValue(value, opts, additionalMeta?.zodMarkedAsArray)
+                const { zt, isArray } = resolveZodTypeByValue(value, opts)
+                if (isArray) toWrapIntoArray = true
+                return zt
             }
             // Check primitives
             const zodType = resolveZodPrimitiveByConstructor(type, opts)
@@ -151,48 +159,61 @@ export function getZodType(target: { type?: TFunction, value?: unknown, addition
             }
             return z.object(shape)
         } else {
-            return resolveZodTypeByValue(value, opts, additionalMeta?.zodMarkedAsArray)
+            const { zt, isArray } = resolveZodTypeByValue(value, opts)
+            if (isArray) toWrapIntoArray = true
+            return zt
         }
     }
 
     function processResult(zt: z.ZodType): z.ZodType {
         if (needToCache && type && !overrideZodType) cachedTypes.set(type, zt)
-        return additionalMeta ? applyZodFunctions(zt, additionalMeta) : zt
+        return applyZodFunctions(zt, {
+            optional: additionalMeta?.optional,
+            description: additionalMeta?.description,
+            zodDefault: additionalMeta?.zodDefault,
+            zodPreprocess: additionalMeta?.zodPreprocess,
+            zodFn: additionalMeta?.zodFn,
+            zodMarkedAsArrayBeforeOptional: additionalMeta?.zodMarkedAsArrayBeforeOptional,
+            wrapIntoArray: additionalMeta?.zodMarkedAsArray ? false : toWrapIntoArray,
+        })
     }    
 }
 
-function resolveZodTypeByValue(value: unknown, opts?: TZodOpts, markedAsArray?: boolean): z.ZodType {
+function resolveZodTypeByValue(value: unknown, opts?: TZodOpts): { isArray?: boolean, zt: z.ZodType } {
     const type = typeof value
     if (type === 'object') {
         if (Array.isArray(value)) {
-            if (value.length) return markedAsArray ? resolveZodTypeByValue(value[0], opts) : resolveZodTypeByValue(value[0], opts).array()
+            if (value.length) {
+                const subType = resolveZodTypeByValue(value[0], opts)
+                return {
+                    isArray: true,
+                    zt: subType.isArray ? subType.zt.array() : subType.zt,
+                }
+            }
             throw new Error('Could not resolve array item type.')
         } else if (value === null) {
-            return z.null()
+            return { zt: z.null() }
         } else if (value instanceof Date) {
-            return z.date()
+            return { zt: z.date() }
         }
     }
-    return resolveZodPrimitive(typeof value as TPrimitives, opts)
+    return { zt: resolveZodPrimitive(typeof value as TPrimitives, opts) }
 }
 
 function applyZodFunctions(type: z.ZodType, toApply: {
     optional?: boolean
     description?: string
-    default?: unknown
+    zodDefault?: unknown
     zodPreprocess?: ((arg: unknown) => unknown)[]
     zodFn?: TZodFunction[]
+    zodMarkedAsArrayBeforeOptional?: boolean, // array was annotated after @Optional
+    wrapIntoArray?: boolean // array detected, but was not annotated
 }) {
     if (toApply) {
         let newType = type
-        if (toApply.optional) {
+        if (!toApply.wrapIntoArray && toApply.optional && !toApply.zodMarkedAsArrayBeforeOptional) {
+            // array of optional smth
             newType = newType.optional()
-        }
-        if (toApply.description) {
-            newType = newType.describe(toApply.description)
-        }
-        if (typeof toApply.default !== 'undefined') {
-            newType = newType.default(toApply.default)
         }
         if (toApply.zodFn && toApply.zodFn.length) {
             toApply.zodFn.forEach(zodFn => newType = zodFn(newType))
@@ -204,6 +225,19 @@ function applyZodFunctions(type: z.ZodType, toApply: {
                 newType = z.preprocess(fn, prev)
                 prev = newType
             }
+        }
+        if (toApply.wrapIntoArray) {
+            newType = newType.array()
+        }
+        if (toApply.optional && (toApply.wrapIntoArray || toApply.zodMarkedAsArrayBeforeOptional)) {
+            // optional array of smth
+            newType = newType.optional()
+        }
+        if (toApply.description) {
+            newType = newType.describe(toApply.description)
+        }
+        if (typeof toApply.zodDefault !== 'undefined') {
+            newType = newType.default(toApply.zodDefault)
         }
         return newType
     }

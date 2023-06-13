@@ -79,6 +79,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
                         type: classConstructor,
                         key: method,
                         index: i,
+                        targetMeta: paramMeta,
                     },
                     'PARAM',
                     restoreCtx

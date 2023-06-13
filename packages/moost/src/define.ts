@@ -1,3 +1,4 @@
+import { TEmpty, TObject } from 'common'
 import { TClassFunction } from './class-function'
 import { TInterceptorFn, TInterceptorPriority } from './decorators'
 import { TPipeFn, TPipePriority } from './pipes'
@@ -49,7 +50,7 @@ export type TInterceptorClass = TClassFunction<TInterceptorFn>
  * @param priority priority of the pipe where BEFORE_RESOLVE = 0, RESOLVE = 1, AFTER_RESOLVE = 2, BEFORE_TRANSFORM = 3, TRANSFORM = 4, AFTER_TRANSFORM = 5, BEFORE_VALIDATE = 6, VALIDATE = 7, AFTER_VALIDATE = 8
  * @returns 
  */
-export function definePipeFn(fn: TPipeFn, priority: TPipePriority = TPipePriority.TRANSFORM) {
+export function definePipeFn<T extends TObject = TEmpty>(fn: TPipeFn<T>, priority: TPipePriority = TPipePriority.TRANSFORM) {
     fn.priority = priority
     return fn
 }

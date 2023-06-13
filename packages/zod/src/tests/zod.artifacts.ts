@@ -1,5 +1,6 @@
 // deno-lint-ignore-file
-import { Coerce, IsArray, IsTuple, Refine, Zod, IsString } from '../zod.decorators'
+import { Optional } from 'moost'
+import { Coerce, IsArray, IsTuple, Refine, Zod, IsString, Or, Default } from '../zod.decorators'
 import { getZodMate } from '../zod.mate'
 import { z } from 'zod'
 
@@ -13,8 +14,8 @@ export class ZodTestClass {
 
 @mate.decorate('inherit', true)
 export class ZodTestClass2 extends ZodTestClass {
-    @mate.decorate('optional', true)
-    @mate.decorate('default', '')
+    @Optional()
+    @Default('')
     lastName?: string = ''
 }
 
@@ -44,30 +45,6 @@ export class ZodTestClassRefine {
     myString = ''
 }
 
-// export class ZodTestClassCoerce {
-//     @Coerce()
-//     primitive = ''
-
-//     @Coerce()
-//     typed: string = ''
-
-//     @IsString()
-//     @Coerce()
-//     decorated: string = ''
-
-//     @Coerce()
-//     @IsArray()
-//     primitiveArray = ['']
-
-//     @Coerce()
-//     // @IsArray()
-//     typedArray: string[] = ['']
-
-//     @IsString()
-//     @Coerce()
-//     // @IsArray()
-//     decoratedArray: string[] = ['']
-// }
 export class ZodTestClassCoercePrimitive {
     @Coerce()
     primitive = ''
@@ -105,4 +82,37 @@ export class ZodTestClassCoerceDecoratedArray {
 export class ZodTestClassStringArray {
     @IsString()
     a!: string[]
+
+    @Optional()
+    ao?: ZodTestClassCoerceDecoratedArray
+}
+
+export class ZodTestClassOptionalArray {
+    @IsString()
+    @Optional()
+    opt1?: string[]
+
+    @IsString()
+    @IsArray()
+    @Optional()
+    opt2?: string[]
+
+    @IsString()
+    @IsArray()
+    @IsArray()
+    arrayOfArray!: (string[])[]
+
+    @IsString()
+    @Optional()
+    @IsArray()
+    required!: (string | undefined)[]
+
+    @IsString()
+    @Or('undefined')
+    @IsArray()
+    required2!: (string | undefined)[]
+
+    @IsString()
+    @Or('undefined')
+    required3!: (string | undefined)[]
 }

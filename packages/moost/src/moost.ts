@@ -134,7 +134,6 @@ export class Moost {
      */
     public async init() {
         this.setProvideRegistry(createProvideRegistry([Moost, () => this]))
-        console.log('Provided Moost Registry')
         for (const a of this.adapters) {
             const constructor = getConstructor(a)
             if (constructor) {

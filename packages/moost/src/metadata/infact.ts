@@ -27,7 +27,6 @@ export function getNewMoostInfact() {
     >({
         describeClass(classConstructor) {
             const meta = getMoostMate().read(classConstructor)
-            console.log(classConstructor.name + ' meta?.params', meta?.params)
             const infactMeta = {
                 injectable: !!meta?.injectable,
                 global: false,
@@ -53,6 +52,7 @@ export function getNewMoostInfact() {
                         key: 'constructor',
                         classMeta: classMeta as unknown as TMoostMetadata,
                         index,
+                        targetMeta: paramMeta,
                     },
                     'PARAM'
                 )
@@ -80,6 +80,7 @@ export function getNewMoostInfact() {
                         type: classConstructor,
                         key,
                         propMeta,
+                        targetMeta: propMeta,
                         classMeta: classMeta as unknown as TMoostMetadata,
                     },
                     'PROP'

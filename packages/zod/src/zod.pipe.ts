@@ -1,5 +1,5 @@
 import { TPipeFn, TPipePriority, definePipeFn, useEventContext } from 'moost'
-import { getZodMate } from './zod.mate'
+import { TZodMate, TZodMetadata } from './zod.mate'
 import { z } from 'zod'
 import { getZodTypeForProp } from './validate'
 import { TZodOpts } from './primitives'
@@ -13,27 +13,17 @@ import { TZodOpts } from './primitives'
  */
 export const ZodPipeline = (opts?: {
     formatError?: ((e: z.ZodError, ...args: Parameters<TPipeFn>) => Error)
-} & TZodOpts) => definePipeFn(async (value, metas, level) => {
+} & TZodOpts) => definePipeFn<TZodMate>(async (value, metas, level) => {
     const { restoreCtx } = useEventContext()
-    type TMeta = ReturnType<ReturnType<typeof getZodMate>['read']>
-    let targetMeta: TMeta = {} as TMeta
-    if (level === 'PARAM') {
-        targetMeta = (metas.paramMeta || {}) as TMeta
-    } else if (level === 'PROP') {
-        targetMeta = (metas.propMeta || {}) as TMeta
-    } else if (level === 'METHOD') {
-        targetMeta = (metas.methodMeta || {}) as TMeta
-    } else if (level === 'CLASS') {
-        targetMeta = (metas.classMeta || {}) as TMeta
-    }
-    if (targetMeta.zodType || targetMeta.type) {
+    const { targetMeta } = metas
+    if (targetMeta?.zodType || targetMeta?.type) {
         const zodType = getZodTypeForProp({
             type: metas.type,
             key: metas.key,
             index: metas.index,
         }, {
             type: targetMeta.type,
-            additionalMeta: targetMeta,
+            additionalMeta: targetMeta as TZodMetadata,
         }, opts)
         const check = await zodType.spa(value)
         restoreCtx()

@@ -13,7 +13,7 @@ describe('pipe.decorator', () => {
             expect(
                 (meta?.pipes as TPipeData[])[0].handler(
                     undefined,
-                    { paramMeta: methodMeta?.params[0], type: PipeDecoratorTestClass, key: '' },
+                    { paramMeta: methodMeta?.params[0], type: PipeDecoratorTestClass, key: '', targetMeta: methodMeta?.params[0] || {} },
                     'PARAM'
                 )
             ).toBe('test pipe 1')
@@ -27,7 +27,7 @@ describe('pipe.decorator', () => {
             expect(
                 (methodMeta?.pipes as TPipeData[])[0].handler(
                     undefined,
-                    { paramMeta: methodMeta?.params[0], type: PipeDecoratorTestClass, key: '' },
+                    { paramMeta: methodMeta?.params[0], type: PipeDecoratorTestClass, key: '', targetMeta: methodMeta?.params[0] || {} },
                     'PARAM'
                 )
             ).toBe('test pipe 2')
@@ -42,7 +42,7 @@ describe('pipe.decorator', () => {
             expect(
                 (methodMeta?.params[0].pipes as TPipeData[])[0].handler(
                     undefined,
-                    { paramMeta: methodMeta.params[0], type: PipeDecoratorTestClass, key: '' },
+                    { paramMeta: methodMeta.params[0], type: PipeDecoratorTestClass, key: '', targetMeta: methodMeta?.params[0] || {} },
                     'PARAM'
                 )
             ).toBe('test pipe 3')

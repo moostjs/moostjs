@@ -1,5 +1,5 @@
 import { validate } from '../validate'
-import { ZodTestClass, ZodTestClass2, ZodTestClassArray, ZodTestClassCoerceDecorated, ZodTestClassCoerceDecoratedArray, ZodTestClassCoercePrimitive, ZodTestClassCoercePrimitiveArray, ZodTestClassCoerceTyped, ZodTestClassCoerceTypedArray, ZodTestClassRefine, ZodTestClassStringArray, ZodTestClassZod } from './zod.artifacts'
+import { ZodTestClass, ZodTestClass2, ZodTestClassArray, ZodTestClassCoerceDecorated, ZodTestClassCoerceDecoratedArray, ZodTestClassCoercePrimitive, ZodTestClassCoercePrimitiveArray, ZodTestClassCoerceTyped, ZodTestClassCoerceTypedArray, ZodTestClassOptionalArray, ZodTestClassRefine, ZodTestClassStringArray, ZodTestClassZod } from './zod.artifacts'
 
 describe('zod', () => {
     it('must validate generic types', async () => {
@@ -186,6 +186,23 @@ describe('zod', () => {
         expect(await validate({ a: ['first', 'last'] }, ZodTestClassStringArray, undefined, true)).toEqual({
             success: true,
             data: { a: ['first', 'last'] },
+        })
+    })
+
+    it('must handle optional for arrays', async () => {
+        expect(await validate({
+            arrayOfArray: [['string1', 'string2'], []],
+            required: [undefined],
+            required2: [undefined],
+            required3: [undefined],
+        }, ZodTestClassOptionalArray, undefined, true)).toEqual({
+            success: true,
+            data: {
+                arrayOfArray: [['string1', 'string2'], []],
+                required: [undefined],
+                required2: [undefined],
+                required3: [undefined],
+            },
         })
     })
 })

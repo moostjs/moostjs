@@ -24,6 +24,11 @@ export const LazyType = <T extends (TFunction | z.ZodType)>(getter: () => T, opt
 export const Coerce = () => mate.decorate('zodCoerce', true)
 
 /**
+ * Decorator to define default value for ZodType
+ */
+export const Default = (value: unknown) => mate.decorate('zodDefault', value)
+
+/**
  * Decorator to specify that the property should be an array https://zod.dev/?id=arrays or tuple https://zod.dev/?id=tuples
  * @param typesfn - A function that returns an array of Zod types
  */
@@ -31,6 +36,12 @@ export const IsArray = (types?: (TFunction | z.ZodType | TPrimitives) | (TFuncti
     const decorators = [
         mate.decorate('zodFn', (t) => t.array(), true),
         mate.decorate('zodMarkedAsArray', true),
+        mate.decorate((meta) => {
+            if (meta.optional) {
+                meta.zodMarkedAsArrayBeforeOptional = true
+            }
+            return meta
+        }),
     ]
     if (types) {
         if (Array.isArray(types)) {

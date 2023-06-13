@@ -7,6 +7,7 @@ export interface TPipeMetas<T extends TObject = TEmpty> {
     methodMeta?: TMoostMetadata & T
     propMeta?: TMoostMetadata & T
     paramMeta?: TMoostParamsMetadata & T
+    targetMeta?: TMoostParamsMetadata & T
     instance?: TObject
     type: TFunction
     index?: number
