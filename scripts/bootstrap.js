@@ -14,10 +14,17 @@ packages.forEach(({ shortName, name, pkg, pkgPath }) => {
             name,
             version,
             description: name,
-            sideEffects: false,
             main: 'dist/index.cjs',
             module: 'dist/index.mjs',
             types: 'dist/index.d.ts',
+            sideEffects: false,
+            exports: {
+                '.': {
+                  import: './dist/index.mjs',
+                  require: './dist/index.cjs',
+                  types: './dist/index.d.ts'
+                },
+            },            
             files: ['dist'],
             repository: {
                 type: 'git',
