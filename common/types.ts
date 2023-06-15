@@ -11,3 +11,5 @@ export type TClassConstructor<T = unknown> = new (...args: TAny[]) => T
 export interface TEmpty {}
 
 export type TPrimitives = 'undefined' | 'boolean' | 'number' | 'bigint' | 'string' | 'symbol'
+
+export type TLogger = { error: (...args: unknown[]) => void, warn: (...args: unknown[]) => void, log: (...args: unknown[]) => void, info: (...args: unknown[]) => void }

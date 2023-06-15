@@ -1,6 +1,6 @@
-import { TClassConstructor, TFunction, TObject, TPrimitives } from 'common'
+import { TClassConstructor, TFunction, TObject, TPrimitives, TLogger } from 'common'
 import { z } from 'zod'
-import { TZodFunction, TZodMetadata, getZodMate } from './zod.mate'
+import { TZodFunctionDefinition, TZodMetadata, getZodMate } from './zod.mate'
 import { TZodOpts, resolveZodPrimitive, resolveZodPrimitiveByConstructor } from './primitives'
 
 const mate = getZodMate()
@@ -27,11 +27,12 @@ export async function validate<T extends (TObject | z.ZodType), S extends boolea
     dto: (new () => T) | z.ZodType<T>,
     opts?: TZodOpts,
     safe?: S,
+    logger?: TLogger,
 ): Promise<S extends true ? z.SafeParseReturnType<unknown, T> : T> {
     if (dto instanceof z.ZodType) {
         return (safe === true ? await dto.safeParseAsync(data) : await dto.parseAsync(data)) as unknown as Promise<S extends true ? z.SafeParseReturnType<unknown, T> : T>
     }
-    const zodType = getZodType({ type: dto }, opts)
+    const zodType = getZodType({ type: dto }, opts, logger)
     if (zodType) {
         return await validate(data, zodType, opts, safe) as Promise<S extends true ? z.SafeParseReturnType<unknown, T> : T>
     }
@@ -46,32 +47,33 @@ export async function validate<T extends (TObject | z.ZodType), S extends boolea
  * @param opts - Zod Options
  * @returns ZodType
  */
-export function getZodTypeForProp(origin: { type: TFunction, key: string | symbol, index?: number }, target: { type?: TFunction, value?: unknown, additionalMeta?: TZodMetadata }, opts?: TZodOpts): z.ZodType {
+export function getZodTypeForProp(origin: { type: TFunction, key: string | symbol, index?: number }, target: { type?: TFunction, value?: unknown, additionalMeta?: TZodMetadata }, opts?: TZodOpts, logger?: TLogger): z.ZodType {
     let store = cachedPropsTypes.get(origin.type)
     if (!store) {
         store = {
             props: new Map(),
             params: new Map(),
         }
+        cachedPropsTypes.set(origin.type, store)
     }
     if (typeof origin.index === 'number') {
         const cached = store.params.get(origin.key)
         if (!cached) {
-            const zodType = getZodType(target, opts)
+            const zodType = getZodType(target, opts, logger)
             const paramsArray: z.ZodType[] = []
             paramsArray[origin.index] = zodType
             store.params.set(origin.key, paramsArray)
             return zodType
         } else {
             if (!cached[origin.index]) {
-                cached[origin.index] = getZodType(target, opts)
+                cached[origin.index] = getZodType(target, opts, logger)
             }
             return cached[origin.index]
         }
     } else {
         const cached = store.props.get(origin.key)
         if (!cached) {
-            const zodType = getZodType(target, opts)
+            const zodType = getZodType(target, opts, logger)
             store.props.set(origin.key, zodType)
             return zodType
         } else {
@@ -86,7 +88,7 @@ export function getZodTypeForProp(origin: { type: TFunction, key: string | symbo
  * @param opts - ZodOptions
  * @returns ZodType
  */
-export function getZodType(target: { type?: TFunction, value?: unknown, additionalMeta?: TZodMetadata }, opts?: TZodOpts): z.ZodType {
+export function getZodType(target: { type?: TFunction, value?: unknown, additionalMeta?: TZodMetadata }, opts?: TZodOpts, logger?: TLogger): z.ZodType {
     const { type, value, additionalMeta } = target
     const typeOfValue = (typeof value) as TPrimitives
     const ownMeta = type && mate.read(type) || undefined
@@ -104,7 +106,10 @@ export function getZodType(target: { type?: TFunction, value?: unknown, addition
         zodDefault: ownMeta.zodDefault,
         zodPreprocess: ownMeta.zodPreprocess,
         zodFn: ownMeta.zodFn,
-    }) : zodInitialType)
+        zodClassName: ownMeta.zodClassName,
+        zodPropName: ownMeta.zodPropName,
+        zodParamIndex: ownMeta.zodParamIndex,
+    }, logger) : zodInitialType)
 
     // functions:
     function lookupInCache(): z.ZodType | undefined {
@@ -152,7 +157,7 @@ export function getZodType(target: { type?: TFunction, value?: unknown, addition
                         type: propMeta?.type,
                         value: fakeInstance[key],
                         additionalMeta: propMeta,
-                    }, { ...(opts || {}), coerce: (propMeta?.zodCoerce || undefined) })
+                    }, { ...(opts || {}), coerce: (propMeta?.zodCoerce || undefined) }, logger)
                 } catch (e) {
                     throw new Error(`Could not create ZodType for class "${type.name}". Type of property "${key as string}" (${propMeta?.type?.name || '' }) is unknown:\n${ (e as Error).message }`)
                 }
@@ -175,16 +180,19 @@ export function getZodType(target: { type?: TFunction, value?: unknown, addition
             zodFn: additionalMeta?.zodFn,
             zodMarkedAsArrayBeforeOptional: additionalMeta?.zodMarkedAsArrayBeforeOptional,
             wrapIntoArray: additionalMeta?.zodMarkedAsArray ? false : toWrapIntoArray,
-        })
+            zodClassName: additionalMeta?.zodClassName,
+            zodPropName: additionalMeta?.zodPropName,
+            zodParamIndex: additionalMeta?.zodParamIndex,            
+        }, logger)
     }    
 }
 
-function resolveZodTypeByValue(value: unknown, opts?: TZodOpts): { isArray?: boolean, zt: z.ZodType } {
+function resolveZodTypeByValue(value: unknown, opts?: TZodOpts, logger?: TLogger): { isArray?: boolean, zt: z.ZodType } {
     const type = typeof value
     if (type === 'object') {
         if (Array.isArray(value)) {
             if (value.length) {
-                const subType = resolveZodTypeByValue(value[0], opts)
+                const subType = resolveZodTypeByValue(value[0], opts, logger)
                 return {
                     isArray: true,
                     zt: subType.isArray ? subType.zt.array() : subType.zt,
@@ -192,9 +200,9 @@ function resolveZodTypeByValue(value: unknown, opts?: TZodOpts): { isArray?: boo
             }
             throw new Error('Could not resolve array item type.')
         } else if (value === null) {
-            return { zt: z.null() }
+            return { zt: z.null(opts) }
         } else if (value instanceof Date) {
-            return { zt: z.date() }
+            return { zt: z.date(opts) }
         }
     }
     return { zt: resolveZodPrimitive(typeof value as TPrimitives, opts) }
@@ -205,10 +213,13 @@ function applyZodFunctions(type: z.ZodType, toApply: {
     description?: string
     zodDefault?: unknown
     zodPreprocess?: ((arg: unknown) => unknown)[]
-    zodFn?: TZodFunction[]
+    zodFn?: TZodFunctionDefinition[]
     zodMarkedAsArrayBeforeOptional?: boolean, // array was annotated after @Optional
+    zodClassName?: string
+    zodPropName?: string
+    zodParamIndex?: number
     wrapIntoArray?: boolean // array detected, but was not annotated
-}) {
+}, logger?: TLogger) {
     if (toApply) {
         let newType = type
         if (!toApply.wrapIntoArray && toApply.optional && !toApply.zodMarkedAsArrayBeforeOptional) {
@@ -216,7 +227,19 @@ function applyZodFunctions(type: z.ZodType, toApply: {
             newType = newType.optional()
         }
         if (toApply.zodFn && toApply.zodFn.length) {
-            toApply.zodFn.forEach(zodFn => newType = zodFn(newType))
+            [...toApply.zodFn].reverse().forEach(zodFn => {
+                try {
+                    newType = zodFn.fn(newType)
+                } catch (e) {
+                    const cl = toApply.zodClassName as string
+                    const prop = toApply.zodPropName as string
+                    const i = toApply.zodParamIndex as number
+                    const arg = typeof i === 'number'
+                    const message = `${__DYE_UNDERSCORE__}@${zodFn.decorator}${__DYE_UNDERSCORE_OFF__} skipped for ${arg ? `${__DYE_CYAN__}argument[${i}]${__DYE_YELLOW__} at ` : ''}${__DYE_CYAN__}${cl}${prop ? '.' + prop : ''}${__DYE_YELLOW__}, ` +
+                        `${__DYE_UNDERSCORE__}${(newType._def as { typeName: string }).typeName}${__DYE_UNDERSCORE_OFF__} does not support such function.`;
+                    (logger || console).warn(`${__DYE_YELLOW__}${message} ${__DYE_WHITE__ + __DYE_DIM__}Runtime error: ${(e as Error).message}${__DYE_RESET__}`)
+                }
+            })
         }
         if (toApply.zodPreprocess) {
             let prev = newType

@@ -30,6 +30,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
     const controllerOverview: TControllerOverview = {
         meta,
         computedPrefix: prefix,
+        type: classConstructor,
         handlers: [],
     }
 

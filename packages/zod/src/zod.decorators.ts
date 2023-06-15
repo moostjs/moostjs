@@ -1,16 +1,43 @@
 import { TFunction, TPrimitives } from 'common'
-import { TZodMate, getZodMate } from './zod.mate'
+import { TZodFunction, TZodMate, getZodMate } from './zod.mate'
 import { z } from 'zod'
 import { getZodType } from './validate'
 import { TZodOpts, resolveZodPrimitive } from './primitives'
 
 const mate = getZodMate()
 
+function ZodFn(decorator: string, fn: TZodFunction) {
+    return ((target: TFunction, propertyKey: string | symbol, descriptor: TypedPropertyDescriptor<unknown>) => {
+        mate.decorate((meta, level, key, index) => {
+            if (!meta.zodFn) meta.zodFn = []
+            if (!meta.zodPropName && ['PARAM', 'PROP'].includes(level)) {
+                meta.zodPropName = key as string
+                if (level === 'PARAM') {
+                    meta.zodParamIndex = index
+                }
+            }
+            meta.zodFn.push({
+                decorator, fn,
+            })
+            if (!meta.zodClassName) {
+                meta.zodClassName = target.name || target.constructor.name
+            }
+            return meta
+        })(target, propertyKey, descriptor)
+    }) as MethodDecorator & ClassDecorator & ParameterDecorator & PropertyDecorator 
+}
+
 /**
  * Decorator to specify the Zod type for a property https://zod.dev/?id=basic-usage
  * @param type - The Zod type
  */
 export const Zod = (type: TZodMate['zodType']) => mate.decorate('zodType', type)
+
+/**
+ * Decorator that marks class/object validations to be skipped
+ * @param type - The Zod type
+ */
+export const ZodSkip = () => mate.decorate('zodSkip', true)
 
 /**
  * Decorator to lazily specify the Zod type for a property, use when have recursive or circular deps https://zod.dev/?id=recursive-types
@@ -34,7 +61,7 @@ export const Default = (value: unknown) => mate.decorate('zodDefault', value)
  */
 export const IsArray = (types?: (TFunction | z.ZodType | TPrimitives) | (TFunction | z.ZodType | TPrimitives)[], opts?: { coerce?: true }) => {
     const decorators = [
-        mate.decorate('zodFn', (t) => t.array(), true),
+        ZodFn('IsArray', (t) => t.array()),
         mate.decorate('zodMarkedAsArray', true),
         mate.decorate((meta) => {
             if (meta.optional) {
@@ -62,24 +89,24 @@ export const IsArray = (types?: (TFunction | z.ZodType | TPrimitives) | (TFuncti
  * Decorator to refine the Zod type with additional constraints https://zod.dev/?id=refine
  * @param args - Arguments for the `refine` method of Zod type
  */
-export const Refine = (...args: Parameters<ReturnType<typeof z.string>['refine']>) => mate.decorate('zodFn', (t) => t.refine(...args), true)
+export const Refine = (...args: Parameters<ReturnType<typeof z.string>['refine']>) => ZodFn('Refine', (t) => t.refine(...args))
 
 /**
  * Decorator to super refine the Zod type with additional constraints https://zod.dev/?id=superrefine
  * @param args - Arguments for the `superRefine` method of Zod type
  */
-export const SuperRefine = (...args: Parameters<ReturnType<typeof z.string>['superRefine']>) => mate.decorate('zodFn', (t) => t.superRefine(...args), true)
+export const SuperRefine = (...args: Parameters<ReturnType<typeof z.string>['superRefine']>) => ZodFn('SuperRefine', (t) => t.superRefine(...args))
 
 /**
  * Decorator to trim the value https://zod.dev/?id=strings
  */
-export const Trim = () => mate.decorate('zodFn', (t) => (t as z.ZodString).trim(), true)
+export const Trim = () => ZodFn('Trim', (t) => (t as z.ZodString).trim())
 
 /**
  * Decorator to transform the Zod type with a transformation function https://zod.dev/?id=transform
  * @param args - Arguments for the `transform` method of Zod string type
  */
-export const Transform = (...args: Parameters<ReturnType<typeof z.string>['transform']>) => mate.decorate('zodFn', (t) => t.transform(...args), true)
+export const Transform = (...args: Parameters<ReturnType<typeof z.any>['transform']>) => ZodFn('Transform', (t) => t.transform(...args))
 
 /**
  * Decorator to handle errors during parsing or validating the Zod type https://zod.dev/?id=catch
@@ -88,120 +115,120 @@ export const Transform = (...args: Parameters<ReturnType<typeof z.string>['trans
 export const OnCatch = <Output>(def: ((ctx: {
     error: z.ZodError
     input: unknown
-}) => Output) | Output) => mate.decorate('zodFn', (t) => t.catch(...([def] as unknown as Parameters<ReturnType<typeof z.string>['catch']>)), true)
+}) => Output) | Output) => ZodFn('OnCatch', (t) => t.catch(...([def] as unknown as Parameters<ReturnType<typeof z.string>['catch']>)))
 
 /**
  * Decorator to specify that the Zod type should have a specific length
  * @param args - Arguments for the `length` method of Zod type
  */
-export const HasLength = (...args: Parameters<ReturnType<typeof z.string>['length']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).length(...args), true)
+export const HasLength = (...args: Parameters<ReturnType<typeof z.string>['length']>) => ZodFn('HasLength', (t) => (t as z.ZodString).length(...args))
 
 /**
  * Decorator to specify the minimum value for the Zod type
  * @param args - Arguments for the `min` method of Zod type
  */
-export const Min = (...args: Parameters<ReturnType<typeof z.string>['min']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).min(...args), true)
+export const Min = (...args: Parameters<ReturnType<typeof z.string>['min']>) => ZodFn('Min', (t) => (t as z.ZodString).min(...args))
 
 /**
  * Decorator to specify the maximum value for the Zod type
  * @param args - Arguments for the `max` method of Zod type
  */
-export const Max = (...args: Parameters<ReturnType<typeof z.string>['max']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).max(...args), true)
+export const Max = (...args: Parameters<ReturnType<typeof z.string>['max']>) => ZodFn('Max', (t) => (t as z.ZodString).max(...args))
 
 /**
  * Decorator to specify the minimum date for the Zod date type
  * @param args - Arguments for the `min` method of Zod date type
  */
-export const DateFrom = (...args: Parameters<ReturnType<typeof z.date>['min']>) => mate.decorate('zodFn', (t) => (t as z.ZodDate).min(...args), true)
+export const DateFrom = (...args: Parameters<ReturnType<typeof z.date>['min']>) => ZodFn('DateFrom', (t) => (t as z.ZodDate).min(...args))
 
 /**
  * Decorator to specify the maximum date for the Zod date type
  * @param args - Arguments for the `max` method of Zod date type
  */
-export const DateTo = (...args: Parameters<ReturnType<typeof z.date>['max']>) => mate.decorate('zodFn', (t) => (t as z.ZodDate).max(...args), true)
+export const DateTo = (...args: Parameters<ReturnType<typeof z.date>['max']>) => ZodFn('DateTo', (t) => (t as z.ZodDate).max(...args))
 
 /**
  * Decorator to specify that the Zod type can be nullable https://zod.dev/?id=nullable
  */
-export const IsNullable = () => mate.decorate('zodFn', (t) => t.nullable(), true)
+export const IsNullable = () => ZodFn('IsNullable', (t) => t.nullable())
 
 /**
  * Decorator to specify that the Zod type can be nullish (null | undefined) https://zod.dev/?id=nullish
  */
-export const IsNullish = () => mate.decorate('zodFn', (t) => t.nullish(), true)
+export const IsNullish = () => ZodFn('IsNullish', (t) => t.nullish())
 
 // strings
 /**
  * Decorator to specify that the Zod string type is a valid email address https://zod.dev/?id=strings
  * @param args - Arguments for the `email` method of Zod string type
  */
-export const IsEmail = (...args: Parameters<ReturnType<typeof z.string>['email']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).email(...args), true)
+export const IsEmail = (...args: Parameters<ReturnType<typeof z.string>['email']>) => ZodFn('IsEmail', (t) => (t as z.ZodString).email(...args))
 
 /**
  * Decorator to specify that the Zod string type is a valid URL https://zod.dev/?id=strings
  * @param args - Arguments for the `url` method of Zod string type
  */
-export const IsUrl = (...args: Parameters<ReturnType<typeof z.string>['url']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).url(...args), true)
+export const IsUrl = (...args: Parameters<ReturnType<typeof z.string>['url']>) => ZodFn('IsUrl', (t) => (t as z.ZodString).url(...args))
 
 /**
  * Decorator to specify that the Zod string type is a valid emoji. https://zod.dev/?id=strings
  * @param args - Arguments for the `emoji` method of Zod string type.
  */
-export const IsEmoji = (...args: Parameters<ReturnType<typeof z.string>['emoji']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).emoji(...args), true)
+export const IsEmoji = (...args: Parameters<ReturnType<typeof z.string>['emoji']>) => ZodFn('IsEmoji', (t) => (t as z.ZodString).emoji(...args))
 
 /**
  * Decorator to specify that the Zod string type is a valid UUID https://zod.dev/?id=strings
  * @param args - Arguments for the `uuid` method of Zod string type
  */
-export const IsUuid = (...args: Parameters<ReturnType<typeof z.string>['uuid']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).uuid(...args), true)
+export const IsUuid = (...args: Parameters<ReturnType<typeof z.string>['uuid']>) => ZodFn('IsUuid', (t) => (t as z.ZodString).uuid(...args))
 
 /**
  * Decorator to specify that the Zod string type is a valid CUID https://zod.dev/?id=strings
  * @param args - Arguments for the `cuid` method of Zod string type
  */
-export const IsCuid = (...args: Parameters<ReturnType<typeof z.string>['cuid']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).cuid(...args), true)
+export const IsCuid = (...args: Parameters<ReturnType<typeof z.string>['cuid']>) => ZodFn('IsCuid', (t) => (t as z.ZodString).cuid(...args))
 
 /**
  * Decorator to specify that the Zod string type is a valid CUID version 2 https://zod.dev/?id=strings
  * @param args - Arguments for the `cuid2` method of Zod string type
  */
-export const IsCuid2 = (...args: Parameters<ReturnType<typeof z.string>['cuid2']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).cuid2(...args), true)
+export const IsCuid2 = (...args: Parameters<ReturnType<typeof z.string>['cuid2']>) => ZodFn('IsCuid2', (t) => (t as z.ZodString).cuid2(...args))
 
 /**
  * Decorator to specify that the Zod string type is a valid ULID https://zod.dev/?id=strings
  * @param args - Arguments for the `ulid` method of Zod string type
  */
-export const IsUlid = (...args: Parameters<ReturnType<typeof z.string>['ulid']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).ulid(...args), true)
+export const IsUlid = (...args: Parameters<ReturnType<typeof z.string>['ulid']>) => ZodFn('IsUlid', (t) => (t as z.ZodString).ulid(...args))
 
 /**
  * Decorator to specify that the Zod string type is a valid datetime string https://zod.dev/?id=strings
  * @param args - Arguments for the `datetime` method of Zod string type
  */
-export const IsDatetime = (...args: Parameters<ReturnType<typeof z.string>['datetime']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).datetime(...args), true)
+export const IsDatetime = (...args: Parameters<ReturnType<typeof z.string>['datetime']>) => ZodFn('IsDatetime', (t) => (t as z.ZodString).datetime(...args))
 
 /**
  * Decorator to specify that the Zod string type is a valid IP address https://zod.dev/?id=strings
  * @param args - Arguments for the `ip` method of Zod string type
  */
-export const IsIp = (...args: Parameters<ReturnType<typeof z.string>['ip']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).ip(...args), true)
+export const IsIp = (...args: Parameters<ReturnType<typeof z.string>['ip']>) => ZodFn('IsIp', (t) => (t as z.ZodString).ip(...args))
 
 /**
  * Decorator to specify that the Zod string type should match a specific regular expression https://zod.dev/?id=strings
  * @param args - Arguments for the `regex` method of Zod string type
  */
-export const MatchesRegex = (...args: Parameters<ReturnType<typeof z.string>['regex']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).regex(...args), true)
+export const MatchesRegex = (...args: Parameters<ReturnType<typeof z.string>['regex']>) => ZodFn('MatchesRegex', (t) => (t as z.ZodString).regex(...args))
 
 /**
  * Decorator to specify that the Zod string type should start with a specific substring https://zod.dev/?id=strings
  * @param args - Arguments for the `startsWith` method of Zod string type
  */
-export const StartsWith = (...args: Parameters<ReturnType<typeof z.string>['startsWith']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).startsWith(...args), true)
+export const StartsWith = (...args: Parameters<ReturnType<typeof z.string>['startsWith']>) => ZodFn('StartsWith', (t) => (t as z.ZodString).startsWith(...args))
 
 /**
  * Decorator to specify that the Zod string type should end with a specific substring https://zod.dev/?id=strings
  * @param args - Arguments for the `endsWith` method of Zod string type
  */
-export const EndsWith = (...args: Parameters<ReturnType<typeof z.string>['endsWith']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).endsWith(...args), true)
+export const EndsWith = (...args: Parameters<ReturnType<typeof z.string>['endsWith']>) => ZodFn('EndsWith', (t) => (t as z.ZodString).endsWith(...args))
 
 /**
  * NUMBERS
@@ -211,79 +238,79 @@ export const EndsWith = (...args: Parameters<ReturnType<typeof z.string>['endsWi
  * Decorator to specify that the Zod number type should be greater than a specific value.
  * @param args - Arguments for the `gt` method of Zod number type.
  */
-export const IsGt = (...args: Parameters<ReturnType<typeof z.number>['gt']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).gt(...args), true)
+export const IsGt = (...args: Parameters<ReturnType<typeof z.number>['gt']>) => ZodFn('IsGt', (t) => (t as z.ZodNumber).gt(...args))
 
 /**
  * Decorator to specify that the Zod number type should be greater than or equal to a specific value.
  * @param args - Arguments for the `gte` method of Zod number type.
  */
-export const IsGte = (...args: Parameters<ReturnType<typeof z.number>['gte']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).gte(...args), true)
+export const IsGte = (...args: Parameters<ReturnType<typeof z.number>['gte']>) => ZodFn('IsGte', (t) => (t as z.ZodNumber).gte(...args))
 
 /**
  * Decorator to specify that the Zod number type should be less than a specific value.
  * @param args - Arguments for the `lt` method of Zod number type.
  */
-export const IsLt = (...args: Parameters<ReturnType<typeof z.number>['lt']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).lt(...args), true)
+export const IsLt = (...args: Parameters<ReturnType<typeof z.number>['lt']>) => ZodFn('IsLt', (t) => (t as z.ZodNumber).lt(...args))
 
 /**
  * Decorator to specify that the Zod number type should be less than or equal to a specific value.
  * @param args - Arguments for the `lte` method of Zod number type.
  */
-export const IsLte = (...args: Parameters<ReturnType<typeof z.number>['lte']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).lte(...args), true)
+export const IsLte = (...args: Parameters<ReturnType<typeof z.number>['lte']>) => ZodFn('IsLte', (t) => (t as z.ZodNumber).lte(...args))
 
 /**
  * Decorator to specify that the Zod number type should be an integer.
  * @param args - Arguments for the `int` method of Zod number type.
  */
-export const IsInt = (...args: Parameters<ReturnType<typeof z.number>['int']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).int(...args), true)
+export const IsInt = (...args: Parameters<ReturnType<typeof z.number>['int']>) => ZodFn('IsInt', (t) => (t as z.ZodNumber).int(...args))
 
 /**
  * Decorator to specify that the Zod number type should be positive.
  * @param args - Arguments for the `positive` method of Zod number type.
  */
-export const IsPositive = (...args: Parameters<ReturnType<typeof z.number>['positive']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).positive(...args), true)
+export const IsPositive = (...args: Parameters<ReturnType<typeof z.number>['positive']>) => ZodFn('IsPositive', (t) => (t as z.ZodNumber).positive(...args))
 
 /**
  * Decorator to specify that the Zod number type should be nonnegative.
  * @param args - Arguments for the `nonnegative` method of Zod number type.
  */
-export const IsNonnegative = (...args: Parameters<ReturnType<typeof z.number>['nonnegative']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).nonnegative(...args), true)
+export const IsNonnegative = (...args: Parameters<ReturnType<typeof z.number>['nonnegative']>) => ZodFn('IsNonnegative', (t) => (t as z.ZodNumber).nonnegative(...args))
 
 /**
  * Decorator to specify that the Zod number type should be negative.
  * @param args - Arguments for the `negative` method of Zod number type.
  */
-export const IsNegative = (...args: Parameters<ReturnType<typeof z.number>['negative']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).negative(...args), true)
+export const IsNegative = (...args: Parameters<ReturnType<typeof z.number>['negative']>) => ZodFn('IsNegative', (t) => (t as z.ZodNumber).negative(...args))
 
 /**
  * Decorator to specify that the Zod number type should be nonpositive.
  * @param args - Arguments for the `nonpositive` method of Zod number type.
  */
-export const IsNonpositive = (...args: Parameters<ReturnType<typeof z.number>['nonpositive']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).nonpositive(...args), true)
+export const IsNonpositive = (...args: Parameters<ReturnType<typeof z.number>['nonpositive']>) => ZodFn('IsNonpositive', (t) => (t as z.ZodNumber).nonpositive(...args))
 
 /**
  * Decorator to specify that the Zod number type should be a multiple of a specific value.
  * @param args - Arguments for the `multipleOf` method of Zod number type.
  */
-export const IsMultipleOf = (...args: Parameters<ReturnType<typeof z.number>['multipleOf']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).multipleOf(...args), true)
+export const IsMultipleOf = (...args: Parameters<ReturnType<typeof z.number>['multipleOf']>) => ZodFn('IsMultipleOf', (t) => (t as z.ZodNumber).multipleOf(...args))
 
 /**
  * Decorator to specify that the Zod number type should be finite.
  * @param args - Arguments for the `finite` method of Zod number type.
  */
-export const IsFinite = (...args: Parameters<ReturnType<typeof z.number>['finite']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).finite(...args), true)
+export const IsFinite = (...args: Parameters<ReturnType<typeof z.number>['finite']>) => ZodFn('IsFinite', (t) => (t as z.ZodNumber).finite(...args))
 
 /**
  * Decorator to specify that the Zod number type should be a safe number.
  * @param args - Arguments for the `safe` method of Zod number type.
  */
-export const IsSafeNumber = (...args: Parameters<ReturnType<typeof z.number>['safe']>) => mate.decorate('zodFn', (t) => (t as z.ZodNumber).safe(...args), true)
+export const IsSafeNumber = (...args: Parameters<ReturnType<typeof z.number>['safe']>) => ZodFn('IsSafeNumber', (t) => (t as z.ZodNumber).safe(...args))
 
 /**
  * Decorator to specify that the Zod type should include a specific item (substring)
  * @param args - Arguments for the `includes` method of Zod type
  */
-export const Includes = (...args: Parameters<ReturnType<typeof z.string>['includes']>) => mate.decorate('zodFn', (t) => (t as z.ZodString).includes(...args), true)
+export const Includes = (...args: Parameters<ReturnType<typeof z.string>['includes']>) => ZodFn('Includes', (t) => (t as z.ZodString).includes(...args))
 
 /**
  * TYPE PRIMITIVES
@@ -498,7 +525,7 @@ export const ToNumber = () => Preprocess((val: unknown) => typeof val === 'strin
  * @returns Zod Preprocess Decorator
  */
 export const ToBoolean = (truthful: unknown[] = ['true', 'True', 'TRUE', 1], falsy: unknown[] = ['false', 'False', 'FALSE', 0]) => Preprocess((val: unknown) => {
-    if (typeof val !== 'boolean') return val
+    if (typeof val === 'boolean') return val
     if (truthful.includes(val)) return true
     if (falsy.includes(val)) return false
     return val
@@ -516,14 +543,14 @@ export const IsCustom = (...args: Parameters<typeof z.custom>) => Zod(z.custom(.
  * @param type - The type to intersect
  * @returns Zod Type decorator
  */
-export const And = (type: TFunction | z.ZodType | TPrimitives) => mate.decorate('zodFn', (t) => t.and(toZodType(type)), true)
+export const And = (type: TFunction | z.ZodType | TPrimitives) => ZodFn('And', (t) => t.and(toZodType(type)))
 
 /**
  * Decorator for creating union type https://zod.dev/?id=or
  * @param type - The type to union
  * @returns Zod Type decorator
  */
-export const Or = (type: TFunction | z.ZodType | TPrimitives) => mate.decorate('zodFn', (t) => t.or(toZodType(type)), true)
+export const Or = (type: TFunction | z.ZodType | TPrimitives) => ZodFn('Or', (t) => t.or(toZodType(type)))
 
 function toZodType(type: TFunction | z.ZodType | TPrimitives, opts?: TZodOpts): z.ZodType {
     if (type instanceof z.ZodType) return type

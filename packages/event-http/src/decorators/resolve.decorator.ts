@@ -188,16 +188,21 @@ export function Cookie(name: string) {
  * @paramType string | object
  */
 export function Query(name?: string): ParameterDecorator {
-    return getMoostMate().apply(getMoostMate().decorate('isQueryParam', name), Resolve(() => {
-        const { jsonSearchParams, urlSearchParams } = useSearchParams()
-        if (name) {
-            const p = urlSearchParams()
-            const value = p.get(name)
-            return value === null ? undefined : value
-        }
-        const json = jsonSearchParams() as TObject
-        return Object.keys(json).length ? json : undefined
-    }, name || 'Query'))
+    const isItem = !!name
+    const _name = isItem ? name : 'Query'
+    return getMoostMate().apply(
+        getMoostMate().decorate('paramSource', isItem ? 'QUERY_ITEM' : 'QUERY'),
+        getMoostMate().decorate('paramName', _name),
+        Resolve(() => {
+            const { jsonSearchParams, urlSearchParams } = useSearchParams()
+            if (isItem) {
+                const p = urlSearchParams()
+                const value = p.get(name)
+                return value === null ? undefined : value
+            }
+            const json = jsonSearchParams() as TObject
+            return Object.keys(json).length ? json : undefined
+        }, _name))
 }
 
 /**

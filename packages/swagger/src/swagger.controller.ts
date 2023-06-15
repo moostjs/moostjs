@@ -1,13 +1,15 @@
 import { Get, HeaderHook, SetHeader, StatusHook, Url } from '@moostjs/event-http'
-import { Controller, Moost, Const, useControllerContext } from 'moost'
+import { Controller, Moost, Const, useControllerContext, useEventLogger } from 'moost'
 import { getAbsoluteFSPath  } from 'swagger-ui-dist'
 import { serveFile } from '@wooksjs/http-static'
 import { THeaderHook, TStatusHook } from '@wooksjs/event-http'
 import { join } from 'path'
 import { SwaggerExclude } from './decorators'
 import { mapToSwaggerSpec } from './mapping'
+import { ZodSkip } from '@moostjs/zod'
 
 @SwaggerExclude()
+@ZodSkip()
 @Controller('api-docs')
 export class SwaggerController {
     constructor(@Const('Moost API') protected title = 'Moost API') {}
@@ -69,11 +71,12 @@ export class SwaggerController {
 
     @Get()
     async 'spec.json'() {
-        if (!this.spec) {
-            const { instantiate } = useControllerContext()
-            const moost = await instantiate(Moost)
-            this.spec = mapToSwaggerSpec(moost.getControllersOverview(), { title: this.title })
-        }
+        const logger = useEventLogger('@moostjs/zod')
+        // if (!this.spec) {
+        const { instantiate } = useControllerContext()
+        const moost = await instantiate(Moost)
+        this.spec = mapToSwaggerSpec(moost.getControllersOverview(), { title: this.title }, logger)
+        // }
         return this.spec
     }
 

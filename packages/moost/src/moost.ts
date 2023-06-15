@@ -133,7 +133,7 @@ export class Moost {
      * Ititializes adapter. Must be called after adapters are attached.
      */
     public async init() {
-        this.setProvideRegistry(createProvideRegistry([Moost, () => this]))
+        this.setProvideRegistry(createProvideRegistry([Moost, () => this], [ProstoLogger, () => this.logger], ['MOOST_LOGGER', () => this.logger]))
         for (const a of this.adapters) {
             const constructor = getConstructor(a)
             if (constructor) {

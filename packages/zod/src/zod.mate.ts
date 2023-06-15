@@ -16,11 +16,16 @@ export interface TZodMate {
     zodPreprocess?: ((arg: unknown) => unknown)[]
     zodMarkedAsArray?: boolean
     zodMarkedAsArrayBeforeOptional?: boolean
-    zodFn?: TZodFunction[]
+    zodFn?: TZodFunctionDefinition[]
+    zodClassName?: string
+    zodPropName?: string
+    zodParamIndex?: number
     zodDefault?: unknown
+    zodSkip?: boolean
     default?: unknown
 }
 
 export type TZodFunction = ((type: z.ZodType | z.ZodString) => z.ZodType | z.ZodString)
+export type TZodFunctionDefinition = { decorator: string, fn: TZodFunction }
 
 export type TZodMetadata = ReturnType<ReturnType<typeof getZodMate>['read']>

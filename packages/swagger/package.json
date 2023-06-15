@@ -41,6 +41,8 @@
   },
   "dependencies": {
     "swagger-ui-dist": "",
+    "zod-parser": "",
+    "@moostjs/zod": "",
     "@wooksjs/http-static": ""
   },
   "devDependencies": {

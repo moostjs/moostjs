@@ -1,5 +1,8 @@
 import { TControllerOverview } from 'moost'
 import { TSwaggerMate } from './swagger.mate'
+import { TZodMetadata, getZodTypeForProp, z } from '@moostjs/zod'
+import { TZodParsed, parseZodType } from 'zod-parser'
+import { TLogger } from 'common'
 
 interface TEndpointSpec {
     summary?: string
@@ -19,7 +22,7 @@ interface TSwaggerOptions {
     version?: string
 }
 
-export function mapToSwaggerSpec(metadata: TControllerOverview[], options?: TSwaggerOptions) {
+export function mapToSwaggerSpec(metadata: TControllerOverview[], options?: TSwaggerOptions, logger?: TLogger) {
     const swaggerSpec = {
         openapi: '3.0.0',
         info: {
@@ -59,32 +62,100 @@ export function mapToSwaggerSpec(metadata: TControllerOverview[], options?: TSwa
             const endpointSpec = swaggerSpec.paths[handlerPath][handlerMethod]
 
             for (const paramName of handler.registeredAs[0].args) {
-                const paramMeta = handler.meta.params.find(
-                    param => param.isRouteParam === paramName
+                const paramIndex = handler.meta.params.findIndex(
+                    param => param.paramSource === 'ROUTE' && param.paramName === paramName
                 )
+                const paramMeta = handler.meta.params[paramIndex]
+                let schema
+                if (paramMeta) {
+                    const zodType = getZodTypeForProp({
+                        type: controller.type,
+                        key: handler.method,
+                        index: paramIndex,
+                    }, {
+                        type: paramMeta.type,
+                        additionalMeta: paramMeta as TZodMetadata,
+                    }, undefined, logger)
+                    schema = paramSchemaType(myParseZod(zodType))
+                }
 
                 endpointSpec.parameters.push({
                     name: paramName,
                     in: 'path',
                     description: paramMeta ? paramMeta.description : undefined,
-                    required: paramMeta ? paramMeta.required || false : false,
-                    schema: { type: 'string' }, // assuming string type, adjust as needed
+                    required: !paramMeta || !paramMeta.optional,
+                    schema: schema || { type: 'string' },
                 })
             }
 
-            for (const paramMeta of handler.meta.params) {
-                if (!paramMeta.isQueryParam) continue
-
-                endpointSpec.parameters.push({
-                    name: paramMeta.isQueryParam,
-                    in: 'query',
-                    description: paramMeta.description,
-                    required: paramMeta.required || false,
-                    schema: { type: 'string' }, // assuming string type, adjust as needed
-                })
+            for (let i = 0; i < handler.meta.params.length; i++) {
+                const paramMeta = handler.meta.params[i]
+                if (paramMeta.paramSource && ['QUERY_ITEM', 'QUERY'].includes(paramMeta.paramSource)) {
+                    const zodType = getZodTypeForProp({
+                        type: controller.type,
+                        key: handler.method,
+                        index: i,
+                    }, {
+                        type: paramMeta.type,
+                        additionalMeta: paramMeta as TZodMetadata,
+                    }, undefined, logger)
+                    const parsed = myParseZod(zodType)
+                    const schema = paramSchemaType(parsed)
+                    if (paramMeta.paramSource == 'QUERY_ITEM') {
+                        endpointSpec.parameters.push({
+                            name: paramMeta.paramName || '',
+                            in: 'query',
+                            description: paramMeta.description,
+                            required: paramMeta.required || false,
+                            schema: schema || { type: 'string' },
+                        })
+                    } else if (paramMeta.paramSource == 'QUERY') {
+                        if (parsed.$type === 'ZodObject') {
+                            for (const [key, value] of Object.entries(parsed.$inner)) {
+                                const schema = paramSchemaType(value)
+                                if (schema) {
+                                    const swaggerSchema = {
+                                        name: key,
+                                        in: 'query',
+                                        description: (value as unknown as { description: string }).description,
+                                        required: !parsed.$optional && !value.$optional,
+                                        schema,
+                                    }
+                                    endpointSpec.parameters.push(swaggerSchema)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
     return swaggerSpec
+}
+
+function paramSchemaType(zodType: TZodParsed & { description?: string }) {
+    let schema
+    switch (zodType.$type) {
+        case 'ZodAny':
+        case 'ZodUnknown':
+        case 'ZodString': schema = { type: 'string' }; break
+        case 'ZodNumber': schema = { type: 'number' }; break
+        case 'ZodBigInt': schema = { type: 'integer' }; break
+        case 'ZodBoolean': schema = { type: 'boolean' }; break
+        case 'ZodEnum': schema = { type: 'string', enum: zodType.$value }; break
+        case 'ZodNativeEnum': schema = { type: 'string', enum: Object.keys(zodType.$value) }; break
+        case 'ZodLiteral': schema = { type: 'string', enum: [zodType.$value] }; break
+        default: return undefined
+    }
+    return schema
+}
+
+function myParseZod(schema: z.ZodType) {
+    return parseZodType<TZodParsed & { description?: string }>(schema, (t, def) => {
+        return {
+            ...t,
+            description: def.description,
+        }
+    })
 }

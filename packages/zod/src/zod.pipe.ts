@@ -3,6 +3,7 @@ import { TZodMate, TZodMetadata } from './zod.mate'
 import { z } from 'zod'
 import { getZodTypeForProp } from './validate'
 import { TZodOpts } from './primitives'
+import { useEventLogger } from 'moost'
 
 /**
  * Validations pipeline powered by zod
@@ -14,8 +15,10 @@ import { TZodOpts } from './primitives'
 export const ZodPipeline = (opts?: {
     formatError?: ((e: z.ZodError, ...args: Parameters<TPipeFn>) => Error)
 } & TZodOpts) => definePipeFn<TZodMate>(async (value, metas, level) => {
-    const { restoreCtx } = useEventContext()
     const { targetMeta } = metas
+    if (targetMeta?.zodSkip || metas.classMeta?.zodSkip || metas.methodMeta?.zodSkip || metas.paramMeta?.zodSkip) return value
+    const { restoreCtx } = useEventContext()
+    const logger = useEventLogger('@moostjs/zod')
     if (targetMeta?.zodType || targetMeta?.type) {
         const zodType = getZodTypeForProp({
             type: metas.type,
@@ -24,7 +27,7 @@ export const ZodPipeline = (opts?: {
         }, {
             type: targetMeta.type,
             additionalMeta: targetMeta as TZodMetadata,
-        }, opts)
+        }, opts, logger)
         const check = await zodType.spa(value)
         restoreCtx()
         if (check.success) {

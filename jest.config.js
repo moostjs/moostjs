@@ -23,6 +23,9 @@ export default {
         '^common$': '<rootDir>/common',
     },
     globals: {
+        __DYE_UNDERSCORE__: '',
+        __DYE_WHITE__: dye('white').open,
+        __DYE_UNDERSCORE_OFF__: '',
         __DYE_RED_BRIGHT__: dye('red-bright').open,
         __DYE_BOLD__: dye('bold').open,
         __DYE_RESET__: dye.reset,

@@ -1,5 +1,5 @@
 import { validate } from '../validate'
-import { PrimitivesTestClass } from './primitives.artifacts'
+import { PrimitivesTestClass, PrimitivesTestClass2, PrimitivesTestClass3 } from './primitives.artifacts'
 
 describe('zod with PrimitivesTestClass', () => {
     it('should pass validation for valid data', async () => {
@@ -116,6 +116,41 @@ describe('zod with PrimitivesTestClass', () => {
   }
 ]]
 `)
+        }
+    })
+
+    it('must detect types based on values', async () => {
+        const data = {
+            str: '',
+            n: 5,
+            b: false,
+            d: new Date(),
+            nl: null,
+        }
+        const result = await validate(data, PrimitivesTestClass2, undefined, true)
+        expect(result.success).toBeTruthy()
+    })
+    it('must detect types based on values and decorators', async () => {
+        const data = {
+            str: 'test',
+            n: '15',
+            b: 'false',
+            d: '2021-01-01',
+            nl: null,
+        }
+        const result = await validate(data, PrimitivesTestClass3, undefined, true)
+        if (!result.success) {
+            console.log(result.error)
+        }
+        expect(result.success).toBeTruthy()
+        if (result.success) {
+            expect(result.data).toEqual({
+                str: 'Test',
+                n: 15,
+                b: false,
+                d: '2021-01-01T00:00:00.000Z',
+                nl: null,
+            })
         }
     })
 })

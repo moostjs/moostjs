@@ -38,8 +38,8 @@ export interface TMoostParamsMetadata extends TCommonMetaFields, TCommonMoostMet
     circular?: () => TAny
     inject?: string | symbol | TClassConstructor
     nullable?: boolean
-    isRouteParam?: string
-    isQueryParam?: string
+    paramSource?: string
+    paramName?: string
 }
 
 export type TInjectableScope = 'FOR_EVENT' | 'SINGLETON'

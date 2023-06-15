@@ -163,8 +163,8 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
             }
 
             const args: Record<string, string> = {}
-            meta?.params?.filter(p => p.isRouteParam && p.description)
-                .forEach(p => args[p.isRouteParam as string] = p.description as string)
+            meta?.params?.filter(p => p.paramSource === 'ROUTE' && p.description)
+                .forEach(p => args[p.paramName as string] = p.description as string)
 
             const routerBinding = this.cliApp.cli(targetPath, {
                 description: meta?.description || '',
