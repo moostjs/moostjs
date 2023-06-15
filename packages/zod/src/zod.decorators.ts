@@ -28,6 +28,23 @@ function ZodFn(decorator: string, fn: TZodFunction) {
 }
 
 /**
+ * Decorator to make zod object strict on props
+ * 
+ * (default)
+ */
+export const Strict = () => mate.decorate('zodObj', 'strict') as ClassDecorator
+
+/**
+ * Decorator to allow unknown props in zod object
+ */
+export const Passthrough = () => mate.decorate('zodObj', 'passthrough') as ClassDecorator
+
+/**
+ * Decorator to stip unknown props out of zod object
+ */
+export const Strip = () => mate.decorate('zodObj', 'strip') as ClassDecorator
+
+/**
  * Decorator to specify the Zod type for a property https://zod.dev/?id=basic-usage
  * @param type - The Zod type
  */

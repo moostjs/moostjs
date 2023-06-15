@@ -21,6 +21,7 @@ export interface TZodMate {
     zodParamIndex?: number
     zodDefault?: unknown
     zodSkip?: boolean
+    zodObj?: 'strict' | 'passthrough' | 'strip'
     default?: unknown
 }
 

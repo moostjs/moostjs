@@ -165,7 +165,10 @@ export function getZodType(target: { type?: TFunction, value?: unknown, addition
                     throw new Error(`Could not create ZodType for class "${type.name}". Type of property "${key as string}" (${propMeta?.type?.name || '' }) is unknown:\n${ (e as Error).message }`)
                 }
             }
-            return z.object(shape)
+            const obj = z.object(shape)
+            if (ownMeta?.zodObj === 'passthrough') return obj.passthrough()
+            if (ownMeta?.zodObj === 'strip') return obj.strip()
+            return obj.strict()
         } else {
             const { zt, isArray } = resolveZodTypeByValue(value, opts)
             if (isArray) toWrapIntoArray = true
