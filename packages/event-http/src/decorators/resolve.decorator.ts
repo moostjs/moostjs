@@ -275,7 +275,10 @@ export function IpList() {
  * @paramType object | string | unknown
  */
 export function Body() {
-    return Resolve(() => useBody().parseBody(), 'body')
+    return getMoostMate().apply(
+        getMoostMate().decorate('paramSource', 'BODY'),
+        Resolve(() => useBody().parseBody(), 'body'),
+    )
 }
 
 /**

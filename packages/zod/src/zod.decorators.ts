@@ -31,7 +31,18 @@ function ZodFn(decorator: string, fn: TZodFunction) {
  * Decorator to specify the Zod type for a property https://zod.dev/?id=basic-usage
  * @param type - The Zod type
  */
-export const Zod = (type: TZodMate['zodType']) => mate.decorate('zodType', type)
+export const Zod = (type: TZodMate['zodType']) => {
+    const decorator = mate.decorate('zodType', type) as (ReturnType<typeof mate.decorate> & {
+        optional: () => ReturnType<typeof mate.decorate>,
+        nullable: () => ReturnType<typeof mate.decorate>,
+        nullish: () => ReturnType<typeof mate.decorate>,
+    })
+    const getZt = (opts?: TZodOpts) => (typeof type === 'function' ? type(opts) : type) as z.ZodType
+    decorator.optional = () => mate.decorate('zodType', (opts) => getZt(opts).optional())
+    decorator.nullable = () => mate.decorate('zodType', (opts) => getZt(opts).nullable())
+    decorator.nullish = () => mate.decorate('zodType', (opts) => getZt(opts).nullish())
+    return decorator
+}
 
 /**
  * Decorator that marks class/object validations to be skipped
@@ -63,12 +74,6 @@ export const IsArray = (types?: (TFunction | z.ZodType | TPrimitives) | (TFuncti
     const decorators = [
         ZodFn('IsArray', (t) => t.array()),
         mate.decorate('zodMarkedAsArray', true),
-        mate.decorate((meta) => {
-            if (meta.optional) {
-                meta.zodMarkedAsArrayBeforeOptional = true
-            }
-            return meta
-        }),
     ]
     if (types) {
         if (Array.isArray(types)) {
@@ -82,7 +87,24 @@ export const IsArray = (types?: (TFunction | z.ZodType | TPrimitives) | (TFuncti
             decorators.push(Zod(toZodType(types, opts)))
         }
     }
-    return mate.apply(...decorators)
+    const decorator = mate.apply(...decorators) as (ReturnType<typeof mate.decorate> & {
+        optional: () => ReturnType<typeof mate.decorate>,
+        nullable: () => ReturnType<typeof mate.decorate>,
+        nullish: () => ReturnType<typeof mate.decorate>,
+    })
+    decorator.optional = () => {
+        decorators[0] = ZodFn('IsArray', (t) => t.array().optional())
+        return mate.apply(...decorators)
+    }
+    decorator.nullable = () => {
+        decorators[0] = ZodFn('IsArray', (t) => t.array().nullable())
+        return mate.apply(...decorators)
+    }
+    decorator.nullish = () => {
+        decorators[0] = ZodFn('IsArray', (t) => t.array().nullish())
+        return mate.apply(...decorators)
+    }
+    return decorator
 }
 
 /**

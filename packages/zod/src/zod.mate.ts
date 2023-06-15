@@ -15,7 +15,6 @@ export interface TZodMate {
     zodCoerce?: true
     zodPreprocess?: ((arg: unknown) => unknown)[]
     zodMarkedAsArray?: boolean
-    zodMarkedAsArrayBeforeOptional?: boolean
     zodFn?: TZodFunctionDefinition[]
     zodClassName?: string
     zodPropName?: string

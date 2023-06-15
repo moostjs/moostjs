@@ -72,18 +72,18 @@ export class SwaggerController {
     @Get()
     async 'spec.json'() {
         const logger = useEventLogger('@moostjs/zod')
-        // if (!this.spec) {
-        const { instantiate } = useControllerContext()
-        const moost = await instantiate(Moost)
-        this.spec = mapToSwaggerSpec(moost.getControllersOverview(), { title: this.title }, logger)
-        // }
+        if (!this.spec) {
+            const { instantiate } = useControllerContext()
+            const moost = await instantiate(Moost)
+            this.spec = mapToSwaggerSpec(moost.getControllersOverview(), { title: this.title }, logger)
+        }
         return this.spec
     }
 
-    @Get('swagger-ui-bundle.js')
-    @Get('swagger-ui-standalone-preset.js')
-    @Get('swagger-ui.css')
-    @Get('index.css')
+    @Get('swagger-ui-bundle.*(js|js\\.map)')
+    @Get('swagger-ui-standalone-preset.*(js|js\\.map)')
+    @Get('swagger-ui.*(css|css\\.map)')
+    @Get('index.*(css|css\\.map)')
     files(@Url() url: string) {
         return this.serve(url.split('/').pop() as string)
     }

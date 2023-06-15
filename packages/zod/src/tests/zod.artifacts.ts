@@ -98,12 +98,15 @@ export class ZodTestClassOptionalArray {
     opt2?: string[]
 
     @IsString()
+    @IsArray().optional()
+    opt22?: string[]
+
+    @IsString()
     @IsArray()
     @IsArray()
     arrayOfArray!: (string[])[]
 
-    @IsString()
-    @Optional()
+    @IsString().optional()
     @IsArray()
     required!: (string | undefined)[]
 

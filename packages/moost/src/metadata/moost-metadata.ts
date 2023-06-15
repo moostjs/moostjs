@@ -30,6 +30,7 @@ export interface TMoostMetadata<H extends TObject = TEmpty> extends TCommonMetaF
     injectable?: true | TInjectableScope
     interceptors?: TInterceptorData[]
     handlers?: TMoostHandler<H>[]
+    returnType?: TFunction
     provide?: TProvideRegistry
     params: (TMateParamMeta & TMoostParamsMetadata)[]
 }

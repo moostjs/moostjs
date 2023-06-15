@@ -18,8 +18,9 @@ interface TClassPropsMap {
  * Validates the input data against a Zod type or a class with Zod metadata.
  * @param data - The data to validate.
  * @param dto - The Zod type or class with Zod metadata.
- * @param opts - Options for Zod validation.
- * @param safe - Indicates whether to use safeParseAsync for safe parsing.
+ * @param opts - (optional) Options for Zod validation.
+ * @param safe - (optional) Indicates whether to use safeParseAsync for safe parsing.
+ * @param logger - (optional)
  * @returns A promise that resolves to the validated data or a safe parse result.
  */
 export async function validate<T extends (TObject | z.ZodType), S extends boolean>(
@@ -44,7 +45,8 @@ export async function validate<T extends (TObject | z.ZodType), S extends boolea
  * 
  * @param origin - origin class, prop key and param index
  * @param target - target type and/or value to check
- * @param opts - Zod Options
+ * @param opts - (optional) Zod Options
+ * @param logger - (optional)
  * @returns ZodType
  */
 export function getZodTypeForProp(origin: { type: TFunction, key: string | symbol, index?: number }, target: { type?: TFunction, value?: unknown, additionalMeta?: TZodMetadata }, opts?: TZodOpts, logger?: TLogger): z.ZodType {
@@ -85,10 +87,11 @@ export function getZodTypeForProp(origin: { type: TFunction, key: string | symbo
 /**
  * Get ZodType 
  * @param target - target type and/or value to check
- * @param opts - ZodOptions
+ * @param opts - (optional) ZodOptions
+ * @param logger - (optional)
  * @returns ZodType
  */
-export function getZodType(target: { type?: TFunction, value?: unknown, additionalMeta?: TZodMetadata }, opts?: TZodOpts, logger?: TLogger): z.ZodType {
+export function getZodType(target: { type?: TFunction, value?: unknown, additionalMeta?: TZodMetadata }, opts?: TZodOpts, logger?: TLogger): TMoostZodType {
     const { type, value, additionalMeta } = target
     const typeOfValue = (typeof value) as TPrimitives
     const ownMeta = type && mate.read(type) || undefined
@@ -170,22 +173,28 @@ export function getZodType(target: { type?: TFunction, value?: unknown, addition
         }
     }
 
-    function processResult(zt: z.ZodType): z.ZodType {
-        if (needToCache && type && !overrideZodType) cachedTypes.set(type, zt)
-        return applyZodFunctions(zt, {
+    function processResult(zt: z.ZodType): TMoostZodType {
+        const toReturn = applyZodFunctions(zt, {
             optional: additionalMeta?.optional,
             description: additionalMeta?.description,
             zodDefault: additionalMeta?.zodDefault,
             zodPreprocess: additionalMeta?.zodPreprocess,
             zodFn: additionalMeta?.zodFn,
-            zodMarkedAsArrayBeforeOptional: additionalMeta?.zodMarkedAsArrayBeforeOptional,
             wrapIntoArray: additionalMeta?.zodMarkedAsArray ? false : toWrapIntoArray,
             zodClassName: additionalMeta?.zodClassName,
             zodPropName: additionalMeta?.zodPropName,
-            zodParamIndex: additionalMeta?.zodParamIndex,            
+            zodParamIndex: additionalMeta?.zodParamIndex,
         }, logger)
+        if (needToCache && type && !overrideZodType) {
+            Object.assign(zt, { __type_ref: type })
+            Object.assign(toReturn, { __type_ref: type })
+            cachedTypes.set(type, zt)
+        }
+        return toReturn
     }    
 }
+
+export type TMoostZodType = z.ZodType & { __type_ref?: TFunction }
 
 function resolveZodTypeByValue(value: unknown, opts?: TZodOpts, logger?: TLogger): { isArray?: boolean, zt: z.ZodType } {
     const type = typeof value
@@ -214,7 +223,6 @@ function applyZodFunctions(type: z.ZodType, toApply: {
     zodDefault?: unknown
     zodPreprocess?: ((arg: unknown) => unknown)[]
     zodFn?: TZodFunctionDefinition[]
-    zodMarkedAsArrayBeforeOptional?: boolean, // array was annotated after @Optional
     zodClassName?: string
     zodPropName?: string
     zodParamIndex?: number
@@ -222,10 +230,6 @@ function applyZodFunctions(type: z.ZodType, toApply: {
 }, logger?: TLogger) {
     if (toApply) {
         let newType = type
-        if (!toApply.wrapIntoArray && toApply.optional && !toApply.zodMarkedAsArrayBeforeOptional) {
-            // array of optional smth
-            newType = newType.optional()
-        }
         if (toApply.zodFn && toApply.zodFn.length) {
             [...toApply.zodFn].reverse().forEach(zodFn => {
                 try {
@@ -252,8 +256,7 @@ function applyZodFunctions(type: z.ZodType, toApply: {
         if (toApply.wrapIntoArray) {
             newType = newType.array()
         }
-        if (toApply.optional && (toApply.wrapIntoArray || toApply.zodMarkedAsArrayBeforeOptional)) {
-            // optional array of smth
+        if (toApply.optional && !(newType instanceof z.ZodOptional) && !newType.isOptional()) {
             newType = newType.optional()
         }
         if (toApply.description) {
