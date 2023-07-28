@@ -63,8 +63,11 @@ export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
 
     protected moost?: Moost
 
+    protected toInit: (() => void)[] = []
+
     onInit(moost: Moost) {
         this.moost = moost
+        this.toInit.forEach(fn => fn())
     }
 
     public start<I>(schemaId: string, inputContext: T, input?: I) {
@@ -109,27 +112,23 @@ export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
                     manualUnscope: true,
                 })
             }
-            let routerBinding
             if (handler.type === 'WF_STEP') {
-                routerBinding = this.wfApp.step(targetPath, {
+                this.wfApp.step(targetPath, {
                     handler: fn as TStepHandler<any, any, any>,
                 })
+                opts.logHandler(`${__DYE_CYAN__}(${handler.type})${__DYE_GREEN__}${targetPath}`) 
             } else {
                 const mate = getWfMate()
                 let wfSchema = mate.read(opts.fakeInstance, opts.method as string)?.wfSchema
                 if (!wfSchema) {
                     wfSchema = mate.read(opts.fakeInstance)?.wfSchema
                 }
-                routerBinding = this.wfApp.flow(targetPath, wfSchema || [])
+                const _fn = fn as (() => void)
+                this.toInit.push(() => {
+                    this.wfApp.flow(targetPath, wfSchema || [], _fn)
+                    opts.logHandler(`${__DYE_CYAN__}(${handler.type})${__DYE_GREEN__}${targetPath}`) 
+                })
             }
-
-            opts.logHandler(
-                `${__DYE_CYAN__}(${handler.type})${__DYE_GREEN__}${targetPath}`
-            )
-            const args = routerBinding.getArgs()
-            const params: Record<string, string> = {}
-            args.forEach(a => params[a] = `{${a}}`)
-            opts.register(handler, routerBinding.getPath(params), args)            
         }
     }
 }

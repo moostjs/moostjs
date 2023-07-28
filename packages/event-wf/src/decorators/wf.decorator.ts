@@ -15,7 +15,7 @@ export function WSchema<T>(schema: TWorkflowSchema<T>): MethodDecorator {
     return getWfMate().decorate('wfSchema', schema)
 }
 
-export const WfCtx = (name: string) => Resolve(() => {
+export const WfCtx = (name?: string) => Resolve(() => {
     const c = useWfState().ctx<Record<string, unknown>>()
     return name ? c[name] : c
 }, name || 'WfCtx')
@@ -26,7 +26,7 @@ export const WfIndexes = () => Resolve(() => useWfState().indexes)
 
 export const WfSchemaId = () => Resolve(() => useWfState().schemaId)
 
-export const WfInput = (name: string) => Resolve(() => {
+export const WfInput = (name?: string) => Resolve(() => {
     const i = useWfState().input() as Record<string, unknown>
     return name ? i[name] : i
 }, name || 'WfInput')
