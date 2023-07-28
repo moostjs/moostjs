@@ -1,3 +1,12 @@
+## [0.2.35](https://github.com/moostjs/moostjs/compare/v0.2.34...v0.2.35) (2023-07-28)
+
+
+### Bug Fixes
+
+* set handler type WF_FLOW for WFlow ([79a50f8](https://github.com/moostjs/moostjs/commit/79a50f8e2cbbfae50d88ac675a685e2052cd7c2d))
+
+
+
 ## [0.2.34](https://github.com/moostjs/moostjs/compare/v0.2.33...v0.2.34) (2023-07-28)
 
 
