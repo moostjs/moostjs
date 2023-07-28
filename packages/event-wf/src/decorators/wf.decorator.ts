@@ -1,14 +1,32 @@
 import { TWorkflowSchema } from '@prostojs/wf'
 import { getWfMate } from '../meta-types'
+import { Resolve } from '@moostjs/moost'
+import { useWfState } from '@wooksjs/event-wf'
 
-export function WfStep(path?: string): MethodDecorator {
+export function WStep(path?: string): MethodDecorator {
     return getWfMate().decorate('handlers', { path, type: 'WF_STEP' }, true)
 }
 
-export function WfFlow(path?: string): MethodDecorator {
-    return getWfMate().decorate('handlers', { path, type: 'WF_STEP' }, true)
+export function WFlow(path?: string): MethodDecorator {
+    return getWfMate().decorate('handlers', { path, type: 'WF_FLOW' }, true)
 }
 
-export function WfSchema<T>(schema: TWorkflowSchema<T>): MethodDecorator {
+export function WSchema<T>(schema: TWorkflowSchema<T>): MethodDecorator {
     return getWfMate().decorate('wfSchema', schema)
 }
+
+export const WfCtx = (name: string) => Resolve(() => {
+    const c = useWfState().ctx<Record<string, unknown>>()
+    return name ? c[name] : c
+}, name || 'WfCtx')
+
+export const WfResume = () => Resolve(() => useWfState().resume)
+
+export const WfIndexes = () => Resolve(() => useWfState().indexes)
+
+export const WfSchemaId = () => Resolve(() => useWfState().schemaId)
+
+export const WfInput = (name: string) => Resolve(() => {
+    const i = useWfState().input() as Record<string, unknown>
+    return name ? i[name] : i
+}, name || 'WfInput')
