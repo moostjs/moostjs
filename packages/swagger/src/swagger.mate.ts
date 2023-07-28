@@ -18,7 +18,8 @@ export interface TSwaggerMate {
 export type TSwaggerResponseConfigValue = TFunction | z.ZodType | TSwaggerSchema
 
 interface TSwaggerResponseConfig {
-    contentType: string
+    contentType?: string
+    description?: string
     response: TSwaggerResponseConfigValue
 }
 

@@ -667,6 +667,14 @@ describe('zod with decorators', () => {
     "message": "Expected object, received boolean"
   },
   {
+    "code": "unrecognized_keys",
+    "keys": [
+      "neverType"
+    ],
+    "path": [],
+    "message": "Unrecognized key(s) in object: 'neverType'"
+  },
+  {
     "code": "custom",
     "message": "Invalid input",
     "path": [

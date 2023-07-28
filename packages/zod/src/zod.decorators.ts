@@ -28,6 +28,12 @@ function ZodFn(decorator: string, fn: TZodFunction) {
 }
 
 /**
+ * Decorator to enable Zod validation pipeline
+ * @returns {ClassDecorator} The decorated class with validation enabled.
+ */
+export const Validatable = () => mate.decorate('zodValidate', true)
+
+/**
  * Decorator to make zod object strict on props
  * 
  * (default)

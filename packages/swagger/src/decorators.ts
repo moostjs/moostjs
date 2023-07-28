@@ -14,9 +14,11 @@ export function SwaggerResponse(code: number | TSwaggerResponseOpts, opts?: TSwa
         const keyCode = typeof code === 'number' ? code : 0
         const opt = typeof code === 'number' ? opts : code
         const contentType = typeof (opt as { contentType: string }).contentType === 'string' ? (opt as { contentType: string }).contentType : '*/*'
-        const response = (typeof (opt as { contentType: string }).contentType === 'string' ? (opt as { response: string }).response : opt) as TSwaggerResponseConfigValue
+        // const description = typeof (opt as { description: string }).description === 'string' ? (opt as { description: string }).description : undefined
+        const response = (['object', 'function'].includes(typeof (opt as { response: unknown }).response) ? (opt as { response: unknown }).response : opt) as TSwaggerResponseConfigValue
         meta.swaggerResponses[keyCode] = meta.swaggerResponses[keyCode] || {}
         meta.swaggerResponses[keyCode][contentType] = response
+        // meta.swaggerResponses[keyCode].description = description
         return meta
     })
 }

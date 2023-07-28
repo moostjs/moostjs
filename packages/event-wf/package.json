@@ -1,7 +1,7 @@
 {
-  "name": "@moostjs/event-cli",
+  "name": "@moostjs/event-wf",
   "version": "0.2.33",
-  "description": "@moostjs/event-cli",
+  "description": "@moostjs/event-wf",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -19,7 +19,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/moostjs.git",
-    "directory": "packages/event-cli"
+    "directory": "packages/event-wf"
   },
   "keywords": [
     "moost",
@@ -34,14 +34,13 @@
   "bugs": {
     "url": "https://github.com/moostjs/moostjs/issues"
   },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-cli#readme",
   "peerDependencies": {
-    "moost": "0.2.33",
-    "wooks": "^0.3.3",
-    "@wooksjs/event-core": "^0.3.3"
   },
   "dependencies": {
-    "@wooksjs/event-cli": "^0.3.3",
-    "@prostojs/wf": "^0.0.3"
-  }
+    "moost": "0.2.33",
+    "wooks": "^0.3.3",
+    "@wooksjs/event-core": "^0.3.3",
+    "@wooksjs/event-wf": "^0.3.3"
+  },
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-wf#readme"
 }

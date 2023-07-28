@@ -17,6 +17,17 @@ describe('zod circular', () => {
       "name"
     ],
     "message": "Required"
+  },
+  {
+    "code": "unrecognized_keys",
+    "keys": [
+      "age"
+    ],
+    "path": [
+      "child",
+      "child"
+    ],
+    "message": "Unrecognized key(s) in object: 'age'"
   }
 ]],
   "success": false,

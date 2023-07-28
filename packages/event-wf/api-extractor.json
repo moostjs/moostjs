@@ -1,0 +1,20 @@
+{
+  "extends": "../../api-extractor.json",
+  "mainEntryPointFilePath": "./dist/packages/event-wf/src/index.d.ts",
+  "dtsRollup": {
+    "publicTrimmedFilePath": "./dist/index.d.ts"
+  },
+  "compiler": {
+    "overrideTsconfig": {
+      "compilerOptions": {
+        "paths": {
+          "common": ["packages/event-wf/dist/common"]
+        }
+      },         
+      "include": [
+        "packages/event-wf/dist/packages",
+        "packages/event-wf/dist/common"
+      ]
+    }
+  }
+}
