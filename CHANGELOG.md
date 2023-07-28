@@ -1,3 +1,12 @@
+## [0.2.36](https://github.com/moostjs/moostjs/compare/v0.2.35...v0.2.36) (2023-07-28)
+
+
+### Bug Fixes
+
+* **wf:** postpone flows registration ([65fa16d](https://github.com/moostjs/moostjs/commit/65fa16d570a19c13afb3baa3edea7ce24d801878))
+
+
+
 ## [0.2.35](https://github.com/moostjs/moostjs/compare/v0.2.34...v0.2.35) (2023-07-28)
 
 

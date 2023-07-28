@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/event-wf",
-  "version": "0.2.35",
+  "version": "0.2.36",
   "description": "@moostjs/event-wf",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -36,10 +36,10 @@
   },
   "peerDependencies": {},
   "dependencies": {
-    "moost": "0.2.35",
-    "wooks": "^0.3.11",
-    "@wooksjs/event-core": "^0.3.11",
-    "@wooksjs/event-wf": "^0.3.11"
+    "moost": "0.2.36",
+    "wooks": "^0.3.12",
+    "@wooksjs/event-core": "^0.3.12",
+    "@wooksjs/event-wf": "^0.3.12"
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-wf#readme"
 }
