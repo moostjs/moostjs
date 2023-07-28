@@ -1,3 +1,16 @@
+## [0.2.34](https://github.com/moostjs/moostjs/compare/v0.2.33...v0.2.34) (2023-07-28)
+
+
+### Features
+
+* add event-wf ([6a9d862](https://github.com/moostjs/moostjs/commit/6a9d862f59e962c4337b97ccf632543a85fb7737))
+* **swagger:** add support for body schemas ([64181f9](https://github.com/moostjs/moostjs/commit/64181f9b04aed870a46251342fc98a8395f8135d))
+* **swagger:** get schemas from zod ([445410d](https://github.com/moostjs/moostjs/commit/445410dee98f9ae4a224d26e63ba9ad97b7e6dd8))
+* **zod:** add strict on objects ([959b9e6](https://github.com/moostjs/moostjs/commit/959b9e692ca74b360b632170e23f7b7826076c2e))
+* **zod:** improve arrays/optionals/defaults ([84cd0df](https://github.com/moostjs/moostjs/commit/84cd0df31c22cf599a45131a110080ce85d363db))
+
+
+
 ## [0.2.33](https://github.com/moostjs/moostjs/compare/v0.2.32...v0.2.33) (2023-05-29)
 
 

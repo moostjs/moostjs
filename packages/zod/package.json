@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/zod",
-  "version": "0.2.33",
+  "version": "0.2.34",
   "description": "@moostjs/zod",
   "sideEffects": false,
   "main": "dist/index.cjs",
@@ -36,9 +36,9 @@
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/zod#readme",
   "dependencies": {
-    "zod": ""
+    "zod": "^3.21.4"
   },
   "peerDependencies": {
-    "moost": ""
+    "moost": "0.2.34"
   }
 }
