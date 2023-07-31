@@ -13,6 +13,7 @@ import {
     useCliContext,
 } from '@wooksjs/event-cli'
 import { TCliClassMeta, getCliMate } from './meta-types'
+import { TFunction } from 'common'
 
 export interface TCliHandlerMeta {
     path: string
@@ -30,7 +31,7 @@ export interface TMoostCliOpts {
     /**
      * Array of cli options applicable to every cli command
      */
-    globalCliOptions?: { keys: string[], description?: string }[]
+    globalCliOptions?: { keys: string[], description?: string, type?: TFunction }[]
 }
 
 const LOGGER_TITLE = 'moost-cli'
@@ -68,6 +69,8 @@ const CONTEXT_TYPE = 'CLI'
  */
 export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
     protected cliApp: WooksCli
+
+    protected optionTypes: Record<string, TFunction[]> = {}
 
     constructor(protected opts?: TMoostCliOpts) {
         const cliAppOpts = opts?.wooksCli
@@ -107,7 +110,14 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
 
     onInit(moost: Moost) {
         this.moost = moost
-        void this.cliApp.run()
+        const boolean = Object
+            .entries(this.optionTypes)
+            .filter(([_key, val]) => val.length === 1 && val[0] === Boolean)
+            .map(([key, _val]) => key)
+        console.log(boolean)
+        void this.cliApp.run(undefined, {
+            boolean,
+        })
     }
 
     bindHandler<T extends object = object>(
@@ -143,7 +153,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
             const targetPath = makePath(path)
             const meta = getCliMate().read(opts.fakeInstance, opts.method as string)
             const classMeta = getCliMate().read(opts.fakeInstance)
-            const cliOptions = new Map<string, { keys: string[], description?: string, value?: string }>()
+            const cliOptions = new Map<string, { keys: string[], description?: string, type?: TFunction, value?: string }>()
             ;[
                 ...(this.opts?.globalCliOptions?.length ? this.opts.globalCliOptions : []),
                 ...(classMeta?.cliOptions || []),
@@ -151,6 +161,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                     keys: param.cliOptionsKeys,
                     value: typeof param.value === 'string' ? param.value : '',
                     description: param.description || '',
+                    type: param.type,
                 })) : []),
             ].forEach(o => cliOptions.set(o.keys[0], o))
             
@@ -162,19 +173,31 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
                 }
             }
 
+            const cliOptionsArray = Array.from(cliOptions.values())
+            cliOptionsArray.forEach(o => {
+                for (const key of o.keys) {
+                    if (!this.optionTypes[key]) {
+                        this.optionTypes[key] = []
+                    }
+                    if (!(this.optionTypes[key].includes(o.type as TFunction))) {
+                        this.optionTypes[key].push(o.type as TFunction)
+                    }
+                }
+            })
+
             const args: Record<string, string> = {}
             meta?.params?.filter(p => p.paramSource === 'ROUTE' && p.description)
                 .forEach(p => args[p.paramName as string] = p.description as string)
 
             const routerBinding = this.cliApp.cli(targetPath, {
                 description: meta?.description || '',
-                options: Array.from(cliOptions.values()),
+                options: cliOptionsArray,
                 args,
                 aliases,
                 examples: meta?.cliExamples || [],
                 handler: fn,
-                onRegister: (path, aliasType) => {
-                    opts.register(handler, path, routerBinding.getArgs())
+                onRegister: (path, aliasType, route) => {
+                    opts.register(handler, path, route?.getArgs() || routerBinding.getArgs())
                     if (this.opts?.debug) {
                         opts.logHandler(`${__DYE_CYAN__}(${ aliasTypes[aliasType] })${__DYE_GREEN__}${path}`)
                     }

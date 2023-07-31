@@ -82,8 +82,8 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
                     },
                     message: 'Bundler:',
                     choices: [
-                        { title: 'ESBuild (with nodemon for dev)', value: 'esbuild' },
-                        { title: 'Rollup', value: 'rollup' },
+                        { title: 'Rollup (recommended)', value: 'rollup' },
+                        { title: 'ESBuild', value: 'esbuild' },
                     ],
                 },
                 {

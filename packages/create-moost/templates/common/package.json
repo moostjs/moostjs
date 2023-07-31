@@ -24,14 +24,14 @@
         //=END IF
         //=IF (bundler === 'esbuild')
             //=IF (type === 'http')
-        "dev": "npm-run-all --parallel build:watch nodemon",
+        "dev": "npm run build:watch",
+        "nodemon": "NODE_OPTIONS=--enable-source-maps nodemon ./dist/main",
             //=END IF
             //=IF (type === 'cli')
         "dev": "npm run build && ./bin.js",
             //=END IF
-        "nodemon": "NODE_OPTIONS=--enable-source-maps nodemon ./dist/main",
-        "build": "esbuild ./src/main.ts --bundle --outdir=dist --platform=node --packages=external",
-        "build:watch": "esbuild ./src/main.ts --bundle --outdir=dist --watch --platform=node --packages=external --sourcemap",
+        "build": "node ./build",
+        "build:watch": "node ./build watch",
         //=END IF
         //=IF (prettier)
         "prettify": "prettier . --write && lint --fix",
@@ -59,10 +59,10 @@
         "tslib": "^2.5.2",
 //=END IF
 //=IF (bundler === 'esbuild')
-        "esbuild": "^0.17.19",
+        "esbuild": "^0.18.17",
+        "esbuild-plugin-tsc": "^0.4.0",
         //=IF (type === 'http')
         "nodemon": "^2.0.22",
-        "npm-run-all": "^4.1.5",
         //=END IF
 //=END IF
 //=IF (eslint)

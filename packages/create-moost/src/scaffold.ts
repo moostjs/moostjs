@@ -36,6 +36,7 @@ export async function scaffold(data: TPrompts) {
 
     if (!data.eslint) {
         excludeCommon.push('.eslintrc.json')
+        excludeCommon.push('build.js')
     }
     if (!data.prettier) {
         excludeCommon.push('.prettierignore')

@@ -63,13 +63,13 @@ export function run() {
     app.adapter(new MoostCli({
         globalCliOptions: [
             // { keys: ['ts'], description: '' },
-            { keys: ['http'], description: 'Use Moost HTTP' },
-            { keys: ['cli'], description: 'Use Moost CLI' },
-            { keys: ['eslint'], description: 'Add ESLint' },
-            { keys: ['prettier'], description: 'Add Prettier' },
-            { keys: ['force'], description: 'Force Overwrite' },
-            { keys: ['esbuild'], description: 'Use esbuild for builds' },
-            { keys: ['rollup'], description: 'Use rollup for builds' },
+            { keys: ['http'], description: 'Use Moost HTTP', type: Boolean },
+            { keys: ['cli'], description: 'Use Moost CLI', type: Boolean },
+            { keys: ['eslint'], description: 'Add ESLint', type: Boolean },
+            { keys: ['prettier'], description: 'Add Prettier', type: Boolean },
+            { keys: ['force'], description: 'Force Overwrite', type: Boolean },
+            { keys: ['esbuild'], description: 'Use esbuild for builds', type: Boolean },
+            { keys: ['rollup'], description: 'Use rollup for builds', type: Boolean },
         ],
     }))
 

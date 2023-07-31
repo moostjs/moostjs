@@ -19,7 +19,7 @@ function cli() {
             cliHelp: { name: '{{ packageName }}' },
         },
         globalCliOptions: [
-            { keys: ['help'], description: 'Display instructions for the command.' },
+            { keys: ['help'], description: 'Display instructions for the command.', type: Boolean },
         ],
     }))
 
