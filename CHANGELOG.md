@@ -1,3 +1,13 @@
+## [0.3.1](https://github.com/moostjs/moostjs/compare/v0.3.0...v0.3.1) (2023-07-31)
+
+
+### Bug Fixes
+
+* **cli:** remove console.log ([1bfe26a](https://github.com/moostjs/moostjs/commit/1bfe26ae86cbc7e2f9269ece76f780162b303d27))
+* **create-moost:** fix esbuild template ([364848a](https://github.com/moostjs/moostjs/commit/364848a5767e6614a959dce7ceb764f9372e1124))
+
+
+
 # [0.3.0](https://github.com/moostjs/moostjs/compare/v0.2.36...v0.3.0) (2023-07-31)
 
 
