@@ -114,7 +114,6 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
             .entries(this.optionTypes)
             .filter(([_key, val]) => val.length === 1 && val[0] === Boolean)
             .map(([key, _val]) => key)
-        console.log(boolean)
         void this.cliApp.run(undefined, {
             boolean,
         })
