@@ -1,3 +1,12 @@
+# [0.3.0](https://github.com/moostjs/moostjs/compare/v0.2.36...v0.3.0) (2023-07-31)
+
+
+### Bug Fixes
+
+* **cli:** improve support for boolean options ([e2e4087](https://github.com/moostjs/moostjs/commit/e2e4087243531f60f32aeb61890443a32632d76d))
+
+
+
 ## [0.2.36](https://github.com/moostjs/moostjs/compare/v0.2.35...v0.2.36) (2023-07-28)
 
 
