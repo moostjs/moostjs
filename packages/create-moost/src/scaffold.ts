@@ -36,7 +36,6 @@ export async function scaffold(data: TPrompts) {
 
     if (!data.eslint) {
         excludeCommon.push('.eslintrc.json')
-        excludeCommon.push('build.js')
     }
     if (!data.prettier) {
         excludeCommon.push('.prettierignore')
@@ -44,6 +43,9 @@ export async function scaffold(data: TPrompts) {
     }
     if (data.bundler !== 'rollup') {
         excludeCommon.push('rollup.config.js')
+    }
+    if (data.bundler !== 'esbuild') {
+        excludeCommon.push('build.js')
     }
 
     await rw.rewriteDir({
