@@ -70,15 +70,15 @@ export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
         this.toInit.forEach(fn => fn())
     }
 
-    public start<I>(schemaId: string, inputContext: T, input?: I) {
-        return this.wfApp.start(schemaId, inputContext, input, () => {
+    public start<I>(schemaId: string, initialContext: T, input?: I) {
+        return this.wfApp.start(schemaId, initialContext, input, () => {}, () => {
             const scopeId = useEventId().getId()
             getMoostInfact().unregisterScope(scopeId)
         })
     }
 
-    public resume<I>(schemaId: string, inputContext: T, indexes: number[], input?: I) {
-        return this.wfApp.resume(schemaId, inputContext, indexes, input, () => {
+    public resume<I>(schemaId: string, state: { context: T, indexes: number[] }, input?: I) {
+        return this.wfApp.resume(schemaId, state, input, () => {}, () => {
             const scopeId = useEventId().getId()
             getMoostInfact().unregisterScope(scopeId)
         })
