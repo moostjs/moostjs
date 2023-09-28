@@ -1,5 +1,5 @@
 import { Body, Get, Post, Query } from '@moostjs/event-http'
-import { Controller, Optional, Param } from '@moostjs/moost'
+import { Controller, Optional, Param } from 'moost'
 import { IsArray, IsNullable, IsNumber, IsString, MatchesRegex, Max, Min, ToNumber } from '@moostjs/zod'
 import { SwaggerRequestBody, SwaggerResponse } from '../decorators'
 

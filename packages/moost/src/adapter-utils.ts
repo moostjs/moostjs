@@ -75,7 +75,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
             } catch (e) {
                 options.logErrors && logger.error(e)
                 response = e
-                return endWithResponse()
+                return endWithResponse(true)
             }
         }
 
@@ -90,7 +90,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
             } catch (e) {
                 options.logErrors && logger.error(e)
                 response = e
-                return endWithResponse()
+                return endWithResponse(true)
             }
         }
 
@@ -117,9 +117,10 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         } catch (e) {
             options.logErrors && logger.error(e)
             response = e
+            return endWithResponse(true)
         }
 
-        async function endWithResponse() {
+        async function endWithResponse(raise = false) {
             // fire after interceptors
             if (interceptorHandler) {
                 restoreCtx()
@@ -136,6 +137,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
             if (!options.manualUnscope) { unscope() }
             if (options.hooks?.end) {
                 await options.hooks.end(hookOptions)
+            }
+            if (raise) {
+                throw response
             }
             return response
         }

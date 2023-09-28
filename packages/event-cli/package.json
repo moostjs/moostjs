@@ -36,12 +36,11 @@
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-cli#readme",
   "peerDependencies": {
-    "moost": "0.3.1",
-    "wooks": "^0.4.1",
-    "@wooksjs/event-core": "^0.4.1"
   },
   "dependencies": {
-    "@wooksjs/event-cli": "^0.4.1",
-    "@prostojs/wf": "^0.0.3"
+    "moost": "0.3.1",
+    "wooks": "^0.4.1",
+    "@wooksjs/event-core": "^0.4.1",
+    "@wooksjs/event-cli": "^0.4.1"
   }
 }

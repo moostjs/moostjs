@@ -1,6 +1,6 @@
 import { TWorkflowSchema } from '@prostojs/wf'
 import { getWfMate } from '../meta-types'
-import { Resolve } from '@moostjs/moost'
+import { Resolve } from 'moost'
 import { useWfState } from '@wooksjs/event-wf'
 
 export function WStep(path?: string): MethodDecorator {
@@ -28,5 +28,5 @@ export const WfSchemaId = () => Resolve(() => useWfState().schemaId)
 
 export const WfInput = (name?: string) => Resolve(() => {
     const i = useWfState().input() as Record<string, unknown>
-    return name ? i[name] : i
+    return typeof i !== 'undefined' ? (name ? i[name] : i) : undefined
 }, name || 'WfInput')

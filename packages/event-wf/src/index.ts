@@ -1,3 +1,4 @@
 export * from './event-wf'
 export * from './decorators'
-export { useCliContext } from '@wooksjs/event-cli'
+export { useWFContext } from '@wooksjs/event-wf'
+export { TFlowOutput, TWorkflowSchema } from '@prostojs/wf'
