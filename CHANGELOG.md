@@ -1,3 +1,13 @@
+## [0.3.2](https://github.com/moostjs/moostjs/compare/v0.3.1...v0.3.2) (2023-09-29)
+
+
+### Bug Fixes
+
+* minor fixes ([3790cdd](https://github.com/moostjs/moostjs/commit/3790cddb4080c6c111edc8df8cb80cbed92fa5c0))
+* WfInput resolver ([eaab9d6](https://github.com/moostjs/moostjs/commit/eaab9d64e19530491021e847b6ea28b6e8d26a64))
+
+
+
 ## [0.3.1](https://github.com/moostjs/moostjs/compare/v0.3.0...v0.3.1) (2023-07-31)
 
 
