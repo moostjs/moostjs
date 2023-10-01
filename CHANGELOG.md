@@ -1,3 +1,12 @@
+## [0.3.4](https://github.com/moostjs/moostjs/compare/v0.3.3...v0.3.4) (2023-10-01)
+
+
+### Bug Fixes
+
+* **event-http:** set header for errors ([c66c1b3](https://github.com/moostjs/moostjs/commit/c66c1b33b04bb3bf9be0db54dcb6d25c73b4bac9))
+
+
+
 ## [0.3.3](https://github.com/moostjs/moostjs/compare/v0.3.2...v0.3.3) (2023-09-30)
 
 
