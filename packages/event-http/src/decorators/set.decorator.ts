@@ -4,19 +4,25 @@ import { useSetCookies, useSetHeader, useStatus } from '@wooksjs/event-http'
 const setHeaderInterceptor: (
     name: string,
     value: string,
-    opts?: { force?: boolean; status?: number }
+    opts?: { force?: boolean; status?: number, when?: 'always' | 'error' | 'ok' }
 ) => TInterceptorFn = (name, value, opts) => {
-    const fn: TInterceptorFn = (before, after) => {
+    const fn: TInterceptorFn = (_before, after, onError) => {
         const h = useSetHeader(name)
         const status = useStatus()
-        after(() => {
+        const cb = () => {
             if (
                 (!h.value || opts?.force) &&
                 (!opts?.status || opts.status === status.value)
             ) {
                 h.value = value
             }
-        })
+        }
+        if (opts?.when !== 'error') {
+            after(cb)
+        }
+        if (opts?.when === 'always' || opts?.when === 'error') {
+            onError(cb)
+        }
     }
     fn.priority = TInterceptorPriority.AFTER_ALL
     return fn
