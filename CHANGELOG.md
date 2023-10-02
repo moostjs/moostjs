@@ -1,3 +1,12 @@
+## [0.3.5](https://github.com/moostjs/moostjs/compare/v0.3.4...v0.3.5) (2023-10-02)
+
+
+### Features
+
+* **wf:** add spy functions ([8516825](https://github.com/moostjs/moostjs/commit/8516825304b0cb0dc04a7b754377eadc5f20830f))
+
+
+
 ## [0.3.4](https://github.com/moostjs/moostjs/compare/v0.3.3...v0.3.4) (2023-10-01)
 
 
