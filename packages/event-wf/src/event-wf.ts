@@ -14,6 +14,7 @@ import {
 
 import { getWfMate } from './meta-types'
 import { useEventId } from '@wooksjs/event-core'
+import { TFlowOutput, TWorkflowSpy } from '@prostojs/wf'
 
 export interface TWfHandlerMeta {
     path: string
@@ -70,14 +71,26 @@ export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
         this.toInit.forEach(fn => fn())
     }
 
-    public start<I>(schemaId: string, initialContext: T, input?: I) {
+    getWfApp() {
+        return this.wfApp
+    }
+
+    public attachSpy<I>(fn: TWorkflowSpy<T, I>) {
+        return this.wfApp.attachSpy<I>(fn)
+    }
+
+    public detachSpy<I>(fn: TWorkflowSpy<T, I>) {
+        return this.wfApp.detachSpy<I>(fn)
+    }
+
+    public start<I>(schemaId: string, initialContext: T, input?: I): Promise<TFlowOutput<T, I>> {
         return this.wfApp.start(schemaId, initialContext, input, () => {}, () => {
             const scopeId = useEventId().getId()
             getMoostInfact().unregisterScope(scopeId)
         })
     }
 
-    public resume<I>(schemaId: string, state: { context: T, indexes: number[] }, input?: I) {
+    public resume<I>(schemaId: string, state: { context: T, indexes: number[] }, input?: I): Promise<TFlowOutput<T, I>> {
         return this.wfApp.resume(schemaId, state, input, () => {}, () => {
             const scopeId = useEventId().getId()
             getMoostInfact().unregisterScope(scopeId)
