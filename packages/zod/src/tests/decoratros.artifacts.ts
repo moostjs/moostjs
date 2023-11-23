@@ -91,7 +91,15 @@ export class ValidoDecoratorsTestClass {
     @Refine((value) => value === 'admin')
     role!: 'admin'
 
-    @SuperRefine((value) => value === 'user')
+    @SuperRefine((value, ctx) => {
+        if (value !== 'user') {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'must be "user"',
+            })
+        }
+        return Promise.resolve()
+    })
     role2!: 'user'
 
     @Trim()
