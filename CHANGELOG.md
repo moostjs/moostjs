@@ -1,3 +1,12 @@
+## [0.3.9](https://github.com/moostjs/moostjs/compare/v0.3.8...v0.3.9) (2023-11-23)
+
+
+### Bug Fixes
+
+* **zod:** fix SuperRefine decorator ([e6118b6](https://github.com/moostjs/moostjs/commit/e6118b661c1213f7ebbc9e9f033c7ca4d8b4c469))
+
+
+
 ## [0.3.8](https://github.com/moostjs/moostjs/compare/v0.3.7...v0.3.8) (2023-10-06)
 
 
