@@ -89,7 +89,7 @@ function createConfig(target, type, declaration = false) {
                 check: true,
                 tsconfig: './tsconfig.json',
                 tsconfigOverride: {
-                    target: 'es2015',
+                    target: 'es2020',
                     declaration,
                     declarationMap: declaration,
                     removeComments: !declaration,

@@ -105,21 +105,21 @@ async function main() {
     // build all packages with types
     out.step('Building all packages...')
     if (!skipBuild && !isDryRun) {
-        await run('npm', ['run', 'build', '--release'])
+        await run('pnpm', ['run', 'build', '--release'])
         // test generated dts files
         // out.step('Verifying type declarations...')
-        // await run('npm', ['run', 'test-dts-only'])
+        // await run('pnpm', ['run', 'test-dts-only'])
     } else {
         out.warn(`(skipped)`)
     }
 
     // generate changelog
     out.step('Generating changelog...')
-    await run(`npm`, ['run', 'changelog'])
+    await run(`pnpm`, ['run', 'changelog'])
 
     // update package-lock.json
     out.step('Updating lockfile...')
-    await run(`npm`, ['install', '--prefer-offline'])
+    await run(`pnpm`, ['i'])
 
     const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
     if (stdout) {
