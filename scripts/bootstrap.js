@@ -19,6 +19,7 @@ packages.forEach(({ shortName, name, pkg, pkgPath }) => {
             types: 'dist/index.d.ts',
             sideEffects: false,
             exports: {
+                './package.json': './package.json',
                 '.': {
                   import: './dist/index.mjs',
                   require: './dist/index.cjs',
@@ -68,40 +69,6 @@ packages.forEach(({ shortName, name, pkg, pkgPath }) => {
         out.success(`✅ README.md created`)
     } else {
         out.log(`- README.md already exists`)
-    }
-
-    const apiExtractorPath = path.join(
-        packagesDir,
-        shortName,
-        `api-extractor.json`
-    )
-    if (args.api || args.force || !fs.existsSync(apiExtractorPath)) {
-        fs.writeFileSync(
-            apiExtractorPath,
-            `{
-  "extends": "../../api-extractor.json",
-  "mainEntryPointFilePath": "./dist/packages/${shortName}/src/index.d.ts",
-  "dtsRollup": {
-    "publicTrimmedFilePath": "./dist/index.d.ts"
-  },
-  "compiler": {
-    "overrideTsconfig": {
-      "compilerOptions": {
-        "paths": {
-          "common": ["packages/${shortName}/dist/common"]
-        }
-      },         
-      "include": [
-        "packages/${shortName}/dist/packages",
-        "packages/${shortName}/dist/common"
-      ]
-    }
-  }
-}`
-        )
-        out.success(`✅ api-extractor.json created`)
-    } else {
-        out.log(`- api-extractor.json already exists`)
     }
 
     const srcDir = path.join(packagesDir, shortName, `src`)

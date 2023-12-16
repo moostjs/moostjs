@@ -8,7 +8,8 @@
         "lib": ["ESNext", "DOM", "WebWorker", "DOM.Iterable"],
         "noUnusedLocals": true,
         "types": ["jest", "node"],
-        "declaration": true,
+        "declaration": false,
+        "declarationMap": false,
         "resolveJsonModule": true,
         "downlevelIteration": true,
         "forceConsistentCasingInFileNames": true,
@@ -17,7 +18,7 @@
         "skipLibCheck": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
-        "removeComments": false,
+        "removeComments": true,
         "paths": {
             "@moostjs/*": ["packages/*/src"],
             "moost": ["packages/moost/src"],

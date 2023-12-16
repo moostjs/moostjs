@@ -5,6 +5,7 @@ import { dye } from '@prostojs/dye'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import { createRequire } from 'module'
 import commonJS from '@rollup/plugin-commonjs'
+import { dts } from 'rollup-plugin-dts'
 
 const require = createRequire(import.meta.url)
 const pkg = require('./package.json')
@@ -64,11 +65,11 @@ const targets = readdirSync('packages').filter((f) => {
 
 const configs = targets
     .map((target) => {
-        return [createConfig(target, 'mjs', true), createConfig(target, 'cjs')]
+        return [createConfig(target, 'mjs'), createConfig(target, 'cjs'), createDtsConfig(target)]
     })
     .flat()
 
-function createConfig(target, type, declaration = false) {
+function createConfig(target, type) {
     const formats = {
         cjs: 'cjs',
         mjs: 'es',
@@ -90,9 +91,9 @@ function createConfig(target, type, declaration = false) {
                 tsconfig: './tsconfig.json',
                 tsconfigOverride: {
                     target: 'es2020',
-                    declaration,
-                    declarationMap: declaration,
-                    removeComments: !declaration,
+                    declaration: false,
+                    declarationMap: false,
+                    removeComments: true,
                     include: [
                         'packages/*/src',
                         'packages/*/__tests__',
@@ -103,6 +104,24 @@ function createConfig(target, type, declaration = false) {
             }),
             replacePlugin,
         ],
+    }
+}
+
+function createDtsConfig(target) {
+    return {
+        external,
+        input: `./packages/${target}/src/index.ts`,
+        output: {
+            file: `./packages/${target}/dist/index.d.ts`,
+            format: 'es',
+            sourcemap: false,
+        },
+        plugins: [dts({
+            tsconfig: './tsconfig.json',
+            compilerOptions: {
+                removeComments: false,
+            }
+        })],
     }
 }
 
