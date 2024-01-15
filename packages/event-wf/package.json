@@ -38,12 +38,12 @@
   "peerDependencies": {},
   "dependencies": {
     "moost": "0.3.12",
-    "wooks": "^0.4.13",
-    "@wooksjs/event-core": "^0.4.13",
-    "@wooksjs/event-wf": "^0.4.13",
+    "wooks": "^0.4.15",
+    "@wooksjs/event-core": "^0.4.15",
+    "@wooksjs/event-wf": "^0.4.15",
     "@prostojs/infact": "^0.1.13",
     "@prostojs/mate": "^0.2.1",
-    "@prostojs/wf": "^0.0.10"
+    "@prostojs/wf": "^0.0.12"
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-wf#readme"
 }
