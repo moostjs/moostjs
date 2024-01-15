@@ -151,7 +151,7 @@ export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
                 }
                 const _fn = fn as () => void
                 this.toInit.push(() => {
-                    this.wfApp.flow(targetPath, wfSchema || [], opts.prefix, _fn)
+                    this.wfApp.flow(targetPath, wfSchema || [], opts.prefix === '/' ? '' : opts.prefix, _fn)
                     opts.logHandler(
                         `${__DYE_CYAN__}(${handler.type})${__DYE_GREEN__}${targetPath}`
                     )
