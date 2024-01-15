@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/swagger",
-  "version": "0.3.12",
+  "version": "0.3.13",
   "description": "@moostjs/swagger",
   "sideEffects": false,
   "main": "dist/index.cjs",
@@ -37,14 +37,14 @@
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/swagger#readme",
   "peerDependencies": {
-    "moost": "0.3.12",
-    "@moostjs/event-http": "0.3.12"
+    "moost": "0.3.13",
+    "@moostjs/event-http": "0.3.13"
   },
   "dependencies": {
     "swagger-ui-dist": "^5.10.5",
     "zod-parser": "^0.0.3",
-    "@moostjs/zod": "0.3.12",
-    "@wooksjs/http-static": "^0.4.13"
+    "@moostjs/zod": "0.3.13",
+    "@wooksjs/http-static": "^0.4.15"
   },
   "devDependencies": {
     "@types/swagger-ui-dist": ""

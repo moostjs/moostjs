@@ -1,3 +1,12 @@
+## [0.3.13](https://github.com/moostjs/moostjs/compare/v0.3.12...v0.3.13) (2024-01-15)
+
+
+### Features
+
+* **wf:** add prefixed flows ([1b8f9d0](https://github.com/moostjs/moostjs/commit/1b8f9d0efbbcf13430d230ff3af45081454e41e4))
+
+
+
 ## [0.3.12](https://github.com/moostjs/moostjs/compare/v0.3.10...v0.3.12) (2023-12-16)
 
 
