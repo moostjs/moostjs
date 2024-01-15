@@ -1,3 +1,12 @@
+## [0.3.14](https://github.com/moostjs/moostjs/compare/v0.3.13...v0.3.14) (2024-01-15)
+
+
+### Bug Fixes
+
+* **wf:** passing empty prefix when '/' ([bcfcd17](https://github.com/moostjs/moostjs/commit/bcfcd178acb835d68af498053a6800b596e95881))
+
+
+
 ## [0.3.13](https://github.com/moostjs/moostjs/compare/v0.3.12...v0.3.13) (2024-01-15)
 
 
