@@ -1,3 +1,12 @@
+## [0.3.15](https://github.com/moostjs/moostjs/compare/v0.3.14...v0.3.15) (2024-01-16)
+
+
+### Features
+
+* **wf:** update dep, move schemaId to state ([20ef66e](https://github.com/moostjs/moostjs/commit/20ef66ea55c5a5372b9aad7734fc1895b0922269))
+
+
+
 ## [0.3.14](https://github.com/moostjs/moostjs/compare/v0.3.13...v0.3.14) (2024-01-15)
 
 
