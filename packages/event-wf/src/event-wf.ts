@@ -26,7 +26,10 @@ const CONTEXT_TYPE = 'WF'
 export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
     protected wfApp: WooksWf<T>
 
-    constructor(protected opts?: WooksWf<T> | TWooksWfOptions, private readonly debug?: boolean) {
+    constructor(
+        protected opts?: WooksWf<T> | TWooksWfOptions,
+        private readonly debug?: boolean
+    ) {
         if (opts && opts instanceof WooksWf) {
             this.wfApp = opts
         } else if (opts) {
@@ -90,12 +93,10 @@ export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
     }
 
     public resume<I>(
-        schemaId: string,
-        state: { context: T; indexes: number[] },
+        state: { schemaId: string; context: T; indexes: number[] },
         input?: I
     ): Promise<TFlowOutput<T, I>> {
         return this.wfApp.resume(
-            schemaId,
             state,
             input,
             () => {},
@@ -151,7 +152,12 @@ export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
                 }
                 const _fn = fn as () => void
                 this.toInit.push(() => {
-                    this.wfApp.flow(targetPath, wfSchema || [], opts.prefix === '/' ? '' : opts.prefix, _fn)
+                    this.wfApp.flow(
+                        targetPath,
+                        wfSchema || [],
+                        opts.prefix === '/' ? '' : opts.prefix,
+                        _fn
+                    )
                     opts.logHandler(
                         `${__DYE_CYAN__}(${handler.type})${__DYE_GREEN__}${targetPath}`
                     )
