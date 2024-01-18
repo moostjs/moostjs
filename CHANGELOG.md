@@ -1,3 +1,12 @@
+## [0.3.18](https://github.com/moostjs/moostjs/compare/v0.3.17...v0.3.18) (2024-01-18)
+
+
+### Features
+
+* **wf:** export useWfState for imports ([c818dd6](https://github.com/moostjs/moostjs/commit/c818dd6d2b0b486ce43417ab6b8f62f052680706))
+
+
+
 ## [0.3.17](https://github.com/moostjs/moostjs/compare/v0.3.16...v0.3.17) (2024-01-18)
 
 
