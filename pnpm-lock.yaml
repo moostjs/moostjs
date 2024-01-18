@@ -60,23 +60,23 @@ devDependencies:
     specifier: ^5.0.0
     version: 5.62.0(eslint@7.32.0)(typescript@5.3.3)
   '@wooksjs/event-cli':
-    specifier: ^0.4.17
-    version: 0.4.17(@wooksjs/event-core@0.4.17)(wooks@0.4.17)
+    specifier: ^0.4.20
+    version: 0.4.20(@wooksjs/event-core@0.4.20)(wooks@0.4.20)
   '@wooksjs/event-core':
-    specifier: ^0.4.17
-    version: 0.4.17
+    specifier: ^0.4.20
+    version: 0.4.20
   '@wooksjs/event-http':
-    specifier: ^0.4.17
-    version: 0.4.17(@prostojs/router@0.2.1)(@wooksjs/event-core@0.4.17)(wooks@0.4.17)
+    specifier: ^0.4.20
+    version: 0.4.20(@prostojs/router@0.2.1)(@wooksjs/event-core@0.4.20)(wooks@0.4.20)
   '@wooksjs/event-wf':
-    specifier: ^0.4.17
-    version: 0.4.17(@wooksjs/event-core@0.4.17)(wooks@0.4.17)
+    specifier: ^0.4.20
+    version: 0.4.20(@wooksjs/event-core@0.4.20)(wooks@0.4.20)
   '@wooksjs/http-body':
-    specifier: ^0.4.17
-    version: 0.4.17(@wooksjs/event-http@0.4.17)
+    specifier: ^0.4.20
+    version: 0.4.20(@wooksjs/event-http@0.4.20)
   '@wooksjs/http-static':
-    specifier: ^0.4.17
-    version: 0.4.17(@wooksjs/event-http@0.4.17)
+    specifier: ^0.4.20
+    version: 0.4.20(@wooksjs/event-http@0.4.20)
   babel-plugin-dynamic-import-node:
     specifier: ^2.3.3
     version: 2.3.3
@@ -153,8 +153,8 @@ devDependencies:
     specifier: ^1.0.0-rc.31
     version: 1.0.0-rc.31(@algolia/client-search@4.21.1)(@types/node@18.19.3)(search-insights@2.13.0)(typescript@5.3.3)
   wooks:
-    specifier: ^0.4.17
-    version: 0.4.17
+    specifier: ^0.4.20
+    version: 0.4.20
   yorkie:
     specifier: ^2.0.0
     version: 2.0.0
@@ -1975,65 +1975,65 @@ packages:
       - vue
     dev: true
 
-  /@wooksjs/event-cli@0.4.17(@wooksjs/event-core@0.4.17)(wooks@0.4.17):
-    resolution: {integrity: sha512-Xr82ve9Nb+Ug+2/i1swuJILqDFeL5Y4vfOJsiMMmSbDZDc5PvFI1uuFemzww6JUqO5BavkS8C7rrAQ5rbWuSXQ==}
+  /@wooksjs/event-cli@0.4.20(@wooksjs/event-core@0.4.20)(wooks@0.4.20):
+    resolution: {integrity: sha512-ZNJgPuH/n0YYA5Cd9VdtJeVc+Sy+brqQmpvn9HzmWkPbie0WBQPwrkZh0YouGOkUN70bbyERoaIJbY4qpsG0Aw==}
     peerDependencies:
-      '@wooksjs/event-core': 0.4.17
-      wooks: 0.4.17
+      '@wooksjs/event-core': 0.4.20
+      wooks: 0.4.20
     dependencies:
       '@prostojs/cli-help': 0.0.10
       '@prostojs/logger': 0.4.0
       '@prostojs/router': 0.2.1
-      '@wooksjs/event-core': 0.4.17
+      '@wooksjs/event-core': 0.4.20
       minimist: 1.2.8
-      wooks: 0.4.17
+      wooks: 0.4.20
     dev: true
 
-  /@wooksjs/event-core@0.4.17:
-    resolution: {integrity: sha512-y9mVG4b/Nj1W8iyOcDK0KKcbC7WC5/FPNgqJvu6fU+hwZE2FvjWiNmphN7zf7wdkNvpQNIklPNuocRPJsF3ApQ==}
+  /@wooksjs/event-core@0.4.20:
+    resolution: {integrity: sha512-1qjoUpvzPwZ2Drl5/EmqOtEUMWwknMZnJTAC5VQmwLxqPH0j1vtGapi9COvtmnCMGPiipwX+CABjbanalEePMg==}
     dependencies:
       '@prostojs/logger': 0.4.0
     dev: true
 
-  /@wooksjs/event-http@0.4.17(@prostojs/router@0.2.1)(@wooksjs/event-core@0.4.17)(wooks@0.4.17):
-    resolution: {integrity: sha512-33e819FEl1XTQXXZCfcYTDIeU2LoaqwNJxCdvjwPqtJc2mi7jqPBIkQSsng8EwAoWfzEjlA3zKwrr/ypF6IrzA==}
+  /@wooksjs/event-http@0.4.20(@prostojs/router@0.2.1)(@wooksjs/event-core@0.4.20)(wooks@0.4.20):
+    resolution: {integrity: sha512-9ms2PDOMmAhNoHdqCvjRGl54jlarhLaJQcVSYGMXKMm4r5bJzehWdyAB5ygoPLgeUolhb+5BqAzaeaqNhhdXiQ==}
     peerDependencies:
       '@prostojs/router': ^0.2.1
-      '@wooksjs/event-core': 0.4.17
-      wooks: 0.4.17
+      '@wooksjs/event-core': 0.4.20
+      wooks: 0.4.20
     dependencies:
       '@prostojs/logger': 0.4.0
       '@prostojs/router': 0.2.1
-      '@wooksjs/event-core': 0.4.17
-      wooks: 0.4.17
+      '@wooksjs/event-core': 0.4.20
+      wooks: 0.4.20
     dev: true
 
-  /@wooksjs/event-wf@0.4.17(@wooksjs/event-core@0.4.17)(wooks@0.4.17):
-    resolution: {integrity: sha512-Hr1BKrY9gf4PlP5FhgFA1wWomvdwwZ2hnjuuDh/742qhMhYjEbrJjQKJZpePJl3ka980RhzUUemlPVs2RPPITQ==}
+  /@wooksjs/event-wf@0.4.20(@wooksjs/event-core@0.4.20)(wooks@0.4.20):
+    resolution: {integrity: sha512-M7vybALQ16SLIQS8NEbvhlZ5oCW0Yc5sHFs0mpeizhXY3OsgUX56oIxOFmbFwp+70a5RbOwtMYaqWTA7AiOpVg==}
     peerDependencies:
-      '@wooksjs/event-core': 0.4.17
-      wooks: 0.4.17
+      '@wooksjs/event-core': 0.4.20
+      wooks: 0.4.20
     dependencies:
       '@prostojs/logger': 0.4.0
       '@prostojs/wf': 0.0.14
-      '@wooksjs/event-core': 0.4.17
-      wooks: 0.4.17
+      '@wooksjs/event-core': 0.4.20
+      wooks: 0.4.20
     dev: true
 
-  /@wooksjs/http-body@0.4.17(@wooksjs/event-http@0.4.17):
-    resolution: {integrity: sha512-goEQFM2bZeOZ0aVSVhgQ2a08UDaj0WEKYmYkwTshsL8eLjlX5ihTFQyJCaOftTPZVKU/aD8gVAXv0XcllTBVmQ==}
+  /@wooksjs/http-body@0.4.20(@wooksjs/event-http@0.4.20):
+    resolution: {integrity: sha512-kVXyBhbPib3ptcwKiHcg2QaAVDmv+FzHLjQRPfL/Jz4jsnIynvWPkWbV5ModLX7VwpeAnCSz7BHGIkHYZNyd+g==}
     peerDependencies:
-      '@wooksjs/event-http': 0.4.17
+      '@wooksjs/event-http': 0.4.20
     dependencies:
-      '@wooksjs/event-http': 0.4.17(@prostojs/router@0.2.1)(@wooksjs/event-core@0.4.17)(wooks@0.4.17)
+      '@wooksjs/event-http': 0.4.20(@prostojs/router@0.2.1)(@wooksjs/event-core@0.4.20)(wooks@0.4.20)
     dev: true
 
-  /@wooksjs/http-static@0.4.17(@wooksjs/event-http@0.4.17):
-    resolution: {integrity: sha512-1UWS+sEmoseS6v74bAP1XuAyPIKQwfqGXCynF4Vyoo+Dl7Xehau4BE0+dpehE8bIiNDJmi/JKMKHrCExv14NCw==}
+  /@wooksjs/http-static@0.4.20(@wooksjs/event-http@0.4.20):
+    resolution: {integrity: sha512-TgRVsTB5XOeUROamZvnB4+UVb12Gi8dKFwif/onQl6b0cxUQKvpooxQqdCLI5vyl09SW9xI/ApH47GTpnEMc8Q==}
     peerDependencies:
-      '@wooksjs/event-http': 0.4.17
+      '@wooksjs/event-http': 0.4.20
     dependencies:
-      '@wooksjs/event-http': 0.4.17(@prostojs/router@0.2.1)(@wooksjs/event-core@0.4.17)(wooks@0.4.17)
+      '@wooksjs/event-http': 0.4.20(@prostojs/router@0.2.1)(@wooksjs/event-core@0.4.20)(wooks@0.4.20)
     dev: true
 
   /JSONStream@1.3.5:
@@ -6339,12 +6339,12 @@ packages:
       isexe: 2.0.0
     dev: true
 
-  /wooks@0.4.17:
-    resolution: {integrity: sha512-tewBCLZcfu22iMp7Ey3oSOoXnwQ2xWops6uStUuDTqrG0VpStdtExlnNulsUIz+ycztyByAd3x4kuPzpDiY4Cw==}
+  /wooks@0.4.20:
+    resolution: {integrity: sha512-KFwEgjPBL4MgElOF6jqQocNr0Sdmlwu3KYaolgxYTAsDi3+utEdUSdjfmDRBc3UFZ8wJZGkAPz3xXpH4vOXqhA==}
     dependencies:
       '@prostojs/logger': 0.4.0
       '@prostojs/router': 0.2.1
-      '@wooksjs/event-core': 0.4.17
+      '@wooksjs/event-core': 0.4.20
     dev: true
 
   /wordwrap@1.0.0:
