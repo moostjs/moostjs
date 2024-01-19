@@ -23,19 +23,20 @@ export interface TWfHandlerMeta {
 const LOGGER_TITLE = 'moost-wf'
 const CONTEXT_TYPE = 'WF'
 
-export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
-    protected wfApp: WooksWf<T>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta> {
+    protected wfApp: WooksWf<T, IR>
 
     constructor(
-        protected opts?: WooksWf<T> | TWooksWfOptions,
+        protected opts?: WooksWf<T, IR> | TWooksWfOptions,
         private readonly debug?: boolean
     ) {
         if (opts && opts instanceof WooksWf) {
             this.wfApp = opts
         } else if (opts) {
-            this.wfApp = createWfApp(opts)
+            this.wfApp = createWfApp<T>(opts) as WooksWf<T, IR>
         } else {
-            this.wfApp = createWfApp()
+            this.wfApp = createWfApp() as WooksWf<T, IR>
         }
         if (!debug) {
             getMoostInfact().silent(true)
@@ -67,11 +68,11 @@ export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
         return this.wfApp
     }
 
-    public attachSpy<I>(fn: TWorkflowSpy<T, I>) {
+    public attachSpy<I>(fn: TWorkflowSpy<T, I, IR>) {
         return this.wfApp.attachSpy<I>(fn)
     }
 
-    public detachSpy<I>(fn: TWorkflowSpy<T, I>) {
+    public detachSpy<I>(fn: TWorkflowSpy<T, I, IR>) {
         return this.wfApp.detachSpy<I>(fn)
     }
 
@@ -79,7 +80,7 @@ export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
         schemaId: string,
         initialContext: T,
         input?: I
-    ): Promise<TFlowOutput<T, I>> {
+    ): Promise<TFlowOutput<T, I, IR>> {
         return this.wfApp.start(
             schemaId,
             initialContext,
@@ -95,7 +96,7 @@ export class MoostWf<T> implements TMoostAdapter<TWfHandlerMeta> {
     public resume<I>(
         state: { schemaId: string; context: T; indexes: number[] },
         input?: I
-    ): Promise<TFlowOutput<T, I>> {
+    ): Promise<TFlowOutput<T, I, IR>> {
         return this.wfApp.resume(
             state,
             input,
