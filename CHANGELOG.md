@@ -1,3 +1,12 @@
+## [0.3.19](https://github.com/moostjs/moostjs/compare/v0.3.18...v0.3.19) (2024-01-19)
+
+
+### Features
+
+* **wf:** add generic for inputRequired ([4aeba79](https://github.com/moostjs/moostjs/commit/4aeba79622374df8974722d3fcec4d4d69d1b0ae))
+
+
+
 ## [0.3.18](https://github.com/moostjs/moostjs/compare/v0.3.17...v0.3.18) (2024-01-18)
 
 
