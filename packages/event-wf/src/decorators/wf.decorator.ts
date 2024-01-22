@@ -3,30 +3,24 @@ import { getWfMate } from '../meta-types'
 import { Resolve } from 'moost'
 import { useWfState } from '@wooksjs/event-wf'
 
-export function WStep(path?: string): MethodDecorator {
+export function Step(path?: string): MethodDecorator {
     return getWfMate().decorate('handlers', { path, type: 'WF_STEP' }, true)
 }
 
-export function WFlow(path?: string): MethodDecorator {
+export function Workflow(path?: string): MethodDecorator {
     return getWfMate().decorate('handlers', { path, type: 'WF_FLOW' }, true)
 }
 
-export function WSchema<T>(schema: TWorkflowSchema<T>): MethodDecorator {
+export function WorkflowSchema<T>(schema: TWorkflowSchema<T>): MethodDecorator {
     return getWfMate().decorate('wfSchema', schema)
 }
 
-export const WfCtx = (name?: string) => Resolve(() => {
-    const c = useWfState().ctx<Record<string, unknown>>()
-    return name ? c[name] : c
-}, name || 'WfCtx')
-
-export const WfResume = () => Resolve(() => useWfState().resume)
-
-export const WfIndexes = () => Resolve(() => useWfState().indexes)
-
-export const WfSchemaId = () => Resolve(() => useWfState().schemaId)
-
-export const WfInput = (name?: string) => Resolve(() => {
-    const i = useWfState().input() as Record<string, unknown>
-    return typeof i !== 'undefined' ? (name ? i[name] : i) : undefined
-}, name || 'WfInput')
+export const WorkflowParam = (name: 'resume' | 'indexes' | 'schemaId' | 'context' | 'input') => {
+    switch (name) {
+        case 'resume': return Resolve(() => useWfState().resume, 'Workflow-Resume')
+        case 'indexes': return Resolve(() => useWfState().indexes, 'Workflow-Indexes')
+        case 'schemaId': return Resolve(() => useWfState().schemaId, 'Workflow-SchemaId')
+        case 'context': return Resolve(() => useWfState().ctx<Record<string, unknown>>(), 'Workflow-Context' )
+        case 'input': return Resolve(() => useWfState().input() as Record<string, unknown>, 'Workflow-Input' )
+    }
+} 

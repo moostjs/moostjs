@@ -1,3 +1,5 @@
+export { getInstanceOwnMethods } from './binding/utils'
+
 export * from './moost'
 export * from './decorators'
 export * from './pipes'
