@@ -103,7 +103,7 @@ export class ValidoDecoratorsTestClass {
     role2!: 'user'
 
     @Trim()
-    @Transform((value) => value.toUpperCase())
+    @Transform((value) => (value as string).toUpperCase())
     upperName!: string
 
     @OnCatch(() => 'default')

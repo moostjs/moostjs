@@ -683,6 +683,13 @@ describe('zod with decorators', () => {
   },
   {
     "code": "custom",
+    "message": "must be \\"user\\"",
+    "path": [
+      "role2"
+    ]
+  },
+  {
+    "code": "custom",
     "fatal": true,
     "path": [
       "customType"
