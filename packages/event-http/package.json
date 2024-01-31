@@ -41,6 +41,7 @@
     "moost": "0.3.23",
     "@wooksjs/event-core": "^0.4.26",
     "@wooksjs/event-http": "^0.4.26",
+    "@wooksjs/http-body": "^0.4.26",
     "@prostojs/infact": "^0.1.13",
     "@prostojs/router": "^0.2.1"
   }

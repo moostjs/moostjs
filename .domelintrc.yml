@@ -1,0 +1,28 @@
+ignoredRules:
+  - '@typescript-eslint/strict-boolean-expressions'
+  - '@typescript-eslint/class-methods-use-this'
+  - max-params
+  - no-return-assign
+  - complexity
+  - unicorn/consistent-function-scoping
+  - sonarjs/cognitive-complexity
+  - prefer-named-capture-group
+  - no-multi-assign
+  - no-continue
+  - unicorn/prefer-logical-operator-over-ternary
+  - unicorn/prefer-ternary
+  - no-implicit-coercion
+  - unicorn/template-indent
+  - max-classes-per-file
+  - no-param-reassign
+  - no-void
+  - unicorn/expiring-todo-comments
+  - '@typescript-eslint/promise-function-async'
+
+relaxedRules:
+  - '@typescript-eslint/no-unnecessary-condition'
+  - '@typescript-eslint/no-shadow'
+  - '@typescript-eslint/no-non-null-assertion'
+  - '@typescript-eslint/require-await'
+  - require-atomic-updates
+  - '@typescript-eslint/no-explicit-any'
