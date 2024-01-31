@@ -7,7 +7,7 @@
 </a>
 </p>
 
-Welcome to Moostjs, a metadata-driven Event Processing Framework inspired by [NestJS](https://nestjs.com/) and powered by [Wooks](https://wooks.moost.org). While Moost is currently a work-in-progress library, we're excited about its potential and invite you to explore, experiment, and contribute to its development. 
+Welcome to Moostjs, a metadata-driven Event Processing Framework inspired by [NestJS](https://nestjs.com/) and powered by [Wooks](https://wooks.moost.org). While Moost is currently a work-in-progress library, we're excited about its potential and invite you to explore, experiment, and contribute to its development.
 
 **Note:** As Moostjs is under active development, breaking changes can be expected.
 

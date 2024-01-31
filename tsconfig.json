@@ -1,34 +1,29 @@
 {
-    "compilerOptions": {
-        "baseUrl": ".",
-        "outDir": "dist",
-        "moduleResolution": "node",
-        "esModuleInterop": true,
-        "target": "ES2020",
-        "lib": ["ESNext", "DOM", "WebWorker", "DOM.Iterable"],
-        "noUnusedLocals": true,
-        "types": ["jest", "node"],
-        "declaration": false,
-        "declarationMap": false,
-        "resolveJsonModule": true,
-        "downlevelIteration": true,
-        "forceConsistentCasingInFileNames": true,
-        "strict": true,
-        "noImplicitAny": true,
-        "skipLibCheck": true,
-        "emitDecoratorMetadata": true,
-        "experimentalDecorators": true,
-        "removeComments": true,
-        "paths": {
-            "@moostjs/*": ["packages/*/src"],
-            "moost": ["packages/moost/src"],
-            "common": ["common/index"]
-        }
+  "compilerOptions": {
+    "baseUrl": ".",
+    "outDir": "dist",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "target": "ES2020",
+    "lib": ["ESNext", "DOM", "WebWorker", "DOM.Iterable"],
+    "noUnusedLocals": true,
+    "types": ["jest", "node"],
+    "declaration": false,
+    "declarationMap": false,
+    "resolveJsonModule": true,
+    "downlevelIteration": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "skipLibCheck": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "removeComments": true,
+    "paths": {
+      "@moostjs/*": ["packages/*/src"],
+      "moost": ["packages/moost/src"],
+      "common": ["common/index"],
     },
-    "include": [
-        "packages/*/src",
-        "packages/*/__tests__",
-        "common/*.ts",
-        "explorations"
-    ]
+  },
+  "include": ["packages/*/src", "packages/*/__tests__", "common/*.ts", "explorations"],
 }

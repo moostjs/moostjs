@@ -1,40 +1,39 @@
-import { Intercept, TInterceptorFn, TInterceptorPriority, defineInterceptorFn } from 'moost'
 import { useSetCookies, useSetHeader, useStatus } from '@wooksjs/event-http'
+import type { TInterceptorFn } from 'moost'
+import { defineInterceptorFn, Intercept, TInterceptorPriority } from 'moost'
 
 const setHeaderInterceptor: (
-    name: string,
-    value: string,
-    opts?: { force?: boolean; status?: number, when?: 'always' | 'error' | 'ok' }
+  name: string,
+  value: string,
+  opts?: { force?: boolean; status?: number; when?: 'always' | 'error' | 'ok' }
 ) => TInterceptorFn = (name, value, opts) => {
-    const fn: TInterceptorFn = (_before, after, onError) => {
-        const h = useSetHeader(name)
-        const status = useStatus()
-        const cb = () => {
-            if (
-                (!h.value || opts?.force) &&
-                (!opts?.status || opts.status === status.value)
-            ) {
-                h.value = value
-            }
-        }
-        if (opts?.when !== 'error') {
-            after(cb)
-        }
-        if (opts?.when === 'always' || opts?.when === 'error') {
-            onError(cb)
-        }
+  const fn: TInterceptorFn = (_before, after, onError) => {
+    const h = useSetHeader(name)
+    const status = useStatus()
+    const cb = () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+      if ((!h.value || opts?.force) && (!opts?.status || opts.status === status.value)) {
+        h.value = value
+      }
     }
-    fn.priority = TInterceptorPriority.AFTER_ALL
-    return fn
+    if (opts?.when !== 'error') {
+      after(cb)
+    }
+    if (opts?.when === 'always' || opts?.when === 'error') {
+      onError(cb)
+    }
+  }
+  fn.priority = TInterceptorPriority.AFTER_ALL
+  return fn
 }
 
 /**
  * Set Header for Request Handler
- * 
+ *
  * ```ts
  * import { Get, SetHeader } from '@moostjs/event-http';
  * import { Controller } from 'moost';
- * 
+ *
  * @Controller()
  * export class ExampleController {
  *   @Get('test')
@@ -45,7 +44,7 @@ const setHeaderInterceptor: (
  *   }
  * }
  * ```
- * 
+ *
  * ```ts
  * import { Get, SetHeader } from '@moostjs/event-http';
  * import { Controller } from 'moost';
@@ -60,28 +59,28 @@ const setHeaderInterceptor: (
  *   }
  * }
  * ```
- * 
+ *
  * @param name  name of header
  * @param value value for header
  * @param options options { status?: number, force?: boolean }
  */
 export function SetHeader(...args: Parameters<typeof setHeaderInterceptor>) {
-    return Intercept(setHeaderInterceptor(...args))
+  return Intercept(setHeaderInterceptor(...args))
 }
 
 const setCookieInterceptor: (
-    ...args: Parameters<ReturnType<typeof useSetCookies>['setCookie']>
+  ...args: Parameters<ReturnType<typeof useSetCookies>['setCookie']>
 ) => TInterceptorFn = (name, value, attrs) => {
-    const fn: TInterceptorFn = (before, after) => {
-        const { setCookie, getCookie } = useSetCookies()
-        after(() => {
-            if (!getCookie(name)) {
-                setCookie(name, value, attrs)
-            }
-        })
-    }
-    fn.priority = TInterceptorPriority.AFTER_ALL
-    return fn
+  const fn: TInterceptorFn = (before, after) => {
+    const { setCookie, getCookie } = useSetCookies()
+    after(() => {
+      if (!getCookie(name)) {
+        setCookie(name, value, attrs)
+      }
+    })
+  }
+  fn.priority = TInterceptorPriority.AFTER_ALL
+  return fn
 }
 
 /**
@@ -100,29 +99,28 @@ const setCookieInterceptor: (
  *   }
  * }
  * ```
- * 
+ *
  * @param name  name of cookie
  * @param value value for cookie
  * @param attrs cookie attributes
  */
 export function SetCookie(...args: Parameters<typeof setCookieInterceptor>) {
-    return Intercept(setCookieInterceptor(...args))
+  return Intercept(setCookieInterceptor(...args))
 }
 
-const setStatusInterceptor = (code: number, opts?: { force?: boolean }) => {
-    return defineInterceptorFn((before, after) => {
-        const status = useStatus()
-        after(() => {
-            if (!status.isDefined || opts?.force) {
-                status.value = code
-            }
-        })
+const setStatusInterceptor = (code: number, opts?: { force?: boolean }) =>
+  defineInterceptorFn((before, after) => {
+    const status = useStatus()
+    after(() => {
+      if (!status.isDefined || opts?.force) {
+        status.value = code
+      }
     })
-}
+  })
 
 /**
  * Set Response Status for Request Handler
- * 
+ *
  * ```ts
  * import { Get, SetStatus } from '@moostjs/event-http';
  * import { Controller } from 'moost';
@@ -136,9 +134,9 @@ const setStatusInterceptor = (code: number, opts?: { force?: boolean }) => {
  *   }
  * }
  * ```
- * @param code number 
+ * @param code number
  * @param opts optional { force?: boolean }
  */
 export function SetStatus(...args: Parameters<typeof setStatusInterceptor>) {
-    return Intercept(setStatusInterceptor(...args))
+  return Intercept(setStatusInterceptor(...args))
 }

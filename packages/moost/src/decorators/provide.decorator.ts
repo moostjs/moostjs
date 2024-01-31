@@ -1,6 +1,8 @@
-import { createProvideRegistry, TProvideFn } from '@prostojs/infact'
+import type { TProvideFn } from '@prostojs/infact'
+import { createProvideRegistry } from '@prostojs/infact'
+import type { TClassConstructor } from 'common'
+
 import { getMoostMate } from '../metadata/moost-metadata'
-import { TClassConstructor } from 'common'
 
 /**
  * ## Provide
@@ -9,15 +11,12 @@ import { TClassConstructor } from 'common'
  * @param type - string or class constructor
  * @param fn - factory function for provided value
  */
-export function Provide(
-    type: string | TClassConstructor,
-    fn: TProvideFn
-): ClassDecorator {
-    return getMoostMate().decorate((meta) => {
-        meta.provide = meta.provide || {}
-        Object.assign(meta.provide, createProvideRegistry([type, fn]))
-        return meta
-    })
+export function Provide(type: string | TClassConstructor, fn: TProvideFn): ClassDecorator {
+  return getMoostMate().decorate(meta => {
+    meta.provide = meta.provide || {}
+    Object.assign(meta.provide, createProvideRegistry([type, fn]))
+    return meta
+  })
 }
 
 /**
@@ -28,5 +27,5 @@ export function Provide(
  * @param type - string or class constructor
  */
 export function Inject(type: string | TClassConstructor): ParameterDecorator {
-    return getMoostMate().decorate('inject', type)
+  return getMoostMate().decorate('inject', type)
 }

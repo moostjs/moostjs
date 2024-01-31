@@ -1,2 +1,2 @@
-export * from './moost-metadata'
 export * from './infact'
+export * from './moost-metadata'

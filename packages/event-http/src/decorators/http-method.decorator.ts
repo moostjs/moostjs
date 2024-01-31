@@ -1,23 +1,16 @@
-import { TEmpty } from 'common'
-import { TMoostMetadata, getMoostMate } from 'moost'
+import type { TEmpty } from 'common'
+import type { TMoostMetadata } from 'moost'
+import { getMoostMate } from 'moost'
 
 export function HttpMethod(
-    method:
-        | '*'
-        | 'GET'
-        | 'PUT'
-        | 'POST'
-        | 'PATCH'
-        | 'DELETE'
-        | 'HEAD'
-        | 'OPTIONS',
-    path?: string
+  method: '*' | 'GET' | 'PUT' | 'POST' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS',
+  path?: string
 ): MethodDecorator {
-    return getMoostMate<TEmpty, TMoostMetadata<{ method: typeof method }>>().decorate(
-        'handlers',
-        { method, path, type: 'HTTP' },
-        true
-    )
+  return getMoostMate<TEmpty, TMoostMetadata<{ method: typeof method }>>().decorate(
+    'handlers',
+    { method, path, type: 'HTTP' },
+    true
+  )
 }
 
 export const All = (path?: string) => HttpMethod('*', path)

@@ -1,4 +1,5 @@
-export * from './event-wf'
 export * from './decorators'
+export * from './event-wf'
+export type { TFlowOutput, TWorkflowSchema } from '@prostojs/wf'
+export { StepRetriableError } from '@prostojs/wf'
 export { useWFContext, useWfState } from '@wooksjs/event-wf'
-export { TFlowOutput, TWorkflowSchema, StepRetriableError } from '@prostojs/wf'

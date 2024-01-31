@@ -1,56 +1,65 @@
 // deno-lint-ignore-file
-import { Coerce, IsUnknown, MatchesRegex, Max, Min, ToBoolean, ToNumber, Transform } from '../zod.decorators'
+import {
+  Coerce,
+  IsUnknown,
+  MatchesRegex,
+  Max,
+  Min,
+  ToBoolean,
+  ToNumber,
+  Transform,
+} from '../zod.decorators'
 
 export class PrimitivesTestClass {
-    propString: string = ''
+  propString = ''
 
-    propNumber: number = 1
+  propNumber = 1
 
-    propBigint: bigint = BigInt(2)
+  propBigint = BigInt(2)
 
-    propBoolean: boolean = true
+  propBoolean = true
 
-    propDate: Date = new Date()
+  propDate: Date = new Date()
 
-    propSymbol: symbol = Symbol('1')
+  propSymbol = Symbol('1')
 
-    propUndefined: undefined = undefined
+  propUndefined = undefined
 
-    propNull: null = null
+  propNull = null
 
-    @IsUnknown()
-    propUnknown!: unknown
+  @IsUnknown()
+  propUnknown!: unknown
 }
 
 export class PrimitivesTestClass2 {
-    str = ''
+  str = ''
 
-    n = 5
+  n = 5
 
-    b = false
+  b = false
 
-    d = new Date()
+  d = new Date()
 
-    nl = null
+  nl = null
 }
 
 export class PrimitivesTestClass3 {
-    @Min(2)
-    @MatchesRegex(/^[A-Za-z]+$/, { message: 'Must contain of only alphabetical letters' })
-    @Transform((s: string) => s[0].toUpperCase() + s.slice(1))
-    str = ''
+  @Min(2)
+  @MatchesRegex(/^[A-Za-z]+$/, { message: 'Must contain of only alphabetical letters' })
+  @Transform((s: string) => s[0].toUpperCase() + s.slice(1))
+  str = ''
 
-    @ToNumber()
-    @Min(12)
-    @Max(70)
-    n = 5
+  @ToNumber()
+  @Min(12)
+  @Max(70)
+  n = 5
 
-    @ToBoolean()
-    b = false
+  @ToBoolean()
+  b = false
 
-    @Coerce()
-    @Transform((d: Date) => d.toISOString())
-    d = new Date()
+  @Coerce()
+  @Transform((d: Date) => d.toISOString())
+  d = new Date()
 
-    nl = null
+  nl = null
 }

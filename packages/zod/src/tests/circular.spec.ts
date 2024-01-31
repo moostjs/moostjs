@@ -2,9 +2,15 @@ import { validate } from '../validate'
 import { CircularTest } from './circular.artifacts'
 
 describe('zod circular', () => {
-    it('must validate circular deps', async () => {
-        expect(await validate({ name: 'Jason', child: { name: 'JasonSon', child: { age: '15' } } }, CircularTest, undefined, true))
-            .toMatchInlineSnapshot(`
+  it('must validate circular deps', async () => {
+    expect(
+      await validate(
+        { name: 'Jason', child: { name: 'JasonSon', child: { age: '15' } } },
+        CircularTest,
+        undefined,
+        true
+      )
+    ).toMatchInlineSnapshot(`
 {
   "error": [ZodError: [
   {
@@ -33,6 +39,5 @@ describe('zod circular', () => {
   "success": false,
 }
 `)
-    })
+  })
 })
-

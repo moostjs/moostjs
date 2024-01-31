@@ -1,1 +1,1 @@
-export { TClassFunction, TCallableClassFunction } from './types'
+export type { TCallableClassFunction, TClassFunction } from './types'

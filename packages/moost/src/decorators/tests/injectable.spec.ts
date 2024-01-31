@@ -5,8 +5,8 @@ import { Injectable } from '../injectable.decorator'
 class A {}
 
 describe('controller.decorator', () => {
-    const metaA = getMoostMate().read(A)
-    it('@Injectable must set injectable', () => {
-        expect(metaA).toHaveProperty('injectable', true)
-    })
+  const metaA = getMoostMate().read(A)
+  it('@Injectable must set injectable', () => {
+    expect(metaA).toHaveProperty('injectable', true)
+  })
 })

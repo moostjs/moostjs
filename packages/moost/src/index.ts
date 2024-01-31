@@ -1,3 +1,5 @@
+/* eslint-disable simple-import-sort/exports */
+export * from './adapter-utils'
 export { getInstanceOwnMethods } from './binding/utils'
 
 export * from './moost'
@@ -9,6 +11,8 @@ export * from './interceptor-handler'
 export * from './composables'
 export * from './adapter-utils'
 export * from './define'
-export { THook, EventLogger, useEventContext, useEventLogger } from '@wooksjs/event-core'
-export { createProvideRegistry, TProvideRegistry } from '@prostojs/infact'
-export { TControllerOverview } from './types'
+export type { THook } from '@wooksjs/event-core'
+export { EventLogger, useEventContext, useEventLogger } from '@wooksjs/event-core'
+export type { TProvideRegistry } from '@prostojs/infact'
+export { createProvideRegistry } from '@prostojs/infact'
+export type { TControllerOverview } from './types'

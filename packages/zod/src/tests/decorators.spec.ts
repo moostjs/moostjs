@@ -2,161 +2,164 @@ import { validate } from '../validate'
 import { ValidoDecoratorsTestClass } from './decoratros.artifacts'
 
 describe('zod with decorators', () => {
-    it('should pass validation for valid data', async () => {
-        const data = {
-            name: 'John',
-            age: 25,
-            tags: ['tag1', 'tag2', 123, 456],
-            role: 'admin',
-            role2: 'user',
-            upperName: ' upper and trimmed ',
-            catchExample: 'catch',
-            fixedLengthString: 'fixed',
-            limitedNumber: 50,
-            fromDate: new Date(2010, 0, 1),
-            toDate: new Date(2022, 0, 1),
-            nullableValue: null,
-            nullishValue: undefined,
-            email: 'test@example.com',
-            url: 'https://example.com',
-            emoji: '😀',
-            uuid: '123e4567-e89b-12d3-a456-426655440000',
-            cuid: 'cjb6mdsb90000qw42x6f7xd4r',
-            cuid2: 'ckfgagrk70000z6b9gkz5kblv',
-            ulid: '01FAEMFCNH0WJD3V4W5Z2N1JKK',
-            datetime: '2022-01-01T00:00:00.000Z',
-            ip: '127.0.0.1',
-            uppercase: 'ABC',
-            startsWithHello: 'HelloWorld',
-            endsWithWorld: 'HelloWorld',
-            greaterThanTen: 20,
-            greaterThanOrEqualToTwenty: 30,
-            lessThanThirty: 20,
-            lessThanOrEqualToForty: 40,
-            integer: 10,
-            positiveNumber: 5,
-            nonNegativeNumber: 0,
-            negativeNumber: -5,
-            nonPositiveNumber: -10,
-            multipleOfFive: 15,
-            finiteNumber: 123.45,
-            safeNumber: 987.65,
-            includesWorld: 'Hello world',
-            stringType: 'string',
-            numberType: 123,
-            bigintType: BigInt(123),
-            booleanType: true,
-            dateType: new Date(),
-            symbolType: Symbol('symbol'),
-            undefinedType: undefined,
-            nullType: null,
-            voidType: undefined,
-            anyType: 'any',
-            unknownType: 'unknown',
-            // neverType: 'never',
-            enumType: 'A',
-            nativeEnumType: 'RED',
-            setType: new Set(['value1', 'value2']),
-            mapType: new Map([['key1', 1], ['key2', 2]]),
-            literalType: 'literal',
-            nanType: NaN,
-            recordType: { key1: 1, key2: 2 },
-            unionType: 'string',
-            discriminatedUnionType: { type: 'A', value: 'string' },
-            intersectionType: { prop1: 'string', prop2: 123 },
-            promiseType: Promise.resolve('promise'),
-            preprocessedType: true,
-            customType: 'custom',
-            andType: { prop1: 'str', prop2: 123 },
-            orType: { prop2: 123 },
-        }
+  it('should pass validation for valid data', async () => {
+    const data = {
+      name: 'John',
+      age: 25,
+      tags: ['tag1', 'tag2', 123, 456],
+      role: 'admin',
+      role2: 'user',
+      upperName: ' upper and trimmed ',
+      catchExample: 'catch',
+      fixedLengthString: 'fixed',
+      limitedNumber: 50,
+      fromDate: new Date(2010, 0, 1),
+      toDate: new Date(2022, 0, 1),
+      nullableValue: null,
+      nullishValue: undefined,
+      email: 'test@example.com',
+      url: 'https://example.com',
+      emoji: '😀',
+      uuid: '123e4567-e89b-12d3-a456-426655440000',
+      cuid: 'cjb6mdsb90000qw42x6f7xd4r',
+      cuid2: 'ckfgagrk70000z6b9gkz5kblv',
+      ulid: '01FAEMFCNH0WJD3V4W5Z2N1JKK',
+      datetime: '2022-01-01T00:00:00.000Z',
+      ip: '127.0.0.1',
+      uppercase: 'ABC',
+      startsWithHello: 'HelloWorld',
+      endsWithWorld: 'HelloWorld',
+      greaterThanTen: 20,
+      greaterThanOrEqualToTwenty: 30,
+      lessThanThirty: 20,
+      lessThanOrEqualToForty: 40,
+      integer: 10,
+      positiveNumber: 5,
+      nonNegativeNumber: 0,
+      negativeNumber: -5,
+      nonPositiveNumber: -10,
+      multipleOfFive: 15,
+      finiteNumber: 123.45,
+      safeNumber: 987.65,
+      includesWorld: 'Hello world',
+      stringType: 'string',
+      numberType: 123,
+      bigintType: BigInt(123),
+      booleanType: true,
+      dateType: new Date(),
+      symbolType: Symbol('symbol'),
+      undefinedType: undefined,
+      nullType: null,
+      voidType: undefined,
+      anyType: 'any',
+      unknownType: 'unknown',
+      // neverType: 'never',
+      enumType: 'A',
+      nativeEnumType: 'RED',
+      setType: new Set(['value1', 'value2']),
+      mapType: new Map([
+        ['key1', 1],
+        ['key2', 2],
+      ]),
+      literalType: 'literal',
+      nanType: Number.NaN,
+      recordType: { key1: 1, key2: 2 },
+      unionType: 'string',
+      discriminatedUnionType: { type: 'A', value: 'string' },
+      intersectionType: { prop1: 'string', prop2: 123 },
+      promiseType: Promise.resolve('promise'),
+      preprocessedType: true,
+      customType: 'custom',
+      andType: { prop1: 'str', prop2: 123 },
+      orType: { prop2: 123 },
+    }
 
-        const result = await validate(data, ValidoDecoratorsTestClass, undefined, true)
-        if (!result.success) {
-            console.log(result.error)
-        }
-        expect(result.success).toBe(true)
-        if (result.success) {
-            data.upperName = 'UPPER AND TRIMMED'
-            data.tags = ['tag1', 'tag2', '123', '456']
-            data.preprocessedType = 'true' as unknown as boolean
-            expect(result.data).toEqual(data)
-        }
-    })
+    const result = await validate(data, ValidoDecoratorsTestClass, undefined, true)
+    if (!result.success) {
+      console.log(result.error)
+    }
+    expect(result.success).toBe(true)
+    if (result.success) {
+      data.upperName = 'UPPER AND TRIMMED'
+      data.tags = ['tag1', 'tag2', '123', '456']
+      data.preprocessedType = 'true' as unknown as boolean
+      expect(result.data).toEqual(data)
+    }
+  })
 
-    it('should fail validation for invalid data', async () => {
-        const data = {
-            name: 'John',
-            age: '25', // Invalid type
-            tags: 'tag1', // Invalid type
-            role: 'guest', // Invalid value
-            role2: 'admin', // Invalid value
-            upperName: 123, // Invalid type
-            catchExample: 123, // Invalid type
-            fixedLengthString: 'short', // Invalid length
-            limitedNumber: 150, // Exceeds maximum
-            fromDate: '2022-01-01', // Invalid type
-            toDate: '2022-12-31', // Invalid type
-            nullableValue: undefined, // Invalid type
-            nullishValue: false, // Invalid type
-            email: 'test@example', // Invalid format
-            url: 'example.com', // Invalid format
-            emoji: 'invalid', // Invalid format
-            uuid: '123', // Invalid format
-            cuid: 'invalid', // Invalid format
-            cuid2: 'invalid', // Invalid format
-            ulid: 'invalid', // Invalid format
-            datetime: '2022-01-01', // Invalid format
-            ip: 'localhost', // Invalid format
-            uppercase: 'abc', // Invalid format
-            startsWithHello: 'World', // Does not start with "Hello"
-            endsWithWorld: 'Hello', // Does not end with "World"
-            greaterThanTen: 5, // Less than minimum
-            greaterThanOrEqualToTwenty: 15, // Less than minimum
-            lessThanThirty: 40, // Greater than maximum
-            lessThanOrEqualToForty: 50, // Greater than maximum
-            integer: 10.5, // Not an integer
-            positiveNumber: -5, // Not a positive number
-            nonNegativeNumber: -1, // Not a non-negative number
-            negativeNumber: 0, // Not a negative number
-            nonPositiveNumber: 5, // Not a non-positive number
-            multipleOfFive: 12, // Not a multiple of 5
-            finiteNumber: Infinity, // Not a finite number
-            safeNumber: 'safe', // Invalid type
-            includesWorld: 'Hello', // Does not include "world"
-            stringType: 123, // Invalid type
-            numberType: '123', // Invalid type
-            bigintType: '123', // Invalid type
-            booleanType: 'true', // Invalid type
-            dateType: '2022-01-01', // Invalid type
-            symbolType: 'symbol', // Invalid type
-            undefinedType: null, // Invalid type
-            nullType: undefined, // Invalid type
-            voidType: null, // Invalid type
-            anyType: 123, // Invalid type
-            unknownType: 123, // Invalid type
-            neverType: 'never', // Invalid type
-            enumType: 'D', // Invalid value
-            nativeEnumType: 'Yellow', // Invalid value
-            setType: ['value1', 'value2'], // Invalid type
-            mapType: { key1: 'value1', key2: 'value2' }, // Invalid type
-            literalType: 'value', // Invalid value
-            nanType: 'NaN', // Invalid type
-            recordType: { key1: 'value1', key2: 'value2' }, // Invalid type
-            unionType: true, // Invalid type
-            discriminatedUnionType: { type: 'A', value: 123 }, // Invalid type
-            intersectionType: { prop1: 123, prop2: 'string' }, // Invalid types
-            promiseType: 'promise', // Invalid type
-            preprocessedType: 'value', // Invalid value after preprocessing
-            customType: 'invalid', // Invalid value
-            andType: true, // Invalid type
-            orType: false, // Invalid type
-        }
+  it('should fail validation for invalid data', async () => {
+    const data = {
+      name: 'John',
+      age: '25', // Invalid type
+      tags: 'tag1', // Invalid type
+      role: 'guest', // Invalid value
+      role2: 'admin', // Invalid value
+      upperName: 123, // Invalid type
+      catchExample: 123, // Invalid type
+      fixedLengthString: 'short', // Invalid length
+      limitedNumber: 150, // Exceeds maximum
+      fromDate: '2022-01-01', // Invalid type
+      toDate: '2022-12-31', // Invalid type
+      nullableValue: undefined, // Invalid type
+      nullishValue: false, // Invalid type
+      email: 'test@example', // Invalid format
+      url: 'example.com', // Invalid format
+      emoji: 'invalid', // Invalid format
+      uuid: '123', // Invalid format
+      cuid: 'invalid', // Invalid format
+      cuid2: 'invalid', // Invalid format
+      ulid: 'invalid', // Invalid format
+      datetime: '2022-01-01', // Invalid format
+      ip: 'localhost', // Invalid format
+      uppercase: 'abc', // Invalid format
+      startsWithHello: 'World', // Does not start with "Hello"
+      endsWithWorld: 'Hello', // Does not end with "World"
+      greaterThanTen: 5, // Less than minimum
+      greaterThanOrEqualToTwenty: 15, // Less than minimum
+      lessThanThirty: 40, // Greater than maximum
+      lessThanOrEqualToForty: 50, // Greater than maximum
+      integer: 10.5, // Not an integer
+      positiveNumber: -5, // Not a positive number
+      nonNegativeNumber: -1, // Not a non-negative number
+      negativeNumber: 0, // Not a negative number
+      nonPositiveNumber: 5, // Not a non-positive number
+      multipleOfFive: 12, // Not a multiple of 5
+      finiteNumber: Infinity, // Not a finite number
+      safeNumber: 'safe', // Invalid type
+      includesWorld: 'Hello', // Does not include "world"
+      stringType: 123, // Invalid type
+      numberType: '123', // Invalid type
+      bigintType: '123', // Invalid type
+      booleanType: 'true', // Invalid type
+      dateType: '2022-01-01', // Invalid type
+      symbolType: 'symbol', // Invalid type
+      undefinedType: null, // Invalid type
+      nullType: undefined, // Invalid type
+      voidType: null, // Invalid type
+      anyType: 123, // Invalid type
+      unknownType: 123, // Invalid type
+      neverType: 'never', // Invalid type
+      enumType: 'D', // Invalid value
+      nativeEnumType: 'Yellow', // Invalid value
+      setType: ['value1', 'value2'], // Invalid type
+      mapType: { key1: 'value1', key2: 'value2' }, // Invalid type
+      literalType: 'value', // Invalid value
+      nanType: 'NaN', // Invalid type
+      recordType: { key1: 'value1', key2: 'value2' }, // Invalid type
+      unionType: true, // Invalid type
+      discriminatedUnionType: { type: 'A', value: 123 }, // Invalid type
+      intersectionType: { prop1: 123, prop2: 'string' }, // Invalid types
+      promiseType: 'promise', // Invalid type
+      preprocessedType: 'value', // Invalid value after preprocessing
+      customType: 'invalid', // Invalid value
+      andType: true, // Invalid type
+      orType: false, // Invalid type
+    }
 
-        const result = await validate(data, ValidoDecoratorsTestClass, undefined, true)
-        expect(result.success).toBe(false)
-        if (!result.success) {
-            expect(result.error).toMatchInlineSnapshot(`
+    const result = await validate(data, ValidoDecoratorsTestClass, undefined, true)
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toMatchInlineSnapshot(`
 [ZodError: [
   {
     "code": "invalid_type",
@@ -772,6 +775,6 @@ describe('zod with decorators', () => {
   }
 ]]
 `)
-        }
-    })
+    }
+  })
 })

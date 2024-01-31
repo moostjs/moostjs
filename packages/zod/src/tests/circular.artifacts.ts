@@ -1,8 +1,8 @@
 import { LazyType } from '../zod.decorators'
 
 export class CircularTest {
-    name = ''
+  name = ''
 
-    @LazyType(() => CircularTest).optional()
-    child?: CircularTest = { name: 'test' }
+  @LazyType(() => CircularTest).optional()
+  child?: CircularTest = { name: 'test' }
 }

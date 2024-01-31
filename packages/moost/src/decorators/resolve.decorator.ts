@@ -1,9 +1,10 @@
 import { useEventLogger, useRouteParams } from '@wooksjs/event-core'
+import type { TEmpty, TObject } from 'common'
+
 import { getMoostMate } from '../metadata/moost-metadata'
-import { TPipeMetas } from '../pipes'
-import { TEmpty, TObject } from 'common'
+import type { TPipeMetas } from '../pipes'
 import { Label } from './common.decorator'
-import { TDecoratorLevel } from './types'
+import type { TDecoratorLevel } from './types'
 
 /**
  * Hook to the Response Status
@@ -13,20 +14,20 @@ import { TDecoratorLevel } from './types'
  * @paramType unknown
  */
 export function Resolve<T extends TObject = TEmpty>(
-    resolver: (metas: TPipeMetas<T>, level: TDecoratorLevel) => unknown,
-    label?: string
+  resolver: (metas: TPipeMetas<T>, level: TDecoratorLevel) => unknown,
+  label?: string
 ): ParameterDecorator & PropertyDecorator {
-    return (target, key, index?) => {
-        const i = typeof index === 'number' ? index : undefined
-        getMoostMate().decorate('resolver', (metas, level) => {
-            let newLabel = label
-            if (!newLabel && level === 'PROP' && typeof metas.key === 'string') {
-                newLabel = metas.key
-            }
-            fillLabel(target, key || '', i, newLabel)
-            return resolver(metas as TPipeMetas<T>, level)
-        })(target, key, i as number)
-    }
+  return (target, key, index?) => {
+    const i = typeof index === 'number' ? index : undefined
+    getMoostMate().decorate('resolver', (metas, level) => {
+      let newLabel = label
+      if (!newLabel && level === 'PROP' && typeof metas.key === 'string') {
+        newLabel = metas.key
+      }
+      fillLabel(target, key || '', i, newLabel)
+      return resolver(metas as TPipeMetas<T>, level)
+    })(target, key, i!)
+  }
 }
 
 /**
@@ -36,11 +37,11 @@ export function Resolve<T extends TObject = TEmpty>(
  * @paramType string
  */
 export function Param(name: string) {
-    return getMoostMate().apply(
-        getMoostMate().decorate('paramSource', 'ROUTE'),
-        getMoostMate().decorate('paramName', name),
-        Resolve(() => useRouteParams().get(name), name),
-    )
+  return getMoostMate().apply(
+    getMoostMate().decorate('paramSource', 'ROUTE'),
+    getMoostMate().decorate('paramName', name),
+    Resolve(() => useRouteParams().get(name), name)
+  )
 }
 
 /**
@@ -49,7 +50,7 @@ export function Param(name: string) {
  * @paramType object
  */
 export function Params() {
-    return Resolve(() => useRouteParams().params, 'params')
+  return Resolve(() => useRouteParams().params, 'params')
 }
 
 /**
@@ -60,7 +61,7 @@ export function Params() {
  * @paramType unknown
  */
 export function Const<T>(value: T, label?: string) {
-    return Resolve(() => value, label)
+  return Resolve(() => value, label)
 }
 
 /**
@@ -71,7 +72,7 @@ export function Const<T>(value: T, label?: string) {
  * @paramType unknown
  */
 export function ConstFactory<T>(factory: () => T | Promise<T>, label?: string) {
-    return Resolve(async () => await factory(), label)
+  return Resolve(async () => factory(), label)
 }
 
 /**
@@ -80,29 +81,18 @@ export function ConstFactory<T>(factory: () => T | Promise<T>, label?: string) {
  * @returns Resolver to '@wooksjs/event-core' (EventLogger)
  */
 export function InjectEventLogger(topic?: string) {
-    return Resolve(() => useEventLogger(topic))
+  return Resolve(() => useEventLogger(topic))
 }
 
-function fillLabel(
-    target: TObject,
-    key: string | symbol,
-    index?: number,
-    name?: string
-) {
-    if (name) {
-        const meta = getMoostMate().read(target, key)
-        if (typeof index === 'number') {
-            if (
-                !meta?.params ||
-                !meta?.params[index] ||
-                !meta?.params[index].label
-            ) {
-                Label(name)(target, key, index)
-            }
-        } else {
-            if (!meta?.label) {
-                Label(name)(target, key)
-            }
-        }
+function fillLabel(target: TObject, key: string | symbol, index?: number, name?: string) {
+  if (name) {
+    const meta = getMoostMate().read(target, key)
+    if (typeof index === 'number') {
+      if (!meta?.params || !meta.params[index] || !meta.params[index].label) {
+        Label(name)(target, key, index)
+      }
+    } else if (!meta?.label) {
+      Label(name)(target, key)
     }
+  }
 }

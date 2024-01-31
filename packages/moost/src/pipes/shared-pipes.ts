@@ -1,9 +1,10 @@
 import { resolvePipe } from './resolve.pipe'
-import { TPipeData, TPipePriority } from './types'
+import type { TPipeData } from './types'
+import { TPipePriority } from './types'
 
 export const sharedPipes: TPipeData[] = [
-    {
-        handler: resolvePipe,
-        priority: TPipePriority.RESOLVE,
-    },
+  {
+    handler: resolvePipe,
+    priority: TPipePriority.RESOLVE,
+  },
 ]
