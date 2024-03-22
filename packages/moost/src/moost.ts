@@ -3,11 +3,12 @@ import { createProvideRegistry, Infact } from '@prostojs/infact'
 import type { TConsoleBase } from '@prostojs/logger'
 import { ProstoLogger } from '@prostojs/logger'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
-import { useEventContext } from '@wooksjs/event-core'
+import { createEventContext, useEventContext } from '@wooksjs/event-core'
 import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
 import { getDefaultLogger } from 'common'
 
 import { bindControllerMethods } from './binding/bind-controller'
+import { setControllerContext } from './composables'
 import type { TInterceptorFn } from './decorators'
 import { TInterceptorPriority } from './decorators'
 import type { InterceptorHandler } from './interceptor-handler'
@@ -196,6 +197,11 @@ export class Moost {
       isControllerConsructor &&
       (classMeta?.injectable === 'SINGLETON' || classMeta?.injectable === true)
     ) {
+      createEventContext({
+        event: { type: 'init' },
+        options: {},
+      })
+      setControllerContext(this, 'bindController' as keyof this)
       instance = (await infact.get(
         controller as TClassConstructor<TAny>,
         infactOpts
