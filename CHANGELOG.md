@@ -1,3 +1,12 @@
+## [0.3.26](https://github.com/moostjs/moostjs/compare/v0.3.25...v0.3.26) (2024-03-22)
+
+
+### Features
+
+* create context when moost init ([217bef3](https://github.com/moostjs/moostjs/commit/217bef3cb19bf2005c6da0ae8b9b531e27d89a08))
+
+
+
 ## [0.3.25](https://github.com/moostjs/moostjs/compare/v0.3.24...v0.3.25) (2024-03-21)
 
 
