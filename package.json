@@ -51,7 +51,7 @@
     "@prostojs/dye": "^0.3.0",
     "@prostojs/infact": "^0.1.13",
     "@prostojs/logger": "^0.4.0",
-    "@prostojs/mate": "^0.3.0",
+    "@prostojs/mate": "^0.3.1",
     "@prostojs/rewrite": "^0.1.0",
     "@prostojs/router": "^0.2.1",
     "@prostojs/wf": "^0.0.18",

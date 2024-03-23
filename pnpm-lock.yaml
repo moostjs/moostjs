@@ -18,8 +18,8 @@ devDependencies:
     specifier: ^0.4.0
     version: 0.4.0
   '@prostojs/mate':
-    specifier: ^0.3.0
-    version: 0.3.0
+    specifier: ^0.3.1
+    version: 0.3.1
   '@prostojs/rewrite':
     specifier: ^0.1.0
     version: 0.1.0
@@ -1294,8 +1294,8 @@ packages:
     resolution: {integrity: sha512-aKGdBASWA2G+Y+5vPKsRdSVrVR9FNoUSg2soHJ40gqWtrhKllHLD+zSxD+HwGaEkSUSLMIiqj707nnvBVyFw1g==}
     dev: true
 
-  /@prostojs/mate@0.3.0:
-    resolution: {integrity: sha512-X1ziOAE20Fev+m5ubp+qimPkAJA0jeptvt2qsQSJcLWIJnznaJg+HilgHb4hRT481bdKXPlV286vHAOooD/FuA==}
+  /@prostojs/mate@0.3.1:
+    resolution: {integrity: sha512-G8d3W7xsXefhtVUWNboXrhm7tCy4EBE5+ltGe/iMUX8wRcfB9YRBx0awvEJdUOpvlJQuBM9HwWbmFZZlYPJ8hA==}
     dev: true
 
   /@prostojs/parser@0.5.5:
