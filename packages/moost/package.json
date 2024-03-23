@@ -1,6 +1,6 @@
 {
   "name": "moost",
-  "version": "0.3.26",
+  "version": "0.3.27",
   "description": "moost",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -32,7 +32,7 @@
   ],
   "dependencies": {
     "@prostojs/infact": "^0.1.13",
-    "@prostojs/mate": "^0.3.0",
+    "@prostojs/mate": "^0.3.1",
     "@prostojs/logger": "^0.4.0",
     "@wooksjs/event-core": "^0.4.30",
     "wooks": "^0.4.30"
