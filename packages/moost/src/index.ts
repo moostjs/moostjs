@@ -1,6 +1,7 @@
 /* eslint-disable simple-import-sort/exports */
 export * from './adapter-utils'
-export { getInstanceOwnMethods } from './binding/utils'
+export { getInstanceOwnMethods, getInstanceOwnProps } from './binding/utils'
+export type { TClassConstructor } from 'common'
 
 export * from './moost'
 export * from './decorators'
@@ -15,4 +16,5 @@ export type { THook } from '@wooksjs/event-core'
 export { EventLogger, useEventContext, useEventLogger } from '@wooksjs/event-core'
 export type { TProvideRegistry } from '@prostojs/infact'
 export { createProvideRegistry } from '@prostojs/infact'
+export { getConstructor, isConstructor } from '@prostojs/mate'
 export type { TControllerOverview } from './types'
