@@ -16,8 +16,13 @@ export function WorkflowSchema<T>(schema: TWorkflowSchema<T>): MethodDecorator {
   return getWfMate().decorate('wfSchema', schema)
 }
 
-export const WorkflowParam = (name: 'resume' | 'indexes' | 'schemaId' | 'context' | 'input') => {
+export const WorkflowParam = (
+  name: 'resume' | 'indexes' | 'schemaId' | 'stepId' | 'context' | 'input' | 'state'
+) => {
   switch (name) {
+    case 'state': {
+      return Resolve(() => useWfState(), 'Workflow-State')
+    }
     case 'resume': {
       return Resolve(() => useWfState().resume, 'Workflow-Resume')
     }
@@ -26,6 +31,9 @@ export const WorkflowParam = (name: 'resume' | 'indexes' | 'schemaId' | 'context
     }
     case 'schemaId': {
       return Resolve(() => useWfState().schemaId, 'Workflow-SchemaId')
+    }
+    case 'stepId': {
+      return Resolve(() => useWfState().stepId(), 'Workflow-StepId')
     }
     case 'context': {
       return Resolve(() => useWfState().ctx<Record<string, unknown>>(), 'Workflow-Context')
