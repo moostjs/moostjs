@@ -1,3 +1,12 @@
+## [0.3.33](https://github.com/moostjs/moostjs/compare/v0.3.32...v0.3.33) (2024-03-31)
+
+
+### Features
+
+* add setReplaceRegistry ([77df545](https://github.com/moostjs/moostjs/commit/77df545a0e3b6d470fec0348ae2493fd436a987a))
+
+
+
 ## [0.3.32](https://github.com/moostjs/moostjs/compare/v0.3.31...v0.3.32) (2024-03-31)
 
 
