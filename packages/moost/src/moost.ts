@@ -347,12 +347,22 @@ export class Moost {
   }
 
   /**
-   * Register new entried to provide as dependency injections
+   * Register new entries to provide as dependency injections
    * @param provide - Provide Registry (use createProvideRegistry from '\@prostojs/infact')
    * @returns
    */
   setProvideRegistry(provide: TProvideRegistry) {
     this.provide = { ...this.provide, ...provide }
+    return this
+  }
+
+  /**
+   * Register replace classes to provide as dependency injections
+   * @param replace - Replace Registry (use createReplaceRegistry from '\@prostojs/infact')
+   * @returns
+   */
+  setReplaceRegistry(replace: TReplaceRegistry) {
+    this.replace = { ...this.replace, ...replace }
     return this
   }
 
