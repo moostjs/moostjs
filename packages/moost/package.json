@@ -31,7 +31,7 @@
     "prostojs"
   ],
   "dependencies": {
-    "@prostojs/infact": "^0.1.14",
+    "@prostojs/infact": "^0.2.0",
     "@prostojs/mate": "^0.3.2",
     "@prostojs/logger": "^0.4.0",
     "@wooksjs/event-core": "^0.4.34",
