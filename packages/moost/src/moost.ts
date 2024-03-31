@@ -167,6 +167,7 @@ export class Moost {
     const meta = getMoostMate()
     const thisMeta = meta.read(this)
     const provide = { ...thisMeta?.provide, ...this.provide }
+    const replace = { ...thisMeta?.replace, ...this.replace }
     for (const _controller of this.unregisteredControllers) {
       let newPrefix: string | undefined
       let controller = _controller
@@ -177,7 +178,7 @@ export class Moost {
       await this.bindController(
         controller,
         provide,
-        this.replace,
+        replace,
         this.options?.globalPrefix || '',
         newPrefix
       )
