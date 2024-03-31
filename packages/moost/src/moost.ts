@@ -218,7 +218,7 @@ export class Moost {
       )) as Promise<TObject>
     } else if (!isControllerConsructor) {
       instance = controller
-      infact.setInstanceRegistries(instance, provide, replace)
+      infact.setInstanceRegistries(instance, provide, replace, { pipes })
     }
 
     // getInstance - instance factory for resolving SINGLETON and FOR_EVENT instance
