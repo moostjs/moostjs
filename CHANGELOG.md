@@ -1,3 +1,12 @@
+## [0.3.32](https://github.com/moostjs/moostjs/compare/v0.3.31...v0.3.32) (2024-03-31)
+
+
+### Features
+
+* add replace registry from infact ([074c4ec](https://github.com/moostjs/moostjs/commit/074c4ecee62be5e70c23f8a5181b172ef9dc27b5))
+
+
+
 ## [0.3.31](https://github.com/moostjs/moostjs/compare/v0.3.30...v0.3.31) (2024-03-27)
 
 
