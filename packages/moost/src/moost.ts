@@ -1,4 +1,4 @@
-import type { TProvideRegistry } from '@prostojs/infact'
+import type { TProvideRegistry, TReplaceRegistry } from '@prostojs/infact'
 import { createProvideRegistry, Infact } from '@prostojs/infact'
 import type { TConsoleBase } from '@prostojs/logger'
 import { ProstoLogger } from '@prostojs/logger'
@@ -95,6 +95,8 @@ export class Moost {
     [Mate, getMoostMate]
   )
 
+  protected replace: TReplaceRegistry = {}
+
   protected unregisteredControllers: Array<TObject | TFunction | [string, TObject | TFunction]> = []
 
   constructor(protected options?: TMoostOptions) {
@@ -172,7 +174,13 @@ export class Moost {
         newPrefix = _controller[0]
         controller = _controller[1] as TObject
       }
-      await this.bindController(controller, provide, this.options?.globalPrefix || '', newPrefix)
+      await this.bindController(
+        controller,
+        provide,
+        this.replace,
+        this.options?.globalPrefix || '',
+        newPrefix
+      )
     }
     this.unregisteredControllers = []
   }
@@ -180,6 +188,7 @@ export class Moost {
   protected async bindController(
     controller: TFunction | TObject,
     provide: TProvideRegistry,
+    replace: TReplaceRegistry,
     globalPrefix: string,
     replaceOwnPrefix?: string
   ) {
@@ -192,7 +201,7 @@ export class Moost {
       (a, b) => a.priority - b.priority
     )
     let instance: TObject | undefined
-    const infactOpts = { provide, customData: { pipes } }
+    const infactOpts = { provide, replace, customData: { pipes } }
     if (
       isControllerConsructor &&
       (classMeta?.injectable === 'SINGLETON' || classMeta?.injectable === true)
@@ -239,7 +248,8 @@ export class Moost {
         replaceOwnPrefix,
         interceptors: Array.from(this.interceptors),
         pipes,
-        provide: classMeta?.provide || {},
+        provide: classMeta?.provide,
+        replace: classMeta?.replace,
         logger: this.logger,
       })
     )
@@ -247,6 +257,7 @@ export class Moost {
       const prefix =
         typeof replaceOwnPrefix === 'string' ? replaceOwnPrefix : classMeta.controller?.prefix
       const mergedProvide = { ...provide, ...classMeta.provide }
+      const mergedReplace = { ...this.replace, ...classMeta.replace }
       for (const ic of classMeta.importController) {
         if (ic.typeResolver) {
           const isConstr = isConstructor(ic.typeResolver)
@@ -259,6 +270,7 @@ export class Moost {
                 ? await (ic.typeResolver as TFunction)()
                 : ic.typeResolver,
             ic.provide ? { ...mergedProvide, ...ic.provide } : mergedProvide,
+            mergedReplace,
             `${globalPrefix}/${prefix || ''}`,
             ic.prefix
           )

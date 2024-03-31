@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import type { TFunction, TPrimitives } from 'common'
 import { z } from 'zod'
 

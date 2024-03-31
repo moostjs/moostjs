@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-import type { TProvideRegistry } from '@prostojs/infact'
+import type { TProvideRegistry, TReplaceRegistry } from '@prostojs/infact'
 import type { TMateParamMeta } from '@prostojs/mate'
 import { Mate } from '@prostojs/mate'
 import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
@@ -31,6 +31,7 @@ export interface TMoostMetadata<H extends TObject = TEmpty>
   handlers?: Array<TMoostHandler<H>>
   returnType?: TFunction
   provide?: TProvideRegistry
+  replace?: TReplaceRegistry
   params: Array<TMateParamMeta & TMoostParamsMetadata>
 }
 

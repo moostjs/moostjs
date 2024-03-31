@@ -12,8 +12,8 @@ devDependencies:
     specifier: ^0.3.0
     version: 0.3.0
   '@prostojs/infact':
-    specifier: ^0.1.13
-    version: 0.1.13
+    specifier: ^0.1.14
+    version: 0.1.14
   '@prostojs/logger':
     specifier: ^0.4.0
     version: 0.4.0
@@ -183,7 +183,7 @@ devDependencies:
     specifier: ^2.0.0
     version: 2.0.0
   zod:
-    specifier: ^3.21.4
+    specifier: ^3.22.4
     version: 3.22.4
   zod-parser:
     specifier: ^0.0.3
@@ -1286,8 +1286,8 @@ packages:
     resolution: {integrity: sha512-oLrPVn/UkifSfRRqDH1W055YvwxZRVHdLjlVQBPhM7xsosn0nFIQaRSNiZJH/GIRXR9ghj+INoJ9aNDJlvaogg==}
     dev: true
 
-  /@prostojs/infact@0.1.13:
-    resolution: {integrity: sha512-B9P1Bu7WnFtLOEgH2TKhzwL89ui0DzA1tB1+gaink3WZsuYHutBr3OuPuNTWeySaDbr3DsZQg4dUlSjU8cgqAg==}
+  /@prostojs/infact@0.1.14:
+    resolution: {integrity: sha512-b205b4uwiwl3S58KDHMHRJ4SoPI0S9U9rjS8cyY0BNzbWxeEnSsfI5SzGbAG6Gl9RmmP67wmASFYxEMfFmsDFA==}
     dev: true
 
   /@prostojs/logger@0.4.0:

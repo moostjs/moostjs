@@ -12,6 +12,7 @@ export interface TBindControllerOptions {
   globalPrefix?: string
   replaceOwnPrefix?: string
   provide?: TMoostMetadata['provide']
+  replace?: TMoostMetadata['replace']
   interceptors?: TMoostMetadata['interceptors']
   pipes?: TPipeData[]
   logger: TConsoleBase

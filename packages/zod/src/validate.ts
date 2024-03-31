@@ -1,3 +1,5 @@
+/* eslint-disable sonarjs/no-nested-template-literals */
+/* eslint-disable @typescript-eslint/naming-convention */
 import type { TClassConstructor, TFunction, TLogger, TObject, TPrimitives } from 'common'
 import { z } from 'zod'
 
@@ -204,7 +206,9 @@ export function getZodType(
           )
         } catch (error) {
           throw new Error(
-            `Could not create ZodType for class "${type.name}". Type of property "${key as string}" (${propMeta?.type?.name || ''}) is unknown:\n${(error as Error).message}`
+            `Could not create ZodType for class "${type.name}". Type of property "${
+              key as string
+            }" (${propMeta?.type?.name || ''}) is unknown:\n${(error as Error).message}`
           )
         }
       }
@@ -306,10 +310,16 @@ function applyZodFunctions(
             const i = toApply.zodParamIndex!
             const arg = typeof i === 'number'
             const message =
-              `${__DYE_UNDERSCORE__}@${zodFn.decorator}${__DYE_UNDERSCORE_OFF__} skipped for ${arg ? `${__DYE_CYAN__}argument[${i}]${__DYE_YELLOW__} at ` : ''}${__DYE_CYAN__}${cl}${prop ? `.${prop}` : ''}${__DYE_YELLOW__}, ` +
-              `${__DYE_UNDERSCORE__}${(newType._def as { typeName: string }).typeName}${__DYE_UNDERSCORE_OFF__} does not support such function.`
+              `${__DYE_UNDERSCORE__}@${zodFn.decorator}${__DYE_UNDERSCORE_OFF__} skipped for ${
+                arg ? `${__DYE_CYAN__}argument[${i}]${__DYE_YELLOW__} at ` : ''
+              }${__DYE_CYAN__}${cl}${prop ? `.${prop}` : ''}${__DYE_YELLOW__}, ` +
+              `${__DYE_UNDERSCORE__}${
+                (newType._def as { typeName: string }).typeName
+              }${__DYE_UNDERSCORE_OFF__} does not support such function.`
             ;(logger || console).warn(
-              `${__DYE_YELLOW__}${message} ${__DYE_WHITE__ + __DYE_DIM__}Runtime error: ${(error as Error).message}${__DYE_RESET__}`
+              `${__DYE_YELLOW__}${message} ${__DYE_WHITE__ + __DYE_DIM__}Runtime error: ${
+                (error as Error).message
+              }${__DYE_RESET__}`
             )
           }
         })

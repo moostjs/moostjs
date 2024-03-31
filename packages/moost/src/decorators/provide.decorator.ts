@@ -1,5 +1,5 @@
 import type { TProvideFn } from '@prostojs/infact'
-import { createProvideRegistry } from '@prostojs/infact'
+import { createProvideRegistry, createReplaceRegistry } from '@prostojs/infact'
 import type { TClassConstructor } from 'common'
 
 import { getMoostMate } from '../metadata/moost-metadata'
@@ -15,6 +15,21 @@ export function Provide(type: string | TClassConstructor, fn: TProvideFn): Class
   return getMoostMate().decorate(meta => {
     meta.provide = meta.provide || {}
     Object.assign(meta.provide, createProvideRegistry([type, fn]))
+    return meta
+  })
+}
+
+/**
+ * ## Replace
+ * ### @Decorator
+ * Defines class to replace in DI
+ * @param type - class to replace
+ * @param newType - new class
+ */
+export function Replace(type: TClassConstructor, newType: TClassConstructor): ClassDecorator {
+  return getMoostMate().decorate(meta => {
+    meta.replace = meta.replace || {}
+    Object.assign(meta.replace, createReplaceRegistry([type, newType]))
     return meta
   })
 }
