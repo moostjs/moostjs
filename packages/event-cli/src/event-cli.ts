@@ -153,9 +153,10 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
         ...(classMeta?.cliOptions || []),
         ...(meta?.params
           ? meta.params
-              .filter((param: TCliClassMeta) => param.cliOptionsKeys.length > 0)
+              .filter((param: TCliClassMeta) => param.cliOptionsKeys?.length)
               .map((param: TCliClassMeta & TMoostParamsMetadata) => ({
-                keys: param.cliOptionsKeys,
+                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                keys: param.cliOptionsKeys!,
                 value: typeof param.value === 'string' ? param.value : '',
                 description: param.description || '',
                 type: param.type,
