@@ -1,3 +1,12 @@
+## [0.3.38](https://github.com/moostjs/moostjs/compare/v0.3.37...v0.3.38) (2024-04-16)
+
+
+### Bug Fixes
+
+* **cli:** fix cliOptions ([f8b596c](https://github.com/moostjs/moostjs/commit/f8b596c3397345d11de3596d9f595cc0c8653103))
+
+
+
 ## [0.3.37](https://github.com/moostjs/moostjs/compare/v0.3.36...v0.3.37) (2024-03-31)
 
 
