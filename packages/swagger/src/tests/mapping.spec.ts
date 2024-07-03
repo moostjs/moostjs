@@ -115,6 +115,15 @@ describe('mapping', () => {
           },
         },
       },
+      '400': {
+        content: {
+          'text/plain': {
+            schema: {
+              type: 'string',
+            },
+          },
+        },
+      },
     })
     expect(spec.components).toBeDefined()
     expect(spec.components.schemas).toBeDefined()
@@ -167,5 +176,13 @@ describe('mapping', () => {
     expect(toTest.requestBody?.content['application/json'].schema).toEqual({
       $ref: '#/components/schemas/SwaggerTypeTest',
     })
+  })
+  it('must add header param', () => {
+    const toTest = spec.paths['/prefix/withHeader'].get
+    expect(toTest.parameters).toHaveLength(1)
+    expect(toTest.parameters[0]).toBeDefined()
+    expect(toTest.parameters[0].in).toEqual('header')
+    expect(toTest.parameters[0].name).toEqual('X-Auth')
+    expect(toTest.parameters[0].schema).toEqual({ type: 'string' })
   })
 })

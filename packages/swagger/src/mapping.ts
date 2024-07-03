@@ -1,3 +1,5 @@
+/* eslint-disable id-length */
+/* eslint-disable max-depth */
 import type { TMoostZodType, TZodMetadata } from '@moostjs/zod'
 import { getZodType, getZodTypeForProp, z } from '@moostjs/zod'
 import type { TAny, TLogger } from 'common'
@@ -5,7 +7,7 @@ import type { TControllerOverview } from 'moost'
 import type { TZodParsed } from 'zod-parser'
 import { parseZodType } from 'zod-parser'
 
-import type { TSwaggerMate } from './swagger.mate'
+import type { TSwaggerConfigType, TSwaggerMate } from './swagger.mate'
 
 interface TEndpointSpec {
   summary?: string
@@ -119,25 +121,7 @@ export function mapToSwaggerSpec(
         for (const [code, responseConfigs] of Object.entries(hmeta.swaggerResponses)) {
           const newCode = code === '0' ? getDefaultStatusCode(handlerMethod) : code
           for (const [contentType, type] of Object.entries(responseConfigs)) {
-            let schema: TSwaggerSchema | undefined
-            let zt: z.ZodType | undefined
-            if (type instanceof z.ZodType) {
-              zt = type
-            } else if (typeof type === 'function') {
-              zt = getZodType({
-                type,
-              })
-            }
-            if (zt) {
-              const parsed = myParseZod(zt)
-              if (
-                ['ZodString', 'ZodNumber', 'ZodObject', 'ZodArray', 'ZodBoolean'].includes(
-                  parsed.$type
-                )
-              ) {
-                schema = getSwaggerSchema(parsed)
-              }
-            }
+            const schema = getSwaggerSchemaFromSwaggerConfigType(type)
             if (schema) {
               responses = responses || {}
               responses[newCode] = { content: { [contentType]: { schema } } }
@@ -208,6 +192,16 @@ export function mapToSwaggerSpec(
 
       const endpointSpec = swaggerSpec.paths[handlerPath][handlerMethod]
 
+      for (const param of hmeta?.swaggerParams || []) {
+        endpointSpec.parameters.push({
+          name: param.name,
+          in: param.in,
+          description: param.description,
+          required: !!param.required,
+          schema: getSwaggerSchemaFromSwaggerConfigType(param.type) || { type: 'string' },
+        })
+      }
+
       for (const paramName of handler.registeredAs[0].args) {
         const paramIndex = handler.meta.params.findIndex(
           param => param.paramSource === 'ROUTE' && param.paramName === paramName
@@ -260,7 +254,7 @@ export function mapToSwaggerSpec(
           )
           const parsed = myParseZod(zodType)
           const schema = getSwaggerSchema(parsed, true)
-          if (paramMeta.paramSource == 'QUERY_ITEM') {
+          if (paramMeta.paramSource === 'QUERY_ITEM') {
             endpointSpec.parameters.push({
               name: paramMeta.paramName || '',
               in: 'query',
@@ -268,7 +262,7 @@ export function mapToSwaggerSpec(
               required: !paramMeta.optional && !parsed.$optional,
               schema: schema || { type: 'string' },
             })
-          } else if (paramMeta.paramSource == 'QUERY' && parsed.$type === 'ZodObject') {
+          } else if (paramMeta.paramSource === 'QUERY' && parsed.$type === 'ZodObject') {
             for (const [key, value] of Object.entries(parsed.$inner)) {
               const schema = getSwaggerSchema(value, true)
               if (schema) {
@@ -422,6 +416,7 @@ function getSwaggerSchema(parsed: TZodParsed, forParam?: boolean): TSwaggerSchem
       }
     }
   } else {
+    // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
     switch (parsed.$type) {
       case 'ZodString': {
         asString()
@@ -575,4 +570,25 @@ function getDefaultStatusCode(httpMethod: string) {
   }
 
   return defaultStatusCodes[httpMethod.toUpperCase() as keyof typeof defaultStatusCodes] || 200
+}
+
+function getSwaggerSchemaFromSwaggerConfigType(type?: TSwaggerConfigType) {
+  let schema: TSwaggerSchema | undefined
+  let zt: z.ZodType | undefined
+  if (type instanceof z.ZodType) {
+    zt = type
+  } else if (typeof type === 'function') {
+    zt = getZodType({
+      type,
+    })
+  }
+  if (zt) {
+    const parsed = myParseZod(zt)
+    if (['ZodString', 'ZodNumber', 'ZodObject', 'ZodArray', 'ZodBoolean'].includes(parsed.$type)) {
+      schema = getSwaggerSchema(parsed)
+    }
+  } else if ((type as TSwaggerSchema).type || (type as TSwaggerSchema).$ref) {
+    schema = type as TSwaggerSchema
+  }
+  return schema
 }

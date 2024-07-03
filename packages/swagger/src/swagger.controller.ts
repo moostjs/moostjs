@@ -3,7 +3,7 @@ import { ZodSkip } from '@moostjs/zod'
 import { THeaderHook, TStatusHook } from '@wooksjs/event-http'
 import { serveFile } from '@wooksjs/http-static'
 import { Const, Controller, Moost, useControllerContext, useEventLogger } from 'moost'
-import { join } from 'path'
+import Path from 'path'
 import { getAbsoluteFSPath } from 'swagger-ui-dist'
 
 import { SwaggerExclude } from './decorators'
@@ -28,7 +28,7 @@ export class SwaggerController {
   ) {
     if (!url.endsWith('index.html') && !url.endsWith('/')) {
       status.value = 302
-      location.value = join(url, '/')
+      location.value = Path.join(url, '/')
       return ''
     }
 

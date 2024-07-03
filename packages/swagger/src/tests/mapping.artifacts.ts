@@ -11,7 +11,7 @@ import {
 } from '@moostjs/zod'
 import { Controller, Optional, Param } from 'moost'
 
-import { SwaggerRequestBody, SwaggerResponse } from '../decorators'
+import { SwaggerParam, SwaggerRequestBody, SwaggerResponse } from '../decorators'
 
 export class SwaggerTypeTest {
   @Min(10)
@@ -41,7 +41,8 @@ export class SwaggerControllerTest {
 
   @Get('test-query-single')
   testQuerySingle(
-    @IsString().optional() @Query('foo') foo: string,
+    // prettier-ignore
+    @(IsString().optional()) @Query('foo') foo: string,
     @IsNumber() @Max(100) @ToNumber() @Optional() @Query('bar') bar: number
   ) {
     return { foo, bar }
@@ -49,6 +50,13 @@ export class SwaggerControllerTest {
 
   @Get('test-response/:name')
   @SwaggerResponse(SwaggerTypeTest)
+  @SwaggerResponse(400, {
+    contentType: 'text/plain',
+    description: 'Error text',
+    response: {
+      type: 'string',
+    },
+  })
   testResponse(@Min(10) @Param('name') name: string) {
     const r = new SwaggerTypeTest()
     r.name = name
@@ -64,5 +72,15 @@ export class SwaggerControllerTest {
   @Post('postBodyExplicit')
   postTest2(@Optional() @Body() body: unknown) {
     return body
+  }
+
+  @Get()
+  @SwaggerParam({
+    name: 'X-Auth',
+    in: 'header',
+    type: String,
+  })
+  withHeader() {
+    return 'ok'
   }
 }

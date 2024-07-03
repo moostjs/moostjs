@@ -12,16 +12,23 @@ export interface TSwaggerMate {
   swaggerTags: string[]
   swaggerExclude: boolean
   swaggerDescription: string
-  swaggerResponses: Record<number, Record<string, TSwaggerResponseConfigValue>>
-  swaggerRequestBody: Record<string, TSwaggerResponseConfigValue>
+  swaggerResponses: Record<number, Record<string, TSwaggerConfigType>>
+  swaggerRequestBody: Record<string, TSwaggerConfigType>
+  swaggerParams: Array<{
+    name: string
+    in: 'query' | 'header' | 'path' | 'formData' | 'body'
+    description?: string
+    required?: boolean
+    type?: TSwaggerConfigType
+  }>
 }
 
-export type TSwaggerResponseConfigValue = TFunction | z.ZodType | TSwaggerSchema
+export type TSwaggerConfigType = TFunction | z.ZodType | TSwaggerSchema
 
 interface TSwaggerResponseConfig {
   contentType?: string
   description?: string
-  response: TSwaggerResponseConfigValue
+  response: TSwaggerConfigType
 }
 
-export type TSwaggerResponseOpts = TSwaggerResponseConfigValue | TSwaggerResponseConfig
+export type TSwaggerResponseOpts = TSwaggerConfigType | TSwaggerResponseConfig

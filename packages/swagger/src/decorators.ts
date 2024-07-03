@@ -1,4 +1,4 @@
-import type { TSwaggerResponseConfigValue, TSwaggerResponseOpts } from './swagger.mate'
+import type { TSwaggerConfigType, TSwaggerMate, TSwaggerResponseOpts } from './swagger.mate'
 import { getSwaggerMate } from './swagger.mate'
 
 export const SwaggerTag = (tag: string) => getSwaggerMate().decorate('swaggerTags', tag, true)
@@ -27,7 +27,7 @@ export function SwaggerResponse(
       ['object', 'function'].includes(typeof (opt as { response: unknown }).response)
         ? (opt as { response: unknown }).response
         : opt
-    ) as TSwaggerResponseConfigValue
+    ) as TSwaggerConfigType
     meta.swaggerResponses[keyCode] = meta.swaggerResponses[keyCode] || {}
     meta.swaggerResponses[keyCode][contentType] = response
     // meta.swaggerResponses[keyCode].description = description
@@ -46,8 +46,12 @@ export function SwaggerRequestBody(opt: TSwaggerResponseOpts) {
       typeof (opt as { contentType: string }).contentType === 'string'
         ? (opt as { response: string }).response
         : opt
-    ) as TSwaggerResponseConfigValue
+    ) as TSwaggerConfigType
     meta.swaggerRequestBody[contentType] = response
     return meta
   })
+}
+
+export function SwaggerParam(opts: TSwaggerMate['swaggerParams'][number]) {
+  return getSwaggerMate().decorate('swaggerParams', opts, true)
 }
