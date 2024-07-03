@@ -1,3 +1,12 @@
+## [0.3.40](https://github.com/moostjs/moostjs/compare/v0.3.39...v0.3.40) (2024-07-03)
+
+
+### Features
+
+* **swagger:** add params decorator ([8ea85d3](https://github.com/moostjs/moostjs/commit/8ea85d3e55dec0abadd8f745ee52d9b0d826a039))
+
+
+
 ## [0.3.39](https://github.com/moostjs/moostjs/compare/v0.3.37...v0.3.39) (2024-07-03)
 
 
