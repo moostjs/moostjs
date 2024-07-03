@@ -21,8 +21,8 @@ devDependencies:
     specifier: ^0.3.2
     version: 0.3.2
   '@prostojs/rewrite':
-    specifier: ^0.1.0
-    version: 0.1.0
+    specifier: ^0.1.1
+    version: 0.1.1
   '@prostojs/router':
     specifier: ^0.2.1
     version: 0.2.1
@@ -1304,8 +1304,8 @@ packages:
       '@prostojs/tree': 0.2.2
     dev: true
 
-  /@prostojs/rewrite@0.1.0:
-    resolution: {integrity: sha512-dZ2Fxtw7TTTBn4UHgEZL2iWwExN4ZoXHDrPN8pV7QE0jLY3w3Oa4TslrF+k8sNE1LDPotg4zLfSDel1/luB0PA==}
+  /@prostojs/rewrite@0.1.1:
+    resolution: {integrity: sha512-UEH6TAd+L2T+GvkUXsv/SKExKRuhItI9eWlVtoHNTYoLeVibcTfTticmojhzd3aMYWfkSZOb6JzXTHItFvAkGQ==}
     dependencies:
       '@prostojs/parser': 0.5.5
       minimatch: 9.0.3
