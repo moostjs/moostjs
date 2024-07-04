@@ -175,6 +175,7 @@ describe('mapping', () => {
       age: 54,
       array: ['example'],
     })
+    expect(spec.components.schemas.SwaggerTypeTest.title).toEqual('Type Definition')
   })
   it('must parse body by type', () => {
     const toTest = spec.paths['/prefix/postBody'].post

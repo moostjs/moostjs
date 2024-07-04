@@ -345,7 +345,21 @@ function getSwaggerSchema(parsed: TZodParsed, forParam?: boolean): TSwaggerSchem
   if (forParam && zodType.__type_ref && globalSchemas[zodType.__type_ref.name]) {
     return globalSchemas[zodType.__type_ref.name]
   }
+
   const schema: TSwaggerSchema = {}
+
+  if (meta) {
+    if (meta.swaggerExample) {
+      schema.example = meta.swaggerExample
+    }
+    if (meta.label || meta.id) {
+      schema.title = meta.label || meta.id
+    }
+    if (meta.description) {
+      schema.description = meta.description
+    }
+  }
+
   if (!forParam && zodType.__type_ref) {
     globalSchemas[zodType.__type_ref.name] = schema
   }
@@ -376,10 +390,6 @@ function getSwaggerSchema(parsed: TZodParsed, forParam?: boolean): TSwaggerSchem
       schema.type = 'string'
       schema.enum = Object.keys(parsed.$value)
     }
-  }
-
-  if (meta?.swaggerExample) {
-    schema.example = meta.swaggerExample
   }
   if (forParam) {
     switch (parsed.$type) {

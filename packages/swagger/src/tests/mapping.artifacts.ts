@@ -9,10 +9,11 @@ import {
   Min,
   ToNumber,
 } from '@moostjs/zod'
-import { Controller, Optional, Param } from 'moost'
+import { Controller, Label, Optional, Param } from 'moost'
 
 import { SwaggerExample, SwaggerParam, SwaggerRequestBody, SwaggerResponse } from '../decorators'
 
+@Label('Type Definition')
 @SwaggerExample({
   name: 'John',
   age: 54,
