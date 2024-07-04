@@ -35,7 +35,7 @@ interface TEndpointSpec {
   }
 }
 
-interface TSwaggerOptions {
+export interface TSwaggerOptions {
   title?: string
   description?: string
   version?: string
@@ -106,6 +106,8 @@ export function mapToSwaggerSpec(
       if (hh.type !== 'HTTP' || hmeta?.swaggerExclude || handler.registeredAs.length === 0) {
         continue
       }
+
+      const uniqueParams: Record<string, TEndpointSpec['parameters'][number] | undefined> = {}
 
       const handlerPath = handler.registeredAs[0].path
       const handlerMethod = hh.method?.toLowerCase() || 'get'
@@ -198,8 +200,34 @@ export function mapToSwaggerSpec(
 
       const endpointSpec = swaggerSpec.paths[handlerPath][handlerMethod]
 
+      // eslint-disable-next-line no-inner-declarations
+      function addParam(param: TEndpointSpec['parameters'][number]) {
+        const key = `${param.in}//${param.name}`
+        if (uniqueParams[key]) {
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          uniqueParams[key]!.description = param.description ?? uniqueParams[key]!.description
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          uniqueParams[key]!.required = param.required
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/no-non-null-assertion
+          uniqueParams[key]!.schema = param.schema ?? uniqueParams[key]!.schema
+        } else {
+          uniqueParams[key] = param
+          endpointSpec.parameters.push(param)
+        }
+      }
+
+      for (const param of cmeta?.swaggerParams || []) {
+        addParam({
+          name: param.name,
+          in: param.in,
+          description: param.description,
+          required: !!param.required,
+          schema: getSwaggerSchemaFromSwaggerConfigType(param.type) || { type: 'string' },
+        })
+      }
+
       for (const param of hmeta?.swaggerParams || []) {
-        endpointSpec.parameters.push({
+        addParam({
           name: param.name,
           in: param.in,
           description: param.description,
@@ -233,7 +261,7 @@ export function mapToSwaggerSpec(
           schema = getSwaggerSchema(parsed, true)
         }
 
-        endpointSpec.parameters.push({
+        addParam({
           name: paramName,
           in: 'path',
           description: paramMeta ? paramMeta.description : undefined,

@@ -7,13 +7,15 @@ import Path from 'path'
 import { getAbsoluteFSPath } from 'swagger-ui-dist'
 
 import { SwaggerExclude } from './decorators'
-import { mapToSwaggerSpec } from './mapping'
+import { mapToSwaggerSpec, TSwaggerOptions } from './mapping'
 
 @SwaggerExclude()
 @ZodSkip()
 @Controller('api-docs')
 export class SwaggerController {
-  'constructor'(@Const('Moost API') protected title = 'Moost API') {}
+  'constructor'(
+    @Const({ title: 'Moost API' }) protected opts: TSwaggerOptions = { title: 'Moost API' }
+  ) {}
 
   'assetPath' = getAbsoluteFSPath()
 
@@ -36,7 +38,7 @@ export class SwaggerController {
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>${this.title}</title>
+    <title>${this.opts.title}</title>
     <link rel="stylesheet" type="text/css" href="./swagger-ui.css" />
     <link rel="stylesheet" type="text/css" href="index.css" />
     <link rel="icon" type="image/png" href="./favicon-32x32.png" sizes="32x32" />
@@ -80,7 +82,7 @@ export class SwaggerController {
     if (!this.spec) {
       const { instantiate } = useControllerContext()
       const moost = await instantiate(Moost)
-      this.spec = mapToSwaggerSpec(moost.getControllersOverview(), { title: this.title }, logger)
+      this.spec = mapToSwaggerSpec(moost.getControllersOverview(), this.opts, logger)
     }
     return this.spec
   }
