@@ -8,6 +8,7 @@ import type { TZodParsed } from 'zod-parser'
 import { parseZodType } from 'zod-parser'
 
 import type { TSwaggerConfigType, TSwaggerMate } from './swagger.mate'
+import { getSwaggerMate } from './swagger.mate'
 
 interface TEndpointSpec {
   summary?: string
@@ -120,11 +121,16 @@ export function mapToSwaggerSpec(
       if (hmeta?.swaggerResponses) {
         for (const [code, responseConfigs] of Object.entries(hmeta.swaggerResponses)) {
           const newCode = code === '0' ? getDefaultStatusCode(handlerMethod) : code
-          for (const [contentType, type] of Object.entries(responseConfigs)) {
-            const schema = getSwaggerSchemaFromSwaggerConfigType(type)
+          for (const [contentType, conf] of Object.entries(responseConfigs)) {
+            const { response, example } = conf
+            const schema = getSwaggerSchemaFromSwaggerConfigType(response)
             if (schema) {
               responses = responses || {}
-              responses[newCode] = { content: { [contentType]: { schema } } }
+              responses[newCode] = {
+                content: {
+                  [contentType]: { schema: { ...schema, example: example || schema.example } },
+                },
+              }
             }
           }
         }
@@ -332,6 +338,7 @@ const globalSchemas: Record<string, TSwaggerSchema> = {}
 
 function getSwaggerSchema(parsed: TZodParsed, forParam?: boolean): TSwaggerSchema | undefined {
   const zodType = parsed.$ref as TMoostZodType
+  const meta = zodType.__type_ref ? getSwaggerMate().read(zodType.__type_ref) : undefined
   if (!forParam && zodType.__type_ref && globalSchemas[zodType.__type_ref.name]) {
     return { $ref: `#/components/schemas/${zodType.__type_ref.name}` }
   }
@@ -371,6 +378,9 @@ function getSwaggerSchema(parsed: TZodParsed, forParam?: boolean): TSwaggerSchem
     }
   }
 
+  if (meta?.swaggerExample) {
+    schema.example = meta.swaggerExample
+  }
   if (forParam) {
     switch (parsed.$type) {
       case 'ZodAny':

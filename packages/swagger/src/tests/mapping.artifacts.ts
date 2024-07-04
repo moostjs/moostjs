@@ -11,8 +11,13 @@ import {
 } from '@moostjs/zod'
 import { Controller, Optional, Param } from 'moost'
 
-import { SwaggerParam, SwaggerRequestBody, SwaggerResponse } from '../decorators'
+import { SwaggerExample, SwaggerParam, SwaggerRequestBody, SwaggerResponse } from '../decorators'
 
+@SwaggerExample({
+  name: 'John',
+  age: 54,
+  array: ['example'],
+})
 export class SwaggerTypeTest {
   @Min(10)
   @Max(20)
@@ -49,14 +54,20 @@ export class SwaggerControllerTest {
   }
 
   @Get('test-response/:name')
-  @SwaggerResponse(SwaggerTypeTest)
+  @SwaggerResponse(SwaggerTypeTest, {
+    name: 'Rick',
+    age: 32,
+    array: ['-'],
+  })
   @SwaggerResponse(400, {
     contentType: 'text/plain',
     description: 'Error text',
     response: {
       type: 'string',
+      example: 'example',
     },
   })
+  @SwaggerResponse(404, String, 'not found')
   testResponse(@Min(10) @Param('name') name: string) {
     const r = new SwaggerTypeTest()
     r.name = name

@@ -12,8 +12,12 @@ export interface TSwaggerMate {
   swaggerTags: string[]
   swaggerExclude: boolean
   swaggerDescription: string
-  swaggerResponses: Record<number, Record<string, TSwaggerConfigType>>
+  swaggerResponses: Record<
+    number,
+    Record<string, { response: TSwaggerConfigType; example?: unknown }>
+  >
   swaggerRequestBody: Record<string, TSwaggerConfigType>
+  swaggerExample?: unknown
   swaggerParams: Array<{
     name: string
     in: 'query' | 'header' | 'path' | 'formData' | 'body'

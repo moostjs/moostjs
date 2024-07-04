@@ -111,6 +111,11 @@ describe('mapping', () => {
           '*/*': {
             schema: {
               $ref: '#/components/schemas/SwaggerTypeTest',
+              example: {
+                name: 'Rick',
+                age: 32,
+                array: ['-'],
+              },
             },
           },
         },
@@ -120,6 +125,17 @@ describe('mapping', () => {
           'text/plain': {
             schema: {
               type: 'string',
+              example: 'example',
+            },
+          },
+        },
+      },
+      '404': {
+        content: {
+          '*/*': {
+            schema: {
+              type: 'string',
+              example: 'not found',
             },
           },
         },
@@ -154,6 +170,11 @@ describe('mapping', () => {
       type: 'string',
     })
     expect(spec.components.schemas.SwaggerTypeTest.required).toEqual(['name', 'array'])
+    expect(spec.components.schemas.SwaggerTypeTest.example).toEqual({
+      name: 'John',
+      age: 54,
+      array: ['example'],
+    })
   })
   it('must parse body by type', () => {
     const toTest = spec.paths['/prefix/postBody'].post

@@ -8,13 +8,25 @@ export const SwaggerExclude = () => getSwaggerMate().decorate('swaggerExclude', 
 export const SwaggerDescription = (descr: string) =>
   getSwaggerMate().decorate('swaggerDescription', descr)
 
-export function SwaggerResponse(opts: TSwaggerResponseOpts): MethodDecorator
-export function SwaggerResponse(code: number, opts: TSwaggerResponseOpts): MethodDecorator
+export function SwaggerResponse(opts: TSwaggerResponseOpts, exmaple?: unknown): MethodDecorator
+export function SwaggerResponse(
+  code: number,
+  opts: TSwaggerResponseOpts,
+  exmaple?: unknown
+): MethodDecorator
 export function SwaggerResponse(
   code: number | TSwaggerResponseOpts,
-  opts?: TSwaggerResponseOpts
+  opts?: TSwaggerResponseOpts | unknown,
+  example?: unknown
 ): MethodDecorator {
   return getSwaggerMate().decorate(meta => {
+    let ex: unknown
+    if (example) {
+      ex = example
+    }
+    if (typeof code !== 'number' && opts) {
+      ex = opts
+    }
     meta.swaggerResponses = meta.swaggerResponses || {}
     const keyCode = typeof code === 'number' ? code : 0
     const opt = typeof code === 'number' ? opts : code
@@ -29,7 +41,7 @@ export function SwaggerResponse(
         : opt
     ) as TSwaggerConfigType
     meta.swaggerResponses[keyCode] = meta.swaggerResponses[keyCode] || {}
-    meta.swaggerResponses[keyCode][contentType] = response
+    meta.swaggerResponses[keyCode][contentType] = { response, example: ex }
     // meta.swaggerResponses[keyCode].description = description
     return meta
   })
@@ -54,4 +66,8 @@ export function SwaggerRequestBody(opt: TSwaggerResponseOpts) {
 
 export function SwaggerParam(opts: TSwaggerMate['swaggerParams'][number]) {
   return getSwaggerMate().decorate('swaggerParams', opts, true)
+}
+
+export function SwaggerExample(example: unknown) {
+  return getSwaggerMate().decorate('swaggerExample', example)
 }
