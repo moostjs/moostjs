@@ -1,3 +1,12 @@
+## [0.3.44](https://github.com/moostjs/moostjs/compare/v0.3.43...v0.3.44) (2024-07-04)
+
+
+### Features
+
+* **swagger:** refactor swagger controller constructor ([f5b766d](https://github.com/moostjs/moostjs/commit/f5b766d98590c38b642f6fc1f8d9a8ceb58cc965))
+
+
+
 ## [0.3.43](https://github.com/moostjs/moostjs/compare/v0.3.42...v0.3.43) (2024-07-04)
 
 
