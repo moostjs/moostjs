@@ -1,3 +1,12 @@
+## [0.3.43](https://github.com/moostjs/moostjs/compare/v0.3.42...v0.3.43) (2024-07-04)
+
+
+### Features
+
+* **swagger:** add title and descr to schema def ([43d2bdb](https://github.com/moostjs/moostjs/commit/43d2bdb9e7573a01aa702a3bb0c9bbc5bb9552a1))
+
+
+
 ## [0.3.42](https://github.com/moostjs/moostjs/compare/v0.3.41...v0.3.42) (2024-07-04)
 
 
