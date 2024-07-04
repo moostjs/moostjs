@@ -1,3 +1,12 @@
+## [0.3.42](https://github.com/moostjs/moostjs/compare/v0.3.41...v0.3.42) (2024-07-04)
+
+
+### Features
+
+* **swagger:** add swagger types example ([b1e6d87](https://github.com/moostjs/moostjs/commit/b1e6d8747b1cf22c6928e54ed2a27cc700ec1381))
+
+
+
 ## [0.3.41](https://github.com/moostjs/moostjs/compare/v0.3.40...v0.3.41) (2024-07-04)
 
 
