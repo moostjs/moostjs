@@ -12,6 +12,10 @@ import { useOtelContext } from './context'
 
 export function enableOtelForMoost() {
   eventContextHooks.onStartEvent((eventType: string) => {
+    if (eventType === 'init') {
+      return
+    }
+
     const { registerSpan } = useOtelContext()
 
     let span: Span | undefined
@@ -28,6 +32,10 @@ export function enableOtelForMoost() {
     }
   })
   eventContextHooks.onEndEvent((eventType: string, abortReason?: string) => {
+    if (eventType === 'init') {
+      return
+    }
+
     const { getSpan } = useOtelContext()
     const span = getSpan()
     if (span) {
