@@ -1,3 +1,7 @@
+## [0.4.3](https://github.com/moostjs/moostjs/compare/v0.4.2...v0.4.3) (2024-07-10)
+
+
+
 ## [0.4.2](https://github.com/moostjs/moostjs/compare/v0.4.1...v0.4.2) (2024-07-10)
 
 
