@@ -1,6 +1,6 @@
 import type { TConsoleBase } from '@prostojs/logger'
 import { getConstructor } from '@prostojs/mate'
-import type { TAny, TAnyFn, TClassConstructor, TFunction, TObject } from 'common'
+import type { TAny, TAnyFn, TClassConstructor, TObject } from 'common'
 
 import { getMoostMate } from '../metadata'
 import { getMoostInfact } from '../metadata/infact'
@@ -10,7 +10,6 @@ import type { TCallableClassFunction, TClassFunction } from './types'
 export async function getCallableFn<T extends TAnyFn = TAnyFn>(
   targetInstance: TObject,
   fn: TCallableClassFunction<T>,
-  restoreCtx: TFunction,
   pipes: TPipeData[],
   logger: TConsoleBase
 ): Promise<T> {
@@ -20,9 +19,6 @@ export async function getCallableFn<T extends TAnyFn = TAnyFn>(
     const infact = getMoostInfact()
     infact.silent(true)
     const instance = (await infact.getForInstance(targetInstance, fn as TClassConstructor<TAny>, {
-      syncContextFn: () => {
-        restoreCtx()
-      },
       customData: {
         pipes: [...(pipes || []), ...(meta.pipes || [])].sort((a, b) => a.priority - b.priority),
       },

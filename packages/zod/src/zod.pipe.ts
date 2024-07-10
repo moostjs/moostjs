@@ -1,6 +1,6 @@
 /* eslint-disable unicorn/consistent-destructuring */
 import type { TPipeFn } from 'moost'
-import { definePipeFn, TPipePriority, useEventContext, useEventLogger } from 'moost'
+import { definePipeFn, TPipePriority, useEventLogger } from 'moost'
 import type { z } from 'zod'
 
 import type { TZodOpts } from './primitives'
@@ -39,7 +39,6 @@ export const ZodPipeline = (
     ) {
       return value
     }
-    const { restoreCtx } = useEventContext()
     const logger = useEventLogger('@moostjs/zod')
     if (targetMeta.zodType || targetMeta.type) {
       const zodType = getZodTypeForProp(
@@ -56,7 +55,6 @@ export const ZodPipeline = (
         logger
       )
       const check = await zodType.spa(value)
-      restoreCtx()
       if (check.success) {
         return check.data
       } else {

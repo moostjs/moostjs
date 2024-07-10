@@ -1,7 +1,7 @@
 {
-  "name": "moost",
+  "name": "@moostjs/otel",
   "version": "0.3.44",
-  "description": "moost",
+  "description": "@moostjs/otel",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/moostjs.git",
-    "directory": "packages/moost"
+    "directory": "packages/otel"
   },
   "keywords": [
     "moost",
@@ -30,18 +30,14 @@
     "wooksjs",
     "prostojs"
   ],
-  "dependencies": {
-    "@prostojs/infact": "^0.2.3",
-    "@prostojs/mate": "^0.3.2",
-    "@prostojs/logger": "^0.4.0",
-    "@wooksjs/event-core": "^0.4.35",
-    "hookable": "^5.5.3",
-    "wooks": "^0.4.35"
-  },
   "author": "Artem Maltsev",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/moostjs/moostjs/issues"
   },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/moost#readme"
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/otel#readme",
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "moost": "^0.3.44"
+  }
 }

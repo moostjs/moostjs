@@ -44,6 +44,8 @@ const CONTEXT_TYPE = 'HTTP'
  * ```
  */
 export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
+  public readonly name = 'http'
+
   protected httpApp: WooksHttp
 
   constructor(httpApp?: WooksHttp | TWooksHttpOptions) {

@@ -1,4 +1,4 @@
-import { useEventContext } from '@wooksjs/event-core'
+import { useAsyncEventContext } from '@wooksjs/event-core'
 import type { TAny, TClassConstructor } from 'common'
 
 import { getMoostInfact, getMoostMate } from '../metadata'
@@ -8,14 +8,14 @@ interface TControllerContext<T> {
 }
 
 export function setControllerContext<T>(controller: T, method: keyof T) {
-  const { store } = useEventContext<TControllerContext<T>>()
+  const { store } = useAsyncEventContext<TControllerContext<T>>()
   const { set } = store('controller')
   set('instance', controller)
   set('method', method)
 }
 
 export function useControllerContext<T extends object>() {
-  const { store } = useEventContext<TControllerContext<T>>()
+  const { store } = useAsyncEventContext<TControllerContext<T>>()
   const { get } = store('controller')
 
   const getController = () => get('instance')!

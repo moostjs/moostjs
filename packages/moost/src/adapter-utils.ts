@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
-import { useEventContext, useEventId, useEventLogger } from '@wooksjs/event-core'
+import { useEventId, useEventLogger } from '@wooksjs/event-core'
 
 import { setControllerContext } from './composables'
 import type { InterceptorHandler } from './interceptor-handler'
 import { getMoostInfact } from './metadata'
 
 export interface TMoostEventHandlerHookOptions<T> {
-  restoreCtx: () => void
   scopeId: string
   logger: ReturnType<typeof useEventLogger>
   unscope: () => void
@@ -42,14 +41,12 @@ export function registerEventScope(scopeId: string) {
 
 export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>) {
   return async () => {
-    const { restoreCtx } = useEventContext(options.contextType)
     const scopeId = useEventId().getId()
     const logger = useEventLogger(options.loggerTitle)
     const unscope = registerEventScope(scopeId)
 
     let response: unknown
     const hookOptions: TMoostEventHandlerHookOptions<T> = {
-      restoreCtx,
       scopeId,
       logger,
       unscope,
@@ -60,11 +57,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
 
     if (options.hooks?.init) {
       await options.hooks.init(hookOptions)
-      restoreCtx()
     }
 
     const instance = await options.getControllerInstance()
-    restoreCtx()
 
     if (instance) {
       setControllerContext(instance, options.controllerMethod || ('' as keyof T))
@@ -72,7 +67,6 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
 
     const interceptorHandler = await options.getIterceptorHandler()
     if (interceptorHandler) {
-      restoreCtx()
       try {
         response = await interceptorHandler.init()
         if (response !== undefined) {
@@ -88,7 +82,6 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     let args: unknown[] = []
     if (options.resolveArgs) {
       // params
-      restoreCtx()
       try {
         // logger.trace(`resolving method args for "${ opts.method as string }"`)
         args = await options.resolveArgs()
@@ -101,7 +94,6 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     }
 
     if (interceptorHandler) {
-      restoreCtx()
       response = await interceptorHandler.fireBefore(response)
       if (response !== undefined) {
         return endWithResponse()
@@ -110,7 +102,6 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
 
     // fire request handler
     const callControllerMethod = () => {
-      restoreCtx()
       if (options.callControllerMethod) {
         return options.callControllerMethod(args)
       } else if (
@@ -134,7 +125,6 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     async function endWithResponse(raise = false) {
       // fire after interceptors
       if (interceptorHandler) {
-        restoreCtx()
         try {
           // logger.trace('firing after interceptors')
           response = await interceptorHandler.fireAfter(response)

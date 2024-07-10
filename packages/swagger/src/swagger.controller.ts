@@ -1,6 +1,6 @@
 import { Get, HeaderHook, SetHeader, StatusHook, Url } from '@moostjs/event-http'
 import { ZodSkip } from '@moostjs/zod'
-import { THeaderHook, TStatusHook } from '@wooksjs/event-http'
+import { THeaderHook, TStatusHook, useSetHeaders } from '@wooksjs/event-http'
 import { serveFile } from '@wooksjs/http-static'
 import { Const, Controller, Moost, useControllerContext, useEventLogger } from 'moost'
 import Path from 'path'
@@ -19,6 +19,13 @@ export class SwaggerController {
 
   'assetPath' = getAbsoluteFSPath()
 
+  protected 'processCors'() {
+    if (this.opts.cors) {
+      const { enableCors } = useSetHeaders()
+      enableCors(this.opts.cors === true ? undefined : this.opts.cors)
+    }
+  }
+
   @Get('')
   @Get('//')
   @Get('index.html')
@@ -28,6 +35,7 @@ export class SwaggerController {
     @HeaderHook('location') location: THeaderHook,
     @StatusHook() status: TStatusHook
   ) {
+    this.processCors()
     if (!url.endsWith('index.html') && !url.endsWith('/')) {
       status.value = 302
       location.value = Path.join(url, '/')
@@ -57,6 +65,7 @@ export class SwaggerController {
   @Get()
   @SetHeader('content-type', 'application/javascript')
   'swagger-initializer.js'() {
+    this.processCors()
     return `window.onload = function() {
   window.ui = SwaggerUIBundle({
     url: "./spec.json",
@@ -78,6 +87,7 @@ export class SwaggerController {
 
   @Get()
   async 'spec.json'() {
+    this.processCors()
     const logger = useEventLogger('@moostjs/zod')
     if (!this.spec) {
       const { instantiate } = useControllerContext()
@@ -92,6 +102,7 @@ export class SwaggerController {
   @Get('swagger-ui.*(css|css\\.map)')
   @Get('index.*(css|css\\.map)')
   'files'(@Url() url: string) {
+    this.processCors()
     return this.serve(url.split('/').pop()!)
   }
 

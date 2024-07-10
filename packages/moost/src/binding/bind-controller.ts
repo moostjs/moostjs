@@ -1,5 +1,4 @@
 /* eslint-disable unicorn/consistent-destructuring */
-import { useEventContext } from '@wooksjs/event-core'
 import type { TEmpty, TObject } from 'common'
 
 import type { TMoostHandler, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
@@ -74,7 +73,6 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
 
     const resolveArgs = async () => {
       const args: unknown[] = []
-      const { restoreCtx } = useEventContext()
       for (const [i, { pipes, meta: paramMeta }] of argsPipes.entries()) {
         args[i] = await runPipes(
           pipes,
@@ -88,8 +86,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             index: i,
             targetMeta: paramMeta,
           },
-          'PARAM',
-          restoreCtx
+          'PARAM'
         )
       }
       return args

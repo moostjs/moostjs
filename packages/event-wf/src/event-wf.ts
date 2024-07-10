@@ -16,6 +16,8 @@ const CONTEXT_TYPE = 'WF'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta> {
+  public readonly name = 'workflow'
+
   protected wfApp: WooksWf<T, IR>
 
   constructor(

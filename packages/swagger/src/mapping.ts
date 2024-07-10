@@ -39,6 +39,7 @@ export interface TSwaggerOptions {
   title?: string
   description?: string
   version?: string
+  cors?: boolean | string
 }
 
 export interface TSwaggerSchema {

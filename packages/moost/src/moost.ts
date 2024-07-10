@@ -3,9 +3,10 @@ import { createProvideRegistry, Infact } from '@prostojs/infact'
 import type { TConsoleBase } from '@prostojs/logger'
 import { ProstoLogger } from '@prostojs/logger'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
-import { createEventContext, useEventContext } from '@wooksjs/event-core'
+import { createAsyncEventContext } from '@wooksjs/event-core'
 import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
 import { getDefaultLogger } from 'common'
+import { Hookable } from 'hookable'
 
 import { bindControllerMethods } from './binding/bind-controller'
 import { setControllerContext } from './composables'
@@ -79,7 +80,7 @@ export interface TMoostOptions {
  * │  app.init()
  * ```
  */
-export class Moost {
+export class Moost extends Hookable {
   protected logger: TConsoleBase
 
   protected pipes: TPipeData[] = Array.from(sharedPipes)
@@ -100,10 +101,19 @@ export class Moost {
   protected unregisteredControllers: Array<TObject | TFunction | [string, TObject | TFunction]> = []
 
   constructor(protected options?: TMoostOptions) {
+    super()
     this.logger = options?.logger || getDefaultLogger('moost')
     getMoostInfact().setLogger(this.getLogger('infact'))
     const mate = getMoostMate()
     Object.assign(mate, { logger: this.getLogger('mate') })
+  }
+
+  _fireEventStart(source: TMoostAdapter<unknown>) {
+    this.callHook('event-start', source)
+  }
+
+  _fireEventEnd(source: TMoostAdapter<unknown>) {
+    this.callHook('event-end', source)
   }
 
   /**
@@ -207,15 +217,16 @@ export class Moost {
       isControllerConsructor &&
       (classMeta?.injectable === 'SINGLETON' || classMeta?.injectable === true)
     ) {
-      createEventContext({
+      await createAsyncEventContext({
         event: { type: 'init' },
         options: {},
+      })(async () => {
+        setControllerContext(this, 'bindController' as keyof this)
+        instance = (await infact.get(
+          controller as TClassConstructor<TAny>,
+          infactOpts
+        )) as Promise<TObject>
       })
-      setControllerContext(this, 'bindController' as keyof this)
-      instance = (await infact.get(
-        controller as TClassConstructor<TAny>,
-        infactOpts
-      )) as Promise<TObject>
     } else if (!isControllerConsructor) {
       instance = controller
       infact.setInstanceRegistries(instance, provide, replace, { pipes })
@@ -227,10 +238,8 @@ export class Moost {
       : async (): Promise<TObject> => {
           // if (!instance) {
           infact.silent(true)
-          const { restoreCtx } = useEventContext()
           const instance = (await infact.get(controller as TClassConstructor<TAny>, {
             ...infactOpts,
-            syncContextFn: restoreCtx,
           })) as Promise<TObject>
           infact.silent(false)
           // }
@@ -393,6 +402,7 @@ export interface TMoostAdapterOptions<H, T> {
 }
 
 export interface TMoostAdapter<H> {
+  name: string
   bindHandler: <T extends TObject = TObject>(
     options: TMoostAdapterOptions<H, T>
   ) => void | Promise<void>

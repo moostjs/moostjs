@@ -60,6 +60,8 @@ const CONTEXT_TYPE = 'CLI'
  * ```
  */
 export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
+  public readonly name = 'cli'
+
   protected cliApp: WooksCli
 
   protected optionTypes: Record<string, TFunction[]> = {}

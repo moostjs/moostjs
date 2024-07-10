@@ -13,7 +13,12 @@ export * from './composables'
 export * from './adapter-utils'
 export * from './define'
 export type { THook } from '@wooksjs/event-core'
-export { EventLogger, useEventContext, useEventLogger } from '@wooksjs/event-core'
+export {
+  EventLogger,
+  useAsyncEventContext,
+  useEventLogger,
+  eventContextHooks,
+} from '@wooksjs/event-core'
 export type { TProvideRegistry } from '@prostojs/infact'
 export { createProvideRegistry, createReplaceRegistry } from '@prostojs/infact'
 export { getConstructor, isConstructor } from '@prostojs/mate'

@@ -1,5 +1,4 @@
 import type { TConsoleBase } from '@prostojs/logger'
-import { useEventContext } from '@wooksjs/event-core'
 import type { TObject } from 'common'
 
 import { getCallableFn } from './class-function/class-function'
@@ -23,10 +22,8 @@ export function getIterceptorHandlerFactory(
       const interceptorMeta = mate.read(handler)
       if (interceptorMeta?.injectable) {
         interceptorHandlers.push(async (...args) => {
-          const { restoreCtx } = useEventContext()
           const targetInstance = await getTargetInstance()
-          restoreCtx()
-          return (await getCallableFn(targetInstance, handler, restoreCtx, pipes, logger))(...args)
+          return (await getCallableFn(targetInstance, handler, pipes, logger))(...args)
         })
       } else {
         interceptorHandlers.push(handler as TInterceptorFn)
