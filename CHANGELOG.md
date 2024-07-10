@@ -1,3 +1,12 @@
+# [0.4.0](https://github.com/moostjs/moostjs/compare/v0.3.44...v0.4.0) (2024-07-10)
+
+
+### Features
+
+* **otel:** add otel support ([8810eea](https://github.com/moostjs/moostjs/commit/8810eea180b1322016908b4e70eb2eb204a8bce0))
+
+
+
 ## [0.3.44](https://github.com/moostjs/moostjs/compare/v0.3.43...v0.3.44) (2024-07-04)
 
 
