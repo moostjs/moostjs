@@ -1,3 +1,12 @@
+## [0.4.6](https://github.com/moostjs/moostjs/compare/v0.4.5...v0.4.6) (2024-07-10)
+
+
+### Bug Fixes
+
+* **otel:** exclude init event from traces ([e4d039a](https://github.com/moostjs/moostjs/commit/e4d039a8ab2debfe000dda69bab545a5123d1003))
+
+
+
 ## [0.4.5](https://github.com/moostjs/moostjs/compare/v0.4.4...v0.4.5) (2024-07-10)
 
 

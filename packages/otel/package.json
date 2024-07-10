@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/otel",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "@moostjs/otel",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -38,6 +38,6 @@
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/otel#readme",
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
-    "moost": "0.4.5"
+    "moost": "0.4.6"
   }
 }
