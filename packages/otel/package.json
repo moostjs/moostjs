@@ -38,6 +38,7 @@
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/otel#readme",
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/sdk-trace-base": "^1.25.1",
     "moost": "0.4.6"
   }
 }

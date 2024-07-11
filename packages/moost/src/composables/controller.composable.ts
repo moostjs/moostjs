@@ -21,15 +21,17 @@ export function useControllerContext<T extends object>() {
   const getController = () => get('instance')!
   const getMethod = () => get('method') as string | undefined
   // todo: add generic types to getControllerMeta
-  const getControllerMeta = () => getMoostMate().read(getController())
+  const getControllerMeta = <TT extends object>() =>
+    getMoostMate<TT, TT, TT>().read(getController())
   // todo: add generic types to getMethodMeta
-  const getMethodMeta = (name?: string) => getMoostMate().read(getController(), name || getMethod())
+  const getMethodMeta = <TT extends object>(name?: string) =>
+    getMoostMate<TT, TT, TT>().read(getController(), name || getMethod())
 
-  function instantiate<T>(c: TClassConstructor<T>) {
+  function instantiate<TT>(c: TClassConstructor<TT>) {
     return getMoostInfact().getForInstance(
       getController(),
       c as TClassConstructor<TAny>
-    ) as Promise<T>
+    ) as Promise<TT>
   }
 
   return {

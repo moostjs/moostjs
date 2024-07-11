@@ -9,6 +9,7 @@ import {
 } from 'moost'
 
 import { useOtelContext } from './context'
+import type { TOtelMate } from './otel.mate'
 
 export function enableOtelForMoost() {
   eventContextHooks.onStartEvent((eventType: string) => {
@@ -39,14 +40,16 @@ export function enableOtelForMoost() {
     const { getSpan } = useOtelContext()
     const span = getSpan()
     if (span) {
-      const { getMethod, getMethodMeta, getController } = useControllerContext()
+      const { getMethod, getMethodMeta, getController, getControllerMeta } = useControllerContext()
       const methodName = getMethod()
-      const methodMeta = getMethodMeta()
+      const methodMeta = getMethodMeta<TOtelMate>()
+      const cMeta = getControllerMeta<TOtelMate>()
       span.setAttributes({
         'custom.event_type': eventType,
         'custom.event_description': methodMeta?.description || methodMeta?.label || methodName,
         'moost.controller': getConstructor(getController()).name,
         'moost.handler': methodName,
+        'moost.ignore': cMeta?.otelIgnoreSpan || methodMeta?.otelIgnoreSpan,
       })
       if (abortReason) {
         span.recordException(new Error(abortReason))
