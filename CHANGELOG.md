@@ -1,3 +1,12 @@
+## [0.4.7](https://github.com/moostjs/moostjs/compare/v0.4.6...v0.4.7) (2024-07-11)
+
+
+### Features
+
+* **otel:** add ignore span capabilities ([1a226bc](https://github.com/moostjs/moostjs/commit/1a226bc5c47deeba83ebbaab780c873d3c1eec3a))
+
+
+
 ## [0.4.6](https://github.com/moostjs/moostjs/compare/v0.4.5...v0.4.6) (2024-07-10)
 
 
