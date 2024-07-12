@@ -1,3 +1,12 @@
+## [0.4.13](https://github.com/moostjs/moostjs/compare/v0.4.12...v0.4.13) (2024-07-12)
+
+
+### Bug Fixes
+
+* **otel:** fix processing wf steps ([a4eb2c9](https://github.com/moostjs/moostjs/commit/a4eb2c99d1d5be0b7e338ef57ec4dbe61a56a788))
+
+
+
 ## [0.4.12](https://github.com/moostjs/moostjs/compare/v0.4.11...v0.4.12) (2024-07-12)
 
 
