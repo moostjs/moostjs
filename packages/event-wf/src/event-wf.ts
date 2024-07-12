@@ -44,6 +44,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
       callControllerMethod: () => undefined,
       logErrors: this.debug,
       targetPath: '',
+      handlerType: 'WF_FLOW',
     })()
   }
 
@@ -121,6 +122,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
         resolveArgs: opts.resolveArgs,
         manualUnscope: true,
         targetPath,
+        handlerType: handler.type,
       })
 
       if (handler.type === 'WF_STEP') {

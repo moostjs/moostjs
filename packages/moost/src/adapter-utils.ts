@@ -34,6 +34,7 @@ export interface TMoostEventHandlerOptions<T> {
     end?: (opts: TMoostEventHandlerHookOptions<T>) => unknown
   }
   targetPath: string
+  handlerType: string
 }
 
 const infact = getMoostInfact()
@@ -73,7 +74,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         options.controllerMethod || ('' as keyof T),
         options.targetPath
       )
-      ci.hook('Controller:registered' as 'Handler:routed')
+      ci.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
     }
 
     const interceptorHandler = await options.getIterceptorHandler()
@@ -127,7 +128,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     }
     try {
       response = await ci.with(
-        'Handler',
+        `Handler:${options.targetPath}` as 'Handler',
         {
           'moost.handler': (options.controllerMethod as string) || '',
           'moost.controller': getConstructor(instance).name,

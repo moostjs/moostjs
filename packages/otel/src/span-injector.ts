@@ -39,7 +39,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     return fn()
   }
 
-  patchRsponse() {
+  protected patchRsponse() {
     const res = this.getResponse()
     if (res) {
       const originalWriteHead = res.writeHead
@@ -61,7 +61,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     }
   }
 
-  startEvent<T>(eventType: string, cb: () => T): T {
+  protected startEvent<T>(eventType: string, cb: () => T): T {
     if (eventType === 'init') {
       return cb()
     }
@@ -118,9 +118,14 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
   }
 
   hook(
+    method: string,
     name: 'Handler:not_found' | 'Handler:routed' | 'Controller:registered',
     route?: string
   ): void {
+    if (method === 'WF_STEP') {
+      // ignore "WF_STEP" to prevent interference with "WF_FLOW"
+      return
+    }
     if (name === 'Handler:not_found') {
       const chm = this.getControllerHandlerMeta()
       this.startEventMetrics(chm.attrs, route)

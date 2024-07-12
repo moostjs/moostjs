@@ -120,6 +120,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
       getControllerInstance: () => this.moost,
       callControllerMethod: () => undefined,
       targetPath: '',
+      handlerType: 'HTTP',
     })()
     if (!response) {
       throw new HttpError(404, 'Resource Not Found')
@@ -174,6 +175,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
           },
         },
         targetPath,
+        handlerType: handler.type,
       })
 
       const routerBinding = this.httpApp.on(handler.method, targetPath, fn)

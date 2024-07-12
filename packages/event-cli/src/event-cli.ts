@@ -94,6 +94,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
       callControllerMethod: () => undefined,
       logErrors: this.opts?.debug,
       targetPath: '',
+      handlerType: 'CLI',
     })()
     if (response === undefined) {
       this.cliApp.onUnknownCommand(pathParams)
@@ -144,6 +145,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
         resolveArgs: opts.resolveArgs,
         logErrors: this.opts?.debug,
         targetPath,
+        handlerType: handler.type,
       })
 
       const meta = getCliMate().read(opts.fakeInstance, opts.method as string)
