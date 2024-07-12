@@ -8,13 +8,13 @@ import type {
 } from './decorators'
 
 export class InterceptorHandler {
-  constructor(protected handlers: TInterceptorFn[]) {}
+  constructor(protected handlers: Array<{ handler: TInterceptorFn; name: string }>) {}
 
-  protected before: Array<{ handler: TInterceptorFn; fn: TInterceptorBefore }> = []
+  protected before: Array<{ name: string; fn: TInterceptorBefore }> = []
 
-  protected after: Array<{ handler: TInterceptorFn; fn: TInterceptorAfter }> = []
+  protected after: Array<{ name: string; fn: TInterceptorAfter }> = []
 
-  protected onError: Array<{ handler: TInterceptorFn; fn: TInterceptorOnError }> = []
+  protected onError: Array<{ name: string; fn: TInterceptorOnError }> = []
 
   public response?: unknown
 
@@ -43,23 +43,22 @@ export class InterceptorHandler {
 
   async init() {
     const ci = getContextInjector<string>()
-    for (const handler of this.handlers) {
+    for (const { handler, name } of this.handlers) {
       const response = await ci.with(
-        `Inteceptor:${handler.name}`,
+        `Interceptor:${name}`,
         {
           'moost.interceptor.stage': 'init',
-          'moost.interceptor.priority': handler.priority || '',
         },
         () =>
           handler(
             fn => {
-              this.before.push({ handler, fn })
+              this.before.push({ name, fn })
             },
             fn => {
-              this.after.unshift({ handler, fn })
+              this.after.unshift({ name, fn })
             },
             fn => {
-              this.onError.unshift({ handler, fn })
+              this.onError.unshift({ name, fn })
             }
           )
       )
@@ -72,12 +71,11 @@ export class InterceptorHandler {
   async fireBefore(response: unknown) {
     const ci = getContextInjector<string>()
     this.response = response
-    for (const { handler, fn } of this.before) {
+    for (const { name, fn } of this.before) {
       await ci.with(
-        `Inteceptor:${handler.name}`,
+        `Interceptor:${name}`,
         {
           'moost.interceptor.stage': 'before',
-          'moost.interceptor.priority': handler.priority || '',
         },
         () => fn(this.replyFn.bind(this))
       )
@@ -92,23 +90,21 @@ export class InterceptorHandler {
     const ci = getContextInjector<string>()
     this.response = response
     if (response instanceof Error) {
-      for (const { handler, fn } of this.onError) {
+      for (const { name, fn } of this.onError) {
         await ci.with(
-          `Inteceptor:${handler.name}`,
+          `Interceptor:${name}`,
           {
             'moost.interceptor.stage': 'after',
-            'moost.interceptor.priority': handler.priority || '',
           },
           () => fn(response, this.replyFn.bind(this))
         )
       }
     } else {
-      for (const { handler, fn } of this.after) {
+      for (const { name, fn } of this.after) {
         await ci.with(
-          `Inteceptor:${handler.name}`,
+          `Interceptor:${name}`,
           {
             'moost.interceptor.stage': 'onError',
-            'moost.interceptor.priority': handler.priority || '',
           },
           () => fn(response, this.replyFn.bind(this))
         )

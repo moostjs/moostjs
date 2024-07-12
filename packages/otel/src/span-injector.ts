@@ -6,7 +6,7 @@ import { ContextInjector, getConstructor, useAsyncEventContext, useControllerCon
 
 import type { TOtelContext } from './context'
 import { useOtelContext } from './context'
-import { moostMetrics } from './metrics'
+import { getMoostMetrics } from './metrics'
 import type { TOtelMate } from './otel.mate'
 
 const tracer = trace.getTracer('moost-tracer')
@@ -14,6 +14,8 @@ const tracer = trace.getTracer('moost-tracer')
 type TAttributes = Record<string, string | number | boolean>
 
 export class SpanInjector extends ContextInjector<TContextInjectorHook> {
+  metrics = getMoostMetrics()
+
   with<T>(name: TContextInjectorHook, attributes: TAttributes, cb: () => T): T
   with<T>(name: TContextInjectorHook, cb: () => T): T
   with<T>(name: TContextInjectorHook, attributes: TAttributes | (() => T), cb?: () => T): T {
@@ -123,6 +125,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       const chm = this.getControllerHandlerMeta()
       this.startEventMetrics(chm.attrs, route)
     } else if (name === 'Controller:registered') {
+      const _route = useAsyncEventContext<TOtelContext>().store('otel').get('route')
       const chm = this.getControllerHandlerMeta()
       if (!chm.ignoreMeter) {
         this.startEventMetrics(chm.attrs, route)
@@ -132,9 +135,9 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       if (span) {
         span.setAttributes(chm.attrs)
         if (chm.attrs['moost.event_type'] === 'HTTP') {
-          span.updateName(`${this.getRequest()?.method || ''} ${route || '<unresolved>'}`)
+          span.updateName(`${this.getRequest()?.method || ''} ${_route || '<unresolved>'}`)
         } else {
-          span.updateName(`${chm.attrs['moost.event_type']} ${route || '<unresolved>'}`)
+          span.updateName(`${chm.attrs['moost.event_type']} ${_route || '<unresolved>'}`)
         }
       }
     }
@@ -203,15 +206,15 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
         route,
         url: req?.url,
       }
-      moostMetrics.httpRequestCount.add(1, attrs)
-      moostMetrics.httpActiveRequests.add(1, attrs)
+      this.metrics.httpRequestCount.add(1, attrs)
+      this.metrics.httpActiveRequests.add(1, attrs)
     }
     const attrs = {
       ...a,
       route,
     }
-    moostMetrics.moostEventCount.add(1, attrs)
-    moostMetrics.moostActiveEvents.add(1, attrs)
+    this.metrics.moostEventCount.add(1, attrs)
+    this.metrics.moostActiveEvents.add(1, attrs)
   }
 
   // end event metrics
@@ -225,21 +228,21 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
         route,
         url: req?.url,
       }
-      moostMetrics.httpActiveRequests.add(-1, attrs)
+      this.metrics.httpActiveRequests.add(-1, attrs)
       if (error) {
-        moostMetrics.httpErrorCount.add(1, attrs)
+        this.metrics.httpErrorCount.add(1, attrs)
       }
-      moostMetrics.httpRequestSize.record(req?.socket.bytesRead || 0, attrs)
-      moostMetrics.httpResponseSize.record(res?._contentLength || 0, attrs)
-      moostMetrics.httpResponseCount.add(1, { ...attrs, status: res?._statusCode })
+      this.metrics.httpRequestSize.record(req?.socket.bytesRead || 0, attrs)
+      this.metrics.httpResponseSize.record(res?._contentLength || 0, attrs)
+      this.metrics.httpResponseCount.add(1, { ...attrs, status: res?._statusCode })
     }
     const attrs = {
       ...a,
       route,
     }
-    moostMetrics.moostActiveEvents.add(-1, attrs)
+    this.metrics.moostActiveEvents.add(-1, attrs)
     if (error) {
-      moostMetrics.moostErrorCount.add(1, attrs)
+      this.metrics.moostErrorCount.add(1, attrs)
     }
   }
 

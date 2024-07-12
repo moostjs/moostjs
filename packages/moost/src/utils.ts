@@ -17,16 +17,19 @@ export function getIterceptorHandlerFactory(
   logger: TConsoleBase
 ) {
   return () => {
-    const interceptorHandlers: TInterceptorFn[] = []
-    for (const { handler } of interceptors) {
+    const interceptorHandlers: Array<{ handler: TInterceptorFn; name: string }> = []
+    for (const { handler, name } of interceptors) {
       const interceptorMeta = mate.read(handler)
       if (interceptorMeta?.injectable) {
-        interceptorHandlers.push(async (...args) => {
-          const targetInstance = await getTargetInstance()
-          return (await getCallableFn(targetInstance, handler, pipes, logger))(...args)
+        interceptorHandlers.push({
+          handler: async (...args) => {
+            const targetInstance = await getTargetInstance()
+            return (await getCallableFn(targetInstance, handler, pipes, logger))(...args)
+          },
+          name,
         })
       } else {
-        interceptorHandlers.push(handler as TInterceptorFn)
+        interceptorHandlers.push({ handler: handler as TInterceptorFn, name })
       }
     }
     return Promise.resolve(new InterceptorHandler(interceptorHandlers))

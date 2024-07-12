@@ -79,7 +79,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     const interceptorHandler = await options.getIterceptorHandler()
     if (interceptorHandler?.count) {
       try {
-        response = await ci.with('Inteceptors:init', () => interceptorHandler.init())
+        response = await ci.with('Interceptors:init', () => interceptorHandler.init())
         if (response !== undefined) {
           return await endWithResponse()
         }
@@ -105,7 +105,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     }
 
     if (interceptorHandler?.countBefore) {
-      response = await ci.with('Inteceptors:before', () => interceptorHandler.fireBefore(response))
+      response = await ci.with('Interceptors:before', () => interceptorHandler.fireBefore(response))
       if (response !== undefined) {
         return endWithResponse()
       }
@@ -145,7 +145,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       if (interceptorHandler?.countAfter || interceptorHandler?.countOnError) {
         try {
           // logger.trace('firing after interceptors')
-          response = await ci.with('Inteceptors:after', () =>
+          response = await ci.with('Interceptors:after', () =>
             interceptorHandler.fireAfter(response)
           )
         } catch (error) {

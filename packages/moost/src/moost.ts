@@ -344,11 +344,17 @@ export class Moost extends Hookable {
             typeof (item as TInterceptorFn).priority === 'number'
               ? (item as TInterceptorFn).priority!
               : TInterceptorPriority.INTERCEPTOR,
+          name: (item as TInterceptorFn)._name || item.name || '<anonymous>',
         })
       } else {
         this.interceptors.push({
           handler: item.handler,
           priority: item.priority,
+          name:
+            item.name ||
+            (item.handler as TInterceptorFn)._name ||
+            item.handler.name ||
+            '<anonymous>',
         })
       }
     }

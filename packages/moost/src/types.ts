@@ -20,8 +20,8 @@ export interface THandlerOverview {
 
 export type TContextInjectorHook =
   | 'Event:start'
-  | 'Inteceptors:init'
+  | 'Interceptors:init'
   | 'Arguments:resolve'
-  | 'Inteceptors:before'
+  | 'Interceptors:before'
   | 'Handler'
-  | 'Inteceptors:after'
+  | 'Interceptors:after'

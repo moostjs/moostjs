@@ -19,6 +19,7 @@ export interface TInterceptorFn {
     onError: (fn: TInterceptorOnError) => void
   ): unknown | Promise<unknown>
   priority?: TInterceptorPriority
+  _name?: string
 }
 
 export enum TInterceptorPriority {
@@ -45,7 +46,8 @@ export enum TInterceptorPriority {
  */
 export function Intercept(
   handler: TCallableClassFunction<TInterceptorFn>,
-  priority?: TInterceptorPriority
+  priority?: TInterceptorPriority,
+  name?: string
 ): ClassDecorator & MethodDecorator {
   return getMoostMate().decorate(
     'interceptors',
@@ -53,6 +55,7 @@ export function Intercept(
       handler,
       priority:
         priority || (handler as TInterceptorFn).priority || TInterceptorPriority.INTERCEPTOR,
+      name: name || (handler as TInterceptorFn)._name || handler.name,
     },
     true
   )

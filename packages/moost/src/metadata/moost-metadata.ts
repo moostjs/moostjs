@@ -52,6 +52,7 @@ export type TMoostHandler<T> = {
 export interface TInterceptorData {
   handler: TCallableClassFunction<TInterceptorFn>
   priority: TInterceptorPriority
+  name: string
 }
 
 const moostMate = new Mate<TMoostMetadata, TMoostMetadata>(METADATA_WORKSPACE, {
