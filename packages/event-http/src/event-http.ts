@@ -114,18 +114,14 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
   > = {}
 
   async onNotFound() {
-    const response = await defineMoostEventHandler({
+    return defineMoostEventHandler({
       loggerTitle: LOGGER_TITLE,
       getIterceptorHandler: () => this.moost?.getGlobalInterceptorHandler(),
       getControllerInstance: () => this.moost,
-      callControllerMethod: () => undefined,
+      callControllerMethod: () => new HttpError(404, 'Resource Not Found'),
       targetPath: '',
-      handlerType: 'HTTP',
+      handlerType: '__SYSTEM__',
     })()
-    if (!response) {
-      throw new HttpError(404, 'Resource Not Found')
-    }
-    return response
   }
 
   protected moost?: Moost

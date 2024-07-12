@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 import type { Span } from '@opentelemetry/api'
 import { context, trace } from '@opentelemetry/api'
 import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from 'http'
@@ -126,6 +127,10 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       // ignore "WF_STEP" to prevent interference with "WF_FLOW"
       return
     }
+    if (method === '__SYSTEM__') {
+      // it is a fake controller that handles 404 errors
+      return
+    }
     if (name === 'Handler:not_found') {
       const chm = this.getControllerHandlerMeta()
       this.startEventMetrics(chm.attrs, route)
@@ -133,7 +138,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       const _route = useAsyncEventContext<TOtelContext>().store('otel').get('route')
       const chm = this.getControllerHandlerMeta()
       if (!chm.ignoreMeter) {
-        this.startEventMetrics(chm.attrs, route)
+        this.startEventMetrics(chm.attrs, _route)
       }
       const { getSpan } = useOtelContext()
       const span = getSpan()
@@ -188,7 +193,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       if (ret && ret instanceof Promise) {
         ret
           .then(r => {
-            endSpan()
+            endSpan(r instanceof Error ? r : undefined)
             // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             return r
           })
@@ -196,7 +201,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
             endSpan(error as Error)
           })
       } else {
-        endSpan()
+        endSpan(ret instanceof Error ? ret : undefined)
       }
     }
     return ret
@@ -207,16 +212,15 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     if (a['moost.event_type'] === 'HTTP') {
       const req = this.getRequest()
       const attrs = {
-        ...a,
-        route,
-        url: req?.url,
+        'route': route || req?.url,
+        'moost.event_type': a['moost.event_type'],
       }
       this.metrics.httpRequestCount.add(1, attrs)
       this.metrics.httpActiveRequests.add(1, attrs)
     }
     const attrs = {
-      ...a,
       route,
+      'moost.event_type': a['moost.event_type'],
     }
     this.metrics.moostEventCount.add(1, attrs)
     this.metrics.moostActiveEvents.add(1, attrs)
@@ -229,9 +233,8 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       const req = this.getRequest()
       const res = this.getResponse()
       const attrs = {
-        ...a,
-        route,
-        url: req?.url,
+        'route': route || req?.url,
+        'moost.event_type': a['moost.event_type'],
       }
       this.metrics.httpActiveRequests.add(-1, attrs)
       if (error) {
@@ -242,8 +245,8 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       this.metrics.httpResponseCount.add(1, { ...attrs, status: res?._statusCode })
     }
     const attrs = {
-      ...a,
       route,
+      'moost.event_type': a['moost.event_type'],
     }
     this.metrics.moostActiveEvents.add(-1, attrs)
     if (error) {

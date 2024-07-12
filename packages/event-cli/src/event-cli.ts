@@ -94,7 +94,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
       callControllerMethod: () => undefined,
       logErrors: this.opts?.debug,
       targetPath: '',
-      handlerType: 'CLI',
+      handlerType: '__SYSTEM__',
     })()
     if (response === undefined) {
       this.cliApp.onUnknownCommand(pathParams)

@@ -41,10 +41,10 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
       loggerTitle: LOGGER_TITLE,
       getIterceptorHandler: () => this.moost?.getGlobalInterceptorHandler(),
       getControllerInstance: () => this.moost,
-      callControllerMethod: () => undefined,
+      callControllerMethod: () => new Error('WF Handler not found'),
       logErrors: this.debug,
       targetPath: '',
-      handlerType: 'WF_FLOW',
+      handlerType: '__SYSTEM__',
     })()
   }
 
