@@ -20,7 +20,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     const fn = typeof attributes === 'function' ? attributes : cb!
     const attrs = typeof attributes === 'object' ? attributes : undefined
     if (name === 'Event:start' && attrs?.eventType) {
-      return this.startEvent(name, attrs.eventType as string, fn)
+      return this.startEvent(attrs.eventType as string, fn)
     } else if (name !== 'Event:start') {
       if (this.getIgnoreSpan()) {
         return fn()
@@ -59,7 +59,10 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     }
   }
 
-  startEvent<T>(name: string, eventType: string, cb: () => T): T {
+  startEvent<T>(eventType: string, cb: () => T): T {
+    if (eventType === 'init') {
+      return cb()
+    }
     const { registerSpan } = useOtelContext()
     let span = trace.getActiveSpan()
     if (eventType === 'HTTP') {
@@ -93,13 +96,14 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     const { getMethod, getMethodMeta, getController, getControllerMeta, getRoute } =
       useControllerContext()
     const methodName = getMethod()
-    const cMeta = getControllerMeta<TOtelMate>()
-    const mMeta = getMethodMeta<TOtelMate>()
+    const controller = getController()
+    const cMeta = controller ? getControllerMeta<TOtelMate>() : undefined
+    const mMeta = controller ? getMethodMeta<TOtelMate>() : undefined
     return {
       ignoreMeter: cMeta?.otelIgnoreMeter || mMeta?.otelIgnoreMeter,
       ignoreSpan: cMeta?.otelIgnoreSpan || mMeta?.otelIgnoreSpan,
       attrs: {
-        'moost.controller': getConstructor(getController()).name,
+        'moost.controller': controller ? getConstructor(controller).name : undefined,
         'moost.handler': methodName,
         'moost.handler_description': mMeta?.description,
         'moost.handler_label': mMeta?.label,
