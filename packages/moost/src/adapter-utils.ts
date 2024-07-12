@@ -1,9 +1,13 @@
+/* eslint-disable @typescript-eslint/no-confusing-void-expression */
+/* eslint-disable require-atomic-updates */
 /* eslint-disable @typescript-eslint/no-unused-expressions */
-import { useEventId, useEventLogger } from '@wooksjs/event-core'
+import { getConstructor } from '@prostojs/mate'
+import { getContextInjector, useEventId, useEventLogger } from '@wooksjs/event-core'
 
 import { setControllerContext } from './composables'
 import type { InterceptorHandler } from './interceptor-handler'
 import { getMoostInfact } from './metadata'
+import type { TContextInjectorHook } from './types'
 
 export interface TMoostEventHandlerHookOptions<T> {
   scopeId: string
@@ -29,6 +33,7 @@ export interface TMoostEventHandlerOptions<T> {
     init?: (opts: TMoostEventHandlerHookOptions<T>) => unknown
     end?: (opts: TMoostEventHandlerHookOptions<T>) => unknown
   }
+  targetPath: string
 }
 
 const infact = getMoostInfact()
@@ -40,6 +45,7 @@ export function registerEventScope(scopeId: string) {
 }
 
 export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>) {
+  const ci = getContextInjector<TContextInjectorHook>()
   return async () => {
     const scopeId = useEventId().getId()
     const logger = useEventLogger(options.loggerTitle)
@@ -62,13 +68,18 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     const instance = await options.getControllerInstance()
 
     if (instance) {
-      setControllerContext(instance, options.controllerMethod || ('' as keyof T))
+      setControllerContext(
+        instance,
+        options.controllerMethod || ('' as keyof T),
+        options.targetPath
+      )
     }
+    ci.with('Handler:routed', () => undefined)
 
     const interceptorHandler = await options.getIterceptorHandler()
     if (interceptorHandler) {
       try {
-        response = await interceptorHandler.init()
+        response = await ci.with('Inteceptors:init', () => interceptorHandler.init())
         if (response !== undefined) {
           return await endWithResponse()
         }
@@ -84,7 +95,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       // params
       try {
         // logger.trace(`resolving method args for "${ opts.method as string }"`)
-        args = await options.resolveArgs()
+        args = await ci.with('Arguments:resolve', () => options.resolveArgs!())
         // logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
       } catch (error) {
         options.logErrors && logger.error(error)
@@ -94,7 +105,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     }
 
     if (interceptorHandler) {
-      response = await interceptorHandler.fireBefore(response)
+      response = await ci.with('Inteceptors:before', () => interceptorHandler.fireBefore(response))
       if (response !== undefined) {
         return endWithResponse()
       }
@@ -115,7 +126,14 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       }
     }
     try {
-      response = callControllerMethod()
+      response = await ci.with(
+        'Handler',
+        {
+          'moost.handler': (options.controllerMethod as string) || '',
+          'moost.controller': getConstructor(instance).name,
+        },
+        () => callControllerMethod()
+      )
     } catch (error) {
       options.logErrors && logger.error(error)
       response = error
@@ -127,7 +145,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       if (interceptorHandler) {
         try {
           // logger.trace('firing after interceptors')
-          response = await interceptorHandler.fireAfter(response)
+          response = await ci.with('Inteceptors:after', () =>
+            interceptorHandler.fireAfter(response)
+          )
         } catch (error) {
           options.logErrors && logger.error(error)
           if (!options.manualUnscope) {

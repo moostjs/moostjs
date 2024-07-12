@@ -93,6 +93,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
       getControllerInstance: () => this.moost,
       callControllerMethod: () => undefined,
       logErrors: this.opts?.debug,
+      targetPath: '',
     })()
     if (response === undefined) {
       this.cliApp.onUnknownCommand(pathParams)
@@ -132,18 +133,19 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
           .replace(/\/\\:/g, '\\:')
           .replace(/^\/+/g, '')
 
-      if (!fn) {
-        fn = defineMoostEventHandler({
-          contextType: CONTEXT_TYPE,
-          loggerTitle: LOGGER_TITLE,
-          getIterceptorHandler: opts.getIterceptorHandler,
-          getControllerInstance: opts.getInstance,
-          controllerMethod: opts.method,
-          resolveArgs: opts.resolveArgs,
-          logErrors: this.opts?.debug,
-        })
-      }
       const targetPath = makePath(path)
+
+      fn = defineMoostEventHandler({
+        contextType: CONTEXT_TYPE,
+        loggerTitle: LOGGER_TITLE,
+        getIterceptorHandler: opts.getIterceptorHandler,
+        getControllerInstance: opts.getInstance,
+        controllerMethod: opts.method,
+        resolveArgs: opts.resolveArgs,
+        logErrors: this.opts?.debug,
+        targetPath,
+      })
+
       const meta = getCliMate().read(opts.fakeInstance, opts.method as string)
       const classMeta = getCliMate().read(opts.fakeInstance)
       const cliOptions = new Map<

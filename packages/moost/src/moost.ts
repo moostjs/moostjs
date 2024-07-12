@@ -221,7 +221,7 @@ export class Moost extends Hookable {
         event: { type: 'init' },
         options: {},
       })(async () => {
-        setControllerContext(this, 'bindController' as keyof this)
+        setControllerContext(this, 'bindController' as keyof this, '')
         instance = (await infact.get(
           controller as TClassConstructor<TAny>,
           infactOpts

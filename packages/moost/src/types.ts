@@ -17,3 +17,11 @@ export interface THandlerOverview {
   handler: TMoostHandler<TEmpty>
   registeredAs: Array<{ path: string; args: string[] }>
 }
+
+export type TContextInjectorHook =
+  | 'Event:start'
+  | 'Inteceptors:init'
+  | 'Arguments:resolve'
+  | 'Inteceptors:before'
+  | 'Handler'
+  | 'Inteceptors:after'

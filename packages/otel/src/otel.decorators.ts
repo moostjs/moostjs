@@ -9,3 +9,8 @@ const mate = getOtelMate()
  * Requires use of MoostBatchSpanProcessor or MoostSimpleSpanProcessor
  */
 export const OtelIgnoreSpan = () => mate.decorate('otelIgnoreSpan', true)
+
+/**
+ * Annotate controller and/or handler to suppress metrics
+ */
+export const OtelIgnoreMeter = () => mate.decorate('otelIgnoreMeter', true)

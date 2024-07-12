@@ -119,6 +119,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
       getIterceptorHandler: () => this.moost?.getGlobalInterceptorHandler(),
       getControllerInstance: () => this.moost,
       callControllerMethod: () => undefined,
+      targetPath: '',
     })()
     if (!response) {
       throw new HttpError(404, 'Resource Not Found')
@@ -158,23 +159,23 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         path.endsWith('//') ? '/' : ''
       }` // explicit double slash "//" -> force url to end with slash
 
-      if (!fn) {
-        fn = defineMoostEventHandler({
-          contextType: CONTEXT_TYPE,
-          loggerTitle: LOGGER_TITLE,
-          getIterceptorHandler: opts.getIterceptorHandler,
-          getControllerInstance: opts.getInstance,
-          controllerMethod: opts.method,
-          resolveArgs: opts.resolveArgs,
-          manualUnscope: true,
-          hooks: {
-            init: ({ unscope }) => {
-              const { rawRequest } = useRequest()
-              rawRequest.on('end', unscope) // will unscope on request end
-            },
+      fn = defineMoostEventHandler({
+        contextType: CONTEXT_TYPE,
+        loggerTitle: LOGGER_TITLE,
+        getIterceptorHandler: opts.getIterceptorHandler,
+        getControllerInstance: opts.getInstance,
+        controllerMethod: opts.method,
+        resolveArgs: opts.resolveArgs,
+        manualUnscope: true,
+        hooks: {
+          init: ({ unscope }) => {
+            const { rawRequest } = useRequest()
+            rawRequest.on('end', unscope) // will unscope on request end
           },
-        })
-      }
+        },
+        targetPath,
+      })
+
       const routerBinding = this.httpApp.on(handler.method, targetPath, fn)
       const { getPath: pathBuilder } = routerBinding
       const methodMeta =

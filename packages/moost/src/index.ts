@@ -17,9 +17,11 @@ export {
   EventLogger,
   useAsyncEventContext,
   useEventLogger,
-  eventContextHooks,
+  ContextInjector,
+  getContextInjector,
+  replaceContextInjector,
 } from '@wooksjs/event-core'
 export type { TProvideRegistry } from '@prostojs/infact'
 export { createProvideRegistry, createReplaceRegistry } from '@prostojs/infact'
 export { getConstructor, isConstructor } from '@prostojs/mate'
-export type { TControllerOverview } from './types'
+export type { TControllerOverview, TContextInjectorHook } from './types'

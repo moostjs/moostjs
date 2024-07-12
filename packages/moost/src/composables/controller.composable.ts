@@ -4,14 +4,15 @@ import type { TAny, TClassConstructor } from 'common'
 import { getMoostInfact, getMoostMate } from '../metadata'
 
 interface TControllerContext<T> {
-  controller: { instance: T; method: keyof T }
+  controller: { instance: T; method: keyof T; route: string }
 }
 
-export function setControllerContext<T>(controller: T, method: keyof T) {
+export function setControllerContext<T>(controller: T, method: keyof T, route: string) {
   const { store } = useAsyncEventContext<TControllerContext<T>>()
   const { set } = store('controller')
   set('instance', controller)
   set('method', method)
+  set('route', route)
 }
 
 export function useControllerContext<T extends object>() {
@@ -20,6 +21,7 @@ export function useControllerContext<T extends object>() {
 
   const getController = () => get('instance')!
   const getMethod = () => get('method') as string | undefined
+  const getRoute = () => get('route')
   // todo: add generic types to getControllerMeta
   const getControllerMeta = <TT extends object>() =>
     getMoostMate<TT, TT, TT>().read(getController())
@@ -36,6 +38,7 @@ export function useControllerContext<T extends object>() {
 
   return {
     instantiate,
+    getRoute,
     getController,
     getMethod,
     getControllerMeta,

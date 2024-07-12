@@ -43,6 +43,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
       getControllerInstance: () => this.moost,
       callControllerMethod: () => undefined,
       logErrors: this.debug,
+      targetPath: '',
     })()
   }
 
@@ -110,17 +111,18 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
       const targetPath = `${`${opts.prefix || ''}/${path}`.replace(/\/\/+/g, '/')}${
         path.endsWith('//') ? '/' : ''
       }` // explicit double slash "//" -> force url to end with slash
-      if (!fn) {
-        fn = defineMoostEventHandler({
-          contextType: CONTEXT_TYPE,
-          loggerTitle: LOGGER_TITLE,
-          getIterceptorHandler: opts.getIterceptorHandler,
-          getControllerInstance: opts.getInstance,
-          controllerMethod: opts.method,
-          resolveArgs: opts.resolveArgs,
-          manualUnscope: true,
-        })
-      }
+
+      fn = defineMoostEventHandler({
+        contextType: CONTEXT_TYPE,
+        loggerTitle: LOGGER_TITLE,
+        getIterceptorHandler: opts.getIterceptorHandler,
+        getControllerInstance: opts.getInstance,
+        controllerMethod: opts.method,
+        resolveArgs: opts.resolveArgs,
+        manualUnscope: true,
+        targetPath,
+      })
+
       if (handler.type === 'WF_STEP') {
         this.wfApp.step(targetPath, {
           handler: fn as TStepHandler<any, any, any>,
