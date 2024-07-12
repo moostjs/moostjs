@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/event-wf",
-  "version": "0.4.14",
+  "version": "0.4.15",
   "description": "@moostjs/event-wf",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -37,7 +37,7 @@
   },
   "peerDependencies": {},
   "dependencies": {
-    "moost": "0.4.14",
+    "moost": "0.4.15",
     "wooks": "^0.5.12",
     "@wooksjs/event-core": "^0.5.12",
     "@wooksjs/event-wf": "^0.5.12",

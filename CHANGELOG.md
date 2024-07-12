@@ -1,3 +1,12 @@
+## [0.4.15](https://github.com/moostjs/moostjs/compare/v0.4.14...v0.4.15) (2024-07-12)
+
+
+### Bug Fixes
+
+* **otel:** update name of not matched routes ([d9a4452](https://github.com/moostjs/moostjs/commit/d9a4452f6175f3cda61ec19854597c1e41346b6a))
+
+
+
 ## [0.4.14](https://github.com/moostjs/moostjs/compare/v0.4.13...v0.4.14) (2024-07-12)
 
 
