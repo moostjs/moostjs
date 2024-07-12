@@ -115,21 +115,31 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     }
   }
 
-  hook(name: 'Handler:not_found' | 'Handler:routed' | 'C', route?: string): void {
-    useAsyncEventContext<TOtelContext>().store('otel').set('route', route)
-    const chm = this.getControllerHandlerMeta()
-    if (!chm.ignoreMeter) {
+  hook(
+    name: 'Handler:not_found' | 'Handler:routed' | 'Controller:registered',
+    route?: string
+  ): void {
+    if (name === 'Handler:not_found') {
+      const chm = this.getControllerHandlerMeta()
       this.startEventMetrics(chm.attrs, route)
-    }
-    const { getSpan } = useOtelContext()
-    const span = getSpan()
-    if (span) {
-      span.setAttributes(chm.attrs)
-      if (chm.attrs['moost.event_type'] === 'HTTP') {
-        span.updateName(`${this.getRequest()?.method || ''} ${route || '<unresolved>'}`)
-      } else {
-        span.updateName(`${chm.attrs['moost.event_type']} ${route || '<unresolved>'}`)
+    } else if (name === 'Controller:registered') {
+      const chm = this.getControllerHandlerMeta()
+      if (!chm.ignoreMeter) {
+        this.startEventMetrics(chm.attrs, route)
       }
+      const { getSpan } = useOtelContext()
+      const span = getSpan()
+      if (span) {
+        span.setAttributes(chm.attrs)
+        if (chm.attrs['moost.event_type'] === 'HTTP') {
+          span.updateName(`${this.getRequest()?.method || ''} ${route || '<unresolved>'}`)
+        } else {
+          span.updateName(`${chm.attrs['moost.event_type']} ${route || '<unresolved>'}`)
+        }
+      }
+    }
+    if (name !== 'Controller:registered') {
+      useAsyncEventContext<TOtelContext>().store('otel').set('route', route)
     }
   }
 

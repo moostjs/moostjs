@@ -73,6 +73,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         options.controllerMethod || ('' as keyof T),
         options.targetPath
       )
+      ci.hook('Controller:registered' as 'Handler:routed')
     }
 
     const interceptorHandler = await options.getIterceptorHandler()

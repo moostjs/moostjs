@@ -17,10 +17,12 @@ export const moostMetrics = {
 
   httpRequestSize: meter.createHistogram('http.server.request.size', {
     description: 'The size of HTTP request bodies',
+    unit: 'byte',
   }),
 
   httpResponseSize: meter.createHistogram('http.server.response.size', {
     description: 'The size of HTTP response bodies',
+    unit: 'byte',
   }),
 
   httpErrorCount: meter.createCounter('http.server.errors', {
