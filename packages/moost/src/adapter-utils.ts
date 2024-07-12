@@ -74,7 +74,6 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         options.targetPath
       )
     }
-    ci.with('Handler:routed', () => undefined)
 
     const interceptorHandler = await options.getIterceptorHandler()
     if (interceptorHandler) {
