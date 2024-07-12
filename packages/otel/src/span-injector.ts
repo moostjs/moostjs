@@ -131,8 +131,17 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       // it is a fake controller that handles 404 errors
       return
     }
+    const { getSpan } = useOtelContext()
     if (name === 'Handler:not_found') {
       const chm = this.getControllerHandlerMeta()
+      const span = getSpan()
+      if (span) {
+        const eventType = this.getEventType()
+        if (eventType === 'HTTP') {
+          const req = this.getRequest()
+          span.updateName(`${req?.method || ''} ${req?.url}`)
+        }
+      }
       this.startEventMetrics(chm.attrs, route)
     } else if (name === 'Controller:registered') {
       const _route = useAsyncEventContext<TOtelContext>().store('otel').get('route')
@@ -140,7 +149,6 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       if (!chm.ignoreMeter) {
         this.startEventMetrics(chm.attrs, _route)
       }
-      const { getSpan } = useOtelContext()
       const span = getSpan()
       if (span) {
         span.setAttributes(chm.attrs)
