@@ -1,3 +1,12 @@
+## [0.4.9](https://github.com/moostjs/moostjs/compare/v0.4.8...v0.4.9) (2024-07-12)
+
+
+### Bug Fixes
+
+* **otel:** fix accessing controller context ([9a0a765](https://github.com/moostjs/moostjs/commit/9a0a765448b050f052c2af5588c3c0377573f0b7))
+
+
+
 ## [0.4.8](https://github.com/moostjs/moostjs/compare/v0.4.7...v0.4.8) (2024-07-12)
 
 
