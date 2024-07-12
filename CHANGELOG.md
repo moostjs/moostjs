@@ -1,3 +1,12 @@
+## [0.4.11](https://github.com/moostjs/moostjs/compare/v0.4.10...v0.4.11) (2024-07-12)
+
+
+### Bug Fixes
+
+* **otel:** fix span filtering ([1688a58](https://github.com/moostjs/moostjs/commit/1688a580368f7d242fc87552f996eb76d7bfbd01))
+
+
+
 ## [0.4.10](https://github.com/moostjs/moostjs/compare/v0.4.9...v0.4.10) (2024-07-12)
 
 
