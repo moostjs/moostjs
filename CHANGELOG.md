@@ -1,3 +1,12 @@
+## [0.4.10](https://github.com/moostjs/moostjs/compare/v0.4.9...v0.4.10) (2024-07-12)
+
+
+### Bug Fixes
+
+* process interceptors only when they have length ([eac9438](https://github.com/moostjs/moostjs/commit/eac943858b3c7493984a032ce7388c6fb7b9645d))
+
+
+
 ## [0.4.9](https://github.com/moostjs/moostjs/compare/v0.4.8...v0.4.9) (2024-07-12)
 
 
