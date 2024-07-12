@@ -1,3 +1,12 @@
+## [0.4.14](https://github.com/moostjs/moostjs/compare/v0.4.13...v0.4.14) (2024-07-12)
+
+
+### Bug Fixes
+
+* **otel:** fix metrics ([022e6d1](https://github.com/moostjs/moostjs/commit/022e6d150e650ad6a1f9fe6832949693ee9dacdd))
+
+
+
 ## [0.4.13](https://github.com/moostjs/moostjs/compare/v0.4.12...v0.4.13) (2024-07-12)
 
 
