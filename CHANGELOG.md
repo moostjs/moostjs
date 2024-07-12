@@ -1,3 +1,17 @@
+## [0.4.8](https://github.com/moostjs/moostjs/compare/v0.4.7...v0.4.8) (2024-07-12)
+
+
+### Bug Fixes
+
+* remove routed context injection ([794f0e8](https://github.com/moostjs/moostjs/commit/794f0e8d277044a17fef272bf671ef3af2cd0f37))
+
+
+### Features
+
+* **otel:** support spans for interceptors ([e8bf6f0](https://github.com/moostjs/moostjs/commit/e8bf6f0e79e2599f1516dbc3c0b49b22cdf4e714))
+
+
+
 ## [0.4.7](https://github.com/moostjs/moostjs/compare/v0.4.6...v0.4.7) (2024-07-11)
 
 
