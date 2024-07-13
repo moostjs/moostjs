@@ -1,5 +1,5 @@
 import type { Span, SpanOptions } from '@opentelemetry/api'
-import { context, trace } from '@opentelemetry/api'
+import { context, SpanStatusCode, trace } from '@opentelemetry/api'
 
 export type TPostSpanProcessFn<T> = (
   span: Span,
@@ -41,6 +41,10 @@ export function withSpan<T>(
   const finalizeSpan = (e: Error | undefined, r: Awaited<T>) => {
     if (e) {
       _span.recordException(e)
+      _span.setStatus({
+        code: SpanStatusCode.ERROR,
+        message: e.message || 'Unknown Error',
+      })
     }
     if (postProcess) {
       postProcess(_span, e, r)
