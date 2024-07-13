@@ -1,3 +1,12 @@
+## [0.4.17](https://github.com/moostjs/moostjs/compare/v0.4.16...v0.4.17) (2024-07-13)
+
+
+### Features
+
+* **otel:** set span error status when exception occured ([cc64128](https://github.com/moostjs/moostjs/commit/cc64128e07c37daa44e16ecac47a2fcc9587478f))
+
+
+
 ## [0.4.16](https://github.com/moostjs/moostjs/compare/v0.4.15...v0.4.16) (2024-07-13)
 
 
