@@ -1,3 +1,12 @@
+## [0.4.16](https://github.com/moostjs/moostjs/compare/v0.4.15...v0.4.16) (2024-07-13)
+
+
+### Features
+
+* **otel:** add withSpan utility fn ([4438d9d](https://github.com/moostjs/moostjs/commit/4438d9d6ee9846ec7790cecd97e59b5c29146a89))
+
+
+
 ## [0.4.15](https://github.com/moostjs/moostjs/compare/v0.4.14...v0.4.15) (2024-07-12)
 
 
