@@ -1,3 +1,12 @@
+## [0.4.18](https://github.com/moostjs/moostjs/compare/v0.4.17...v0.4.18) (2024-07-13)
+
+
+### Bug Fixes
+
+* **otel:** fix bug in withSpan fn ([b524c33](https://github.com/moostjs/moostjs/commit/b524c3357f5141dd2b26b2f6f45d7fd395b606fb))
+
+
+
 ## [0.4.17](https://github.com/moostjs/moostjs/compare/v0.4.16...v0.4.17) (2024-07-13)
 
 
