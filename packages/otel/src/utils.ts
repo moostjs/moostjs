@@ -32,10 +32,10 @@ export function withSpan<T>(
   const _span =
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     typeof (span as TSpanInput).name === 'string' && !(span as Span).spanContext
-      ? (span as Span)
-      : trace
+      ? trace
           .getTracer('default')
           .startSpan((span as TSpanInput).name, (span as TSpanInput).options)
+      : (span as Span)
   let result = undefined as T
 
   const finalizeSpan = (e: Error | undefined, r: Awaited<T>) => {
