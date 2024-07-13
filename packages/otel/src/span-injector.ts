@@ -1,6 +1,6 @@
 /* eslint-disable sonarjs/no-duplicate-string */
 import type { Span } from '@opentelemetry/api'
-import { context, trace } from '@opentelemetry/api'
+import { SpanKind, trace } from '@opentelemetry/api'
 import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from 'http'
 import type { TContextInjectorHook } from 'moost'
 import { ContextInjector, getConstructor, useAsyncEventContext, useControllerContext } from 'moost'
@@ -9,6 +9,7 @@ import type { TOtelContext } from './context'
 import { useOtelContext } from './context'
 import { getMoostMetrics } from './metrics'
 import type { TOtelMate } from './otel.mate'
+import { withSpan } from './utils'
 
 const tracer = trace.getTracer('moost-tracer')
 
@@ -29,10 +30,11 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
         return fn()
       } else {
         const span = tracer.startSpan(name, {
+          kind: SpanKind.INTERNAL,
           attributes: attrs,
         })
         return this.withSpan(span, fn, {
-          rootSpan: false,
+          withMetrics: false,
           endSpan: true,
         })
       }
@@ -77,7 +79,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     if (span) {
       registerSpan(span)
       return this.withSpan(span, cb, {
-        rootSpan: true,
+        withMetrics: true,
         endSpan: eventType !== 'HTTP',
       })
     }
@@ -168,51 +170,24 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     span: Span,
     cb: () => T,
     opts: {
-      rootSpan: boolean
+      withMetrics: boolean
       endSpan: boolean
     }
   ): T {
-    let result
-    let exception: Error | undefined
-    const endSpan = (error?: Error) => {
-      if (error) {
-        span.recordException(error)
+    return withSpan(span, cb, (_span, exception, result) => {
+      if (result instanceof Error) {
+        _span.recordException(result)
       }
-      if (opts.rootSpan) {
+      if (opts.withMetrics) {
         const chm = this.getControllerHandlerMeta()
         if (!chm.ignoreMeter) {
-          this.endEventMetrics(chm.attrs, error)
+          this.endEventMetrics(chm.attrs, result instanceof Error ? result : exception)
         }
       }
       if (opts.endSpan) {
-        span.end()
-      }
-    }
-    context.with(trace.setSpan(context.active(), span), () => {
-      try {
-        result = cb()
-      } catch (error) {
-        exception = error as Error
-        endSpan(exception)
+        _span.end()
       }
     })
-    const ret = result as T
-    if (!exception) {
-      if (ret && ret instanceof Promise) {
-        ret
-          .then(r => {
-            endSpan(r instanceof Error ? r : undefined)
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-            return r
-          })
-          .catch(error => {
-            endSpan(error as Error)
-          })
-      } else {
-        endSpan(ret instanceof Error ? ret : undefined)
-      }
-    }
-    return ret
   }
 
   // start event metrics
