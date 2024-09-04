@@ -101,7 +101,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     const { getMethod, getMethodMeta, getController, getControllerMeta, getRoute } =
       useControllerContext()
     const methodName = getMethod()
-    const controller = getController()
+    const controller = getController() as object | undefined
     const cMeta = controller ? getControllerMeta<TOtelMate>() : undefined
     const mMeta = controller ? getMethodMeta<TOtelMate>() : undefined
     return {
@@ -185,6 +185,10 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
         }
       }
       if (opts.endSpan) {
+        const customAttrs = useAsyncEventContext<TOtelContext>().store('customSpanAttrs').value
+        if (customAttrs) {
+          _span.setAttributes(customAttrs)
+        }
         _span.end()
       }
     })
@@ -192,49 +196,30 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
 
   // start event metrics
   startEventMetrics(a: Record<string, string | number | boolean | undefined>, route?: string) {
-    if (a['moost.event_type'] === 'HTTP') {
-      const req = this.getRequest()
-      const attrs = {
-        'route': route || req?.url,
-        'moost.event_type': a['moost.event_type'],
-      }
-      this.metrics.httpRequestCount.add(1, attrs)
-      this.metrics.httpActiveRequests.add(1, attrs)
-    }
-    const attrs = {
-      route,
-      'moost.event_type': a['moost.event_type'],
-    }
-    this.metrics.moostEventCount.add(1, attrs)
-    this.metrics.moostActiveEvents.add(1, attrs)
+    useAsyncEventContext<TOtelContext>().store('otel').set('startTime', Date.now())
   }
 
   // end event metrics
   endEventMetrics(a: Record<string, string | number | boolean | undefined>, error?: Error) {
-    const route = useAsyncEventContext<TOtelContext>().store('otel').get('route')
-    if (a['moost.event_type'] === 'HTTP') {
-      const req = this.getRequest()
-      const res = this.getResponse()
-      const attrs = {
-        'route': route || req?.url,
-        'moost.event_type': a['moost.event_type'],
-      }
-      this.metrics.httpActiveRequests.add(-1, attrs)
-      if (error) {
-        this.metrics.httpErrorCount.add(1, attrs)
-      }
-      this.metrics.httpRequestSize.record(req?.socket.bytesRead || 0, attrs)
-      this.metrics.httpResponseSize.record(res?._contentLength || 0, attrs)
-      this.metrics.httpResponseCount.add(1, { ...attrs, status: res?._statusCode })
-    }
+    const otelStore = useAsyncEventContext<TOtelContext>().store('otel')
+    const route = otelStore.get('route')
+    const duration = Date.now() - (otelStore.get('startTime') || Date.now() - 1)
+    const customAttrs = useAsyncEventContext<TOtelContext>().store('customMetricAttrs').value || {}
     const attrs = {
+      ...customAttrs,
       route,
       'moost.event_type': a['moost.event_type'],
+      'moost.is_error': error ? 1 : 0,
+    } as Record<string, string | number>
+    if (a['moost.event_type'] === 'HTTP') {
+      // eslint-disable-next-line unicorn/no-lonely-if
+      if (!attrs.route) {
+        attrs.route = this.getRequest()?.url || ''
+      }
+      attrs['http.status_code'] = this.getResponse()?._statusCode || 0
+      attrs['moost.is_error'] = attrs['moost.is_error'] || attrs['http.status_code'] > 399 ? 1 : 0
     }
-    this.metrics.moostActiveEvents.add(-1, attrs)
-    if (error) {
-      this.metrics.moostErrorCount.add(1, attrs)
-    }
+    this.metrics.moostEventDuration.record(duration, attrs)
   }
 
   getRequest() {

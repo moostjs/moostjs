@@ -6,13 +6,23 @@ export interface TOtelContext {
   otel?: {
     span?: Span
     route?: string
+    startTime?: number
   }
+  customSpanAttrs?: Record<string, string>
+  customMetricAttrs?: Record<string, string>
 }
 
 const spanStack = [] as Span[]
 
 export function useOtelContext() {
-  const store = useAsyncEventContext<TOtelContext>().store('otel')
+  const eventContext = useAsyncEventContext<TOtelContext>()
+  const store = eventContext.store('otel')
+
+  const csa = eventContext.store('customSpanAttrs')
+  const cma = eventContext.store('customMetricAttrs')
+
+  const customSpanAttr = (name: string, value: string | number) => csa.set(name, value)
+  const customMetricAttr = (name: string, value: string | number) => cma.set(name, value)
 
   const getSpan = () => store.get('span')
 
@@ -71,6 +81,8 @@ export function useOtelContext() {
     getPropagationHeaders,
     registerSpan: (span: Span) => store.set('span', span),
     pushSpan,
+    customSpanAttr,
+    customMetricAttr,
   }
 }
 
