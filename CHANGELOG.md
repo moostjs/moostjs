@@ -1,3 +1,12 @@
+## [0.4.20](https://github.com/moostjs/moostjs/compare/v0.4.19...v0.4.20) (2024-09-04)
+
+
+### Features
+
+* **otel:** add custom attrs support for spans/metrics ([a08d63a](https://github.com/moostjs/moostjs/commit/a08d63ac3b89cc29a17689d0de2a72684d72c65f))
+
+
+
 ## [0.4.19](https://github.com/moostjs/moostjs/compare/v0.4.18...v0.4.19) (2024-07-23)
 
 
