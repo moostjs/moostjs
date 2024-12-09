@@ -1,118 +1,154 @@
-# Interceptors
+# Interceptors in Moost
 
-## Quick Summary
+Interceptors in Moost act as flexible middleware that can modify the request flow before and after your handlers execute. They’re an essential tool for cross-cutting concerns such as logging, authentication, input validation, response transformation, and error handling, without cluttering your controller or handler logic.
 
-Moost's interceptors let you modify the event context both before and after an event handler runs. They're versatile, with uses ranging from manipulating requests or responses, authorizing actions, logging events, and more. They can adjust the response, halt event processing, or deal with errors.
+## Key Concepts
 
-## Interceptor Priorities
+- **Lifecycle Hooks:** Interceptors run at defined points:
+  - **Before Handler:** Modify requests, inject prerequisites, or halt execution.
+  - **After Handler:** Transform responses, log results, or finalize cleanup steps.
+  - **On Error:** Handle exceptions gracefully, transforming or logging errors.
 
-Interceptor priorities manage the order interceptors are activated. `TInterceptorPriority` enum sets these levels, with lower priority interceptors going first. They follow this sequence:
+- **Priority Levels:**  
+  Interceptors execute in a defined order based on their priority (`TInterceptorPriority`). Some common priorities:
+  - `BEFORE_ALL` (0): Run setup logic before anything else.
+  - `GUARD` (2): Authorization checks.
+  - `INTERCEPTOR` (4): General-purpose interceptors.
+  - `CATCH_ERROR` (5): Error-handling interceptors.
+  - `AFTER_ALL` (6): Final cleanup logic at the end.
 
-0. `BEFORE_ALL`: First to go, used for initial setup.
-1. `BEFORE_GUARD`: Executed before any guard interceptors.
-2. `GUARD`: For authorization checking interceptors.
-3. `AFTER_GUARD`: Executed after the guard interceptors.
-4. `INTERCEPTOR`: Default priority for common interceptors.
-5. `CATCH_ERROR`: Post-execution interceptors dealing with errors.
-6. `AFTER_ALL`: Last to go, used for cleanup or final actions.
+These priorities ensure you can layer interceptors logically, ensuring authentication runs before business logic, and cleanup runs after everything else.
 
-## Creating an Interceptor
+## Creating Interceptors
 
-You can craft an interceptor with the `defineInterceptorFn` function, where you detail the interceptor's logic. Here's an example:
+You can define interceptors as functions or classes. Both forms integrate with Moost’s DI and event lifecycle.
 
+### Functional Interceptors
+
+Use `defineInterceptorFn` to create a functional interceptor. This function receives three callback registrars: `before`, `after`, and `onError`. Each accepts a function defining what to do at that stage.
+
+**Example:**
 ```ts
-import { Intercept, defineInterceptorFn, TInterceptorPriority } from 'moost';
+import { defineInterceptorFn, TInterceptorPriority } from 'moost';
 
 export const myInterceptorFn = defineInterceptorFn((before, after, onError) => {
   before((reply) => {
-    // Pre-handler execution logic
+    // Runs before handler
+    // For example, log request start time or validate inputs
   });
 
   after((response, reply) => {
-    // Post-handler execution logic
+    // Runs after handler returns
+    // For example, modify response or log the result
   });
 
   onError((error, reply) => {
-    // Error handling logic
+    // Runs if the handler throws an error
+    // For example, transform the error into a user-friendly message
   });
 }, TInterceptorPriority.INTERCEPTOR);
 ```
 
-In this example, `before`, `after`, and `onError` callbacks manage actions before, after, and in the event of handler errors, respectively. `reply` can be used to modify responses or halt processing.
+In the above example:
+- `before` and `after` functions optionally call `reply(value)` to modify the final response or stop processing further.
+- `onError` can also call `reply(value)` to override the error response.
+
+### Class-Based Interceptors
+
+Interceptors can be defined as classes, benefiting from Moost’s DI. This allows you to inject services or configuration into your interceptors. Class-based interceptors must implement a `handler` method that matches the interceptor function signature.
+
+**Example:**
+```ts
+import { TClassFunction, Injectable, TInterceptorFn, TInterceptorPriority } from 'moost';
+
+@Injectable()
+class MyClassInterceptor implements TClassFunction<TInterceptorFn> {
+  static priority = TInterceptorPriority.BEFORE_ALL;
+
+  handler: TInterceptorFn = (before, after, onError) => {
+    before((reply) => {
+      // Set up or modify the request context before the handler
+    });
+    after((response, reply) => {
+      // Post-processing or logging after the handler executes
+    });
+    onError((error, reply) => {
+      // Centralized error handling logic
+    });
+  };
+}
+```
+
+**Using the Interceptor:**
+```ts
+import { Intercept } from 'moost';
+
+const MyClassInterceptorDecorator = Intercept(MyClassInterceptor);
+
+@Controller()
+@MyClassInterceptorDecorator
+class ExampleController {
+  @Get('test')
+  testHandler() { /* ... */ }
+}
+```
+
+In this setup, Moost creates and injects dependencies into the interceptor class, letting you easily integrate services like logging, configuration, or authentication checks.
 
 ## Applying Interceptors
 
-After creating an interceptor function, apply it to event handlers or controller classes using the `@Intercept` decorator:
+Interceptors can be applied at different levels:
 
-```ts
-import { myInterceptorFn } from './path/to/interceptors';
-import { Controller, Intercept } from 'moost';
-import { Get } from '@moostjs/event-http';
+1. **Per-Handler:**
+   ```ts
+   @Get('test')
+   @Intercept(myInterceptorFn)
+   testHandler() { /* ... */ }
+   ```
 
-@Intercept(myInterceptorFn)
-@Controller()
-export class ExampleController {
-  @Get('test')
-  @Intercept(myInterceptorFn)
-  testHandler() {
-    // ...
-  }
-}
-```
+2. **Per-Controller:**
+   ```ts
+   @Intercept(myInterceptorFn)
+   @Controller()
+   class ExampleController {
+     @Get('test')
+     testHandler() { /* ... */ }
+   }
+   ```
 
-Alternatively, define a new Decorator based on your interceptor function:
+3. **Globally:**
+   ```ts
+   const app = new Moost();
+   app.applyGlobalInterceptors(myInterceptorFn);
+   ```
+   
+Global interceptors affect all controllers and handlers, making them useful for tasks like global logging, authentication, or rate limiting.
 
-```ts
-const MyInterceptorDecorator = Intercept(myInterceptorFn);
+## Practical Use Cases
 
-@MyInterceptorDecorator
-@Controller()
-export class ExampleController {
-  @Get('test')
-  @MyInterceptorDecorator
-  testHandler() {
-    // ...
-  }
-}
-```
+- **Authentication/Authorization:**
+  Run guards at `BEFORE_GUARD` or `GUARD` priority to ensure only authenticated users can reach certain handlers.
+  
+- **Error Transformation:**
+  Use `CATCH_ERROR` priority interceptors to convert technical exceptions into readable error messages for clients.
+  
+- **Response Shaping:**
+  Post-process responses at `AFTER_ALL` to add common headers, wrap data in a standard envelope, or ensure consistent formatting across all endpoints.
+  
+- **Performance Logging:**
+  `BEFORE_ALL` or `AFTER_ALL` interceptors can record timestamps, measure handler execution time, and log metrics.
 
-## Global Interceptors
+## Best Practices
 
-Use Moost's `applyGlobalInterceptors` method to apply interceptors universally across all controllers and handlers in your application:
+- **Keep Interceptors Focused:**  
+  Each interceptor should handle a specific concern (e.g., logging, auth, formatting). This modularity improves maintainability.
+  
+- **Leverage Priorities:**  
+  Assign meaningful priorities so interceptors execute in a logical sequence. For example, run authorization checks before general logging.
+  
+- **Combine with DI:**  
+  Class-based interceptors can use DI to access services, configurations, or cached data, keeping the interceptor code minimal and testable.
 
-```ts
-import { myInterceptorFn } from './path/to/interceptors';
-import { Moost } from 'moost';
+---
 
-const app = new Moost();
-app.applyGlobalInterceptors(myInterceptorFn);
-```
-
-Global interceptors can apply common features like logging, authentication, or event handling across all events.
-
-## Class-based Interceptors
-
-Moost supports class-based interceptors, benefiting from dependency injection.
-Moost will create an instance of the interceptor class and inject dependencies. These interceptors can have `FOR_EVENT` scope, allowing resolvers on class properties. 
-
-Here's an example:
-
-```ts
-import { TClassFunction, TInterceptorFn, Intercept, TInterceptorPriority, Injectable } from 'moost';
-
-@Injectable()
-class MyInterceptorClass implements TClassFunction<TInterceptorFn> {
-    static priority: TInterceptorPriority = TInterceptorPriority.BEFORE_ALL;
-
-    handler = (before, after, onError
-
-) => {
-        // Interceptor logic here
-    };
-}
-
-const MyInterceptor = Intercept(MyInterceptorClass);
-```
-
-In this example, `MyInterceptorClass` defines a class-based interceptor, with a `handler` method for the interceptor's
-logic and a `priority` for its execution order. Using `Intercept` transforms it into a decorator for easy application to your controllers or handlers.
+Interceptors bring flexibility and control to your Moost application’s event flow. By understanding their lifecycle, priorities, and integration with DI, you can implement sophisticated cross-cutting logic without polluting your business code.

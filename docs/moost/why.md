@@ -1,34 +1,24 @@
-# Why Moost
+# Why Moost?
 
-::: warning
-Moost is an ongoing project. It's ready to use, but be aware that we're still working on improving some of its parts.
-:::
+Moost was born out of frustration with the complexities and overhead found in existing frameworks like NestJS. While NestJS’s decorator-driven approach and rich ecosystem are appealing, its reliance on modules, intricate metadata patterns, and multi-layered structure can feel overwhelming — especially for smaller projects or developers who value simplicity.
 
-Building big enterprise applications can feel like navigating a jungle of code. As the codebase grows, it often becomes a jumbled mess, making it harder and harder to understand and maintain. This is what we call "legacy code."
+**Key Motivations Behind Moost:**
 
-This is where Moost comes in. Moost helps developers tackle this issue and makes it easier to build strong, fast applications without falling into the legacy code trap.
+1. **Reducing Boilerplate:**  
+   In NestJS, setting up a simple controller often means creating multiple files and classes — modules, providers, and controllers — just to return a response. Moost’s design eliminates these extra steps, allowing you to define your application’s behavior more directly and minimize repetitive scaffolding.
 
-## The Problems
+2. **Simplifying Decorators and Metadata:**  
+   Creating a custom decorator in NestJS can be cumbersome due to the complexity of its metadata system. Moost leverages [`@prostojs/mate`](https://github.com/prostojs/mate) for a more intuitive, TypeScript-friendly metadata mechanism. This makes it easier to build and extend decorators, so you can quickly implement new features without wrestling with low-level details.
 
-Why does code become this big, difficult-to-manage mess? Here are a few reasons:
+3. **Ditching Modules for a Leaner DI Model:**  
+   The module-centric architecture of NestJS adds cognitive load and can feel restrictive. Moost opts for a straightforward, global instance registry approach, powered by [`@prostojs/infact`](https://github.com/prostojs/infact). This means you can set up dependencies without mentally juggling multiple layers or module boundaries.
 
--   _Poor initial design_: If you don't carefully plan how different parts of your application interact with each other, you can end up with a delicate system where changing one part can accidentally break another.
--   _Too many patches_: Even a well-designed application can become confusing if it has too many small patches added on top of it.
--   _Complex structures_: Some applications are just complex by nature, and this can make them challenging to work with.
+4. **Composables Over Middleware:**  
+   Instead of forcing you into a complex middleware chain, Moost encourages composables and interceptors, building on the flexible, event-driven core of Wooks. With composables, you only enable what you need, when you need it, reducing hidden complexity and improving performance.
 
-When your code becomes fragile and everything is too interconnected, you know you're in trouble. The solution is to use good software design principles, like the [SOLID](https://en.wikipedia.org/wiki/SOLID) principles, to keep your applications flexible and healthy in the long run.
+5. **Adhering to SOLID Principles:**  
+Both NestJS and Moost encourage building applications that respect SOLID principles — separating concerns, using dependency injection, and defining clear boundaries between components. Moost takes these principles one step further by stripping away extraneous modules and scaffolding, allowing you to apply SOLID patterns without extra complexity.
+   
 
-There are solutions like `nestjs`, inspired by `angular`, that support good design principles using decorators and metadata. But `nestjs` also has a module system that can be hard to understand.
-
-## The Moost Solution
-
-Like `nestjs`, Moost supports good design principles, including SOLID. This helps you create applications that are easy to understand, flexible, and maintainable. But Moost offers some extra advantages:
-
--   _No unnecessary module abstractions_: Moost keeps things simple and user-friendly by getting rid of confusing module abstractions.
--   _Reusable dependency injection_: Moost uses [@prostojs/infact](https://github.com/prostojs/infact), a powerful tool for managing dependencies.
--   _Metadata layer with [@prostojs/mate](https://github.com/prostojs/mate)_: Moost includes a handy metadata layer, making it easier to work with metadata.
--   _Support for [DTOs](https://en.wikipedia.org/wiki/Data_transfer_object) and validations_: Moost helps you manage data transfer objects (DTOs) and validate your data with [@prostojs/valido](https://github.com/prostojs/valido).
--   _Framework independence_: Moost can work with `express` or `fastify`, but it doesn't depend on them directly.
--   _Built on the **Wooks Composables** foundation_: Moost is built on [Wooks](https://wooks.moost.org), so you can benefit from all the features offered by Wooks Composables.
-
-In short, Moost gives you a solid foundation for building big, scalable server-side applications. It leverages the power of `TypeScript` and `@Metadata` to make development easier and faster. With Moost, you can leave the legacy code behind and enjoy a smoother, more manageable coding experience!
+**In Essence:**  
+Moost was created to preserve the best parts of NestJS’s decorator-driven philosophy — type safety, expressiveness, and a familiar coding style — while removing the elements that often feel like unnecessary ceremony. If you’ve ever wished for a leaner, more direct way to build server-side applications without sacrificing clarity or power, Moost is the answer.

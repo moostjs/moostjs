@@ -1,52 +1,57 @@
 # Circular Dependencies
 
-Roundabout, or circular, dependencies happen when two or more classes lean on each other. This can make a spinning circle that's tricky to handle when your program is running. But don't worry, Moost has a trick to handle this using the `@Circular` decorator.
+Circular dependencies occur when two or more classes depend on each other’s instantiation, creating a loop in the dependency graph. These scenarios can complicate instance creation and often lead to runtime errors if not managed properly. While it’s best practice to avoid circular dependencies whenever possible — by refactoring your architecture — Moost provides a mechanism to handle them when needed.
 
-## Breaking the Roundabout
+## Using `@Circular` to Resolve Circular Dependencies
 
-The `@Circular` decorator is like a friendly traffic cop that tells Moost what class type to use when there's a circular dependency. It uses a callback function to return the class type before it's created.
+Moost introduces the `@Circular()` decorator to break dependency loops. This decorator accepts a callback function that returns the class constructor of the dependency, allowing Moost to defer the resolution until a suitable point in the instantiation cycle.
 
-Here's how to use the `@Circular` decorator when you have circular dependencies:
+**Example:**
 ```ts
 import { Injectable, Circular } from 'moost';
 
 @Injectable()
 class ClassA {
   constructor(@Circular(() => ClassB) private classB: ClassB) {
-    // What ClassA does
+    // classB is not fully instantiated yet
   }
 }
 
 @Injectable()
 class ClassB {
   constructor(@Circular(() => ClassA) private classA: ClassA) {
-    // What ClassB does
+    // classA is not fully instantiated yet
   }
 }
 ```
 
-In this example, `ClassA` depends on `ClassB`, and `ClassB` depends on `ClassA`. By using the `@Circular` decorator with the right class type callback, we tell Moost about the circular dependency.
+In this example:
+- `ClassA` depends on `ClassB`, and `ClassB` depends on `ClassA`.
+- By applying `@Circular(() => ClassB)` in `ClassA`’s constructor, we inform Moost that `ClassB` will be known later.
+- Similarly, `@Circular(() => ClassA)` in `ClassB` ensures that the dependency on `ClassA` is also deferred.
+  
+Moost uses these callbacks to construct proxy instances and then later resolves them to the actual instances once the cycle is clarified. This approach allows the framework to create both classes without running into immediate runtime errors.
 
-::: warning
-It's super important to remember the order of dependency injection. With circular dependencies, Moost injects dependent classes after the constructor call. So you shouldn't try to use these dependencies in the constructor.
+## Important Considerations
 
-If you do, you might run into problems or errors because of the circular dependencies and how they're resolved. It's better to wait until after the constructor has run and the circular dependencies have been sorted out. That way, your app will run more reliably and predictably.
-:::
+### Initialization Order and Usage
 
-## Behind the Scenes
-When Moost is dealing with circular dependencies, it has a two-step plan:
+When you rely on circular dependencies, keep in mind:
+- Moost creates a proxy (placeholder) object during construction and resolves the actual instance after the constructors have run.
+- You should not expect fully usable dependencies inside the constructor if they are involved in a circular relationship. Accessing them immediately might lead to undefined behavior or partial initialization.
+  
+Instead, use lifecycle hooks (if available) or other initialization logic that runs after constructors to safely interact with these dependencies once the resolution is complete.
 
-1. It makes a proxy instance for the class with the circular dependency.
-2. It uses the class type from the `@Circular` decorator to sort out the circular dependency.
+### Minimizing Circular Dependencies
 
-By doing this, Moost can successfully handle circular dependencies and create the classes without any errors.
+While `@Circular` provides a solution, circular dependencies can increase complexity, reduce clarity, and make testing or debugging more challenging. Consider the following strategies:
+- **Refactoring Classes:** Split responsibilities or introduce intermediate interfaces or abstract classes to break the dependency cycle.
+- **Reorganizing Code Structure:** Sometimes a different package structure or introducing a service that centralizes shared logic can remove the cycle.
+- **Dependency Inversion:** Apply SOLID principles, particularly the dependency inversion principle, to depend on abstractions rather than concrete classes.
 
-## Don't Forget
+## Summary
 
-Circular dependencies should generally be avoided because they can make your code more complex and harder to manage. They happen when two or more classes depend on each other, forming a circular pattern of dependencies.
-
-While Moost can handle circular dependencies using the `@Circular` decorator, it's best to only use this when you have no other options. Circular dependencies can make your code harder to understand, increase the chance of bugs, and make testing and debugging more difficult.
-
-Ideally, you should look at your code and structure to find ways to cut down or get rid of circular dependencies. By rearranging your code and breaking up dependencies, you can make your design easier to manage and more flexible.
-
-Even though the `@Circular` decorator can help with circular dependencies, it should be used sparingly and only as a last resort. Try to design your app to keep complex dependencies to a minimum and make your code easier to understand.
+- **Circular dependencies** can cause complex runtime issues.
+- Moost’s `@Circular()` decorator allows you to declare a deferred dependency, letting Moost handle instance creation and resolution later in the lifecycle.
+- Use this feature only when refactoring or architectural changes are not feasible.
+- Always strive to minimize circular dependencies through better design, as reducing complexity leads to more maintainable and testable code.

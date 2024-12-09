@@ -118,6 +118,10 @@ export default defineConfig({
                     text: 'Moost',
                     items: [
                         {
+                            text: 'What is Moost',
+                            link: '/moost/what',
+                        },
+                        {
                             text: 'Why Moost',
                             link: '/moost/why',
                         },
@@ -131,13 +135,15 @@ export default defineConfig({
                     items: [
                         {
                             text: 'Dependency Injection',
-                            link: '/moost/di/',
                             items: [{
+                                text: 'Introduction to DI',
+                                link: '/moost/di/',
+                            }, {
+                                    text: 'Dependencies Substitution',
+                                    link: '/moost/di/provide-inject',
+                                }, {
                                     text: 'Circular Dependencies',
                                     link: '/moost/di/circular',
-                                }, {
-                                    text: 'Provide-Inject',
-                                    link: '/moost/di/provide-inject',
                                 }, {
                                     text: 'Functional Instantiation',
                                     link: '/moost/di/functional',

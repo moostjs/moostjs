@@ -1,77 +1,82 @@
-# Provide-Inject
+# Dependency Substitution and Injection in Moost
 
-Moost comes with two special tools, the `@Provide` and `@Inject` decorators, to make it easy to share things (dependencies) and then use them where you need them in your app. 
+Moost’s dependency injection (DI) system is highly configurable. Beyond basic injection and providing dependencies via class types or string keys, Moost supports dynamic substitution of classes. This allows you to alter behavior at runtime — replacing certain classes with others — without forcing changes throughout your codebase or configuration.
 
-## Overview
-Provide-Inject in Moost allows you to:
+## Class and Key-Based Provides
 
-- Share things for others to use with the `@Provide` decorator.
-- Use specific things in your classes with the `@Inject` decorator.
-- Create a global list of shared things for your main Moost app using the `setProvideRegistry` method.
-
-## Provide with Class Type
-To share a thing using its class type, use the `@Provide` decorator. You need to give it the class as the first thing and a callback function that returns what you want to share.
-
-Here's an example of how to share things using class types:
-```ts
-import { Provide, Injectable } from 'moost';
-
-class AnotherDependency {
-  // Some Dependency Class stuff
-}
-
-@Injectable()
-@Provide(AnotherDependency, () => new AnotherDependency())
-class MyClass {
-  constructor(private dependency: AnotherDependency) {}
-  // Class stuff
-}
-```
-In this example, we're sharing an instance of the `AnotherDependency` class using its class type. This instance can then be used in `MyClass` and any other classes that need `AnotherDependency`.
-
-## Provide with String Keys
-To share things using string keys, use the `@Provide` decorator with a string key as the first thing and a callback function that returns what you want to share. To use these shared things, use the `@Inject` decorator with the matching string key as the constructor parameter.
-
-Here's how you can share and use things with string keys:
-```ts
-import { Provide, Inject, Injectable } from 'moost';
-
-class MyDependency {
-  constructor(private type: string) {}
-  // Some Dependency Class stuff
-}
-
-@Provide('instance-a', () => new MyDependency('A'))
-@Provide('instance-b', () => new MyDependency('B'))
-@Injectable()
-class MyClass {
-  constructor(
-    @Inject('instance-a') private dependencyA: MyDependency,
-    @Inject('instance-b') private dependencyB: MyDependency
-  ) {
-    // ...
+- **Class-based Provide:**  
+  Use `@Provide(ClassType, factoryFn)` to bind a class type to a specific factory. Consumers only need to reference the class type in their constructor.
+  
+  ```ts
+  @Provide(AnotherDependency, () => new AnotherDependency())
+  class MyClass {
+    constructor(private dep: AnotherDependency) {}
   }
-}
-```
-In this example, we're sharing instances of the `MyDependency` class with string keys `'instance-a'` and `'instance-b'`. These instances can then be used in other classes with the matching string keys.
+  ```
 
-Remember, you need to use the `@Inject` decorator when you're using things shared with string keys. But if they're shared using class types, you don't need the decorator.
+- **String Key Provide:**  
+  Use `@Provide('some-key', factoryFn)` and `@Inject('some-key')` for cases where multiple instances of the same class or non-class values must be differentiated by keys.
+  
+  ```ts
+  @Provide('instance-a', () => new MyDependency('A'))
+  @Provide('instance-b', () => new MyDependency('B'))
+  class MyClass {
+    constructor(
+      @Inject('instance-a') private depA: MyDependency,
+      @Inject('instance-b') private depB: MyDependency
+    ) {}
+  }
+  ```
 
 ## Global Provide Registry
-Moost lets you make a global sharing list for the main Moost app using the `setProvideRegistry` method. This list makes sure that certain things are always available to be used throughout the app.
 
-Here's how to set up a global sharing list:
+You can centralize dependency definitions using the global provide registry instead of placing `@Provide` decorators on classes. This keeps your dependency configuration in one location, making it easier to maintain and update:
+
 ```ts
-import { Moost, createProvideRegistry } from 'moost';
-import { AnotherDependency, MyDependency } from './dependencies';
-
-const app = new Moost();
 app.setProvideRegistry(createProvideRegistry(
   [AnotherDependency, () => new AnotherDependency()],
   ['instance-a', () => new MyDependency('A')],
   ['instance-b', () => new MyDependency('B')]
 ));
 ```
-In this example, we're making a global sharing list with instances for `AnotherDependency`, `'instance-a'`, and `'instance-b'`. Now, these instances can be used in any class by using their symbolic names or class types.
 
-By using the power of `@Provide` and `@Inject`, you can easily share and use specific things throughout your Moost app. Remember to use the `@Inject` decorator for things shared with string keys. But if they're shared using the class type, you don't need the decorator.
+## Replacing Dependencies
+
+### Replace Registry
+
+A replace registry allows you to override one class with another globally. This is useful when you want to switch to a specialized subclass or a mock implementation without editing every injection point.
+
+```ts
+app.setReplaceRegistry(createReplaceRegistry([BaseClass, ExtendedClass]));
+```
+
+Any class expecting `BaseClass` will now receive an instance of `ExtendedClass`.
+
+### `@Replace` Decorator
+
+For scenarios where you want to declare replacements inline, Moost provides the `@Replace` decorator. Instead of configuring replacements at the application level, you can specify directly on a class which types to override.
+
+**Example:**
+```ts
+import { Replace } from 'moost';
+
+@Replace(BaseClass, ExtendedClass)
+class AnotherClass {
+  // Any injection of BaseClass is now replaced with ExtendedClass
+}
+```
+
+This is especially helpful for applying localized substitutions in tests, feature toggles, or adjusting a third-party controller’s dependencies when you cannot modify their code directly.
+
+## Practical Guidelines
+
+1. **Choose `@Provide` and `@Inject` Strategies Wisely:**  
+   Use class-type provides whenever possible to simplify usage. Resort to string keys only when multiple variations or non-class values need to be clearly distinguished.
+
+2. **Maintain a Global Provide Registry for Shared Configuration:**  
+   Keep frequently used dependencies centralized. This makes large-scale refactoring simpler.
+
+3. **Use Replacements for Flexibility and Testing:**  
+   Whether setting replacements via `app.setReplaceRegistry()` or using `@Replace`, you can easily swap out classes. This approach improves testability, enabling quick injection of mock or specialized classes without modifying consumer logic.
+
+By combining these features, Moost’s DI system remains flexible, maintainable, and adaptable. You can configure how dependencies are provided and replaced in a way that supports testing, modularization, and easy evolution as your application’s requirements change.
