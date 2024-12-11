@@ -1,4 +1,4 @@
-# Logs
+# Logging in Moost
 
 Moost inherits a logging mechanism from Wooks based on the
 [@prostojs/logger](https://github.com/prostojs/logger/) npm package, which

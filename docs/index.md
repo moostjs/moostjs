@@ -26,6 +26,7 @@ actions:
 features:
     - icon: '@'
       title: Make the Moost of @Metadata
+      link: /moost/meta/
       details: Make your coding smoother with smart dependency injections and easy testing through decorators.
     - icon: 🕸
       title: Build Web Apps with Ease
@@ -40,9 +41,10 @@ features:
           alt: WooksJS
       title: Discover the Power of Wooks Composables
       details: Moost is built on Wooks, which means you can use all Wooks Composables for a smoother development process.
-      link: https://wooks.moost.org
+      link: https://wooks.moost.org/wooks/what.html#what-are-composables
     - icon: ✍
       title: Create Your Own @Decorators
+      link: /moost/meta/custom#creating-custom-decorators
       details: Make your app's logic reusable with your own @Decorators to boost structure and readability.
     - icon: 🔑
       title: Built with TypeScript

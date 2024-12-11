@@ -78,6 +78,24 @@ export default defineConfig({
             { text: 'Moost', link: '/moost/', activeMatch: '/moost/' },
             { text: 'Web App', link: '/webapp/', activeMatch: '/webapp/' },
             { text: 'CLI App', link: '/cliapp/', activeMatch: '/cliapp/' },
+            { text: 'Modules', items: [
+                {
+                    text: '@moostjs/event-http',
+                    link: '/webapp/',
+                },
+                {
+                    text: '@moostjs/event-cli',
+                    link: '/cliapp/',
+                },
+                {
+                    text: '@moostjs/event-wf',
+                    link: '/wf/',
+                },
+                {
+                    text: '@moostjs/zod',
+                    link: '/validation/',
+                },
+            ] },
             // { text: 'Config', link: '/config/', activeMatch: '/config/' },
             // { text: 'Plugins', link: '/plugins/', activeMatch: '/plugins/' },
             {
@@ -113,14 +131,35 @@ export default defineConfig({
         ],
 
         sidebar: {
+            '/wf/': [
+                {
+                    text: 'Overview',
+                    link: '/wf/overview'
+                },
+                {
+                    text: 'Quick Start',
+                    link: '/wf/'
+                },
+                {
+                    text: 'API Reference',
+                    link: '/wf/api'
+                },
+            ],
+            '/validation/': [
+                {
+                    text: 'Validation in Moost',
+                    link: '/validation/'
+                },
+                {
+                    text: 'Validation API Ref',
+                    link: '/validation/api'
+                },
+            ],
             '/moost/': [
                 {
-                    text: 'Moost',
+                    text: 'Overview',
+                    collapsed: false,
                     items: [
-                        {
-                            text: 'What is Moost',
-                            link: '/moost/what',
-                        },
                         {
                             text: 'Why Moost',
                             link: '/moost/why',
@@ -130,32 +169,39 @@ export default defineConfig({
                             link: '/moost/',
                         },
                     ],
-                }, {
-                    text: 'Foundation',
+                }, 
+                {
+                    text: 'Moost Adapters',
+                    link: '/moost/adapters/',
+                },
+                {
+                    text: 'Dependency Injection',
+                    collapsed: false,
+                    items: [{
+                        text: 'Introduction to DI',
+                        link: '/moost/di/',
+                    }, {
+                            text: 'Dependencies Substitution',
+                            link: '/moost/di/provide-inject',
+                        }, {
+                            text: 'Circular Dependencies',
+                            link: '/moost/di/circular',
+                        }, {
+                            text: 'Functional Instantiation',
+                            link: '/moost/di/functional',
+                        }],
+                },
+                {
+                    text: 'Handling Events',
+                    collapsed: false,
                     items: [
                         {
-                            text: 'Dependency Injection',
-                            items: [{
-                                text: 'Introduction to DI',
-                                link: '/moost/di/',
-                            }, {
-                                    text: 'Dependencies Substitution',
-                                    link: '/moost/di/provide-inject',
-                                }, {
-                                    text: 'Circular Dependencies',
-                                    link: '/moost/di/circular',
-                                }, {
-                                    text: 'Functional Instantiation',
-                                    link: '/moost/di/functional',
-                                }],
+                            text: 'Event Lifecycle',
+                            link: '/moost/event-lifecycle',
                         },
                         {
                             text: 'Controllers',
                             link: '/moost/controllers',
-                        },
-                        {
-                            text: 'Resolvers',
-                            link: '/moost/resolvers',
                         },
                         {
                             text: 'Interceptors',
@@ -163,35 +209,55 @@ export default defineConfig({
                         },
                         {
                             text: 'Pipelines',
-                            link: '/moost/pipelines',
+                            collapsed: false,
+                            items: [{
+                                text: 'Introduction to Pipelines',
+                                link: '/moost/pipes/',
+                            },{
+                                text: 'Resolve Pipe',
+                                link: '/moost/pipes/resolve',
+                            },{
+                                text: 'Validation Pipe',
+                                link: '/moost/pipes/validate',
+                            },{
+                                text: 'Custom Pipes',
+                                link: '/moost/pipes/custom',
+                            }]
                         },
                         {
-                            text: 'Metadata',
+                            text: 'Logging',
+                            link: '/moost/logging',
+                        },
+                        {
+                            text: 'Opentelemetry in Moost',
+                            link: '/moost/otel',
+                        },
+                    ],
+                    
+                },
+                        {
+                            text: 'Metadata (Mate)',
+                            collapsed: false,
                             items: [
                                 {
-                                    text: 'Overview',
+                                    text: 'Introduction to Metadata',
                                     link: '/moost/meta/'
                                 },
                                 {
-                                    text: 'Common Fields',
+                                    text: 'General-Purpose Metadata',
                                     link: '/moost/meta/common'
+                                },
+                                {
+                                    text: 'Customizing Metadata',
+                                    link: '/moost/meta/custom'
                                 },
                                 {
                                     text: 'Controller Metadata',
                                     link: '/moost/meta/controller'
                                 },
-                                {
-                                    text: 'Enhancing Metadata',
-                                    link: '/moost/meta/enhancing'
-                                },
+                                
                             ]
-                        },
-                        {
-                            text: 'Logs',
-                            link: '/moost/logging',
-                        },
-                    ]
-                }],
+                        },],
             '/webapp/': [{
                     text: 'Web Application',
                     items: [

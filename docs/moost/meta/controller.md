@@ -1,68 +1,130 @@
 # Controller Metadata
 
-In Moost, you can easily access controller metadata from interceptors or event
-handlers using the `useControllerContext` composable. This composable provides
-convenient methods for retrieving metadata related to the current controller,
-properties of the controller, and the current event handler.
+The **Controller Metadata** is available through the `useControllerContext` composable and provides developers with a powerful and convenient way to access and interact with metadata related to the current controller and its methods during event processing. This composable is essential for advanced use cases such as implementing custom interceptors, performing dynamic logic based on metadata, and enhancing the flexibility of your application’s event handling mechanisms.
 
-## Example Usage
+[[toc]]
 
-Here's an example that demonstrates the usage of `useControllerContext`:
+## Purpose
+
+The `useControllerContext` composable serves to:
+
+- **Access Controller Metadata:** Retrieve metadata associated with the current controller class.
+- **Access Method Metadata:** Obtain metadata for the specific method handling an event.
+- **Access Property Metadata:** Fetch metadata for individual properties within the controller.
+- **Understand Parameter Metadata:** Gain insights into the metadata of method parameters.
+- **Determine Execution Context:** Identify the current method’s name and the controller’s scope.
+
+## Available Methods
+
+The `useControllerContext` composable provides several methods to access different aspects of controller metadata:
+
+### `getPropMeta(propName: string | symbol): TMoostMetadata | undefined`
+
+**Description:**  
+Retrieves the metadata associated with a specific property of the current controller.
+
+**Parameters:**
+
+- `propName`: The name of the property whose metadata you want to access.
+
+**Returns:**  
+The metadata object for the specified property or `undefined` if not found.
+
+**Usage Example:**
 
 ```ts
-import { useControllerContext } from "moost";
-
-// ...
-{
-  // Must be used inside an event handler or interceptor
-  const {
-    getPropMeta,
-    getControllerMeta,
-    getMethodMeta,
-    getParamsMeta,
-    getMethod,
-    getScope,
-  } = useControllerContext();
-
-  getPropMeta("propName"); // metadata of a property
-  getControllerMeta(); // metadata of the controller
-  getMethodMeta(); // metadata of the current event handler
-  getParamsMeta(); // metadata of event handler arguments
-  getMethod(); // event handler method name
-  getScope(); // controller scope
-}
-// ...
+const propMeta = getPropMeta('username');
+console.log(propMeta?.description); // Outputs the description metadata of the 'username' property
 ```
 
-In the example above, `useControllerContext` is invoked to retrieve an object
-containing several metadata-related methods. These methods allow you to access
-specific metadata associated with the current controller, its properties, and
-the current event handler.
+### `getControllerMeta(): TMoostMetadata | undefined`
 
-- `getPropMeta('propName')`: This method extracts the metadata of a property
-  with the specified name from the current controller.
+**Description:**  
+Fetches the metadata of the current controller class.
 
-- `getControllerMeta()`: This method retrieves the metadata of the controller
-  that is being used to handle the current event.
+**Parameters:**  
+None
 
-- `getMethodMeta()`: This method extracts the metadata of the current event
-  handler.
+**Returns:**  
+The metadata object of the controller or `undefined` if not found.
 
-- `getParamsMeta()`: This method extracts the metadata of the current event
-  handler arguments.
+**Usage Example:**
 
-- `getMethod()`: This method extracts the name of the current event
-  handler method.
+```ts
+const controllerMeta = getControllerMeta();
+console.log(controllerMeta?.label); // Outputs the label metadata of the controller
+```
 
-- `getScope()`: This method extracts scope (SINGLETON or FOR_EVENT) of the current controller.
+### `getMethodMeta(): TMoostMetadata | undefined`
 
-By using the `useControllerContext` composable and its associated methods, you
-can easily access and utilize controller metadata within your interceptors or
-event handlers. This enables you to leverage the metadata to make informed
-decisions, perform custom logic, or enhance the functionality of your Moost
-application.
+**Description:**  
+Obtains the metadata of the current event handler method.
 
-Please note that the availability of controller metadata depends on the context
-in which the `useControllerContext` composable is used. Ensure that you are
-using it within an appropriate event handling context to access the desired
-controller metadata.
+**Parameters:**  
+None
+
+**Returns:**  
+The metadata object of the method or `undefined` if not found.
+
+**Usage Example:**
+
+```ts
+const methodMeta = getMethodMeta();
+console.log(methodMeta?.id); // Outputs the ID metadata of the method
+```
+
+### `getParamsMeta(): TMoostMetadata[] | undefined`
+
+**Description:**  
+Retrieves an array of metadata objects for each parameter of the current event handler method.
+
+**Parameters:**  
+None
+
+**Returns:**  
+An array of metadata objects for the parameters or `undefined` if not found.
+
+**Usage Example:**
+
+```ts
+const paramsMeta = getParamsMeta();
+paramsMeta?.forEach((meta, index) => {
+  console.log(`Parameter ${index} description: ${meta.description}`);
+});
+```
+
+### `getMethod(): string | undefined`
+
+**Description:**  
+Gets the name of the current event handler method.
+
+**Parameters:**  
+None
+
+**Returns:**  
+The method name as a string or `undefined` if not found.
+
+**Usage Example:**
+
+```ts
+const methodName = getMethod();
+console.log(`Current method: ${methodName}`);
+```
+
+### `getScope(): 'SINGLETON' | 'FOR_EVENT' | undefined`
+
+**Description:**  
+Determines the scope of the current controller, indicating whether it is a singleton or scoped per event.
+
+**Parameters:**  
+None
+
+**Returns:**  
+The scope of the controller (`'SINGLETON'` or `'FOR_EVENT'`) or `undefined` if not set.
+
+**Usage Example:**
+
+```ts
+const scope = getScope();
+console.log(`Controller scope: ${scope}`);
+```

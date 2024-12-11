@@ -9,6 +9,10 @@ Interceptors in Moost act as flexible middleware that can modify the request flo
   - **After Handler:** Transform responses, log results, or finalize cleanup steps.
   - **On Error:** Handle exceptions gracefully, transforming or logging errors.
 
+::: tip
+*You can check out [Event Lifecycle Diagram](/moost/event-lifecycle#diagram) to understand when and how interceptors are executed.*
+:::
+
 - **Priority Levels:**  
   Interceptors execute in a defined order based on their priority (`TInterceptorPriority`). Some common priorities:
   - `BEFORE_ALL` (0): Run setup logic before anything else.
@@ -21,7 +25,7 @@ These priorities ensure you can layer interceptors logically, ensuring authentic
 
 ## Creating Interceptors
 
-You can define interceptors as functions or classes. Both forms integrate with Moost’s DI and event lifecycle.
+You can define interceptors as functions or classes. Both forms integrate with Moost’s DI and [event lifecycle](/moost/event-lifecycle).
 
 ### Functional Interceptors
 

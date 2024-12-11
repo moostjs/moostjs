@@ -1,6 +1,6 @@
 # Functional Instantiation
 
-While Moost’s dependency injection system typically handles object creation automatically, there are scenarios where you might need to explicitly instantiate classes at runtime — such as within interceptors, lifecycle hooks, or certain event handlers. To meet these needs, Moost provides a composable called `useControllerContext()` that gives you access to the `instantiate` function, enabling on-demand class instantiation within the current controller’s context.
+While Moost’s dependency injection system typically handles object creation automatically, there are scenarios where you might need to explicitly instantiate classes at runtime — such as within interceptors, lifecycle hooks, or certain event handlers. To meet these needs, Moost provides a composable called [`useControllerContext()`](/moost/meta/controller) that gives you access to the `instantiate` function, enabling on-demand class instantiation within the current controller’s context.
 
 ## When to Use Functional Instantiation
 

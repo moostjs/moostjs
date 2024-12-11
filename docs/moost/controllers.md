@@ -100,6 +100,8 @@ In this scenario, each incoming event (e.g., each request) gets its own controll
 - **Reverse is allowed:**  
   A `FOR_EVENT` controller can depend on singletons without issues.
 
+*You can read more about Dependency Injection (DI) in Moost [here](/moost/di/index).*
+
 ## Structuring Your Controllers
 
 By composing multiple controllers and leveraging prefixes, you can build a clear hierarchy of your application’s behavior. For example:

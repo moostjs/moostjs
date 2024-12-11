@@ -8,7 +8,7 @@ Additionally, you can use the composable functions from Wooks inside request han
 For more details, refer to the [Wooks Request Composables](https://wooks.moost.org/webapp/composables/request.html) documentation.
 
 ::: info
-To learn more about the foundation of **resolver** decorators please read the [Moost Resolvers Documentation](/moost/resolvers).
+To learn more about the foundation of **resolver** decorators please read the [Moost Resolvers Documentation](/moost/pipes/resolve).
 :::
 
 ## Content

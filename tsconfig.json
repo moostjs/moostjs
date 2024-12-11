@@ -1,4 +1,7 @@
 {
+  "vueCompilerOptions": {
+    "vitePressExtensions": [".md"]
+  },
   "compilerOptions": {
     "baseUrl": ".",
     "outDir": "dist",
@@ -22,8 +25,8 @@
     "paths": {
       "@moostjs/*": ["packages/*/src"],
       "moost": ["packages/moost/src"],
-      "common": ["common/index"],
-    },
+      "common": ["common/index"]
+    }
   },
-  "include": ["packages/*/src", "packages/*/__tests__", "common/*.ts", "explorations"],
+  "include": ["packages/*/src", "packages/*/__tests__", "common/*.ts", "explorations"]
 }
