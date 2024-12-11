@@ -278,5 +278,5 @@ mate.decorateConditional(level => {
 ## Further Reading
 
 For more detailed guides, explore the following documentation pages:
-- [General-Purpose Metadata](./general-purpose-metadata.md)
-- [Metadata Inheritance](./metadata-inheritance.md)
+- [General-Purpose Metadata](/moost/meta/common)
+- [Metadata Inheritance](/moost/meta/inherit)

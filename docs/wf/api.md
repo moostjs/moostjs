@@ -1,184 +1,136 @@
-# Moost Workflows API Reference
+# Moost Workflow API Reference
 
-This API reference details the workflow decorators available in Moost, their purposes, usage patterns.
+This page details the core decorators and classes for working with workflows in Moost.
 
 [[toc]]
 
-## Workflow Decorators
+## Decorators
 
-Moost provides a set of decorators to define workflows, steps, and workflow parameters.
+### `@Workflow(path?: string)`
 
-### Class-Level Decorators
+**Usage:** Marks a controller method as a workflow entry point.
 
-Class-level decorators are used to define workflows within controller classes. They act as entry points for initiating and managing workflows.
-
-#### `@Workflow(path?: string)`
-
-**Description:**  
-Marks a method as a workflow entry point. This decorator associates the method with a specific workflow path, enabling the Moost framework to recognize and manage the workflow.
-
-**Parameters:**
-
-- `path` _(optional)_: A string specifying the workflow path. If omitted, the workflow defaults to a base path.
-
-**Usage:**
-
-```ts
-import { Workflow, WorkflowSchema } from '@moostjs/event-fw';
-import { Controller } from 'moost';
-
-@Controller('auth')
-export class AuthController {
+- **Parameters:**  
+  `path`: Optional. The workflow path (string), can be static or parametric.
   
-  @Workflow('invite')
-  @WorkflowSchema([
-    'prepare-available-roles',
-    'email-form',
-    'pre-create-user',
-    'transport-email/email/invite',
-    'check-pending-invitation',
-    'set-email-confirmed',
-    'prepare-password-rules',
-    'create-password-form',
-    'unset-pending-invitation',
-    'activate-user',
-    'registration-confirmation',
-  ])
-  inviteFlow() {
-    // Entry point for the 'invite' workflow
-  }
+**Example:**
+```ts
+@Workflow('my-workflow')
+entryPoint() {}
+```
+
+### `@WorkflowSchema<T>(schema: TWorkflowSchema<T>)`
+
+**Usage:** Assigns the workflow schema (array of steps, conditions, loops, breaks) to the entry point.
+
+- **Generic:** `T` is the workflow context type.
+- **Parameters:**  
+  `schema`: A `TWorkflowSchema<T>` array defining steps and control flow.
+
+**Example:**
+```ts
+@WorkflowSchema<TMyContext>([
+  "step1",
+  { condition: (ctx) => ctx.flag, id: "conditionalStep" },
+  { while: 'items.length > 0', steps: ["processItem"] }
+])
+```
+
+### `@Step(path?: string)`
+
+**Usage:** Marks a controller method as a workflow step.
+
+- **Parameters:**  
+  `path`: Optional step path (string), can be static or parametric.
+
+**Example:**
+```ts
+@Step('calculateValue')
+calculateValue() { ... }
+```
+
+### `WorkflowParam(name: 'resume' | 'indexes' | 'schemaId' | 'stepId' | 'context' | 'input' | 'state')`
+
+**Usage:** Injects workflow runtime parameters into a step method or controller property.
+
+- **Parameters:**  
+  `name` one of:  
+  - `'resume'`: A function `(input: I) => Promise<TFlowOutput<T,I,IR>>` to resume workflow after input or retriable error.  
+  - `'indexes'`: Current step indexes array.  
+  - `'schemaId'`: Current workflow schemaId (string).  
+  - `'stepId'`: Current stepId (string).  
+  - `'context'`: Current workflow context (typed by generics).  
+  - `'input'`: Input passed to workflow step.  
+  - `'state'`: Workflow state object (with schemaId, context, indexes).
+
+**Example:**
+```ts
+@Step('validate')
+validate(@WorkflowParam('context') ctx: MyContext) {
+  if (!ctx.valid) return { inputRequired: true };
 }
 ```
 
-### Method-Level Decorators
+## MoostWf Class
 
-Method-level decorators define individual steps within a workflow. Each step represents a discrete action or task that the workflow executes.
+`MoostWf<T, IR>` represents a workflow adapter instance. It allows you to start and resume workflows programmatically.
 
-#### `@Step(path?: string)`
+### `start<I>(schemaId: string, initialContext: T, input?: I): Promise<TFlowOutput<T,I,IR>>`
 
-**Description:**  
-Marks a method as a workflow step. This decorator associates the method with a specific step path within a workflow, allowing the workflow engine to execute it as part of the workflow sequence.
+**Usage:** Starts a workflow identified by `schemaId` with `initialContext`. Optionally provide `input` if the first step requires it.
 
-**Parameters:**
+- **Returns:** A promise that resolves to `TFlowOutput<T,I,IR>`.
 
-- `path` _(optional)_: A string specifying the step path. If omitted, the step defaults to the method's name.
+**Example:**
+```ts
+const output = await wf.start('my-workflow', { a:1,b:2,c:3 });
+```
 
-**Usage:**
+If `inputRequired` or a `StepRetriableError` occurs, the workflow `interrupt` will be `true`, and `output.resume` can be used to continue later.
+
+### `resume<I>(state: { schemaId: string; context: T; indexes: number[] }, input?: I): Promise<TFlowOutput<T,I,IR>>`
+
+**Usage:** Resumes an interrupted workflow from the given state with the provided input.
+
+- **Parameters:**  
+  `state`: The `state` returned in a previous interrupted `TFlowOutput`.
+  `input`: Data required to continue.
+
+**Example:**
+```ts
+if (output.interrupt && output.state) {
+  const resumed = await wf.resume(output.state, { a:10,b:20,c:30 });
+}
+```
+
+## TFlowOutput Structure
+
+When `start` or `resume` completes:
 
 ```ts
-import { Step, WorkflowParam } from '@moostjs/event-fw';
-import { Controller } from 'moost';
-
-@Controller('auth')
-export class AuthController {
-
-  @Step('prepare-available-roles')
-  async prepareAvailableRoles() {
-    // Logic to prepare available roles
-  }
-
-  @Step('email-form')
-  async emailForm(@WorkflowParam('input') data: any) {
-    // Logic to handle email form input
-  }
+interface TFlowOutput<T, I, IR> {
+  state: {
+    schemaId: string;
+    context: T;
+    indexes: number[];
+  };
+  finished: boolean;
+  inputRequired?: IR;
+  interrupt?: boolean;
+  break?: boolean;
+  stepId: string;
+  resume?: (input: I) => Promise<TFlowOutput<T, unknown, IR>>;
+  retry?: (input?: I) => Promise<TFlowOutput<T, unknown, IR>>;
+  error?: Error;
+  expires?: number;
+  errorList?: unknown;
 }
 ```
 
-### Parameter Decorators
-
-Parameter decorators inject specific workflow-related parameters into step methods, providing access to workflow state, context, and input data.
-
-#### `@WorkflowParam(name: 'resume' | 'indexes' | 'schemaId' | 'stepId' | 'context' | 'input' | 'state')`
-
-**Description:**  
-Injects workflow parameters into a method's parameters. These parameters provide access to various aspects of the workflow's state and context.
-
-**Parameters:**
-
-- `name`: A string literal specifying the workflow parameter to inject. Allowed values are:
-  - `'resume'`: A function to resume the workflow.
-  - `'indexes'`: The current step indexes in the workflow.
-  - `'schemaId'`: The identifier of the workflow schema.
-  - `'stepId'`: The identifier of the current step.
-  - `'context'`: The workflow's context object.
-  - `'input'`: The input provided to the workflow.
-  - `'state'`: The overall state of the workflow.
-
-**Usage:**
-
-```ts
-import { Step, WorkflowParam } from '@moostjs/event-fw';
-import { Controller } from 'moost';
-
-@Controller('auth')
-export class AuthController {
-
-  @Step('read-invited-user')
-  async readInvitedUser(@WorkflowParam('input') email: string) {
-    // Logic to read the invited user based on email
-  }
-
-  @Step('set-email-confirmed')
-  async setEmailConfirmed(@WorkflowParam('context') ctx: any) {
-    // Logic to set email as confirmed in context
-  }
-}
-```
-
-## Utility Functions
-
-In addition to decorators, Moost provides utility functions to interact with the workflow system programmatically.
-
-### `useWfState()`
-
-**Description:**  
-Retrieves the current workflow state within a step method. This function is useful for accessing and modifying the workflow's state.
-
-**Usage:**
-
-```ts
-import { Step, WorkflowParam, useWfState } from '@moostjs/event-fw';
-import { Controller } from 'moost';
-
-@Controller('auth')
-export class AuthController {
-
-  @Step('example-step')
-  async exampleStep() {
-    const state = useWfState();
-    state.someProperty = 'newValue';
-  }
-}
-```
-
-### `redirectWfToEmail(target: string, template: string, context: TInviteEmailContext)`
-
-**Description:**  
-Redirects the workflow to send an email using a specified template and context. This function integrates email sending within the workflow steps.
-
-**Parameters:**
-
-- `target`: The email address to send the email to.
-- `template`: The identifier of the email template to use.
-- `context`: An object containing context data for the email template.
-
-**Usage:**
-
-```ts
-import { Step, WorkflowParam, redirectWfToEmail } from '@moostjs/event-fw';
-import { Controller } from 'moost';
-
-@Controller('auth')
-export class AuthController {
-
-  @Step('send-invite-email')
-  async sendInviteEmail(@WorkflowParam('context') ctx: any) {
-    return redirectWfToEmail(ctx.email, 'invite-template', {
-      name: ctx.firstName,
-      // Additional context data
-    });
-  }
-}
-```
-
+- `finished`: `true` if workflow ended normally, otherwise `false`.
+- `inputRequired`: If present, more input is needed.
+- `interrupt`: `true` if workflow paused due to input or retriable error.
+- `resume`: A function to continue the workflow after interruption.
+- `error`: Any error thrown (e.g., `StepRetriableError`).
+- `errorList`: Additional error details if provided.
 

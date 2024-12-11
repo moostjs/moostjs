@@ -90,7 +90,7 @@ This setup allows different modules, such as routing and documentation generator
 
 To explore more about how to effectively use and extend metadata in Moost, refer to the following documentation pages:
 
-- [Customizing Metadata](./customizing-metadata.md)
-- [Metadata Inheritance](./metadata-inheritance.md)
+- [Customizing Metadata](/moost/meta/custom)
+- [Metadata Inheritance](/moost/meta/inherit)
 
 These guides provide in-depth instructions on creating custom metadata, applying it to your components, and leveraging inheritance to promote reusability and consistency.

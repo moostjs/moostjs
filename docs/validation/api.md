@@ -141,17 +141,33 @@ export class UpdateUserDto {
 ### `@ZodSkip()`
 
 **Description:**  
-Marks class or object validations to be skipped, effectively excluding the decorated target from the validation pipeline.
+Marks controller, method or parameter, effectively excluding the decorated target from the validation pipeline.
 
 **Usage:**
 
 ```ts
 import { Validatable, ZodSkip } from 'moost';
 
-@Validatable()
+@Controller()
 @ZodSkip()
-export class NoValidationDto {
-  // This class will be skipped in the validation process
+export class NoValidationController {
+  // This controller will be skipped in the validation process,
+  // event if validation pipe applied globally
+}
+```
+
+```ts
+@Controller()
+export class Controller {
+  @Post('no-validate')
+  noValidate(
+    @ZodSkip()
+    @Body()
+    body: DTOClass,
+  ) {
+  // Body will be skipped in the validation process,
+  // event though it is typed with DTO Class
+  }
 }
 ```
 

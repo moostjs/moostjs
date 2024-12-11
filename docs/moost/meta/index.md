@@ -42,19 +42,19 @@ In Moost, metadata serves as a mechanism to enrich your code elements with suppl
 
 Moost’s metadata system is highly customizable, allowing advanced users to extend its capabilities through custom metadata. This is particularly useful when building additional modules or integrating with other libraries. By defining your own metadata interfaces and decorators, you can tailor Moost to fit unique application requirements.
 
-For more details on customizing metadata, refer to the [Customizing Metadata](./customizing-metadata.md) and [General-Purpose Metadata](./general-purpose-metadata.md) documentation pages.
+For more details on customizing metadata, refer to the [Customizing Metadata](/moost/meta/custom) and [General-Purpose Metadata](/moost/meta/common) documentation pages.
 
 ## Metadata Inheritance
 
 Moost supports metadata inheritance, enabling subclasses to inherit metadata from their superclasses. This feature promotes reusability and consistency across your application’s components. By using decorator `@Inherit`, you can ensure that common metadata attributes are propagated through your class hierarchies.
 
-Learn more about metadata inheritance in the [Metadata Inheritance](./metadata-inheritance.md) guide.
+Learn more about metadata inheritance in the [Metadata Inheritance](/moost/meta/inherit) guide.
 
 ## Summary
 
 Moost’s metadata system, powered by [`@prostojs/mate`](https://github.com/prostojs/mate), provides a flexible and powerful way to annotate and configure your application components. By leveraging decorators to attach metadata, you can create cleaner, more maintainable, and highly customizable server-side applications. Whether you’re utilizing built-in decorators for routing, DI, validation, and interception, or crafting your own custom decorators to extend Moost’s functionality, the metadata system is integral to building robust and scalable applications with Moost.
 
 For deeper insights and practical guides, explore the following documentation pages:
-- [General-Purpose Metadata](./general-purpose-metadata.md)
-- [Customizing Metadata](./customizing-metadata.md)
-- [Metadata Inheritance](./metadata-inheritance.md)
+- [General-Purpose Metadata](/moost/meta/common)
+- [Customizing Metadata](/moost/meta/custom)
+- [Metadata Inheritance](/moost/meta/inherit)

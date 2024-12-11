@@ -141,6 +141,30 @@ export default defineConfig({
                     link: '/wf/'
                 },
                 {
+                    text: 'Workflow Entry Point',
+                    link: '/wf/entry',
+                },
+                {
+                    text: 'Workflow Steps',
+                    link: '/wf/steps',
+                },
+                {
+                    text: 'Workflow Schema',
+                    link: '/wf/schema',
+                },
+                {
+                    text: 'Workflow Context',
+                    link: '/wf/context',
+                },
+                {
+                    text: 'Retriable Error',
+                    link: '/wf/retriable-error',
+                },
+                {
+                    text: 'Interceptors and Pipes',
+                    link: '/wf/interceptors-pipes',
+                },
+                {
                     text: 'API Reference',
                     link: '/wf/api'
                 },
@@ -254,6 +278,11 @@ export default defineConfig({
                                 {
                                     text: 'Controller Metadata',
                                     link: '/moost/meta/controller'
+                                },
+                                
+                                {
+                                    text: 'Metadata Inheritance',
+                                    link: '/moost/meta/inherit'
                                 },
                                 
                             ]

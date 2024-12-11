@@ -31,7 +31,7 @@ Below is a representative diagram illustrating the lifecycle of a Moost event.
    Moost initializes all applicable interceptors. [Interceptors](/moost/interceptors) are like middleware: they can hook into the event lifecycle, adding logic before and after the handler executes, and can handle errors. If an error occurs here, Moost moves directly to error handling (Step 11).
 
 6. **Resolve Handler Arguments**  
-   The handler’s parameters are resolved using [pipelines](/moost/pipelines). This includes [resolve pipeline](/moost/resolve-pipeline), [validation pipeline](/moost/validation-pipeline) (optional) and custom pipelines (optional). If something goes wrong (e.g., invalid data), Moost proceeds to error handling (Step 11).
+   The handler’s parameters are resolved using [pipelines](/moost/pipes/index). This includes [resolve pipeline](/moost/pipes/resolve), [validation pipeline](/moost/pipes/validate) (optional) and custom pipelines (optional). If something goes wrong (e.g., invalid data), Moost proceeds to error handling (Step 11).
 
 7. **Run Interceptors 'before' Hooks**  
    [Interceptors](/moost/interceptors) run their "before" hooks, allowing tasks such as authentication checks, request transformations, or early bail-outs. Again, errors here are caught and result in jumping to Step 11.
