@@ -145,28 +145,32 @@ Marks controller, method or parameter, effectively excluding the decorated targe
 
 **Usage:**
 
-```ts
-import { Validatable, ZodSkip } from 'moost';
+Controller-wise example:
 
-@Controller()
+```ts
 @ZodSkip()
+@Controller()
 export class NoValidationController {
-  // This controller will be skipped in the validation process,
-  // event if validation pipe applied globally
+  // This controller will be skipped
+  // in the validation process, even
+  // if validation pipe applied globally
 }
 ```
 
+Parameter-wise example:
+
 ```ts
 @Controller()
-export class Controller {
+export class MyController {
   @Post('no-validate')
   noValidate(
     @ZodSkip()
     @Body()
     body: DTOClass,
   ) {
-  // Body will be skipped in the validation process,
-  // event though it is typed with DTO Class
+  // Body will be skipped in the
+  // validation process, even though
+  // it is typed with DTO Class
   }
 }
 ```
