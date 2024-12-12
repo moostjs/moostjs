@@ -38,6 +38,28 @@ export function defineInterceptorFn(
   return fn
 }
 
+/**
+ * Class based interceptor interface
+ *
+ * Use it to create class-based interceptors and don't forget to make it **@Injectable()**
+ *
+ * @example
+ * "@Injectable()
+ * export class MyInterceptor implements TInterceptorClass {
+ *     static priority = TInterceptorPriority.INTERCEPTOR
+ *     handler: TInterceptorClass['handler'] = (before, after, onError) => {
+ *         before((reply) => {
+ *             console.log('before')
+ *         })
+ *         after((response, reply) => {
+ *             console.log('after')
+ *         })
+ *         onError((error, reply) => {
+ *             console.log('error')
+ *         })
+ *     }
+ * }
+ */
 export type TInterceptorClass = TClassFunction<TInterceptorFn>
 
 /**

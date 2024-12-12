@@ -63,10 +63,10 @@ Interceptors can be defined as classes, benefiting from Moost’s DI. This allow
 
 **Example:**
 ```ts
-import { TClassFunction, Injectable, TInterceptorFn, TInterceptorPriority } from 'moost';
+import { Injectable, TInterceptorClass, TInterceptorPriority } from 'moost';
 
 @Injectable()
-class MyClassInterceptor implements TClassFunction<TInterceptorFn> {
+class MyClassInterceptor implements TInterceptorClass {
   static priority = TInterceptorPriority.BEFORE_ALL;
 
   handler: TInterceptorFn = (before, after, onError) => {

@@ -1,3 +1,8 @@
+<script setup>
+function goToDef(n) {
+    document.location.hash = `#step${n}`
+}
+</script>
 <template>
 <svg id="event-lifecycle" width="550" viewBox="0 0 658 1500" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto;">
     <path d="M541.931 720L542.926 719.899L541.931 720ZM557.5 1007.5L558.5 1007.49L557.5 1007.5ZM557.5 1121.5L558.5 1121.53L558.498 1121.57L558.494
@@ -24,11 +29,17 @@
     1063.71C496.793 1071.46 517.844 1080.08 533.257 1089.6C540.963 1094.36 547.308 1099.38 551.708 1104.66C556.112 1109.96 558.612 1115.58 558.5
     1121.52L556.5 1121.48ZM558.494 1121.61C558.029 1125.73 558.042 1125.31 558.033 1125.77C558.021 1126.31 557.998 1127.68 557.498 1135.07L555.502
     1134.93C556.002 1127.55 556.023 1126.22 556.033 1125.73C556.045 1125.15 556.059 1125.36 556.506 1121.39L558.494 1121.61Z" fill="var(--ec-text)"/>
+    
+    
+    <g class="ec-hoverable" @click="goToDef(1)">
     <rect x="249.5" y="11.5" width="222" height="97" rx="10.5" fill="var(--ec-bg)" stroke="var(--ec-border)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="265.959" y="54.981">1. Incoming Event (e.g. HTTP </tspan>
         <tspan x="276.938" y="75.981">request or CLI command)</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(2)">
     <rect x="249.5" y="149.5" width="222" height="97" rx="10.5" fill="var(--ec-bg)" stroke="var(--ec-border)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="283.678" y="192.515">2. Create Event Context </tspan>
@@ -36,6 +47,9 @@
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-family="monospace" font-size="14" letter-spacing="0em">
         <tspan x="258.986" y="213.515">createAsyncEventContext()</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(3)">
     <rect x="249.5" y="287.5" width="222" height="97" rx="10.5" fill="var(--ec-bg)" stroke="var(--ec-border)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="297.801" y="330.515">3. Perform Routing </tspan>
@@ -43,56 +57,88 @@
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-family="monospace" font-size="14" letter-spacing="0em">
         <tspan x="287.41" y="351.515">router.lookup(...)</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(4)">
     <rect x="137.5" y="425.5" width="222" height="97" rx="10.5" fill="var(--ec-bg)" stroke="var(--ec-border)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="165.601" y="468.981">4. Set Controller Instance &#x2028;</tspan>
         <tspan x="194.913" y="489.981">in Event Context</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(8)">
     <rect x="138.5" y="977.5" width="222" height="97" rx="10.5" fill="var(--ec-bg-handler)" stroke="var(--ec-border-handler)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="156.989" y="1020.98">8. Call Handler Method With </tspan>
         <tspan x="181.544" y="1041.98">Resolved Arguments</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(13)">
     <rect x="249.5" y="1391.5" width="222" height="97" rx="10.5" fill="var(--ec-bg)" stroke="var(--ec-border)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="263.977" y="1434.98">13. Return Response to Event </tspan>
         <tspan x="286.836" y="1455.98">Origin (HTTP, CLI, etc.)</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(12)">
     <rect x="249.5" y="1253.5" width="222" height="97" rx="10.5" fill="var(--ec-bg)" stroke="var(--ec-border)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="272.46" y="1296.98">12. Process Final Response </tspan>
         <tspan x="268.468" y="1317.98">(e.g. format HTTP response)</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(10)">
     <rect x="258.5" y="1115.5" width="206" height="97" rx="10.5" fill="var(--ec-bg-interceptor)" stroke="var(--ec-border-interceptor)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="294.269" y="1158.98">10. Run Interceptors </tspan>
         <tspan x="310.552" y="1179.98">&#39;onError &#39;Hooks</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(9)">
     <rect x="35.5" y="1115.5" width="206" height="97" rx="10.5" fill="var(--ec-bg-interceptor)" stroke="var(--ec-border-interceptor)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="54.6094" y="1158.98">9. Run Interceptors &#39;after &#39;</tspan>
         <tspan x="117.746" y="1179.98">Hooks</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(11)">
     <rect x="481.5" y="1134.5" width="170" height="59" rx="10.5" fill="var(--ec-bg-red)" stroke="var(--ec-border-red)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="512.674" y="1169.48">11. Handle Error</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(7)">
     <rect x="138.5" y="839.5" width="222" height="97" rx="10.5" fill="var(--ec-bg-interceptor)" stroke="var(--ec-border-interceptor)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="159.703" y="882.981">7. Run Interceptors &#39;before &#39;</tspan>
         <tspan x="228.746" y="903.981">Hooks</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(6)">
     <rect x="137.5" y="701.5" width="222" height="97" rx="10.5" fill="var(--ec-bg)" stroke="var(--ec-border)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="148.805" y="734.481">6. Resolve Handler Arguments </tspan>
         <tspan x="156.939" y="755.481">(resolve pipeline, validation, </tspan>
         <tspan x="234.548" y="776.481">etc.)</tspan>
     </text>
+    </g>
+
+    <g class="ec-hoverable" @click="goToDef(5)">
     <rect x="138.5" y="563.5" width="222" height="97" rx="10.5" fill="var(--ec-bg-interceptor)" stroke="var(--ec-border-interceptor)"/>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-size="14" letter-spacing="0em">
         <tspan x="171.673" y="606.981">5. Initialize Interceptors </tspan>
         <tspan x="170.777" y="627.981">(Interceptors init phase)</tspan>
     </text>
+    </g>
+
     <mask id="path-28-outside-1_0_1" maskUnits="userSpaceOnUse" x="218" y="50" width="19" height="20" fill="var(--ec-text)">
         <rect fill="white" x="218" y="50" width="19" height="20"/>
         <path d="M230 60L225.712 55.712L225.023 56.4L228.079 59.5L218.423 59.5L218.423 60.5L228.079 60.5L225.023 63.6L225.711 64.289L230 60ZM222.596 52.17C223.272 51.79 223.98 51.5 224.72 51.3C225.46 51.1 226.22 51 227 51C228.245 51 229.415 51.2363 230.51 51.709C231.605 52.1817 232.557 52.822 233.367 53.63C234.177 54.438 234.818 55.3903 235.291 56.487C235.764 57.5837 236 58.7537 236 59.997C236 61.2403 235.764 62.4103 235.291 63.507C234.818 64.6037 234.177 65.5567 233.367 66.366C232.557 67.1753 231.605 67.817 230.51 68.291C229.415 68.765 228.245 69.0013 227 69C226.22 69 225.46 68.9 224.72 68.7C223.98 68.5 223.272 68.21 222.596 67.83L223.316 67.112C223.907 67.4147 224.508 67.638 225.12 67.782C225.732 67.926 226.359 67.9987 227 68C229.233 68 231.125 67.225 232.675 65.675C234.225 64.125 235 62.2333 235 60C235 57.7667 234.225 55.875 232.675 54.325C231.125 52.775 229.233 52 227 52C226.347 52 225.71 52.0757 225.089 52.227C224.468 52.3783 223.876 52.605 223.315 52.907L222.596 52.17Z"/>
@@ -188,6 +234,7 @@
 
     --ec-bg-red: #FFEEEE;
     --ec-border-red: #A48A8A;
+    --ec-border-hl: #404040;
 }
 
 .dark #event-lifecycle {
@@ -203,6 +250,23 @@
 
     --ec-bg-red: #5c2929;
     --ec-border-red: #9f5050;
+    --ec-border-hl: #d6d6d6;
+}
+
+.ec-hoverable {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    transform-origin: 50% 50%;
+    transform-box: fill-box;
+    opacity: .85;
+}
+
+.ec-hoverable:hover {
+    opacity: 1;
+}
+
+.ec-hoverable:hover rect {
+    stroke: var(--ec-border-hl)!important;
 }
 
 </style>
