@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-extraneous-class */
 import type { TFunction } from 'common'
 
 import { getMoostMate } from '../../metadata/moost-metadata'

@@ -22,6 +22,8 @@ import { TPipePriority } from './pipes/types'
 import type { TControllerOverview } from './types'
 import { getIterceptorHandlerFactory } from './utils'
 
+export { getGlobalWooks } from 'wooks'
+
 export interface TMoostOptions {
   /**
    * Prefix that is used for each event path
