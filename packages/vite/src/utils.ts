@@ -31,7 +31,9 @@ export function gatherAllImporters(
   return visited
 }
 
-const logger = new EventLogger('', { level: 99 }).createTopic(PLUGIN_NAME)
+const logger = new EventLogger('', { level: 99 }).createTopic(
+  __DYE_DIM__ + __DYE_CYAN__ + PLUGIN_NAME
+)
 export function getLogger() {
   return logger
 }
