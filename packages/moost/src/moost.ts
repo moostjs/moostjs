@@ -52,7 +52,7 @@ export interface TMoostOptions {
  * │  const app = new MyServer()
  * │  const http = new MoostHttp()
  * │  app.adapter(http).listen(3000, () => {
- * │      app.getLogger('[MyApp]').log('Up on port 3000')
+ * │      app.getLogger('MyApp').log('Up on port 3000')
  * │  })
  * │  app.init()
  * ```
@@ -104,10 +104,10 @@ export class Moost extends Hookable {
 
   constructor(protected options?: TMoostOptions) {
     super()
-    this.logger = options?.logger || getDefaultLogger(`${__DYE_DIM__ + __DYE_MAGENTA__}[moost]`)
-    getMoostInfact().setLogger(this.getLogger('[infact]'))
+    this.logger = options?.logger || getDefaultLogger(`${__DYE_DIM__ + __DYE_MAGENTA__}moost`)
+    getMoostInfact().setLogger(this.getLogger('infact'))
     const mate = getMoostMate()
-    Object.assign(mate, { logger: this.getLogger('[mate]') })
+    Object.assign(mate, { logger: this.getLogger('mate') })
   }
 
   _fireEventStart(source: TMoostAdapter<unknown>) {
@@ -123,7 +123,7 @@ export class Moost extends Hookable {
    * Provides application logger
    * ```js
    * // get logger with topic = "App"
-   * const logger = app.getLogger('[App]')
+   * const logger = app.getLogger('App')
    * logger.log('...')
    * ```
    * @param topic

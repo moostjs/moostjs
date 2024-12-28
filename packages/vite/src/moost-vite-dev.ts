@@ -21,6 +21,8 @@ export interface TMoostViteDevOptions {
   outDir?: string
   format?: 'cjs' | 'esm'
   sourcemap?: boolean
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  onEject?: (instance: object, dependency: Function) => boolean
 }
 
 /**
@@ -141,7 +143,7 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
      * - Hooks into the server middlewares to use our Moost callback.
      */
     async configureServer(server) {
-      moostRestartCleanup(adapters)
+      moostRestartCleanup(adapters, options.onEject)
 
       // Import the SSR entry so the app initializes
       // (MoostHttp.listen is patched, so no actual server is spawned).
@@ -194,7 +196,7 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
           moostMiddleware = null
 
           // Clean up Moost container references
-          moostRestartCleanup(adapters, cleanupInstances)
+          moostRestartCleanup(adapters, options.onEject, cleanupInstances)
 
           reloadRequired = true
         }

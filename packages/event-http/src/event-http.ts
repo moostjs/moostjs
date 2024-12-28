@@ -38,7 +38,7 @@ const CONTEXT_TYPE = 'HTTP'
  * │  const app = new MyServer()
  * │  const http = new MoostHttp()
  * │  app.adapter(http).listen(3000, () => {
- * │      app.getLogger('[MyApp]').log('Up on port 3000')
+ * │      app.getLogger('MyApp').log('Up on port 3000')
  * │  })
  * │  app.init()
  * ```

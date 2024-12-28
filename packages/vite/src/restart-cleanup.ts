@@ -5,6 +5,7 @@
 import { getGlobalWooks, getMoostInfact, getMoostMate, Moost } from 'moost'
 
 import type { createAdapterDetector } from './adapter-detector'
+import type { TMoostViteDevOptions } from './moost-vite-dev'
 import { getLogger } from './utils'
 
 /**
@@ -14,6 +15,7 @@ import { getLogger } from './utils'
  */
 export function moostRestartCleanup(
   adapters: Array<ReturnType<typeof createAdapterDetector>>,
+  onEject?: TMoostViteDevOptions['onEject'],
   cleanupInstances?: Set<string>
 ) {
   const logger = getLogger()
@@ -42,7 +44,10 @@ export function moostRestartCleanup(
     for (const key of Object.getOwnPropertySymbols(registry)) {
       const instance = registry[key]
       scanParams(instance, (type: Function) => {
-        if (type === Moost || type instanceof Moost || type.prototype instanceof Moost) {
+        if (
+          (type === Moost || type instanceof Moost || type.prototype instanceof Moost) &&
+          (!onEject || onEject(instance, type))
+        ) {
           delete registry[key]
           logger.debug(
             `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "Moost")`
@@ -50,7 +55,7 @@ export function moostRestartCleanup(
           return true
         }
         for (const adapter of adapters) {
-          if (adapter.compare(type)) {
+          if (adapter.compare(type) && (!onEject || onEject(instance, type))) {
             delete registry[key]
             logger.debug(
               `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "${
@@ -63,7 +68,7 @@ export function moostRestartCleanup(
       })
     }
     // need to remove instances with unknown dependencies
-    clearDependantRegistry(registry)
+    clearDependantRegistry(registry, onEject)
     infact.registry = registry
   }
 
@@ -72,7 +77,10 @@ export function moostRestartCleanup(
   getGlobalWooks(undefined, undefined, 'cleanup')
 }
 
-function clearDependantRegistry(registry: Record<symbol, object>) {
+function clearDependantRegistry(
+  registry: Record<symbol, object>,
+  onEject?: TMoostViteDevOptions['onEject']
+) {
   const logger = getLogger()
   const objSet = new Set()
   let somethingIsDeleted = true
@@ -85,7 +93,7 @@ function clearDependantRegistry(registry: Record<symbol, object>) {
     for (const key of Object.getOwnPropertySymbols(registry)) {
       const instance = registry[key]
       scanParams(instance, (type: Function) => {
-        if (!objSet.has(type)) {
+        if (!objSet.has(type) && (!onEject || onEject(instance, type))) {
           delete registry[key]
           logger.debug(
             `✖️  Ejecting "${constructorName(instance)}" (depends on "${
