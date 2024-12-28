@@ -38,7 +38,7 @@ const CONTEXT_TYPE = 'HTTP'
  * │  const app = new MyServer()
  * │  const http = new MoostHttp()
  * │  app.adapter(http).listen(3000, () => {
- * │      app.getLogger('MyApp').log('Up on port 3000')
+ * │      app.getLogger('[MyApp]').log('Up on port 3000')
  * │  })
  * │  app.init()
  * ```
@@ -140,7 +140,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
   }
 
   getLogger() {
-    return this.getHttpApp().getLogger('moost-http')
+    return this.getHttpApp().getLogger('[moost-http]')
   }
 
   bindHandler<T extends object = object>(opts: TMoostAdapterOptions<THttpHandlerMeta, T>): void {

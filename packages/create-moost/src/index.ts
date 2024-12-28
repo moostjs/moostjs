@@ -18,24 +18,25 @@ class CliController extends Moost {
   }
 
   async execute(name?: string) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     useAutoHelp() && process.exit(0)
 
     const prompts = await getPrompts({
       name,
-      eslint: !!useCliOption('eslint'),
-      prettier: !!useCliOption('prettier'),
       http: !!useCliOption('http'),
       cli: !!useCliOption('cli'),
+      wf: !!useCliOption('wf'),
+      domelint: !!useCliOption('domelint'),
       force: !!useCliOption('force'),
-      esbuild: !!useCliOption('esbuild'),
-      rollup: !!useCliOption('rollup'),
     })
 
     console.log('\nScaffolding a new project...')
     await scaffold(prompts)
     const cli = prompts.type === 'cli'
     return `
-${__DYE_WHITE_BRIGHT__ + __DYE_BOLD__}Success! ${__DYE_BOLD_OFF__}Your new "${prompts.projectName}" project has been created successfully. ${__DYE_COLOR_OFF__}
+${__DYE_WHITE_BRIGHT__ + __DYE_BOLD__}Success! ${__DYE_BOLD_OFF__}Your new "${
+      prompts.projectName
+    }" project has been created successfully. ${__DYE_COLOR_OFF__}
 
 Follow these next steps to start your development server:
 
@@ -67,14 +68,15 @@ export function run() {
   app.adapter(
     new MoostCli({
       globalCliOptions: [
-        // { keys: ['ts'], description: '' },
         { keys: ['http'], description: 'Use Moost HTTP', type: Boolean },
         { keys: ['cli'], description: 'Use Moost CLI', type: Boolean },
-        { keys: ['eslint'], description: 'Add ESLint', type: Boolean },
-        { keys: ['prettier'], description: 'Add Prettier', type: Boolean },
+        { keys: ['wf'], description: 'Add Workflow Adapter', type: Boolean },
+        {
+          keys: ['domelint'],
+          description: 'Add do-me-lint (smart eslint installer)',
+          type: Boolean,
+        },
         { keys: ['force'], description: 'Force Overwrite', type: Boolean },
-        { keys: ['esbuild'], description: 'Use esbuild for builds', type: Boolean },
-        { keys: ['rollup'], description: 'Use rollup for builds', type: Boolean },
       ],
     })
   )

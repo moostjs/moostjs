@@ -1,15 +1,21 @@
 {
-    "compilerOptions": {
-        "outDir": "dist",
-        "emitDecoratorMetadata": true,
-        "experimentalDecorators": true,
-        "esModuleInterop": true,
-        "moduleResolution": "node",
-        "lib": ["esnext"],
-        "target": "ESNext",
-        "downlevelIteration": true,
-        "strict": true,
-        "skipLibCheck": true
-    },
-    "include": ["src"]
+  "compilerOptions": {
+    "outDir": "dist",
+
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+
+    "isolatedModules": true,
+    "useDefineForClassFields": true
+  },
+  "exclude": ["node_modules", "dist"],
+  "include": ["src"]
 }

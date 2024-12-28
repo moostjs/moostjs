@@ -1,11 +1,10 @@
 {
   "name": "@moostjs/vite",
   "version": "0.4.23",
-  "description": "Vite plugin for moostjs",
+  "description": "Vite Dev plugin for moostjs",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "private": true,
   "sideEffects": false,
   "exports": {
     "./package.json": "./package.json",
@@ -29,7 +28,8 @@
     "composables",
     "framework",
     "wooksjs",
-    "prostojs"
+    "prostojs",
+    "vite"
   ],
   "author": "Artem Maltsev",
   "license": "MIT",
@@ -37,7 +37,9 @@
     "url": "https://github.com/moostjs/moostjs/issues"
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/vite#readme",
-  "dependencies": {
-    "moost": "0.4.23"
+  "peerDependencies": {
+    "moost": "0.4.23",
+    "@moostjs/event-http": "0.4.23",
+    "vite": "6.x"
   }
 }

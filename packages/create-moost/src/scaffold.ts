@@ -15,7 +15,7 @@ import type { TPrompts } from './types'
 
 const rw = new ProstoRewrite({
   textPattern: [
-    '*.{js,jsx,ts,tsx,txt,json,yml,yaml,md,ini}',
+    '*.{js,jsx,ts,tsx,txt,json,jsonc,yml,yaml,md,ini,css,html}',
     'Dockerfile',
     '*config',
     '.gitignore',
@@ -41,22 +41,14 @@ export async function scaffold(data: TPrompts) {
   }
   const templatePath = join(__dirname, '../templates', data.type)
   const commonPath = join(__dirname, '../templates/common')
+  const wfPath = join(__dirname, '../templates/wf')
 
   const context: Record<string, unknown> = { ...data, version }
 
   const excludeCommon: string[] = []
 
-  if (!data.eslint) {
-    excludeCommon.push('.eslintrc.json')
-  }
-  if (!data.prettier) {
-    excludeCommon.push('.prettierignore', '.prettierrc')
-  }
-  if (data.bundler !== 'rollup') {
-    excludeCommon.push('rollup.config.js')
-  }
-  if (data.bundler !== 'esbuild') {
-    excludeCommon.push('build.js')
+  if (!data.domelint) {
+    excludeCommon.push('.domelintrc.yml')
   }
 
   await rw.rewriteDir(
@@ -71,9 +63,24 @@ export async function scaffold(data: TPrompts) {
       baseDir: commonPath,
       output: projectDir,
       exclude: excludeCommon,
+      renameFile(filename) {
+        if (filename.endsWith('.jsonc')) {
+          return filename.replace(/c$/, '')
+        }
+        return filename
+      },
     },
     context
   )
+  if (data.wf) {
+    await rw.rewriteDir(
+      {
+        baseDir: wfPath,
+        output: projectDir,
+      },
+      context
+    )
+  }
 }
 
 function emptyDirectorySync(directory: string) {

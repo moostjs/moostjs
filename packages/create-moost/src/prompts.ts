@@ -10,8 +10,6 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
     targetDir: inputs.name || '',
     projectName: inputs.name || '',
     packageName: inputs.name || '',
-    prettier: !!inputs.prettier,
-    eslint: !!inputs.eslint,
   }
   try {
     const results = await prompts<keyof TPrompts | 'overwriteChecker'>(
@@ -65,25 +63,6 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
           ],
         },
         {
-          name: 'bundler',
-          type: () => {
-            if (inputs.esbuild && !inputs.rollup) {
-              predefined.bundler = 'esbuild'
-              return null
-            }
-            if (!inputs.esbuild && inputs.rollup) {
-              predefined.bundler = 'rollup'
-              return null
-            }
-            return 'select'
-          },
-          message: 'Bundler:',
-          choices: [
-            { title: 'Rollup (recommended)', value: 'rollup' },
-            { title: 'ESBuild', value: 'esbuild' },
-          ],
-        },
-        {
           name: 'packageName',
           type: () => (isValidPackageName(predefined.targetDir!) ? null : 'text'),
           message: 'Package name:',
@@ -91,22 +70,17 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
           validate: (dir: string) => isValidPackageName(dir) || 'Invalid package.json name',
         },
         {
-          name: 'eslint',
-          type: () => (inputs.eslint ? null : 'toggle'),
-          message: 'Add ESLint for code quality?',
+          name: 'wf',
+          type: () => (inputs.wf ? null : 'toggle'),
+          message: 'Add Moost Workflows?',
           initial: false,
           active: 'Yes',
           inactive: 'No',
         },
         {
-          name: 'prettier',
-          type: (prev, values) => {
-            if (!values.eslint) {
-              return null
-            }
-            return 'toggle'
-          },
-          message: 'Add Prettier for code formatting?',
+          name: 'domelint',
+          type: () => (inputs.domelint ? null : 'toggle'),
+          message: 'Add do-me-lint (smart eslint installer)?',
           initial: false,
           active: 'Yes',
           inactive: 'No',

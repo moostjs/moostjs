@@ -1,0 +1,14 @@
+ignoredRules:
+  # for Moost controllers: they don't typically use 'this'
+  - '@typescript-eslint/class-methods-use-this'
+
+  # For Moost decorators: it's common to pull url route params from the url
+  - max-params
+
+  # Too strict, hinders readability
+  - '@typescript-eslint/strict-boolean-expressions'
+
+  # Empty class is a valid use case for Moost's controller composition
+  - '@typescript-eslint/no-extraneous-class'
+
+  - '@typescript-eslint/consistent-type-imports'

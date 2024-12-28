@@ -2,11 +2,9 @@ export interface TInputs {
   name: string
   http: boolean
   cli: boolean
-  eslint: boolean
-  prettier: boolean
+  wf: boolean
+  domelint: boolean
   force: boolean
-  esbuild: boolean
-  rollup: boolean
 }
 
 export interface TPrompts {
@@ -14,8 +12,7 @@ export interface TPrompts {
   projectName: string
   packageName: string
   type: 'cli' | 'http'
-  bundler: 'esbuild' | 'rollup'
+  wf: boolean
+  domelint: boolean
   overwrite?: boolean
-  eslint?: boolean
-  prettier?: boolean
 }

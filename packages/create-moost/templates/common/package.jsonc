@@ -1,0 +1,33 @@
+{
+  "name": "{{ packageName }}",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+//=IF (domelint)
+    "postinstall": "npx do-me-lint",
+//=END IF
+    "dev": "vite dev",
+    "build": "vite build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+//=IF (type === 'http')
+    "@moostjs/event-http": "^{{ version }}",
+//=END IF
+//=IF (type === 'cli')
+    "@moostjs/event-cli": "^{{ version }}",
+//=END IF
+    "moost": "^{{ version }}"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "unplugin-swc": "^1.5.1",
+    "vite": "^6.0.5"
+  }
+}

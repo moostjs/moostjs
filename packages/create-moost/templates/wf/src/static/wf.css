@@ -1,0 +1,135 @@
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1em;
+  position: relative;
+  overflow: hidden;
+  /* Main gradient background */
+  background: linear-gradient(135deg, #151e38 0%, #233e88 100%);
+}
+
+/* Top-left shape overlay */
+body::before {
+  content: "";
+  position: absolute;
+  top: -10%;
+  left: -15%;
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(circle, #213b82 20%, transparent 70%);
+  filter: blur(60px); /* Add some blur for a more ethereal effect */
+  opacity: 0.8;
+  transform: rotate(20deg);
+  z-index: -1;
+}
+
+
+/* Container (section) with glass-like effect */
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  max-width: 400px;
+  width: 100%;
+  padding: 1.6em;
+  border-radius: 1.6em;
+  position: relative;
+  color: #fff;
+  background: rgba(40, 69, 150, .8);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+h1 {
+  margin: 12px 0;
+  display: flex;
+  gap: .5em;
+  font-size: 28px;
+  justify-content: start;
+  align-items: center;
+}
+
+h1 svg {
+  width: 48px;
+  height: 48px;;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  font-weight: 600;
+}
+
+/* Inputs with a subtle focus effect */
+input {
+  padding: 0.7em;
+  border: 1px solid #ccc;
+  border-radius: 0.25em;
+  transition: border-color 0.2s ease;
+  background-color: #ffffffa0;
+}
+input:focus {
+  outline: none;
+  border-color: #4758ed;
+  outline: 2px solid #4758ed;
+  background-color: #ffffff;
+}
+
+/* Modern button styling */
+button {
+  margin-top: .7em;
+  padding: 1em;
+  border: none;
+  border-radius: 0.25em;
+  cursor: pointer;
+  background-color: #4758ed;
+  color: #fff;
+  font-weight: 600;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+button:hover {
+  background-color: #5f6bf2;
+  transform: translateY(-1px);
+}
+button:active {
+  transform: translateY(0);
+}
+
+p {
+  margin: 0;
+  padding: 0;
+}
+
+a {
+  margin: 1em 0 0 0;
+  opacity: 0.75;
+  color: white;
+}
+
+a:hover {
+  opacity: 1;
+}
+
+a:visited {
+  color: white;
+}
+
+p.error {
+  background-color: #ff000020;
+  border: 1px solid #aa000070;
+  padding: 1em;
+  border-radius: 1em;
+  color: #ff4444;
+}
