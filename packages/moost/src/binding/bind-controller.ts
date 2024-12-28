@@ -121,7 +121,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
         // eslint-disable-next-line @typescript-eslint/no-loop-func
         logHandler: (eventName: string) => {
           options.logger.info(
-            `• ${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${
+            `${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${
               classConstructor.name
             }.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`
           )

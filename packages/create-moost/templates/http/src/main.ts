@@ -35,12 +35,15 @@ app.adapter(new MoostHttp()).listen(3000, () => {
   app.getLogger("[{{ projectName }}]").info("Server started on port 3000");
 });
 
+//=IF (wf)
 // Configure the Workflow adapter to handle workflow-related events
 app.adapter(new MoostWf());
+//=END IF
 
 // Register application controllers
 //=IF (wf)
 app.registerControllers(AppController, WfController).init();
-//=ELSE
+//=END IF
+//=IF (!wf)
 app.registerControllers(AppController).init();
 //=END IF

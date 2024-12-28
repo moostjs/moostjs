@@ -54,7 +54,6 @@ export function moostRestartCleanup(
             delete registry[key]
             logger.debug(
               `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "${
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 adapter.constructor!.name
               }")`
             )

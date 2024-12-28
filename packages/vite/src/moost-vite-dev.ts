@@ -11,8 +11,8 @@ import { gatherAllImporters, getLogger, PLUGIN_NAME } from './utils'
 type TMiddleware = (req: IncomingMessage, res: ServerResponse) => any
 
 /** Regex checks */
-const REG_HAS_EXPORT_CLASS = /(^\s*export\s+class\s+)/m
-const REG_REPLACE_EXPORT_CLASS = /(^\s*export\s+class\s+)/gm
+const REG_HAS_EXPORT_CLASS = /(^\s*@(Injectable|Controller)\()/m
+const REG_REPLACE_EXPORT_CLASS = /(^\s*@(Injectable|Controller)\()/gm
 
 export interface TMoostViteDevOptions {
   entry: string
@@ -37,7 +37,7 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
     createAdapterDetector('http', MoostHttp => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       MoostHttp.prototype.listen = function (...args: any[]) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
         moostMiddleware = this.getServerCb()
         setTimeout(() => {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
@@ -51,6 +51,7 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
   ]
   /** A logger instance for plugin debug output. */
   const logger = getLogger()
+  let reloadRequired = false
 
   return {
     name: PLUGIN_NAME,
@@ -102,10 +103,7 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
 
       // Inject a decorator to track the file ID if the file exports a class
       if (REG_HAS_EXPORT_CLASS.test(code)) {
-        code = code.replace(
-          REG_REPLACE_EXPORT_CLASS,
-          '@__VITE_ID(import.meta.filename)\nexport class '
-        )
+        code = code.replace(REG_REPLACE_EXPORT_CLASS, '\n@__VITE_ID(import.meta.filename)\n$1')
         code = `import { __VITE_ID } from 'virtual:vite-id'\n\n${code}`
       }
       return code
@@ -150,7 +148,16 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
       await server.ssrLoadModule(entry)
 
       // Attach Moost as a middleware if present
-      server.middlewares.use((req, res, next) => {
+      // eslint-disable-next-line @typescript-eslint/no-misused-promises
+      server.middlewares.use(async (req, res, next) => {
+        if (reloadRequired) {
+          console.clear()
+          reloadRequired = false
+          logger.debug('🚀 Reloading Moost App...')
+          await server.ssrLoadModule(entry)
+          // eslint-disable-next-line no-promise-executor-return
+          await new Promise(resolve => setTimeout(resolve, 1))
+        }
         if (moostMiddleware) {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return moostMiddleware(req, res)
@@ -166,11 +173,10 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
      * - Clear Moost’s runtime registry for those classes.
      * - Re-import the SSR entry to re-initialize the app.
      */
-    async hotUpdate({ file, server }) {
+    hotUpdate({ file }) {
       if (file.endsWith('.ts')) {
         const modules = this.environment.moduleGraph.getModulesByFile(file)
         if (modules) {
-          console.clear()
           logger.debug(`🔃 Hot update: ${file}`)
 
           const cleanupInstances = new Set<string>()
@@ -190,8 +196,7 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
           // Clean up Moost container references
           moostRestartCleanup(adapters, cleanupInstances)
 
-          logger.debug('🚀 Reloading Moost App...')
-          await server.ssrLoadModule(entry)
+          reloadRequired = true
         }
         // Return an empty array so Vite doesn't do partial HMR
         return []
