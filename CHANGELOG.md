@@ -1,3 +1,12 @@
+# [0.5.0](https://github.com/moostjs/moostjs/compare/v0.4.23...v0.5.0) (2024-12-28)
+
+
+### Features
+
+* **vite:** add vite plugin ([78368be](https://github.com/moostjs/moostjs/commit/78368beef67272ca1ee5488f6992ca193bcdaba8))
+
+
+
 ## [0.4.23](https://github.com/moostjs/moostjs/compare/v0.4.22...v0.4.23) (2024-12-23)
 
 

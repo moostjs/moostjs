@@ -1,6 +1,6 @@
 {
   "name": "moost",
-  "version": "0.4.23",
+  "version": "0.5.0",
   "description": "moost",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -33,10 +33,10 @@
   "dependencies": {
     "@prostojs/infact": "^0.2.4",
     "@prostojs/mate": "^0.3.3",
-    "@prostojs/logger": "^0.4.2",
-    "@wooksjs/event-core": "^0.5.17",
+    "@prostojs/logger": "^0.4.3",
+    "@wooksjs/event-core": "^0.5.18",
     "hookable": "^5.5.3",
-    "wooks": "^0.5.17"
+    "wooks": "^0.5.18"
   },
   "author": "Artem Maltsev",
   "license": "MIT",
