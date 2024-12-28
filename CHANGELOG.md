@@ -1,3 +1,12 @@
+## [0.5.1](https://github.com/moostjs/moostjs/compare/v0.5.0...v0.5.1) (2024-12-28)
+
+
+### Features
+
+* **vite:** add onEject callback ([31c5d9a](https://github.com/moostjs/moostjs/commit/31c5d9afc7d88b1609e848a2a69c7967c98534db))
+
+
+
 # [0.5.0](https://github.com/moostjs/moostjs/compare/v0.4.23...v0.5.0) (2024-12-28)
 
 
