@@ -2,7 +2,7 @@ import type { TConsoleBase } from '@prostojs/logger'
 import type { TAny, TClassConstructor, TObject } from 'common'
 
 import type { TMoostMetadata } from '../metadata'
-import type { TMoostAdapter } from '../moost'
+import type { Moost, TMoostAdapter } from '../moost'
 import type { TPipeData } from '../pipes'
 
 export interface TBindControllerOptions {
@@ -16,4 +16,5 @@ export interface TBindControllerOptions {
   interceptors?: TMoostMetadata['interceptors']
   pipes?: TPipeData[]
   logger: TConsoleBase
+  moostInstance: Moost
 }

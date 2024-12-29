@@ -120,11 +120,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
         resolveArgs,
         // eslint-disable-next-line @typescript-eslint/no-loop-func
         logHandler: (eventName: string) => {
-          options.logger.info(
-            `${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__}→ ${
-              classConstructor.name
-            }.${__DYE_CYAN__}${method as string}${__DYE_GREEN__}()`
-          )
+          options.moostInstance.logMappedHandler(eventName, classConstructor, method as string)
         },
         register(h: TMoostHandler<TEmpty>, path: string, args: string[]) {
           const data = wm.get(h)

@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/ban-types */
 /* eslint-disable @typescript-eslint/naming-convention */
-import { getGlobalWooks, getMoostInfact, getMoostMate, Moost } from 'moost'
+import { clearGlobalWooks, getMoostInfact, getMoostMate, Moost } from 'moost'
 
 import type { createAdapterDetector } from './adapter-detector'
 import type { TMoostViteDevOptions } from './moost-vite-dev'
@@ -74,7 +74,7 @@ export function moostRestartCleanup(
 
   // Clean up metadata and wooks
   getMoostMate()._cleanup()
-  getGlobalWooks(undefined, undefined, 'cleanup')
+  clearGlobalWooks()
 }
 
 function clearDependantRegistry(

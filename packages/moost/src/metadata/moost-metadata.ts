@@ -32,6 +32,7 @@ export interface TMoostMetadata<H extends TObject = TEmpty>
   returnType?: TFunction
   provide?: TProvideRegistry
   replace?: TReplaceRegistry
+  loggerTopic?: string
   params: Array<TMateParamMeta & TMoostParamsMetadata>
 }
 

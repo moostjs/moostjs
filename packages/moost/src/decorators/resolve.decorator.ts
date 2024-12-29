@@ -1,4 +1,4 @@
-import { useEventLogger, useRouteParams } from '@wooksjs/event-core'
+import { useRouteParams } from '@wooksjs/event-core'
 import type { TEmpty, TObject } from 'common'
 
 import { getMoostMate } from '../metadata/moost-metadata'
@@ -73,15 +73,6 @@ export function Const<T>(value: T, label?: string) {
  */
 export function ConstFactory<T>(factory: () => T | Promise<T>, label?: string) {
   return Resolve(async () => factory(), label)
-}
-
-/**
- * Resolves event logger from event context
- * @param topic
- * @returns Resolver to '@wooksjs/event-core' (EventLogger)
- */
-export function InjectEventLogger(topic?: string) {
-  return Resolve(() => useEventLogger(topic))
 }
 
 function fillLabel(target: TObject, key: string | symbol, index?: number, name?: string) {

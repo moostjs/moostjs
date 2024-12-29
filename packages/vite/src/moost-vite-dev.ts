@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from 'http'
 import type { Plugin } from 'vite'
 
 import { createAdapterDetector } from './adapter-detector'
+import { patchMoostHandlerLogging } from './moost-logging'
 import { moostRestartCleanup } from './restart-cleanup'
 import { gatherAllImporters, getLogger, PLUGIN_NAME } from './utils'
 
@@ -54,6 +55,8 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
   /** A logger instance for plugin debug output. */
   const logger = getLogger()
   let reloadRequired = false
+
+  patchMoostHandlerLogging()
 
   return {
     name: PLUGIN_NAME,

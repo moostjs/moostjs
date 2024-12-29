@@ -17,13 +17,11 @@ export async function getCallableFn<T extends TAnyFn = TAnyFn>(
   const meta = mate.read(fn)
   if (meta?.injectable) {
     const infact = getMoostInfact()
-    infact.silent(true)
     const instance = (await infact.getForInstance(targetInstance, fn as TClassConstructor<TAny>, {
       customData: {
         pipes: [...(pipes || []), ...(meta.pipes || [])].sort((a, b) => a.priority - b.priority),
       },
     })) as TClassFunction<T>
-    infact.silent(false)
     return ((...args: TAny[]) => instance.handler(...(args as Parameters<T>))) as unknown as T
   }
   if (typeof fn === 'function') {

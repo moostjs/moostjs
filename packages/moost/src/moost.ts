@@ -5,7 +5,7 @@ import { ProstoLogger } from '@prostojs/logger'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
 import { createAsyncEventContext } from '@wooksjs/event-core'
 import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
-import { getDefaultLogger } from 'common'
+import { getDefaultLogger, setDefaultLogger } from 'common'
 import { Hookable } from 'hookable'
 
 import { bindControllerMethods } from './binding/bind-controller'
@@ -22,7 +22,9 @@ import { TPipePriority } from './pipes/types'
 import type { TControllerOverview } from './types'
 import { getIterceptorHandlerFactory } from './utils'
 
-export { getGlobalWooks } from 'wooks'
+export type { TConsoleBase } from '@prostojs/logger'
+export { ProstoLogger } from '@prostojs/logger'
+export { clearGlobalWooks, getGlobalWooks } from 'wooks'
 
 export interface TMoostOptions {
   /**
@@ -105,7 +107,7 @@ export class Moost extends Hookable {
   constructor(protected options?: TMoostOptions) {
     super()
     this.logger = options?.logger || getDefaultLogger(`${__DYE_DIM__ + __DYE_MAGENTA__}moost`)
-    getMoostInfact().setLogger(this.getLogger('infact'))
+    setDefaultLogger(this.logger)
     const mate = getMoostMate()
     Object.assign(mate, { logger: this.getLogger('mate') })
   }
@@ -129,8 +131,8 @@ export class Moost extends Hookable {
    * @param topic
    * @returns
    */
-  public getLogger(topic: string) {
-    if (this.logger instanceof ProstoLogger) {
+  public getLogger(topic?: string) {
+    if (topic && this.logger instanceof ProstoLogger) {
       return this.logger.createTopic(topic)
     }
     return this.logger
@@ -174,8 +176,6 @@ export class Moost extends Hookable {
   }
 
   protected async bindControllers() {
-    const infact = getMoostInfact()
-    infact.setLogger(this.logger)
     const meta = getMoostMate()
     const thisMeta = meta.read(this)
     const provide = { ...thisMeta?.provide, ...this.provide }
@@ -237,16 +237,10 @@ export class Moost extends Hookable {
     // getInstance - instance factory for resolving SINGLETON and FOR_EVENT instance
     const getInstance = instance
       ? () => Promise.resolve(instance!)
-      : async (): Promise<TObject> => {
-          // if (!instance) {
-          infact.silent(true)
-          const instance = (await infact.get(controller as TClassConstructor<TAny>, {
+      : async (): Promise<TObject> =>
+          (await infact.get(controller as TClassConstructor<TAny>, {
             ...infactOpts,
           })) as Promise<TObject>
-          infact.silent(false)
-          // }
-          return instance
-        }
 
     const classConstructor = isConstructor(controller)
       ? controller
@@ -263,6 +257,7 @@ export class Moost extends Hookable {
         provide: classMeta?.provide,
         replace: classMeta?.replace,
         logger: this.logger,
+        moostInstance: this,
       })
     )
     if (classMeta && classMeta.importController) {
@@ -394,6 +389,23 @@ export class Moost extends Hookable {
   ) {
     this.unregisteredControllers.push(...controllers)
     return this
+  }
+
+  public logMappedHandler(
+    eventName: string,
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    classConstructor: Function,
+    method: string,
+    stroke?: boolean,
+    prefix?: string
+  ) {
+    const c = stroke ? __DYE_CROSSED__ : ''
+    const coff = stroke ? __DYE_CROSSED_OFF__ : ''
+    this.logger.info(
+      `${prefix || ''}${c}${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__ + c}→ ${
+        classConstructor.name
+      }.${__DYE_CYAN__ + c}${method}${__DYE_GREEN__}()${coff}`
+    )
   }
 }
 

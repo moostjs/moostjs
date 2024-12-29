@@ -31,9 +31,6 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     } else {
       this.wfApp = createWfApp() as WooksWf<T, IR>
     }
-    if (!debug) {
-      getMoostInfact().silent(true)
-    }
   }
 
   async onNotFound() {
