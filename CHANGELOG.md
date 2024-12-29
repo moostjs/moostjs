@@ -1,3 +1,12 @@
+## [0.5.8](https://github.com/moostjs/moostjs/compare/v0.5.7...v0.5.8) (2024-12-29)
+
+
+### Bug Fixes
+
+* fix InjectMoostLogger ([e366174](https://github.com/moostjs/moostjs/commit/e36617452ab1f0c65e05941a73241e85bd21969f))
+
+
+
 ## [0.5.7](https://github.com/moostjs/moostjs/compare/v0.5.6...v0.5.7) (2024-12-29)
 
 
