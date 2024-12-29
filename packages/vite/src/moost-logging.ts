@@ -145,7 +145,7 @@ export function patchMoostHandlerLogging(): void {
         item.classConstructor,
         item.method,
         true,
-        '✖️ '
+        '❌  '
       )
     })
   }

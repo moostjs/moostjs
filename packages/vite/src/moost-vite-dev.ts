@@ -156,9 +156,10 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
       server.middlewares.use(async (req, res, next) => {
         if (reloadRequired) {
-          console.clear()
           reloadRequired = false
+          console.log()
           logger.debug('🚀 Reloading Moost App...')
+          console.log()
           await server.ssrLoadModule(entry)
           // eslint-disable-next-line no-promise-executor-return
           await new Promise(resolve => setTimeout(resolve, 1))
