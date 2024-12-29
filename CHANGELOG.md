@@ -1,3 +1,12 @@
+## [0.5.9](https://github.com/moostjs/moostjs/compare/v0.5.8...v0.5.9) (2024-12-29)
+
+
+### Bug Fixes
+
+* fix infact run pipes ([1729d41](https://github.com/moostjs/moostjs/commit/1729d41e61b68c55ee6cdc06e202333e2e788d69))
+
+
+
 ## [0.5.8](https://github.com/moostjs/moostjs/compare/v0.5.7...v0.5.8) (2024-12-29)
 
 
