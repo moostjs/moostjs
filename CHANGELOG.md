@@ -1,3 +1,12 @@
+## [0.5.11](https://github.com/moostjs/moostjs/compare/v0.5.10...v0.5.11) (2024-12-29)
+
+
+### Bug Fixes
+
+* **create-moost:** fix tsconfig ([71284a5](https://github.com/moostjs/moostjs/commit/71284a5001c94d57ad53f2c8da4e1c20cbe96d74))
+
+
+
 ## [0.5.10](https://github.com/moostjs/moostjs/compare/v0.5.9...v0.5.10) (2024-12-29)
 
 
