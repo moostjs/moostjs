@@ -1,3 +1,12 @@
+## [0.5.4](https://github.com/moostjs/moostjs/compare/v0.5.3...v0.5.4) (2024-12-29)
+
+
+### Bug Fixes
+
+* fix logging ([4162011](https://github.com/moostjs/moostjs/commit/4162011261ade88b9689d4966b6af2b5b39fd845))
+
+
+
 ## [0.5.3](https://github.com/moostjs/moostjs/compare/v0.5.2...v0.5.3) (2024-12-29)
 
 
