@@ -399,8 +399,8 @@ export class Moost extends Hookable {
     stroke?: boolean,
     prefix?: string
   ) {
-    const c = stroke ? __DYE_CROSSED__ : ''
-    const coff = stroke ? __DYE_CROSSED_OFF__ : ''
+    const c = stroke ? '\u001B[9m' : '' // crossed
+    const coff = stroke ? '\u001B[29m' : '' // crossed off
     this.logger.info(
       `${prefix || ''}${c}${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__ + c}→ ${
         classConstructor.name
