@@ -1,3 +1,12 @@
+## [0.5.10](https://github.com/moostjs/moostjs/compare/v0.5.9...v0.5.10) (2024-12-29)
+
+
+### Bug Fixes
+
+* **vite:** ignore Object dependencies ([66507f3](https://github.com/moostjs/moostjs/commit/66507f38e111c72e2e95cb2333a65fa769381f29))
+
+
+
 ## [0.5.9](https://github.com/moostjs/moostjs/compare/v0.5.8...v0.5.9) (2024-12-29)
 
 
