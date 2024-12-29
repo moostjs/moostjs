@@ -52,7 +52,7 @@ export function getNewMoostInfact() {
       } as unknown as TInfactClassMeta<TMoostParamsMetadata> & TMoostMetadata
     },
 
-    resolveParam({ paramMeta, classMeta, customData, classConstructor, index }) {
+    resolveParam({ paramMeta, customData, classConstructor, index }) {
       if (paramMeta && customData?.pipes) {
         return runPipes(
           customData.pipes,
@@ -61,7 +61,7 @@ export function getNewMoostInfact() {
             paramMeta,
             type: classConstructor,
             key: 'constructor',
-            classMeta: classMeta as unknown as TMoostMetadata,
+            classMeta: getMoostMate().read(classConstructor),
             index,
             targetMeta: paramMeta,
           },
