@@ -109,8 +109,10 @@ export function getNewMoostInfact() {
           const scope = getMoostMate().read(targetClass)?.injectable || 'SINGLETON'
           if (
             loggingOptions.newInstance === false ||
-            loggingOptions.newInstance === scope ||
-            (loggingOptions.newInstance === 'SINGLETON' && scope === true)
+            !(
+              loggingOptions.newInstance === scope ||
+              (loggingOptions.newInstance === 'SINGLETON' && scope === true)
+            )
           ) {
             return
           }
