@@ -1,6 +1,6 @@
 {
   "name": "create-moost",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "description": "create-moost",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -42,10 +42,10 @@
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/create-moost#readme",
   "dependencies": {
-    "@moostjs/event-cli": "0.5.6",
+    "@moostjs/event-cli": "0.5.7",
     "@wooksjs/event-cli": "^0.5.19",
     "@prostojs/rewrite": "^0.1.1",
-    "moost": "0.5.6",
+    "moost": "0.5.7",
     "prompts": "^2.4.2"
   }
 }

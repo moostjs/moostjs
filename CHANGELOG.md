@@ -1,3 +1,12 @@
+## [0.5.7](https://github.com/moostjs/moostjs/compare/v0.5.6...v0.5.7) (2024-12-29)
+
+
+### Bug Fixes
+
+* improve infact logging ([f538fa3](https://github.com/moostjs/moostjs/commit/f538fa3233bde0ff4ad7f0a9378f83c2f120f74c))
+
+
+
 ## [0.5.6](https://github.com/moostjs/moostjs/compare/v0.5.5...v0.5.6) (2024-12-29)
 
 
