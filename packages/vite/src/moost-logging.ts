@@ -145,7 +145,7 @@ export function patchMoostHandlerLogging(): void {
         item.classConstructor,
         item.method,
         true,
-        '❌  '
+        '❌ '
       )
     })
   }
@@ -173,7 +173,7 @@ export function patchMoostHandlerLogging(): void {
         classConstructor,
         method,
         false,
-        logsStorage!.isFirstRun ? '' : '➕ '
+        logsStorage!.isFirstRun ? '' : '✅ '
       )
     }
   }

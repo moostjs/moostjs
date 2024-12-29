@@ -106,12 +106,11 @@ export function getNewMoostInfact() {
     on: (event, targetClass, message, args?) => {
       switch (event) {
         case 'new-instance': {
-          const isForEvent = getMoostMate().read(targetClass)?.injectable !== 'SINGLETON'
-          const isSingleton = !isForEvent
+          const scope = getMoostMate().read(targetClass)?.injectable || 'SINGLETON'
           if (
             loggingOptions.newInstance === false ||
-            (loggingOptions.newInstance === 'FOR_EVENT' && !isForEvent) ||
-            (loggingOptions.newInstance === 'SINGLETON' && isSingleton)
+            loggingOptions.newInstance === scope ||
+            (loggingOptions.newInstance === 'SINGLETON' && scope === true)
           ) {
             return
           }
