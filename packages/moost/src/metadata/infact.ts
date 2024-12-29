@@ -131,7 +131,7 @@ export function getNewMoostInfact() {
       }
       let logger
       try {
-        logger = useEventLogger('infact')
+        logger = event === 'error' ? getDefaultLogger('infact') : useEventLogger('infact')
       } catch (error) {
         logger = getDefaultLogger('infact')
       }
