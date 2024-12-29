@@ -116,7 +116,9 @@ function scanParams(instance: object, cb: (type: Function) => boolean | void) {
     for (const param of params) {
       if (
         param.type === undefined ||
-        [Array, String, Number, Boolean].includes(param.type as unknown as StringConstructor)
+        [Array, String, Number, Boolean, Object].includes(
+          param.type as unknown as StringConstructor
+        )
       ) {
         // skip undefined and primitive types
         continue

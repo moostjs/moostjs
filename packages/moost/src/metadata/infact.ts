@@ -11,6 +11,7 @@ import type { TMoostMetadata, TMoostParamsMetadata } from './moost-metadata'
 import { getMoostMate } from './moost-metadata'
 
 const sharedMoostInfact = getNewMoostInfact()
+const INFACT_BANNER = `${__DYE_DIM__ + __DYE_MAGENTA__}infact`
 interface TInfactLoggingOptions {
   newInstance?: true | false | 'FOR_EVENT' | 'SINGLETON'
   warn?: true | false
@@ -133,9 +134,9 @@ export function getNewMoostInfact() {
       }
       let logger
       try {
-        logger = event === 'error' ? getDefaultLogger('infact') : useEventLogger('infact')
+        logger = event === 'error' ? getDefaultLogger(INFACT_BANNER) : useEventLogger(INFACT_BANNER)
       } catch (error) {
-        logger = getDefaultLogger('infact')
+        logger = getDefaultLogger(INFACT_BANNER)
       }
       const instance = `${__DYE_UNDERSCORE__}${targetClass.name}${__DYE_UNDERSCORE_OFF__}`
       switch (event) {
