@@ -2,7 +2,7 @@ import type { TWooksCliOptions } from '@wooksjs/event-cli'
 import { createCliApp, useCliContext, WooksCli } from '@wooksjs/event-cli'
 import type { TFunction } from 'common'
 import type { Moost, TMoostAdapter, TMoostAdapterOptions, TMoostParamsMetadata } from 'moost'
-import { defineMoostEventHandler, getMoostInfact, setInfactLoggingOptions } from 'moost'
+import { defineMoostEventHandler, setInfactLoggingOptions } from 'moost'
 
 import type { TCliClassMeta } from './meta-types'
 import { getCliMate } from './meta-types'

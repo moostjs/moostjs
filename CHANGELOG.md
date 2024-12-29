@@ -1,3 +1,12 @@
+## [0.5.2](https://github.com/moostjs/moostjs/compare/v0.5.1...v0.5.2) (2024-12-29)
+
+
+### Features
+
+* **vite:** more controls on logging ([2cc38f1](https://github.com/moostjs/moostjs/commit/2cc38f136bf9aed9e6c33a515dfee62b41d72f00))
+
+
+
 ## [0.5.1](https://github.com/moostjs/moostjs/compare/v0.5.0...v0.5.1) (2024-12-28)
 
 
