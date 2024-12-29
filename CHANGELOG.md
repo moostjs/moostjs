@@ -1,3 +1,12 @@
+## [0.5.3](https://github.com/moostjs/moostjs/compare/v0.5.2...v0.5.3) (2024-12-29)
+
+
+### Bug Fixes
+
+* export logger decorators ([2a1e537](https://github.com/moostjs/moostjs/commit/2a1e53779c23586ef0c67d803568adc2249545d2))
+
+
+
 ## [0.5.2](https://github.com/moostjs/moostjs/compare/v0.5.1...v0.5.2) (2024-12-29)
 
 
