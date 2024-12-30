@@ -1,3 +1,12 @@
+## [0.5.14](https://github.com/moostjs/moostjs/compare/v0.5.12...v0.5.14) (2024-12-30)
+
+
+### Bug Fixes
+
+* **wf:** set Moost as controller context in wf init ([0d186dc](https://github.com/moostjs/moostjs/commit/0d186dc021272daf7269d755e65c1dd7283be3e7))
+
+
+
 ## [0.5.13](https://github.com/moostjs/moostjs/compare/v0.5.12...v0.5.13) (2024-12-30)
 
 
