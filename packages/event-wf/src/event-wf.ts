@@ -3,7 +3,7 @@ import { useEventId } from '@wooksjs/event-core'
 import type { TStepHandler, TWooksWfOptions } from '@wooksjs/event-wf'
 import { createWfApp, WooksWf } from '@wooksjs/event-wf'
 import type { Moost, TMoostAdapter, TMoostAdapterOptions } from 'moost'
-import { defineMoostEventHandler, getMoostInfact } from 'moost'
+import { defineMoostEventHandler, getMoostInfact, setControllerContext } from 'moost'
 
 import { getWfMate } from './meta-types'
 
@@ -97,7 +97,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
   }
 
   bindHandler<T extends object = object>(opts: TMoostAdapterOptions<TWfHandlerMeta, T>): void {
-    let fn
+    let fn: ReturnType<typeof defineMoostEventHandler>
     for (const handler of opts.handlers) {
       if (!['WF_STEP', 'WF_FLOW'].includes(handler.type)) {
         continue
@@ -133,7 +133,15 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
         if (!wfSchema) {
           wfSchema = mate.read(opts.fakeInstance)?.wfSchema
         }
-        const _fn = fn as () => void
+        // eslint-disable-next-line @typescript-eslint/no-loop-func
+        const _fn = (async () => {
+          // the fn() will be instantiating real controller
+          // so we have to provide Moost as controller for now
+          // so we can use controller context and instantiate moost-level singletones
+          // even before real controller is instantiated
+          setControllerContext(this.moost!, 'bindHandler' as keyof typeof this.moost, targetPath)
+          return fn()
+        }) as () => void
         // eslint-disable-next-line @typescript-eslint/no-loop-func
         this.toInit.push(() => {
           this.wfApp.flow(targetPath, wfSchema || [], opts.prefix === '/' ? '' : opts.prefix, _fn)
