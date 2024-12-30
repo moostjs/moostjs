@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/vite",
-  "version": "0.5.11",
+  "version": "0.5.12",
   "description": "Vite Dev plugin for moostjs",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -38,8 +38,8 @@
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/vite#readme",
   "peerDependencies": {
-    "moost": "0.5.11",
-    "@moostjs/event-http": "0.5.11",
+    "moost": "0.5.12",
+    "@moostjs/event-http": "0.5.12",
     "vite": "^6.0.5"
   }
 }

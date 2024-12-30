@@ -1,3 +1,12 @@
+## [0.5.12](https://github.com/moostjs/moostjs/compare/v0.5.11...v0.5.12) (2024-12-30)
+
+
+### Bug Fixes
+
+* fix moost logger injection ([500a570](https://github.com/moostjs/moostjs/commit/500a57025c616ae539f2eda22629538472e4d449))
+
+
+
 ## [0.5.11](https://github.com/moostjs/moostjs/compare/v0.5.10...v0.5.11) (2024-12-29)
 
 
