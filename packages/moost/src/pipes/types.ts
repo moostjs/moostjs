@@ -10,6 +10,7 @@ export interface TPipeMetas<T extends TObject = TEmpty> {
   paramMeta?: TMoostParamsMetadata & T
   targetMeta?: TMoostParamsMetadata & T
   instance?: TObject
+  scopeId?: string | symbol
   type: TFunction
   index?: number
   key: string | symbol

@@ -21,8 +21,8 @@ importers:
         specifier: ^0.3.0
         version: 0.3.0
       '@prostojs/infact':
-        specifier: ^0.3.1
-        version: 0.3.1
+        specifier: ^0.3.2
+        version: 0.3.2
       '@prostojs/logger':
         specifier: ^0.4.3
         version: 0.4.3
@@ -967,8 +967,8 @@ packages:
   '@prostojs/ftring@0.0.4':
     resolution: {integrity: sha512-oLrPVn/UkifSfRRqDH1W055YvwxZRVHdLjlVQBPhM7xsosn0nFIQaRSNiZJH/GIRXR9ghj+INoJ9aNDJlvaogg==}
 
-  '@prostojs/infact@0.3.1':
-    resolution: {integrity: sha512-xIxhJ9ZpY+q+6gjojJfhbZX61AkrqiY4nw1xbr8cAkgKLGN/vYBPyixlbkH6or0CpEJMp+MQoDdWN0/y2FUvDQ==}
+  '@prostojs/infact@0.3.2':
+    resolution: {integrity: sha512-zXTGf1y5yNDlBi3qzLkm2dm8J0CPYpEmeoxNjn6W4S6cid3Ph1N4XeJjgQ1KD+n3e/pgqa3lh5npfLNAAhsVfg==}
 
   '@prostojs/logger@0.4.3':
     resolution: {integrity: sha512-d1+lZBNIX8TZeXjLqc/mz+gcqKadZ1ezoS8geVto9EZ+Dlgh4quiXOAICat64yZpHVyGkdbOsZu7ba4zJmivFQ==}
@@ -4554,7 +4554,7 @@ snapshots:
 
   '@prostojs/ftring@0.0.4': {}
 
-  '@prostojs/infact@0.3.1': {}
+  '@prostojs/infact@0.3.2': {}
 
   '@prostojs/logger@0.4.3': {}
 

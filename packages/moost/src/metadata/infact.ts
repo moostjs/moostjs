@@ -41,15 +41,30 @@ interface TCustom {
 
 const scopeVarsMap = new Map<string | symbol, Record<string, unknown>>()
 
+/**
+ * Define global scope name to be used with `@InjectFromScope` and `@InjectScopeVars` decorators
+ *
+ * You can read scoped vars with `getInfactScopeVars`
+ * @param name scope name
+ * @param scopeVars key-value object as scoped vars
+ */
 export function defineInfactScope(name: string | symbol, scopeVars: Record<string, unknown>) {
   scopeVarsMap.set(name, scopeVars)
   getMoostInfact().registerScope(name)
 }
 
+/**
+ * Read scoped vars defined with `defineInfactScope`
+ * @param name scope name
+ * @returns key-value object as scoped vars
+ */
 export function getInfactScopeVars(name: string | symbol) {
   return scopeVarsMap.get(name)
 }
 
+/**
+ * Get Infact instance (used for Dependency Injections)
+ */
 export function getNewMoostInfact() {
   return new Infact<TMoostMetadata, TMoostMetadata, TMoostParamsMetadata, TCustom>({
     describeClass(classConstructor) {
@@ -64,7 +79,7 @@ export function getNewMoostInfact() {
       } as unknown as TInfactClassMeta<TMoostParamsMetadata> & TMoostMetadata
     },
 
-    resolveParam({ paramMeta, customData, classConstructor, index }) {
+    resolveParam({ paramMeta, customData, classConstructor, index, scopeId }) {
       if (paramMeta && customData?.pipes) {
         return runPipes(
           customData.pipes,
@@ -73,6 +88,7 @@ export function getNewMoostInfact() {
             paramMeta,
             type: classConstructor,
             key: 'constructor',
+            scopeId,
             classMeta: getMoostMate().read(classConstructor),
             index,
             targetMeta: paramMeta,
@@ -92,6 +108,7 @@ export function getNewMoostInfact() {
       key,
       initialValue,
       propMeta,
+      scopeId,
       classMeta,
       customData,
       classConstructor,
@@ -104,6 +121,7 @@ export function getNewMoostInfact() {
             instance,
             type: classConstructor,
             key,
+            scopeId,
             propMeta,
             targetMeta: propMeta,
             classMeta: classMeta as unknown as TMoostMetadata,

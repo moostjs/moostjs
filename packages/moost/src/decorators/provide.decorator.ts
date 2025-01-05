@@ -2,7 +2,9 @@ import type { TProvideFn } from '@prostojs/infact'
 import { createProvideRegistry, createReplaceRegistry } from '@prostojs/infact'
 import type { TClassConstructor } from 'common'
 
+import { getInfactScopeVars } from '../metadata'
 import { getMoostMate } from '../metadata/moost-metadata'
+import { Resolve } from './resolve.decorator'
 
 /**
  * ## Provide
@@ -41,10 +43,28 @@ export function Replace(type: TClassConstructor, newType: TClassConstructor): Cl
  * (For optional values use with @Optional())
  * @param type - string or class constructor
  */
-export function Inject(type: string | TClassConstructor): ParameterDecorator {
+export function Inject(type: string | TClassConstructor): ParameterDecorator & PropertyDecorator {
   return getMoostMate().decorate('inject', type)
 }
 
-export function FromScope(name: string | symbol): ParameterDecorator {
+/**
+ * Injects instance from scope
+ *
+ * (scope must be defined by `defineInfactScope` fn)
+ * @param name scope name
+ */
+export function InjectFromScope(name: string | symbol): ParameterDecorator & PropertyDecorator {
   return getMoostMate().decorate('fromScope', name)
+}
+/**
+ * Inject vars from scope for instances
+ * instantiated with `@InjectFromScope` decorator
+ */
+export function InjectScopeVars(name?: string): ParameterDecorator & PropertyDecorator {
+  return Resolve(({ scopeId }) => {
+    if (scopeId) {
+      return name ? getInfactScopeVars(scopeId)?.[name] : getInfactScopeVars(scopeId)
+    }
+    return undefined
+  })
 }
