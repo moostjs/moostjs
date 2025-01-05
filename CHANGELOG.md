@@ -1,3 +1,12 @@
+## [0.5.17](https://github.com/moostjs/moostjs/compare/v0.5.16...v0.5.17) (2025-01-05)
+
+
+### Bug Fixes
+
+* scoped DI ([ec8133b](https://github.com/moostjs/moostjs/commit/ec8133b6a461fdac96f021222c92a8bac16574c8))
+
+
+
 ## [0.5.16](https://github.com/moostjs/moostjs/compare/v0.5.15...v0.5.16) (2025-01-05)
 
 
