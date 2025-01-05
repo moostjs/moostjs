@@ -39,7 +39,7 @@ interface TCustom {
   pipes?: TPipeData[]
 }
 
-const scopeVarsMap = new Map<string | symbol, Record<string, unknown>>()
+const scopeVarsMap = new Map<string | symbol, unknown>()
 
 /**
  * Define global scope name to be used with `@InjectFromScope` and `@InjectScopeVars` decorators
@@ -48,7 +48,7 @@ const scopeVarsMap = new Map<string | symbol, Record<string, unknown>>()
  * @param name scope name
  * @param scopeVars key-value object as scoped vars
  */
-export function defineInfactScope(name: string | symbol, scopeVars: Record<string, unknown>) {
+export function defineInfactScope<T extends object>(name: string | symbol, scopeVars: T) {
   scopeVarsMap.set(name, scopeVars)
   getMoostInfact().registerScope(name)
 }
@@ -58,8 +58,8 @@ export function defineInfactScope(name: string | symbol, scopeVars: Record<strin
  * @param name scope name
  * @returns key-value object as scoped vars
  */
-export function getInfactScopeVars(name: string | symbol) {
-  return scopeVarsMap.get(name)
+export function getInfactScopeVars<T extends object>(name: string | symbol) {
+  return scopeVarsMap.get(name) as T | undefined
 }
 
 /**
