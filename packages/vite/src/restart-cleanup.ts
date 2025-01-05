@@ -21,9 +21,12 @@ export function moostRestartCleanup(
   const logger = getLogger()
   const infact = getMoostInfact() as unknown as {
     registry: Record<symbol, object>
+    scopes: Record<string | symbol, Record<symbol, object>>
   } & ReturnType<typeof getMoostInfact>
 
-  const { registry } = infact
+  const { registry, scopes } = infact
+
+  const registries = [registry, ...Object.values(scopes)]
 
   // Clear any internal references
   infact._cleanup()
@@ -32,44 +35,47 @@ export function moostRestartCleanup(
 
   // If we have specific IDs to remove, do so
   if (cleanupInstances) {
-    for (const key of Object.getOwnPropertySymbols(registry)) {
-      const instance = registry[key]
-      const viteId = mate.read(instance)?.__vite_id
-      if (viteId && cleanupInstances.has(viteId)) {
-        logger.debug(`🔃 Replacing "${constructorName(instance)}"`)
-        delete registry[key]
-      }
-    }
-
-    for (const key of Object.getOwnPropertySymbols(registry)) {
-      const instance = registry[key]
-      scanParams(instance, (type: Function) => {
-        if (
-          (type === Moost || type instanceof Moost || type.prototype instanceof Moost) &&
-          (!onEject || onEject(instance, type))
-        ) {
-          delete registry[key]
-          logger.debug(
-            `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "Moost")`
-          )
-          return true
+    for (const reg of registries) {
+      for (const key of Object.getOwnPropertySymbols(reg)) {
+        const instance = reg[key]
+        const viteId = mate.read(instance)?.__vite_id
+        if (viteId && cleanupInstances.has(viteId)) {
+          logger.debug(`🔃 Replacing "${constructorName(instance)}"`)
+          delete reg[key]
         }
-        for (const adapter of adapters) {
-          if (adapter.compare(type) && (!onEject || onEject(instance, type))) {
-            delete registry[key]
+      }
+
+      for (const key of Object.getOwnPropertySymbols(reg)) {
+        const instance = reg[key]
+        scanParams(instance, (type: Function) => {
+          if (
+            (type === Moost || type instanceof Moost || type.prototype instanceof Moost) &&
+            (!onEject || onEject(instance, type))
+          ) {
+            delete reg[key]
             logger.debug(
-              `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "${
-                adapter.constructor!.name
-              }")`
+              `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "Moost")`
             )
             return true
           }
-        }
-      })
+          for (const adapter of adapters) {
+            if (adapter.compare(type) && (!onEject || onEject(instance, type))) {
+              delete reg[key]
+              logger.debug(
+                `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "${
+                  adapter.constructor!.name
+                }")`
+              )
+              return true
+            }
+          }
+        })
+      }
+      // need to remove instances with unknown dependencies
+      clearDependantRegistry(reg, onEject)
     }
-    // need to remove instances with unknown dependencies
-    clearDependantRegistry(registry, onEject)
     infact.registry = registry
+    infact.scopes = scopes
   }
 
   // Clean up metadata and wooks

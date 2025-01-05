@@ -39,6 +39,17 @@ interface TCustom {
   pipes?: TPipeData[]
 }
 
+const scopeVarsMap = new Map<string | symbol, Record<string, unknown>>()
+
+export function defineInfactScope(name: string | symbol, scopeVars: Record<string, unknown>) {
+  scopeVarsMap.set(name, scopeVars)
+  getMoostInfact().registerScope(name)
+}
+
+export function getInfactScopeVars(name: string | symbol) {
+  return scopeVarsMap.get(name)
+}
+
 export function getNewMoostInfact() {
   return new Infact<TMoostMetadata, TMoostMetadata, TMoostParamsMetadata, TCustom>({
     describeClass(classConstructor) {

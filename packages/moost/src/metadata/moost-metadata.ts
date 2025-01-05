@@ -42,6 +42,7 @@ export interface TMoostParamsMetadata extends TCommonMetaFields, TCommonMoostMet
   nullable?: boolean
   paramSource?: string
   paramName?: string
+  fromScope?: string | symbol // for infact scope
 }
 
 export type TInjectableScope = 'FOR_EVENT' | 'SINGLETON'

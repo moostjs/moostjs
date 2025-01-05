@@ -51,7 +51,7 @@
     "@opentelemetry/sdk-trace-base": "^1.25.1",
     "@prostojs/cli-help": "^0.0.11",
     "@prostojs/dye": "^0.3.0",
-    "@prostojs/infact": "^0.3.0",
+    "@prostojs/infact": "^0.3.1",
     "@prostojs/logger": "^0.4.3",
     "@prostojs/mate": "^0.3.3",
     "@prostojs/rewrite": "^0.1.1",

@@ -44,3 +44,7 @@ export function Replace(type: TClassConstructor, newType: TClassConstructor): Cl
 export function Inject(type: string | TClassConstructor): ParameterDecorator {
   return getMoostMate().decorate('inject', type)
 }
+
+export function FromScope(name: string | symbol): ParameterDecorator {
+  return getMoostMate().decorate('fromScope', name)
+}
