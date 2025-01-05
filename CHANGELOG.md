@@ -1,3 +1,12 @@
+## [0.5.18](https://github.com/moostjs/moostjs/compare/v0.5.17...v0.5.18) (2025-01-05)
+
+
+### Features
+
+* add provide support for param ([9e5bfb4](https://github.com/moostjs/moostjs/commit/9e5bfb4d554ad3ab141bf20b0b50e020919c8cd3))
+
+
+
 ## [0.5.17](https://github.com/moostjs/moostjs/compare/v0.5.16...v0.5.17) (2025-01-05)
 
 
