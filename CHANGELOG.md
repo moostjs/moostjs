@@ -1,3 +1,12 @@
+## [0.5.16](https://github.com/moostjs/moostjs/compare/v0.5.15...v0.5.16) (2025-01-05)
+
+
+### Features
+
+* add scoped DI support ([e0b5b7c](https://github.com/moostjs/moostjs/commit/e0b5b7c2ca58e5ac386b17c1db08900ace2587da))
+
+
+
 ## [0.5.15](https://github.com/moostjs/moostjs/compare/v0.5.14...v0.5.15) (2025-01-05)
 
 
