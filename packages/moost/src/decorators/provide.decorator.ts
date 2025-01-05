@@ -63,7 +63,9 @@ export function InjectFromScope(name: string | symbol): ParameterDecorator & Pro
 export function InjectScopeVars(name?: string): ParameterDecorator & PropertyDecorator {
   return Resolve(({ scopeId }) => {
     if (scopeId) {
-      return name ? getInfactScopeVars(scopeId)?.[name] : getInfactScopeVars(scopeId)
+      return name
+        ? getInfactScopeVars<Record<string, unknown>>(scopeId)?.[name]
+        : getInfactScopeVars(scopeId)
     }
     return undefined
   })
