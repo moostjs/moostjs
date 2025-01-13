@@ -1,3 +1,12 @@
+## [0.5.19](https://github.com/moostjs/moostjs/compare/v0.5.18...v0.5.19) (2025-01-13)
+
+
+### Bug Fixes
+
+* **vite:** fix builds and vitest compatibility ([4bc25f6](https://github.com/moostjs/moostjs/commit/4bc25f69ff5a45a0eb9023b4a7bfd1705c46fcf5))
+
+
+
 ## [0.5.18](https://github.com/moostjs/moostjs/compare/v0.5.17...v0.5.18) (2025-01-05)
 
 
