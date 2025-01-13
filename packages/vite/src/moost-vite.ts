@@ -17,25 +17,102 @@ const REG_HAS_EXPORT_CLASS = /(^\s*@(Injectable|Controller)\()/m
 const REG_REPLACE_EXPORT_CLASS = /(^\s*@(Injectable|Controller)\()/gm
 
 export interface TMoostViteDevOptions {
+  /**
+   * The entry file for the application.
+   * This file serves as the main entry point for the build process and SSR server.
+   *
+   * Example: './src/main.ts'
+   */
   entry: string
+
+  /**
+   * The port number for the Vite dev server.
+   *
+   * Default: `3000`.
+   */
   port?: number
+
+  /**
+   * The hostname or IP address for the Vite dev server.
+   * If not specified, defaults to `'localhost'`.
+   *
+   * Example: '0.0.0.0'
+   */
   host?: string
+
+  /**
+   * The output directory for the build artifacts.
+   *
+   * Default to: `'dist'`.
+   */
   outDir?: string
+
+  /**
+   * The output format for the build artifacts.
+   * - `'cjs'`: CommonJS, suitable for Node.js environments.
+   * - `'esm'`: ES Module, suitable for modern environments.
+   *
+   * Default: `'esm'`.
+   */
   format?: 'cjs' | 'esm'
+
+  /**
+   * Whether to generate source maps for the build output.
+   * Source maps are useful for debugging purposes by mapping minified code back to the original source.
+   *
+   * Default: `true`.
+   */
   sourcemap?: boolean
+  /**
+   * Configuration for defining external dependencies during the build process.
+   *
+   * This helps in excluding certain modules from the bundled output, reducing the bundle size and
+   * allowing them to be resolved at runtime instead.
+   *
+   * Default: `true`.
+   */
+  externals?:
+    | {
+        /**
+         * Whether to exclude Node.js built-in modules (e.g., `fs`, `path`, `node:fs`) from the build output.
+         * If `true`, all Node.js built-ins will be marked as external.
+         * Default: `false`.
+         */
+        node?: boolean
+        /**
+         * Whether to exclude workspace dependencies (e.g., packages marked with `workspace:*` in `package.json`) from the build output.
+         * If `true`, all workspace dependencies will be marked as external.
+         * Default: `false`.
+         */
+        workspace?: boolean
+      }
+    | boolean
   // eslint-disable-next-line @typescript-eslint/ban-types
   onEject?: (instance: object, dependency: Function) => boolean
 }
 
 /**
- * The main Vite plugin that:
- * - Detects when moost adapter usage (http, cli, wf).
- * - Patches `MoostHttp.prototype.listen` in dev mode to register a custom middleware instead of listening on a port.
- * - Injects a `__VITE_ID()` decorator into exported classes to track them for hot reload cleanup.
- * - Cleans up internal Moost state upon hot updates, then reloads the SSR entry.
+ * The main Vite plugin for integrating Moost applications.
+ *
+ * Features:
+ * - **Adapter Detection**: Detects Moost adapter usage (`http`, `cli`, `wf`) and applies relevant configurations.
+ * - **Dev Mode Middleware**:
+ *   - Patches `MoostHttp.prototype.listen` to register a custom middleware for serving the app via Vite's dev server instead of binding to a port.
+ *   - Handles Moost state cleanup and hot module replacement (HMR) during development.
+ * - **Class Tracking**: Injects a `__VITE_ID()` decorator into exported classes to enable tracking and cleanup during hot reloads.
+ * - **Externals Support**:
+ *   - Allows marking Node.js built-in modules and dependencies from `package.json` (optionally excluding workspace dependencies) as external during builds.
+ *   - Configured via the `externals` option, which helps reduce bundle size and ensures compatibility with runtime environments.
+ * - **Build and Test Friendly**:
+ *   - Avoids interfering with Vitest runs by skipping dev-specific behaviors during tests.
+ *   - Ensures proper SSR entry setup and Rollup configurations for production builds.
+ *
+ * @param {TMoostViteDevOptions} options - Configuration options for the Moost Vite plugin.
+ * @returns {Plugin} The configured Vite plugin.
  */
 export function moostVite(options: TMoostViteDevOptions): Plugin {
   const isTest = process.env.NODE_ENV === 'test'
+  const isProd = process.env.NODE_ENV === 'production'
 
   let moostMiddleware: TMiddleware | null = null
   const adapters = isTest
@@ -62,9 +139,8 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
 
   patchMoostHandlerLogging()
 
-  return {
+  const pluginConfig: Plugin = {
     name: PLUGIN_NAME,
-    apply: 'serve',
     enforce: 'pre',
     config(cfg) {
       const entry = cfg.build?.rollupOptions?.input || options.entry
@@ -89,7 +165,15 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
           rollupOptions: {
             external: isTest
               ? cfg.build?.rollupOptions?.external
-              : cfg.build?.rollupOptions?.external || getExternals(),
+              : cfg.build?.rollupOptions?.external ||
+                (options.externals === false
+                  ? []
+                  : getExternals({
+                      node: Boolean(options.externals === true || options.externals?.node),
+                      workspace: Boolean(
+                        options.externals === true || options.externals?.workspace
+                      ),
+                    })),
             input: entry,
             output: {
               format: options.format,
@@ -110,9 +194,6 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
      * - Inject `__VITE_ID(import.meta.filename)` for classes.
      */
     async transform(code, id) {
-      if (isTest) {
-        return
-      }
       if (!id.endsWith('.ts')) {
         return code
       }
@@ -145,9 +226,6 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
      * It exports a `__VITE_ID(id)` function that decorates a class with a `__vite_id` property.
      */
     load(id) {
-      if (isTest) {
-        return
-      }
       if (id === '\0virtual:vite-id') {
         return `
           import { getMoostMate } from "moost";
@@ -166,10 +244,6 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
      * - Hooks into the server middlewares to use our Moost callback.
      */
     async configureServer(server) {
-      if (isTest) {
-        return
-      }
-
       moostRestartCleanup(adapters, options.onEject)
 
       // Import the SSR entry so the app initializes
@@ -233,4 +307,14 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
       }
     },
   }
+
+  if (isProd || isTest) {
+    delete pluginConfig.configureServer
+    delete pluginConfig.resolveId
+    delete pluginConfig.load
+    delete pluginConfig.transform
+    delete pluginConfig.hotUpdate
+  }
+
+  return pluginConfig
 }

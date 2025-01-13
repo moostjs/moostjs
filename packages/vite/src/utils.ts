@@ -4,7 +4,7 @@ import { builtinModules } from 'node:module'
 import { EventLogger } from 'moost'
 import type { EnvironmentModuleNode } from 'vite'
 
-export const PLUGIN_NAME = 'moost-vite-dev'
+export const PLUGIN_NAME = 'moost-vite'
 
 /**
  * Recursively gathers all importer modules upstream from a given module.
@@ -41,13 +41,20 @@ export function getLogger() {
   return logger
 }
 
-export function getExternals() {
+export function getExternals({ node, workspace }: { node: boolean; workspace: boolean }) {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8').toString()) as {
     dependencies?: Record<string, string>
   }
-  return [
-    ...builtinModules, // e.g. 'fs'
-    ...builtinModules.map(m => `node:${m}`), // e.g. 'node:fs'
-    ...Object.keys(pkg.dependencies || {}),
-  ]
+  const externals = workspace
+    ? Object.keys(pkg.dependencies || {})
+    : Object.entries(pkg.dependencies || {})
+        .filter(([key, ver]) => !ver.startsWith('workspace:'))
+        .map(i => i[0])
+  if (node) {
+    externals.push(
+      ...builtinModules, // e.g. 'fs'
+      ...builtinModules.map(m => `node:${m}`) // e.g. 'node:fs'
+    )
+  }
+  return externals
 }
