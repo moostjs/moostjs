@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { builtinModules } from 'node:module'
+
 import { EventLogger } from 'moost'
 import type { EnvironmentModuleNode } from 'vite'
 
@@ -36,4 +39,15 @@ const logger = new EventLogger('', { level: 99 }).createTopic(
 )
 export function getLogger() {
   return logger
+}
+
+export function getExternals() {
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8').toString()) as {
+    dependencies?: Record<string, string>
+  }
+  return [
+    ...builtinModules, // e.g. 'fs'
+    ...builtinModules.map(m => `node:${m}`), // e.g. 'node:fs'
+    ...Object.keys(pkg.dependencies || {}),
+  ]
 }

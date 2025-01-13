@@ -2,11 +2,12 @@
 /* eslint-disable func-names */
 import type { IncomingMessage, ServerResponse } from 'http'
 import type { Plugin } from 'vite'
+import { mergeConfig } from 'vite'
 
 import { createAdapterDetector } from './adapter-detector'
 import { patchMoostHandlerLogging } from './moost-logging'
 import { moostRestartCleanup } from './restart-cleanup'
-import { gatherAllImporters, getLogger, PLUGIN_NAME } from './utils'
+import { gatherAllImporters, getExternals, getLogger, PLUGIN_NAME } from './utils'
 
 /** A simple request-response middleware type for Node’s http module. */
 type TMiddleware = (req: IncomingMessage, res: ServerResponse) => any
@@ -69,7 +70,8 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
       const entry = cfg.build?.rollupOptions?.input || options.entry
       const outfile =
         typeof entry === 'string' ? entry.split('/').pop()!.replace(/\.ts$/, '.js') : undefined
-      return {
+
+      const pluginConfig = {
         server: {
           port: cfg.server?.port || options.port || 3000,
           host: cfg.server?.host || options.host,
@@ -85,6 +87,9 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
           ssr: cfg.build?.ssr ?? true,
           minify: cfg.build?.minify || false,
           rollupOptions: {
+            external: isTest
+              ? cfg.build?.rollupOptions?.external
+              : cfg.build?.rollupOptions?.external || getExternals(),
             input: entry,
             output: {
               format: options.format,
@@ -95,6 +100,8 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
           },
         },
       }
+
+      return mergeConfig(cfg, pluginConfig)
     },
 
     /**
