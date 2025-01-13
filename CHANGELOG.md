@@ -1,3 +1,12 @@
+## [0.5.21](https://github.com/moostjs/moostjs/compare/v0.5.20...v0.5.21) (2025-01-13)
+
+
+### Bug Fixes
+
+* **vite:** add externals support ([f93e074](https://github.com/moostjs/moostjs/commit/f93e074e022aa8750a1626dce45f6652bc5f2f24))
+
+
+
 ## [0.5.20](https://github.com/moostjs/moostjs/compare/v0.5.19...v0.5.20) (2025-01-13)
 
 
