@@ -33,27 +33,30 @@ export interface TMoostViteDevOptions {
  * - Injects a `__VITE_ID()` decorator into exported classes to track them for hot reload cleanup.
  * - Cleans up internal Moost state upon hot updates, then reloads the SSR entry.
  */
-export function moostViteDev(options: TMoostViteDevOptions): Plugin {
-  const entry = options.entry
+export function moostVite(options: TMoostViteDevOptions): Plugin {
+  const isTest = process.env.NODE_ENV === 'test'
+
   let moostMiddleware: TMiddleware | null = null
-  const adapters = [
-    createAdapterDetector('http', MoostHttp => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      MoostHttp.prototype.listen = function (...args: any[]) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-        moostMiddleware = this.getServerCb()
-        setTimeout(() => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
-          args.filter(a => typeof a === 'function').forEach(a => a())
-        }, 1)
-        return Promise.resolve()
-      }
-    }),
-    createAdapterDetector('cli'),
-    createAdapterDetector('wf'),
-  ]
+  const adapters = isTest
+    ? []
+    : [
+        createAdapterDetector('http', MoostHttp => {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          MoostHttp.prototype.listen = function (...args: any[]) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+            moostMiddleware = this.getServerCb()
+            setTimeout(() => {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+              args.filter(a => typeof a === 'function').forEach(a => a())
+            }, 1)
+            return Promise.resolve()
+          }
+        }),
+        createAdapterDetector('cli'),
+        createAdapterDetector('wf'),
+      ]
   /** A logger instance for plugin debug output. */
-  const logger = getLogger()
+  const logger = isTest ? console : getLogger()
   let reloadRequired = false
 
   patchMoostHandlerLogging()
@@ -62,8 +65,10 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
     name: PLUGIN_NAME,
     apply: 'serve',
     enforce: 'pre',
-
     config(cfg) {
+      const entry = cfg.build?.rollupOptions?.input || options.entry
+      const outfile =
+        typeof entry === 'string' ? entry.split('/').pop()!.replace(/\.ts$/, '.js') : undefined
       return {
         server: {
           port: cfg.server?.port || options.port || 3000,
@@ -75,15 +80,17 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
           exclude: cfg.optimizeDeps?.exclude || ['@swc/core'],
         },
         build: {
-          target: cfg.build?.target || 'node20',
+          target: cfg.build?.target || 'node',
           outDir: cfg.build?.outDir || options.outDir || 'dist',
-          ssr: cfg.build?.ssr || options.entry,
+          ssr: cfg.build?.ssr ?? true,
           minify: cfg.build?.minify || false,
           rollupOptions: {
-            input: cfg.build?.rollupOptions?.input || options.entry,
-            output: cfg.build?.rollupOptions?.output || {
+            input: entry,
+            output: {
               format: options.format,
               sourcemap: !!(options.sourcemap ?? true),
+              entryFileNames: outfile,
+              ...cfg.build?.rollupOptions?.output,
             },
           },
         },
@@ -96,6 +103,9 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
      * - Inject `__VITE_ID(import.meta.filename)` for classes.
      */
     async transform(code, id) {
+      if (isTest) {
+        return
+      }
       if (!id.endsWith('.ts')) {
         return code
       }
@@ -128,6 +138,9 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
      * It exports a `__VITE_ID(id)` function that decorates a class with a `__vite_id` property.
      */
     load(id) {
+      if (isTest) {
+        return
+      }
       if (id === '\0virtual:vite-id') {
         return `
           import { getMoostMate } from "moost";
@@ -146,11 +159,15 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
      * - Hooks into the server middlewares to use our Moost callback.
      */
     async configureServer(server) {
+      if (isTest) {
+        return
+      }
+
       moostRestartCleanup(adapters, options.onEject)
 
       // Import the SSR entry so the app initializes
       // (MoostHttp.listen is patched, so no actual server is spawned).
-      await server.ssrLoadModule(entry)
+      await server.ssrLoadModule(options.entry)
 
       // Attach Moost as a middleware if present
       // eslint-disable-next-line @typescript-eslint/no-misused-promises
@@ -160,7 +177,7 @@ export function moostViteDev(options: TMoostViteDevOptions): Plugin {
           console.log()
           logger.debug('🚀 Reloading Moost App...')
           console.log()
-          await server.ssrLoadModule(entry)
+          await server.ssrLoadModule(options.entry)
           // eslint-disable-next-line no-promise-executor-return
           await new Promise(resolve => setTimeout(resolve, 1))
         }

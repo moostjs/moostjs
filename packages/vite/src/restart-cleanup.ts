@@ -5,7 +5,7 @@
 import { clearGlobalWooks, getMoostInfact, getMoostMate, Moost } from 'moost'
 
 import type { createAdapterDetector } from './adapter-detector'
-import type { TMoostViteDevOptions } from './moost-vite-dev'
+import type { TMoostViteDevOptions } from './moost-vite'
 import { getLogger } from './utils'
 
 /**

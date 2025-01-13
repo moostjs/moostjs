@@ -1,1 +1,1 @@
-export { moostViteDev } from './moost-vite-dev'
+export { moostVite } from './moost-vite'
