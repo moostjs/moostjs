@@ -1,3 +1,12 @@
+## [0.5.20](https://github.com/moostjs/moostjs/compare/v0.5.19...v0.5.20) (2025-01-13)
+
+
+### Bug Fixes
+
+* **vite:** add merge cfg ([f406785](https://github.com/moostjs/moostjs/commit/f4067851b923d625b001334eee7adfae35208e14))
+
+
+
 ## [0.5.19](https://github.com/moostjs/moostjs/compare/v0.5.18...v0.5.19) (2025-01-13)
 
 
