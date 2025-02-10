@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/event-http",
-  "version": "0.5.25",
+  "version": "0.5.26",
   "description": "@moostjs/event-http",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",

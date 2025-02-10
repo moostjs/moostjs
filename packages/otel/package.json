@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/otel",
-  "version": "0.5.25",
+  "version": "0.5.26",
   "description": "@moostjs/otel",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
