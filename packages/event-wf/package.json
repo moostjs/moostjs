@@ -6,17 +6,22 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "sideEffects": false,
+  "type": "module",
   "exports": {
     "./package.json": "./package.json",
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
     "dist"
   ],
+  "scripts": {
+    "pub": "pnpm publish --access public",
+    "test": "vitest"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/moostjs.git",
@@ -35,15 +40,17 @@
   "bugs": {
     "url": "https://github.com/moostjs/moostjs/issues"
   },
-  "peerDependencies": {},
   "dependencies": {
-    "moost": "0.5.21",
-    "wooks": "^0.5.20",
-    "@wooksjs/event-core": "^0.5.20",
-    "@wooksjs/event-wf": "^0.5.20",
     "@prostojs/infact": "^0.3.3",
     "@prostojs/mate": "^0.3.3",
-    "@prostojs/wf": "^0.0.18"
+    "@prostojs/wf": "^0.0.18",
+    "@wooksjs/event-core": "^0.5.20",
+    "@wooksjs/event-wf": "^0.5.20",
+    "moost": "workspace:^",
+    "wooks": "^0.5.20"
   },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-wf#readme"
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-wf#readme",
+  "devDependencies": {
+    "vitest": "^3.0.5"
+  }
 }

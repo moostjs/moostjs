@@ -1,6 +1,5 @@
 /* eslint-disable unicorn/consistent-destructuring */
-import type { TEmpty, TObject } from 'common'
-
+import type { TEmpty, TObject } from '../common-types'
 import type { TMoostHandler, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { getMoostMate } from '../metadata'
 import type { TPipeData } from '../pipes'

@@ -1,5 +1,4 @@
-import type { TAny } from 'common'
-
+import type { TAny } from '../common-types'
 import type { TDecoratorLevel } from '../decorators/types'
 import { definePipeFn } from '../define'
 import type { TPipeMetas } from './types'

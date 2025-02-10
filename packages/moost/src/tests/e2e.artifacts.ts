@@ -1,9 +1,9 @@
 /* eslint-disable import/no-extraneous-dependencies */
 import { Delete, Get, Patch, Post, Query, Url } from '@moostjs/event-http'
 import { useRequest } from '@wooksjs/event-http'
-import { TFunction } from 'common'
 
 import type { TClassFunction } from '../class-function'
+import { TFunction } from '../common-types'
 import type { TInterceptorFn } from '../decorators'
 import {
   Controller,
@@ -14,7 +14,7 @@ import {
   Optional,
   Provide,
 } from '../decorators'
-import { Moost } from '../moost'
+import { Moost } from '../..'
 
 @Injectable()
 export class E2eInterceptor implements TClassFunction<TInterceptorFn> {

@@ -1,5 +1,6 @@
 import { getConstructor } from '@prostojs/mate'
-import type { TAny, TClassConstructor } from 'common'
+
+import type { TAny, TClassConstructor } from '../common-types'
 
 export function getInstanceOwnMethods<T = TAny>(instance: T): Array<keyof T> {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

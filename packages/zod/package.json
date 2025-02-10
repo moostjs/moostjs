@@ -9,14 +9,18 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
     "dist"
   ],
+  "scripts": {
+    "pub": "pnpm publish --access public",
+    "test": "vitest"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/moostjs.git",
@@ -40,6 +44,9 @@
     "zod": "^3.22.4"
   },
   "peerDependencies": {
-    "moost": "0.5.21"
+    "moost": "workspace:^"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.5"
   }
 }

@@ -2,9 +2,9 @@
 import type { TProvideRegistry, TReplaceRegistry } from '@prostojs/infact'
 import type { TMateParamMeta } from '@prostojs/mate'
 import { Mate } from '@prostojs/mate'
-import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
 
 import type { TCallableClassFunction } from '../class-function/types'
+import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from '../common-types'
 import type { TInterceptorFn, TInterceptorPriority } from '../decorators/intercept.decorator'
 import type { TDecoratorLevel } from '../decorators/types'
 import type { TPipeData, TPipeMetas } from '../pipes'

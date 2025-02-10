@@ -1,6 +1,7 @@
-import type { TEmpty } from 'common'
 import type { TMoostMetadata } from 'moost'
 import { getMoostMate } from 'moost'
+
+import type { TEmpty } from '../common-types'
 
 export function HttpMethod(
   method: '*' | 'GET' | 'PUT' | 'POST' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS',

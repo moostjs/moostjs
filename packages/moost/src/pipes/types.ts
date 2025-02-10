@@ -1,5 +1,4 @@
-import type { TEmpty, TFunction, TObject } from 'common'
-
+import type { TEmpty, TFunction, TObject } from '../common-types'
 import type { TDecoratorLevel } from '../decorators/types'
 import type { TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 

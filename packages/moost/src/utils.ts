@@ -1,7 +1,7 @@
 import type { TConsoleBase } from '@prostojs/logger'
-import type { TObject } from 'common'
 
 import { getCallableFn } from './class-function/class-function'
+import type { TObject } from './common-types'
 import type { TInterceptorFn } from './decorators'
 import { InterceptorHandler } from './interceptor-handler'
 import type { TInterceptorData } from './metadata'

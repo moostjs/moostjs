@@ -1,0 +1,237 @@
+{
+  "plugins": [
+    "import",
+    "typescript",
+    "unicorn"
+  ],
+  "env": {
+    "es2021": true,
+    "node ": true,
+    "browser": false
+  },
+  "ignorePatterns": ["**/__snapshots__/**/*", "node_modules", "dist"],
+  "globals": {
+    "describe": "readonly",
+    "it": "readonly",
+    "expect": "readonly",
+    "process": "readonly",
+    "beforeAll": "readonly",
+    "afterAll": "readonly",
+    "vi": "readonly",
+    "console": "readonly",
+    "Buffer": "readonly",
+    "setTimeout": "readonly",
+    "URL": "readonly",
+    "setInterval": "readonly",
+    "__DYE_RESET__": "readonly",
+    "__DYE_COLOR_OFF__": "readonly",
+    "__DYE_BG_OFF__": "readonly",
+    "__DYE_BOLD__": "readonly",
+    "__DYE_BOLD_OFF__": "readonly",
+    "__DYE_DIM__": "readonly",
+    "__DYE_DIM_OFF__": "readonly",
+    "__DYE_ITALIC__": "readonly",
+    "__DYE_ITALIC_OFF__": "readonly",
+    "__DYE_UNDERSCORE__": "readonly",
+    "__DYE_UNDERSCORE_OFF__": "readonly",
+    "__DYE_INVERSE__": "readonly",
+    "__DYE_INVERSE_OFF__": "readonly",
+    "__DYE_HIDDEN__": "readonly",
+    "__DYE_HIDDEN_OFF__": "readonly",
+    "__DYE_CROSSED__": "readonly",
+    "__DYE_CROSSED_OFF__": "readonly",
+    "__DYE_BLACK__": "readonly",
+    "__DYE_BG_BLACK__": "readonly",
+    "__DYE_BLACK_BRIGHT__": "readonly",
+    "__DYE_BG_BLACK_BRIGHT__": "readonly",
+    "__DYE_RED__": "readonly",
+    "__DYE_BG_RED__": "readonly",
+    "__DYE_RED_BRIGHT__": "readonly",
+    "__DYE_BG_RED_BRIGHT__": "readonly",
+    "__DYE_GREEN__": "readonly",
+    "__DYE_BG_GREEN__": "readonly",
+    "__DYE_GREEN_BRIGHT__": "readonly",
+    "__DYE_BG_GREEN_BRIGHT__": "readonly",
+    "__DYE_YELLOW__": "readonly",
+    "__DYE_BG_YELLOW__": "readonly",
+    "__DYE_YELLOW_BRIGHT__": "readonly",
+    "__DYE_BG_YELLOW_BRIGHT__": "readonly",
+    "__DYE_BLUE__": "readonly",
+    "__DYE_BG_BLUE__": "readonly",
+    "__DYE_BLUE_BRIGHT__": "readonly",
+    "__DYE_BG_BLUE_BRIGHT__": "readonly",
+    "__DYE_MAGENTA__": "readonly",
+    "__DYE_BG_MAGENTA__": "readonly",
+    "__DYE_MAGENTA_BRIGHT__": "readonly",
+    "__DYE_BG_MAGENTA_BRIGHT__": "readonly",
+    "__DYE_CYAN__": "readonly",
+    "__DYE_BG_CYAN__": "readonly",
+    "__DYE_CYAN_BRIGHT__": "readonly",
+    "__DYE_BG_CYAN_BRIGHT__": "readonly",
+    "__DYE_WHITE__": "readonly",
+    "__DYE_BG_WHITE__": "readonly",
+    "__DYE_WHITE_BRIGHT__": "readonly",
+    "__DYE_BG_WHITE_BRIGHT__": "readonly",
+    "__DYE_GRAY01__": "readonly",
+    "__DYE_BG_GRAY01__": "readonly",
+    "__DYE_GRAY02__": "readonly",
+    "__DYE_BG_GRAY02__": "readonly",
+    "__DYE_GRAY03__": "readonly",
+    "__DYE_BG_GRAY03__": "readonly",
+    "__DYE_GRAY04__": "readonly",
+    "__DYE_BG_GRAY04__": "readonly",
+    "__DYE_GRAY05__": "readonly",
+    "__DYE_BG_GRAY05__": "readonly",
+    "__DYE_GRAY06__": "readonly",
+    "__DYE_BG_GRAY06__": "readonly",
+    "__DYE_GRAY07__": "readonly",
+    "__DYE_BG_GRAY07__": "readonly",
+    "__DYE_GRAY08__": "readonly",
+    "__DYE_BG_GRAY08__": "readonly",
+    "__DYE_GRAY09__": "readonly",
+    "__DYE_BG_GRAY09__": "readonly",
+    "__DYE_GRAY10__": "readonly",
+    "__DYE_BG_GRAY10__": "readonly",
+    "__DYE_GRAY11__": "readonly",
+    "__DYE_BG_GRAY11__": "readonly",
+    "__DYE_GRAY12__": "readonly",
+    "__DYE_BG_GRAY12__": "readonly",
+    "__DYE_GRAY13__": "readonly",
+    "__DYE_BG_GRAY13__": "readonly",
+    "__DYE_GRAY14__": "readonly",
+    "__DYE_BG_GRAY14__": "readonly",
+    "__DYE_GRAY15__": "readonly",
+    "__DYE_BG_GRAY15__": "readonly",
+    "__DYE_GRAY16__": "readonly",
+    "__DYE_BG_GRAY16__": "readonly",
+    "__DYE_GRAY17__": "readonly",
+    "__DYE_BG_GRAY17__": "readonly",
+    "__DYE_GRAY18__": "readonly",
+    "__DYE_BG_GRAY18__": "readonly",
+    "__DYE_GRAY19__": "readonly",
+    "__DYE_BG_GRAY19__": "readonly",
+    "__DYE_GRAY20__": "readonly",
+    "__DYE_BG_GRAY20__": "readonly",
+    "__DYE_GRAY21__": "readonly",
+    "__DYE_BG_GRAY21__": "readonly",
+    "__DYE_GRAY22__": "readonly",
+    "__DYE_BG_GRAY22__": "readonly"
+  },
+  "rules": {
+    "no-unused-vars": "off",
+    "no-undef": "error",
+    "eqeqeq": "error",
+    "strict": [
+      "error",
+      "global"
+    ],
+    "curly": "error",
+    "no-console": "warn",
+    "no-debugger": "error",
+    "no-shadow": "error",
+    "no-sparse-arrays": "off",
+    "no-var": "error",
+    "prefer-const": "error",
+    "prefer-arrow-callback": "error",
+    "arrow-body-style": [
+      "error",
+      "as-needed"
+    ],
+    "no-empty": "error",
+    "default-case": "error",
+    "no-eval": "error",
+    "no-implied-eval": "error",
+    "no-new-func": "error",
+    "no-new-object": "error",
+    "no-array-constructor": "error",
+    "no-useless-escape": "error",
+    "no-useless-catch": "error",
+    "no-use-before-define": [
+      "error",
+      {
+        "functions": false,
+        "classes": true
+      }
+    ],
+    "consistent-return": "error",
+    "dot-notation": "error",
+    "yoda": [
+      "error",
+      "never"
+    ],
+    "max-params": [
+      "warn",
+      4
+    ],
+    "complexity": [
+      "warn",
+      10
+    ],
+    "max-depth": [
+      "warn",
+      4
+    ],
+    "max-lines": [
+      "warn",
+      300
+    ],
+    "max-statements": [
+      "warn",
+      20
+    ],
+    "no-floating-decimal": "error",
+    "prefer-template": "error",
+    "template-curly-spacing": "error",
+    "spaced-comment": [
+      "error",
+      "always",
+      {
+        "markers": [
+          "/"
+        ]
+      }
+    ],
+    "semi": [
+      "error",
+      "always"
+    ],
+    "quotes": [
+      "error",
+      "double",
+      {
+        "avoidEscape": true
+      }
+    ],
+    "indent": [
+      "error",
+      2,
+      {
+        "SwitchCase": 1
+      }
+    ],
+    "keyword-spacing": [
+      "error",
+      {
+        "before": true,
+        "after": true
+      }
+    ],
+    "space-before-function-paren": [
+      "error",
+      "never"
+    ],
+    "space-infix-ops": "error",
+    "eol-last": [
+      "error",
+      "always"
+    ],
+    "linebreak-style": [
+      "error",
+      "unix"
+    ],
+    "import/order": [
+      "error",
+      "unix"
+    ]
+  }
+}

@@ -6,7 +6,13 @@ import type { TWooksHttpOptions } from '@wooksjs/event-http'
 import { createHttpApp, HttpError, useRequest, WooksHttp } from '@wooksjs/event-http'
 import { Server as HttpServer } from 'http'
 import { Server as HttpsServer } from 'https'
-import type { Moost, TMoostAdapter, TMoostAdapterOptions, TMoostMetadata } from 'moost'
+import type {
+  Moost,
+  TConsoleBase,
+  TMoostAdapter,
+  TMoostAdapterOptions,
+  TMoostMetadata,
+} from 'moost'
 import { defineMoostEventHandler, getMoostMate } from 'moost'
 import type { ListenOptions } from 'net'
 
@@ -139,7 +145,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     )
   }
 
-  getLogger() {
+  getLogger(): TConsoleBase {
     return this.getHttpApp().getLogger('[moost-http]')
   }
 

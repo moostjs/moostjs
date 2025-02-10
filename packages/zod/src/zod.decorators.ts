@@ -1,6 +1,6 @@
-import type { TFunction, TPrimitives } from 'common'
 import { z } from 'zod'
 
+import type { TFunction, TPrimitives } from './common-types'
 import type { TZodOpts } from './primitives'
 import { resolveZodPrimitive } from './primitives'
 import { getZodType } from './validate'

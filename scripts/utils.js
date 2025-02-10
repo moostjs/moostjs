@@ -1,45 +1,53 @@
-import fs from 'fs'
+/* eslint-disable no-use-before-define */
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
+import { builtinModules } from 'module'
 import path from 'path'
-import { fileURLToPath } from 'url'
-import { createRequire } from 'module'
-import { dye } from '@prostojs/dye'
-import { PROJECT } from './constants.js'
 
-export const require = createRequire(import.meta.url)
-export const __filename = fileURLToPath(import.meta.url)
-export const __dirname = path.dirname(__filename)
+export function getExternals(ws) {
+  const pkgPath = getWorkspacePath(ws ? `packages/${ws}/package.json` : 'package.json')
+  const pkg = JSON.parse(readFileSync(pkgPath))
 
-export const packagesDir = path.resolve(__dirname, '../packages')
+  // Take dependencies from package.json, fallback to empty object if missing
+  const deps = Object.keys(pkg.dependencies ?? {})
+  const devDeps = Object.keys(pkg.devDependencies ?? {})
+  const peerDeps = Object.keys(pkg.peerDependencies ?? {})
 
-const files = fs.readdirSync(packagesDir)
+  // Combine dependencies and built-in Node.js modules
+  return [
+    ...deps,
+    ...devDeps,
+    ...peerDeps,
+    ...builtinModules,
+    ...builtinModules.map(mod => `node:${mod}`),
+    'vscode',
+  ]
+}
 
-export const mainPkg = require('../package.json')
-export const version = mainPkg.version
-export const packages = files
-    .filter((shortName) =>
-        fs.statSync(path.join(packagesDir, shortName)).isDirectory()
-    )
-    .map((shortName) => {
-        const pkgRoot = path.join(packagesDir, shortName)
-        const pkgPath = path.join(pkgRoot, `package.json`)
-        return {
-            name: shortName === PROJECT || shortName === `create-${ PROJECT }` ? shortName : `@${ PROJECT }js/${shortName}`,
-            shortName,
-            pkgPath,
-            pkgRoot,
-            pkg: fs.existsSync(pkgPath) ? require(pkgPath) : null,
-        }
-    })
+export function getBuildOptions(ws) {
+  const pkgPath = getWorkspacePath(ws ? `packages/${ws}/package.json` : 'package.json')
+  const pkg = JSON.parse(readFileSync(pkgPath))
+  const buildArray = Array.isArray(pkg?.build) ? pkg.build : pkg?.build ? [pkg.build] : [{}]
+  return buildArray.map(build => ({
+    entries: build.entries || ['src/index.ts'],
+    formats: build.format ? [build.format] : ['esm', 'cjs'],
+    dts: build.dts ?? true,
+    external: build.external,
+  }))
+}
 
-let step = 1
+export function getWorkspacePath(target) {
+  return path.resolve(process.cwd(), target)
+}
 
-export const out = {
-    info: dye('cyan').attachConsole('info'),
-    error: dye('red').attachConsole('error'),
-    step: dye('cyan')
-        .prefix(() => dye('bold')(`\nStep ${step++}. `))
-        .attachConsole('info'),
-    log: dye('gray04').attachConsole('log'),
-    warn: dye('yellow').attachConsole('warn'),
-    success: dye('green').attachConsole('log'),
+export function getWorkspaceFolders() {
+  const packagesPath = getWorkspacePath('packages')
+
+  if (!existsSync(packagesPath)) {
+    return []
+  }
+
+  return readdirSync(packagesPath).filter(item => {
+    const fullPath = path.join(packagesPath, item)
+    return statSync(fullPath).isDirectory()
+  })
 }

@@ -5,18 +5,23 @@
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "type": "module",
   "sideEffects": false,
   "exports": {
     "./package.json": "./package.json",
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
     "dist"
   ],
+  "scripts": {
+    "pub": "pnpm publish --access public",
+    "test": "vitest"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/moostjs.git",
@@ -32,8 +37,8 @@
   ],
   "dependencies": {
     "@prostojs/infact": "^0.3.3",
-    "@prostojs/mate": "^0.3.3",
     "@prostojs/logger": "^0.4.3",
+    "@prostojs/mate": "^0.3.3",
     "@wooksjs/event-core": "^0.5.20",
     "hookable": "^5.5.3",
     "wooks": "^0.5.20"
@@ -43,5 +48,11 @@
   "bugs": {
     "url": "https://github.com/moostjs/moostjs/issues"
   },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/moost#readme"
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/moost#readme",
+  "devDependencies": {
+    "@moostjs/event-http": "workspace:^",
+    "@wooksjs/event-http": "^0.5.20",
+    "@wooksjs/http-body": "^0.5.20",
+    "vitest": "^3.0.5"
+  }
 }

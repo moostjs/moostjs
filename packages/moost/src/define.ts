@@ -1,6 +1,5 @@
-import type { TEmpty, TObject } from 'common'
-
 import type { TClassFunction } from './class-function'
+import type { TEmpty, TObject } from './common-types'
 import type { TInterceptorFn } from './decorators'
 import { TInterceptorPriority } from './decorators'
 import type { TPipeFn } from './pipes'

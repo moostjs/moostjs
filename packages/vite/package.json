@@ -9,14 +9,18 @@
   "exports": {
     "./package.json": "./package.json",
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.cjs"
     }
   },
   "files": [
     "dist"
   ],
+  "scripts": {
+    "pub": "pnpm publish --access public",
+    "test": "vitest"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/moostjs.git",
@@ -38,8 +42,11 @@
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/vite#readme",
   "peerDependencies": {
-    "moost": "0.5.21",
-    "@moostjs/event-http": "0.5.21",
+    "@moostjs/event-http": "workspace:^",
+    "moost": "workspace:^",
     "vite": "^6.0.5"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.5"
   }
 }

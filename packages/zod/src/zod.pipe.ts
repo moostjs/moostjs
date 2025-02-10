@@ -7,6 +7,7 @@ import type { TZodOpts } from './primitives'
 import { getZodTypeForProp } from './validate'
 import type { TZodMate, TZodMetadata } from './zod.mate'
 import { getZodMate } from './zod.mate'
+import { TEmpty } from './common-types'
 
 /**
  * Validations pipeline powered by zod
@@ -17,7 +18,7 @@ import { getZodMate } from './zod.mate'
  */
 export const ZodPipeline = (
   opts?: {
-    formatError?: (e: z.ZodError, ...args: Parameters<TPipeFn>) => Error
+    formatError?: (e: z.ZodError, ...args: Parameters<TPipeFn<TEmpty>>) => Error
   } & TZodOpts
 ) =>
   definePipeFn<TZodMate>(async (value, metas, level) => {

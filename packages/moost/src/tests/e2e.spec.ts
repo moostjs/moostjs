@@ -1,20 +1,20 @@
 import { MoostHttp } from '@moostjs/event-http'
 import { createProvideRegistry } from '@prostojs/infact'
-import type { Moost } from 'moost'
 
+import type { Moost, TMoostAdapter } from '..'
 import { E2eInterceptor, E2eTestMoost, SECRET } from './e2e.artifacts'
 import * as request from './request.artifacts'
 
 describe('moost', () => {
   let moost: Moost
   let moostHttp: MoostHttp
-  const globalInterceptor = jest.fn()
-  const e2eInterceptor = jest.fn()
+  const globalInterceptor = vi.fn()
+  const e2eInterceptor = vi.fn()
 
   beforeAll(async () => {
-    moost = new E2eTestMoost()
+    moost = new E2eTestMoost() as unknown as Moost
     moostHttp = new MoostHttp()
-    moost.adapter(moostHttp)
+    moost.adapter(moostHttp as unknown as TMoostAdapter<any>)
     moost
       .applyGlobalInterceptors(globalInterceptor)
       .setProvideRegistry(
@@ -99,7 +99,7 @@ describe('moost', () => {
   describe('interceptors', () => {
     it('must call globalInterceptor everywhere', async () => {
       const times = Math.round(Math.random() * 5) + 1
-      jest.clearAllMocks()
+      vi.clearAllMocks()
       for (let i = 0; i < times; i++) {
         await request.get('getMethod') // root level
         await request.get('nestedControllerMethod?value=1') // nested controller

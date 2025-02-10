@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-extraneous-class */
-import type { TFunction } from 'common'
-
+import type { TFunction } from '../../common-types'
 import { getMoostMate } from '../../metadata/moost-metadata'
 import { Controller, ImportController } from '../controller.decorator'
 

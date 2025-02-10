@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { TFunction, TPrimitives } from 'common'
 import { z } from 'zod'
+
+import type { TFunction, TPrimitives } from './common-types'
 
 export const primitivesConstructorMap = new WeakMap<
   TFunction['prototype'],

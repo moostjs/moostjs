@@ -2,11 +2,11 @@
 /* eslint-disable max-depth */
 import type { TMoostZodType, TZodMetadata } from '@moostjs/zod'
 import { getZodType, getZodTypeForProp, z } from '@moostjs/zod'
-import type { TAny, TLogger } from 'common'
 import type { TControllerOverview } from 'moost'
 import type { TZodParsed } from 'zod-parser'
 import { parseZodType } from 'zod-parser'
 
+import type { TAny, TLogger } from './common-types'
 import type { TSwaggerConfigType, TSwaggerMate } from './swagger.mate'
 import { getSwaggerMate } from './swagger.mate'
 

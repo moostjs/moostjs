@@ -1,13 +1,13 @@
 import { Get, HeaderHook, SetHeader, StatusHook, Url } from '@moostjs/event-http'
 import { ZodSkip } from '@moostjs/zod'
-import { THeaderHook, TStatusHook, useSetHeaders } from '@wooksjs/event-http'
+import { THeaderHook, type TStatusHook, useSetHeaders } from '@wooksjs/event-http'
 import { serveFile } from '@wooksjs/http-static'
 import { Const, Controller, Moost, useControllerContext, useEventLogger } from 'moost'
 import Path from 'path'
 import { getAbsoluteFSPath } from 'swagger-ui-dist'
 
 import { SwaggerExclude } from './decorators'
-import { mapToSwaggerSpec, TSwaggerOptions } from './mapping'
+import { mapToSwaggerSpec, type TSwaggerOptions } from './mapping'
 
 @SwaggerExclude()
 @ZodSkip()

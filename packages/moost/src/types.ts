@@ -1,5 +1,4 @@
-import type { TEmpty, TFunction } from 'common'
-
+import type { TEmpty, TFunction } from './common-types'
 import type { TMoostHandler, TMoostMetadata } from './metadata'
 
 export interface TControllerOverview {

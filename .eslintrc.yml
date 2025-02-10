@@ -570,3 +570,5 @@ overrides:
       yml/require-string-key: error
       yml/spaced-comment: error
       yml/vue-custom-block/no-parsing-error: error
+extends:
+  - plugin:oxlint/recommended

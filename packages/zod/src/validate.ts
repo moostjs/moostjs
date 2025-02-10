@@ -1,8 +1,8 @@
 /* eslint-disable sonarjs/no-nested-template-literals */
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { TClassConstructor, TFunction, TLogger, TObject, TPrimitives } from 'common'
 import { z } from 'zod'
 
+import type { TClassConstructor, TFunction, TLogger, TObject, TPrimitives } from './common-types'
 import type { TZodOpts } from './primitives'
 import { resolveZodPrimitive, resolveZodPrimitiveByConstructor } from './primitives'
 import type { TZodFunctionDefinition, TZodMetadata } from './zod.mate'

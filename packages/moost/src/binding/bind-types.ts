@@ -1,6 +1,6 @@
 import type { TConsoleBase } from '@prostojs/logger'
-import type { TAny, TClassConstructor, TObject } from 'common'
 
+import type { TAny, TClassConstructor, TObject } from '../common-types'
 import type { TMoostMetadata } from '../metadata'
 import type { Moost, TMoostAdapter } from '../moost'
 import type { TPipeData } from '../pipes'

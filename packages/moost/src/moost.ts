@@ -4,15 +4,15 @@ import type { TConsoleBase } from '@prostojs/logger'
 import { ProstoLogger } from '@prostojs/logger'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
 import { createAsyncEventContext } from '@wooksjs/event-core'
-import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from 'common'
-import { getDefaultLogger, setDefaultLogger } from 'common'
 import { Hookable } from 'hookable'
 
 import { bindControllerMethods } from './binding/bind-controller'
+import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from './common-types'
 import { setControllerContext } from './composables'
 import type { TInterceptorFn } from './decorators'
 import { TInterceptorPriority } from './decorators'
 import type { InterceptorHandler } from './interceptor-handler'
+import { getDefaultLogger, setDefaultLogger } from './logger'
 import type { TInterceptorData, TMoostHandler } from './metadata'
 import { getMoostMate } from './metadata'
 import { getMoostInfact } from './metadata/infact'
@@ -260,7 +260,7 @@ export class Moost extends Hookable {
         moostInstance: this,
       })
     )
-    if (classMeta && classMeta.importController) {
+    if (classMeta?.importController) {
       const prefix =
         typeof replaceOwnPrefix === 'string' ? replaceOwnPrefix : classMeta.controller?.prefix
       const mergedProvide = { ...provide, ...classMeta.provide }

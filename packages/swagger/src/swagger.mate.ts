@@ -1,10 +1,19 @@
 import type { z } from '@moostjs/zod'
-import type { TFunction } from 'common'
-import { getMoostMate } from 'moost'
+import { getMoostMate, type TMoostMetadata, type Mate, type TMateParamMeta } from 'moost'
 
+import type { TFunction } from './common-types'
 import type { TSwaggerSchema } from './mapping'
 
-export function getSwaggerMate() {
+export function getSwaggerMate(): Mate<
+  TMoostMetadata &
+    TSwaggerMate & {
+      params: Array<TMateParamMeta>
+    },
+  TMoostMetadata &
+    TSwaggerMate & {
+      params: Array<TMateParamMeta>
+    }
+> {
   return getMoostMate<TSwaggerMate, TSwaggerMate>()
 }
 

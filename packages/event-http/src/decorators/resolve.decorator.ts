@@ -13,8 +13,9 @@ import {
   useStatus,
 } from '@wooksjs/event-http'
 import { useBody } from '@wooksjs/http-body'
-import type { TObject } from 'common'
 import { getMoostMate, Resolve } from 'moost'
+
+import type { TObject } from '../common-types'
 
 /**
  * Hook to the Response Status

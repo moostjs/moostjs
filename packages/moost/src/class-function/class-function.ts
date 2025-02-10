@@ -1,7 +1,7 @@
 import type { TConsoleBase } from '@prostojs/logger'
 import { getConstructor } from '@prostojs/mate'
-import type { TAny, TAnyFn, TClassConstructor, TObject } from 'common'
 
+import type { TAny, TAnyFn, TClassConstructor, TObject } from '../common-types'
 import { getMoostMate } from '../metadata'
 import { getMoostInfact } from '../metadata/infact'
 import type { TPipeData } from '../pipes'

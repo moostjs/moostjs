@@ -1,6 +1,6 @@
 import { useAsyncEventContext } from '@wooksjs/event-core'
-import type { TAny, TClassConstructor } from 'common'
 
+import type { TAny, TClassConstructor } from '../common-types'
 import { getMoostInfact, getMoostMate } from '../metadata'
 
 interface TControllerContext<T> {

@@ -1,7 +1,7 @@
 import type { TProvideFn } from '@prostojs/infact'
 import { createProvideRegistry, createReplaceRegistry } from '@prostojs/infact'
-import type { TClassConstructor } from 'common'
 
+import type { TClassConstructor } from '../common-types'
 import { getInfactScopeVars } from '../metadata'
 import { getMoostMate } from '../metadata/moost-metadata'
 import { Resolve } from './resolve.decorator'

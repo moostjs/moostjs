@@ -1,3 +1,4 @@
+/* eslint-disable sonarjs/no-duplicate-string */
 import * as eventCore from '@wooksjs/event-core'
 import * as wooksComposables from '@wooksjs/event-http'
 import * as wooksBody from '@wooksjs/http-body'
@@ -5,12 +6,12 @@ import * as wooksBody from '@wooksjs/http-body'
 import { getMoostMate } from '../../metadata'
 import { ResolveDecoratorsTestClass } from './resolve.artifacts'
 
-jest.mock('@wooksjs/event-http')
-const mWooksComposables = wooksComposables as jest.Mocked<typeof wooksComposables>
-jest.mock('@wooksjs/event-core')
-const mEventCore = eventCore as jest.Mocked<typeof eventCore>
-jest.mock('@wooksjs/http-body')
-const mWooksBody = wooksBody as jest.Mocked<typeof wooksBody>
+vi.mock('@wooksjs/event-http')
+const mWooksComposables = vi.mocked(wooksComposables)
+vi.mock('@wooksjs/event-core')
+const mEventCore = vi.mocked(eventCore)
+vi.mock('@wooksjs/http-body')
+const mWooksBody = vi.mocked(wooksBody)
 
 console.log('mWooks.useHeaders')
 

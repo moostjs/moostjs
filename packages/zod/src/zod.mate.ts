@@ -1,13 +1,23 @@
-import { getMoostMate } from 'moost'
+import { getMoostMate, type TMoostMetadata, type Mate, type TMateParamMeta } from 'moost'
 import type { z } from 'zod'
 
 import type { TZodOpts } from './primitives'
+import { TEmpty } from './common-types'
 
 /**
  * Get Mate instance with zod-specific types (TZodMate)
  * @returns Mate
  */
-export function getZodMate() {
+export function getZodMate(): Mate<
+  TMoostMetadata<TEmpty> &
+    TZodMate & {
+      params: Array<TZodMate & TMateParamMeta>
+    },
+  TMoostMetadata<TEmpty> &
+    TZodMate & {
+      params: Array<TZodMate & TMateParamMeta>
+    }
+> {
   return getMoostMate<TZodMate, TZodMate, TZodMate>()
 }
 

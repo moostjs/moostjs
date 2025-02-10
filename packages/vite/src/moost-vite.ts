@@ -2,7 +2,6 @@
 /* eslint-disable func-names */
 import type { IncomingMessage, ServerResponse } from 'http'
 import type { Plugin } from 'vite'
-import { mergeConfig } from 'vite'
 
 import { createAdapterDetector } from './adapter-detector'
 import { patchMoostHandlerLogging } from './moost-logging'
@@ -147,7 +146,7 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
       const outfile =
         typeof entry === 'string' ? entry.split('/').pop()!.replace(/\.ts$/, '.js') : undefined
 
-      const pluginConfig = {
+      return {
         server: {
           port: cfg.server?.port || options.port || 3000,
           host: cfg.server?.host || options.host,
@@ -184,8 +183,6 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
           },
         },
       }
-
-      return mergeConfig(cfg, pluginConfig)
     },
 
     /**

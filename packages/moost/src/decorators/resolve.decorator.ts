@@ -1,6 +1,6 @@
 import { useRouteParams } from '@wooksjs/event-core'
-import type { TEmpty, TObject } from 'common'
 
+import type { TEmpty, TObject } from '../common-types'
 import { getMoostMate } from '../metadata/moost-metadata'
 import type { TPipeMetas } from '../pipes'
 import { Label } from './common.decorator'
@@ -79,7 +79,7 @@ function fillLabel(target: TObject, key: string | symbol, index?: number, name?:
   if (name) {
     const meta = getMoostMate().read(target, key)
     if (typeof index === 'number') {
-      if (!meta?.params || !meta.params[index] || !meta.params[index].label) {
+      if (!meta?.params?.[index]?.label) {
         Label(name)(target, key, index)
       }
     } else if (!meta?.label) {

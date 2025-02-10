@@ -37,7 +37,7 @@ export function gatherAllImporters(
 const logger = new EventLogger('', { level: 99 }).createTopic(
   __DYE_DIM__ + __DYE_CYAN__ + PLUGIN_NAME
 )
-export function getLogger() {
+export function getLogger(): EventLogger {
   return logger
 }
 
