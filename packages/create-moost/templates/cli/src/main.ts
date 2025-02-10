@@ -25,7 +25,7 @@ class Commands {
 function run() {
   new CliApp()
     .controllers(Commands)
-    .useHelp({ name: 'cli-app', title: 'CLI APP'})
+    .useHelp({ name: '{{ packageName }}', title: ''})
     .useOptions([{ keys: ['help'], description: 'Display instructions for the command.' }])
     .start()
 }

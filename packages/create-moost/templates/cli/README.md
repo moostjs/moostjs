@@ -1,4 +1,6 @@
-# Moost CLI Template
+# {{ projectName }} 
+
+## Moost CLI Template
 
 This template provides a simple CLI application using Moost CLI. It demonstrates how to define commands with decorators, build the project with Rolldown, and run it in different environments.
 
