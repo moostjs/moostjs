@@ -32,12 +32,13 @@ You can test the CLI in multiple ways:
 
 ```bash
 npm run build
-npx <project_name> <command> [options]
+npx {{ packageName }} <command> [options]
 ```
 
 Example:
 
 ```bash
+npm run build
 npx {{ packageName }} hello world
 ```
 

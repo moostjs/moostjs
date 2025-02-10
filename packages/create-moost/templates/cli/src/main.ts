@@ -2,6 +2,7 @@ import { CliApp, Controller, Cli, Param, CliExample, CliOption, Description } fr
 
 @Controller()
 class Commands {
+    @Description('Prints a greeting')
     @CliExample('hello world', 'Prints "Hello, world!"')
     @CliExample('hello world -u', 'Prints "HELLO, WORLD!"')
     @Cli('hello/:name')
