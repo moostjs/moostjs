@@ -21,10 +21,7 @@
 //=END IF
 //=IF (wf)
     "@moostjs/event-wf": "^{{ version }}",
-    "@wooksjs/http-static": "^0.5.18",
-//=END IF
-//=IF (type === 'cli')
-    "@moostjs/event-cli": "^{{ version }}",
+    "@wooksjs/http-static": "^0.5.25",
 //=END IF
     "moost": "^{{ version }}"
   },
@@ -33,6 +30,6 @@
     "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
     "unplugin-swc": "^1.5.1",
-    "vite": "^6.0.5"
+    "vite": "^6.1.0"
   }
 }

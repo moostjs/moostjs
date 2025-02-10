@@ -1,12 +1,10 @@
-import { Cli, MoostCli } from '@moostjs/event-cli'
+import { Cli, CliApp, Param } from '@moostjs/event-cli'
 import { useAutoHelp, useCliOption } from '@wooksjs/event-cli'
-import { Controller, Moost, Param } from 'moost'
 
 import { getPrompts } from './prompts'
 import { scaffold } from './scaffold'
 
-@Controller()
-class CliController extends Moost {
+class Commands extends CliApp {
   @Cli('')
   root() {
     return this.execute()
@@ -63,23 +61,17 @@ Enjoy coding, and build something amazing!${__DYE_COLOR_OFF__}
 }
 
 export function run() {
-  const app = new CliController()
-
-  app.adapter(
-    new MoostCli({
-      globalCliOptions: [
-        { keys: ['http'], description: 'Use Moost HTTP', type: Boolean },
-        { keys: ['cli'], description: 'Use Moost CLI', type: Boolean },
-        { keys: ['wf'], description: 'Add Workflow Adapter', type: Boolean },
-        {
-          keys: ['domelint'],
-          description: 'Add do-me-lint (smart eslint installer)',
-          type: Boolean,
-        },
-        { keys: ['force'], description: 'Force Overwrite', type: Boolean },
-      ],
-    })
-  )
-
-  void app.init()
+  new Commands()
+    .useOptions([
+      { keys: ['http'], description: 'Use Moost HTTP', type: Boolean },
+      { keys: ['cli'], description: 'Use Moost CLI', type: Boolean },
+      { keys: ['wf'], description: 'Add Workflow Adapter', type: Boolean },
+      {
+        keys: ['domelint'],
+        description: 'Add do-me-lint (smart eslint installer)',
+        type: Boolean,
+      },
+      { keys: ['force'], description: 'Force Overwrite', type: Boolean },
+    ])
+    .start()
 }

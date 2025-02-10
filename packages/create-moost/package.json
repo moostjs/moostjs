@@ -16,7 +16,7 @@
     }
   },
   "bin": {
-    "create-moost": "./bin.js"
+    "create-moost": "./bin.cjs"
   },
   "scripts": {
     "pub": "pnpm publish --access public",
@@ -49,12 +49,16 @@
   "dependencies": {
     "@moostjs/event-cli": "workspace:^",
     "@prostojs/rewrite": "^0.1.1",
-    "@wooksjs/event-cli": "^0.5.20",
+    "@wooksjs/event-cli": "^0.5.25",
     "moost": "workspace:^",
     "prompts": "^2.4.2"
   },
   "devDependencies": {
+    "@moostjs/vite": "^0.5.21",
     "@types/prompts": "^2.4.9",
+    "rolldown": "1.0.0-beta.3",
+    "unplugin-swc": "^1.5.1",
+    "vite": "^6.1.0",
     "vitest": "^3.0.5"
   }
 }

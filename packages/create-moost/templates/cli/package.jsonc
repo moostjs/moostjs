@@ -1,0 +1,25 @@
+{
+  "name": "{{ packageName }}",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/main.cjs",
+  "scripts": {
+//=IF (domelint)
+    "postinstall": "npx do-me-lint",
+//=END IF
+    "dev": "pnpm build && node ./dist/main.cjs",
+    "build": "rolldown build -c rolldown.config.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@moostjs/event-cli": "^{{ version }}"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "unplugin-swc": "^1.5.1",
+    "rolldown": "1.0.0-beta.3"
+  }
+}

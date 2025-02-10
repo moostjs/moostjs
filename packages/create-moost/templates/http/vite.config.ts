@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig  } from "vite";
 import swc from 'unplugin-swc';
 import { moostVite } from "@moostjs/vite";
 

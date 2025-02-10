@@ -46,8 +46,8 @@
   },
   "dependencies": {
     "@moostjs/zod": "workspace:^",
-    "@wooksjs/event-http": "^0.5.20",
-    "@wooksjs/http-static": "^0.5.20",
+    "@wooksjs/event-http": "^0.5.25",
+    "@wooksjs/http-static": "^0.5.25",
     "swagger-ui-dist": "^5.10.5",
     "zod-parser": "^0.0.3"
   },

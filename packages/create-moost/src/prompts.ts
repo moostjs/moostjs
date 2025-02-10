@@ -71,7 +71,8 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
         },
         {
           name: 'wf',
-          type: () => (inputs.wf ? null : 'toggle'),
+          type: (prev, values) =>
+            inputs.wf || values.type === 'cli' || inputs.cli ? null : 'toggle',
           message: 'Add Moost Workflows Example?',
           initial: false,
           active: 'Yes',

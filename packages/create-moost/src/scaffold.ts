@@ -55,6 +55,12 @@ export async function scaffold(data: TPrompts) {
     {
       baseDir: templatePath,
       output: projectDir,
+      renameFile(filename) {
+        if (filename.endsWith('.jsonc')) {
+          return filename.replace(/c$/, '')
+        }
+        return filename
+      },
     },
     context
   )
@@ -77,6 +83,12 @@ export async function scaffold(data: TPrompts) {
       {
         baseDir: wfPath,
         output: projectDir,
+        renameFile(filename) {
+          if (filename.endsWith('.jsonc')) {
+            return filename.replace(/c$/, '')
+          }
+          return filename
+        },
       },
       context
     )
