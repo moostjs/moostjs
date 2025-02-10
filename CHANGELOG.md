@@ -1,3 +1,12 @@
+## [0.5.22](https://github.com/moostjs/moostjs/compare/v0.5.21...v0.5.22) (2025-02-10)
+
+
+### Features
+
+* **cli:** add CliApp (quck cli app starter) ([68a1014](https://github.com/moostjs/moostjs/commit/68a1014ab3950586e8ad182eca5fdd00598db504))
+
+
+
 ## [0.5.21](https://github.com/moostjs/moostjs/compare/v0.5.20...v0.5.21) (2025-01-13)
 
 
