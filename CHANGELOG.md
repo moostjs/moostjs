@@ -1,3 +1,12 @@
+## [0.5.24](https://github.com/moostjs/moostjs/compare/v0.5.23...v0.5.24) (2025-02-10)
+
+
+### Features
+
+* **cli:** update template ([35a8efb](https://github.com/moostjs/moostjs/commit/35a8efb3822e0b55e651a9cdf4eb373b6760a5a8))
+
+
+
 ## [0.5.23](https://github.com/moostjs/moostjs/compare/v0.5.22...v0.5.23) (2025-02-10)
 
 
