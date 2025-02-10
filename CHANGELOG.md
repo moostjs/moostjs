@@ -1,3 +1,12 @@
+## [0.5.23](https://github.com/moostjs/moostjs/compare/v0.5.22...v0.5.23) (2025-02-10)
+
+
+### Bug Fixes
+
+* **cli:** fix quick cli ([36e6595](https://github.com/moostjs/moostjs/commit/36e65952bbfafd55e91bc26aa5fa6da0db33efee))
+
+
+
 ## [0.5.22](https://github.com/moostjs/moostjs/compare/v0.5.21...v0.5.22) (2025-02-10)
 
 
