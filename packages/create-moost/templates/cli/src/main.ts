@@ -1,4 +1,4 @@
-import { CliApp, Controller, Cli, Param, CliExample, CliOption } from '@moostjs/event-cli'
+import { CliApp, Controller, Cli, Param, CliExample, CliOption, Description } from '@moostjs/event-cli'
 
 @Controller()
 class Commands {
@@ -6,18 +6,26 @@ class Commands {
     @CliExample('hello world -u', 'Prints "HELLO, WORLD!"')
     @Cli('hello/:name')
     greet(
-        @Param('name') name: string,
-        @CliOption('uppercase', 'u') uppercase: boolean,
+        @Description('A name to greet')
+        @Param('name')
+        name: string,
+
+        @Description('Whether to print the greeting in uppercase')
+        @CliOption('uppercase', 'u')
+        uppercase: boolean,
     ) {
         const output = `Hello, ${name}!`
         return uppercase ? output.toUpperCase() : output
     }
 }
 
+/**
+ * npm run dev hello world
+ */
 function run() {
   new CliApp()
     .controllers(Commands)
-    .useHelp({ name: '{{ packageName }}'})
+    .useHelp({ name: 'cli-app', title: 'CLI APP'})
     .useOptions([{ keys: ['help'], description: 'Display instructions for the command.' }])
     .start()
 }
