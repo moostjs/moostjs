@@ -2,12 +2,20 @@
   "name": "{{ packageName }}",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/main.cjs",
+  "main": "dist/main.js",
+  "type": "module",
+  "bin": {
+    "{{ packageName }}": "./bin.js"
+  },
+  "files": [
+    "dist",
+    "bin.js"
+  ],
   "scripts": {
 //=IF (domelint)
     "postinstall": "npx do-me-lint",
 //=END IF
-    "dev": "pnpm build && node ./dist/main.cjs",
+    "dev": "pnpm build && node ./dist/main.js",
     "build": "rolldown build -c rolldown.config.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

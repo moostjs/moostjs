@@ -4,8 +4,8 @@ import swc from 'unplugin-swc';
 export default defineConfig({
     input: 'src/main.ts',
     output: {
-        format: 'cjs',
-        file: 'dist/main.cjs',
+        format: 'esm',
+        file: 'dist/main.js',
     },
     external: ['@moostjs/event-cli', 'moost'],
     plugins: [

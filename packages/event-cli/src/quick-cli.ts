@@ -1,9 +1,13 @@
 import { Moost } from 'moost'
 import { MoostCli, TMoostCliOpts } from './event-cli'
-import { CliHelpInterceptor } from './interceptors'
-import { TWooksCliOptions } from '@wooksjs/event-cli'
+import { cliHelpInterceptor } from './interceptors'
 
-type THelpOptions = TWooksCliOptions['cliHelp'] & {
+type THelpOptions = {
+  name?: string
+  title?: string
+  maxWidth?: number
+  maxLeft?: number
+  mark?: string
   colors?: boolean
   lookupLevel?: number
 }
@@ -88,14 +92,22 @@ export class CliApp extends Moost {
   start() {
     const cli = new MoostCli({
       wooksCli: {
-        cliHelp: this._helpOpts,
+        cliHelp: this._helpOpts
+          ? {
+              name: this._helpOpts.name,
+              title: this._helpOpts.title,
+              maxWidth: this._helpOpts.maxWidth,
+              maxLeft: this._helpOpts.maxLeft,
+              mark: this._helpOpts.mark,
+            }
+          : undefined,
       },
       globalCliOptions: this._globalOpts,
     })
     this.adapter(cli)
     if (this._helpOpts) {
       this.applyGlobalInterceptors(
-        CliHelpInterceptor({
+        cliHelpInterceptor({
           colors: this._helpOpts.colors,
           lookupLevel: this._helpOpts.lookupLevel,
         })

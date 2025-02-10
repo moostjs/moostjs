@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-require('./dist/main.cjs');
+import('./dist/main.js');
