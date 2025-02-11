@@ -1,3 +1,12 @@
+## [0.5.27](https://github.com/moostjs/moostjs/compare/v0.5.26...v0.5.27) (2025-02-11)
+
+
+### Features
+
+* **arbac:** add @prostojs/arbac support ([d33cccf](https://github.com/moostjs/moostjs/commit/d33cccf09bc2b5a2c57d9f912f923af3a63af6d8))
+
+
+
 ## [0.5.26](https://github.com/moostjs/moostjs/compare/v0.5.25...v0.5.26) (2025-02-10)
 
 
