@@ -102,6 +102,22 @@ importers:
         specifier: ^8.3.2
         version: 8.3.2
 
+  packages/arbac:
+    dependencies:
+      '@prostojs/arbac':
+        specifier: ^0.0.2
+        version: 0.0.2
+      '@wooksjs/event-http':
+        specifier: ^0.5.25
+        version: 0.5.25(@prostojs/router@0.2.1)(@wooksjs/event-core@0.5.25)(wooks@0.5.25)
+      moost:
+        specifier: workspace:^
+        version: link:../moost
+    devDependencies:
+      vitest:
+        specifier: ^3.0.5
+        version: 3.0.5(@types/node@22.13.1)(jiti@1.21.0)
+
   packages/create-moost:
     dependencies:
       '@moostjs/event-cli':
@@ -122,7 +138,7 @@ importers:
     devDependencies:
       '@moostjs/vite':
         specifier: ^0.5.21
-        version: 0.5.21(@moostjs/event-http@0.5.21(wooks@0.5.25))(moost@packages+moost)(vite@6.1.0(@types/node@22.13.1)(jiti@1.21.0))
+        version: 0.5.21(@moostjs/event-http@0.5.26(wooks@0.5.25))(moost@packages+moost)(vite@6.1.0(@types/node@22.13.1)(jiti@1.21.0))
       '@types/prompts':
         specifier: ^2.4.9
         version: 2.4.9
@@ -1296,8 +1312,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.20':
     resolution: {integrity: sha512-R8LcPeWZol2zR8mmH3JeKQ6QRCFb7XgUhV9ZlGhHLGyg4wpPiPZNQOOWhFZhxKw8u//yTbNGI42Bx/3paXEQ+Q==}
 
-  '@moostjs/event-http@0.5.21':
-    resolution: {integrity: sha512-B28srggH3AFEL0kz374Dy0dxKS3rTrgp57qEkf+Zy7A0C2wtEb3uoftz7wGRz8cO8DSRmHGHj4UerZwma5BVEQ==}
+  '@moostjs/event-http@0.5.26':
+    resolution: {integrity: sha512-OLWJiIPHDoSOdSQNBjrUQfD1K5ijWLH2YLUF69TK8mBm7O6O7MLAi8OvlfduzHcvUBh3YDO6JmtILwOWiJeNvA==}
 
   '@moostjs/vite@0.5.21':
     resolution: {integrity: sha512-mG+RWcsTG0JgYk/tlKWxsoTHmPhyWrAEoFWU8yIYhvqr5IGtcbNfT8GDfRvF7xxJdppDMMEjNup9uXWZw2Q5fQ==}
@@ -1389,6 +1405,9 @@ packages:
     resolution: {integrity: sha512-OvG4lRw2AnTDJnCb1Jm1bzE2KuRvJLE+fQ6TDSj0UQSmTGHLXIZLc+Y8HMxntCx0p850FVBtYixdg2sHkv+i3g==}
     cpu: [x64]
     os: [win32]
+
+  '@prostojs/arbac@0.0.2':
+    resolution: {integrity: sha512-zXYITxYcMzxHVXwzZGmyXETnXBvPJZtdMraZKir7LSXT56dUuvuPDYZivdPbJU0RMA1rMr6Xt+FvUC4rMwmxUw==}
 
   '@prostojs/cache@0.0.1':
     resolution: {integrity: sha512-DQH+nAFBGGCYq11x2Cc9xYjiIsNCR+pVgzC5Y409opTQBPXqyGg7v7kVJcgwfYBJBwXvem6wen13Ae71teNXhA==}
@@ -3411,8 +3430,8 @@ packages:
   mitt@3.0.1:
     resolution: {integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==}
 
-  moost@0.5.21:
-    resolution: {integrity: sha512-Gh0iWhF7ntmTOyhY2TI9he1HIymqI4YgRVaNN9kQezwiNhFp0LFK2oDT3mP9Juzj72vtwpe6fefBG8CReaAoVQ==}
+  moost@0.5.26:
+    resolution: {integrity: sha512-XGsp1aqXoeb8Gd8cRkFsEqIvLvEPA7z/yCcJBpmKfrIQhTlSQQ9LC341exYeu0fTtVuAtUeGcHa5kRfJq31Adg==}
 
   ms@2.1.2:
     resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==}
@@ -5383,20 +5402,20 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.5.0
     optional: true
 
-  '@moostjs/event-http@0.5.21(wooks@0.5.25)':
+  '@moostjs/event-http@0.5.26(wooks@0.5.25)':
     dependencies:
       '@prostojs/infact': 0.3.3
       '@prostojs/router': 0.2.1
       '@wooksjs/event-core': 0.5.25
       '@wooksjs/event-http': 0.5.25(@prostojs/router@0.2.1)(@wooksjs/event-core@0.5.25)(wooks@0.5.25)
       '@wooksjs/http-body': 0.5.25
-      moost: 0.5.21
+      moost: 0.5.26
     transitivePeerDependencies:
       - wooks
 
-  '@moostjs/vite@0.5.21(@moostjs/event-http@0.5.21(wooks@0.5.25))(moost@packages+moost)(vite@6.1.0(@types/node@22.13.1)(jiti@1.21.0))':
+  '@moostjs/vite@0.5.21(@moostjs/event-http@0.5.26(wooks@0.5.25))(moost@packages+moost)(vite@6.1.0(@types/node@22.13.1)(jiti@1.21.0))':
     dependencies:
-      '@moostjs/event-http': 0.5.21(wooks@0.5.25)
+      '@moostjs/event-http': 0.5.26(wooks@0.5.25)
       moost: link:packages/moost
       vite: 6.1.0(@types/node@22.13.1)(jiti@1.21.0)
 
@@ -5466,6 +5485,8 @@ snapshots:
 
   '@oxlint/win32-x64@0.15.10':
     optional: true
+
+  '@prostojs/arbac@0.0.2': {}
 
   '@prostojs/cache@0.0.1': {}
 
@@ -7959,7 +7980,7 @@ snapshots:
 
   mitt@3.0.1: {}
 
-  moost@0.5.21:
+  moost@0.5.26:
     dependencies:
       '@prostojs/infact': 0.3.3
       '@prostojs/logger': 0.4.3

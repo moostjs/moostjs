@@ -1,0 +1,51 @@
+{
+  "name": "@moostjs/arbac",
+  "version": "0.5.26",
+  "description": "Access Control @prostojs/arbac",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "pub": "pnpm publish --access public",
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/arbac"
+  },
+  "keywords": [
+    "moost",
+    "moostjs",
+    "arbac",
+    "rbac",
+    "abac",
+    "access control"
+  ],
+  "author": "Artem Maltsev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/arbac#readme",
+  "dependencies": {
+    "moost": "workspace:^",
+    "@wooksjs/event-http": "^0.5.25",
+    "@prostojs/arbac": "^0.0.2"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.5"
+  }
+}
