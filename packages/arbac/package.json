@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/arbac",
-  "version": "0.5.28",
+  "version": "0.5.29",
   "description": "Access Control @prostojs/arbac",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
