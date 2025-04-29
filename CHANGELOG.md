@@ -1,3 +1,12 @@
+## [0.5.29](https://github.com/moostjs/moostjs/compare/v0.5.28...v0.5.29) (2025-04-29)
+
+
+### Bug Fixes
+
+* fix import from moost ([67175e3](https://github.com/moostjs/moostjs/commit/67175e37caf83182f4a132827ed0fec4c1a88d95))
+
+
+
 ## [0.5.28](https://github.com/moostjs/moostjs/compare/v0.5.27...v0.5.28) (2025-04-29)
 
 
