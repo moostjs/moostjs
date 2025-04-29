@@ -1,6 +1,6 @@
 import 'zx/globals'
 import { readFileSync, writeFileSync } from 'fs'
-import pkg from '../package.json' assert { type: 'json' }
+import pkg from '../package.json' with { type: 'json' }
 import { getWorkspaceFolders } from './utils.js'
 import inquirer from 'inquirer'
 import { dye } from '@prostojs/dye'

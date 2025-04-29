@@ -8,7 +8,7 @@ import { rolldown } from 'rolldown'
 import dyePlugin from '@prostojs/dye/rolldown'
 import dtsPlugin from 'rollup-plugin-dts'
 import { writeFileSync } from 'fs'
-import pkg from '../package.json' assert { type: 'json' }
+import pkg from '../package.json' with { type: 'json' }
 import path from 'path'
 import swcPlugin from 'unplugin-swc'
 

@@ -21,7 +21,7 @@
 //=END IF
 //=IF (wf)
     "@moostjs/event-wf": "^{{ version }}",
-    "@wooksjs/http-static": "^0.5.25",
+    "@wooksjs/http-static": "^0.6.0",
 //=END IF
     "moost": "^{{ version }}"
   },

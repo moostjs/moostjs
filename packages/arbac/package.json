@@ -42,7 +42,7 @@
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/arbac#readme",
   "dependencies": {
     "moost": "workspace:^",
-    "@wooksjs/event-http": "^0.5.25",
+    "@wooksjs/event-http": "^0.6.0",
     "@prostojs/arbac": "^0.0.2"
   },
   "devDependencies": {

@@ -44,9 +44,9 @@
   "dependencies": {
     "@prostojs/infact": "^0.3.3",
     "@prostojs/router": "^0.2.1",
-    "@wooksjs/event-core": "^0.5.25",
-    "@wooksjs/event-http": "^0.5.25",
-    "@wooksjs/http-body": "^0.5.25",
+    "@wooksjs/event-core": "^0.6.0",
+    "@wooksjs/event-http": "^0.6.0",
+    "@wooksjs/http-body": "^0.6.0",
     "moost": "workspace:^"
   },
   "devDependencies": {

@@ -44,10 +44,10 @@
     "@prostojs/infact": "^0.3.3",
     "@prostojs/mate": "^0.3.3",
     "@prostojs/wf": "^0.0.18",
-    "@wooksjs/event-core": "^0.5.25",
-    "@wooksjs/event-wf": "^0.5.25",
+    "@wooksjs/event-core": "^0.6.0",
+    "@wooksjs/event-wf": "^0.6.0",
     "moost": "workspace:^",
-    "wooks": "^0.5.25"
+    "wooks": "^0.6.0"
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-wf#readme",
   "devDependencies": {
