@@ -1,5 +1,5 @@
 import { useRequest } from '@wooksjs/event-http'
-import { defineInterceptorFn, Intercept, TInterceptorPriority } from 'packages/moost/dist'
+import { defineInterceptorFn, Intercept, TInterceptorPriority } from 'moost'
 
 /**
  * Creates an interceptor that sets the maximum allowed inflated body size in bytes.
