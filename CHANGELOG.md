@@ -1,3 +1,12 @@
+## [0.5.28](https://github.com/moostjs/moostjs/compare/v0.5.27...v0.5.28) (2025-04-29)
+
+
+### Features
+
+* add decorators for http limits ([2a0f6c6](https://github.com/moostjs/moostjs/commit/2a0f6c650941a527aaf74e3eab2aec249d11459c))
+
+
+
 ## [0.5.27](https://github.com/moostjs/moostjs/compare/v0.5.26...v0.5.27) (2025-02-11)
 
 
