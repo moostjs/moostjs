@@ -1,6 +1,6 @@
 {
   "name": "create-moost",
-  "version": "0.5.27",
+  "version": "0.5.28",
   "description": "create-moost",
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
