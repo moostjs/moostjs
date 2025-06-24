@@ -1,7 +1,8 @@
 /* eslint-disable max-depth */
 /* eslint-disable func-names */
 import type { IncomingMessage, ServerResponse } from 'http'
-import type { Plugin } from 'vite'
+import { PluginOption } from 'vite'
+import MagicString from 'magic-string'
 
 import { createAdapterDetector } from './adapter-detector'
 import { patchMoostHandlerLogging } from './moost-logging'
@@ -107,11 +108,12 @@ export interface TMoostViteDevOptions {
  *   - Ensures proper SSR entry setup and Rollup configurations for production builds.
  *
  * @param {TMoostViteDevOptions} options - Configuration options for the Moost Vite plugin.
- * @returns {Plugin} The configured Vite plugin.
+ * @returns {PluginOption} The configured Vite plugin.
  */
-export function moostVite(options: TMoostViteDevOptions): Plugin {
+export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const isTest = process.env.NODE_ENV === 'test'
   const isProd = process.env.NODE_ENV === 'production'
+  const externals = options.externals ?? true
 
   let moostMiddleware: TMiddleware | null = null
   const adapters = isTest
@@ -138,7 +140,7 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
 
   patchMoostHandlerLogging()
 
-  const pluginConfig: Plugin = {
+  const pluginConfig: PluginOption = {
     name: PLUGIN_NAME,
     enforce: 'pre',
     config(cfg) {
@@ -161,22 +163,20 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
           outDir: cfg.build?.outDir || options.outDir || 'dist',
           ssr: cfg.build?.ssr ?? true,
           minify: cfg.build?.minify || false,
+          sourcemap: !!(options.sourcemap ?? true),
           rollupOptions: {
             external: isTest
               ? cfg.build?.rollupOptions?.external
               : cfg.build?.rollupOptions?.external ||
-                (options.externals === false
+                (externals === false
                   ? []
                   : getExternals({
-                      node: Boolean(options.externals === true || options.externals?.node),
-                      workspace: Boolean(
-                        options.externals === true || options.externals?.workspace
-                      ),
+                      node: Boolean(externals === true || externals?.node),
+                      workspace: Boolean(externals === true || externals?.workspace),
                     })),
             input: entry,
             output: {
               format: options.format,
-              sourcemap: !!(options.sourcemap ?? true),
               entryFileNames: outfile,
               ...cfg.build?.rollupOptions?.output,
             },
@@ -192,7 +192,7 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
      */
     async transform(code, id) {
       if (!id.endsWith('.ts')) {
-        return code
+        return null
       }
 
       for (const adapter of adapters) {
@@ -203,10 +203,17 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
 
       // Inject a decorator to track the file ID if the file exports a class
       if (REG_HAS_EXPORT_CLASS.test(code)) {
-        code = code.replace(REG_REPLACE_EXPORT_CLASS, '\n@__VITE_ID(import.meta.filename)\n$1')
-        code = `import { __VITE_ID } from 'virtual:vite-id'\n\n${code}`
+        const s = new MagicString(code)
+        s.replace(REG_REPLACE_EXPORT_CLASS, '\n@__VITE_ID(import.meta.filename)\n$1')
+        s.prepend(`import { __VITE_ID } from 'virtual:vite-id'\n\n`)
+        // code = code.replace(REG_REPLACE_EXPORT_CLASS, '\n@__VITE_ID(import.meta.filename)\n$1')
+        // code = `import { __VITE_ID } from 'virtual:vite-id'\n\n${code}`
+        return {
+          code: s.toString(),
+          map: s.generateMap({ hires: true }),
+        }
       }
-      return code
+      return null
     },
 
     /**
@@ -224,13 +231,16 @@ export function moostVite(options: TMoostViteDevOptions): Plugin {
      */
     load(id) {
       if (id === '\0virtual:vite-id') {
-        return `
+        return {
+          code: `
           import { getMoostMate } from "moost";
           const mate = getMoostMate();
           export function __VITE_ID(id) {
             return mate.decorate("__vite_id", id)
           }
-        `
+        `,
+          map: null,
+        }
       }
     },
 

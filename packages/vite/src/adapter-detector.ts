@@ -19,7 +19,7 @@ export function createAdapterDetector(
     async init() {
       this.detected = true
       // @ts-expect-error
-      const module = await import(`@moostjs/event-${adapter}`)
+      const module = await import(/* @vite-ignore */ `@moostjs/event-${adapter}`)
       this.constructor = module[`Moost${adapter.charAt(0).toUpperCase() + adapter.slice(1)}`]
       if (onInit) {
         onInit(this.constructor!)

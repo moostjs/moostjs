@@ -46,6 +46,6 @@
     "@prostojs/arbac": "^0.0.2"
   },
   "devDependencies": {
-    "vitest": "^3.0.5"
+    "vitest": "3.2.4"
   }
 }

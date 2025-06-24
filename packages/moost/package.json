@@ -53,6 +53,6 @@
     "@moostjs/event-http": "workspace:^",
     "@wooksjs/event-http": "^0.6.0",
     "@wooksjs/http-body": "^0.6.0",
-    "vitest": "^3.0.5"
+    "vitest": "3.2.4"
   }
 }

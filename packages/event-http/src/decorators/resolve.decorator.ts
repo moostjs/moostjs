@@ -151,6 +151,9 @@ export function Authorization(name: 'username' | 'password' | 'bearer' | 'raw' |
       case 'type': {
         return auth.authType()
       }
+      default: {
+        return undefined
+      }
     }
   }, 'authorization')
 }

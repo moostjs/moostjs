@@ -51,6 +51,6 @@
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-wf#readme",
   "devDependencies": {
-    "vitest": "^3.0.5"
+    "vitest": "3.2.4"
   }
 }

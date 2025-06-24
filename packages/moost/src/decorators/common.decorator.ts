@@ -1,6 +1,19 @@
 import { getMoostMate } from '../metadata'
 
 /**
+ * Apply Multiple Decorators
+ *
+ * @param decorators - array of decorators
+ * @returns
+ */
+export function ApplyDecorators(
+  ...decorators: (MethodDecorator | ClassDecorator | ParameterDecorator | PropertyDecorator)[]
+): MethodDecorator & ClassDecorator & ParameterDecorator & PropertyDecorator {
+  const mate = getMoostMate()
+  return mate.apply(...decorators)
+}
+
+/**
  * ## Label
  * ### @Decorator
  * _Common purpose decorator that may be used by various adapters for various purposes_

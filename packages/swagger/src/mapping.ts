@@ -572,6 +572,9 @@ function getSwaggerSchema(parsed: TZodParsed, forParam?: boolean): TSwaggerSchem
       case 'ZodLazy': {
         return getSwaggerSchema(parsed.$get())
       }
+      default: {
+        return undefined
+      }
     }
   }
 

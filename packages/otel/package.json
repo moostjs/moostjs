@@ -42,10 +42,10 @@
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/otel#readme",
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/sdk-trace-base": "^1.25.1",
+    "@opentelemetry/sdk-trace-base": "^2.0.1",
     "moost": "workspace:^"
   },
   "devDependencies": {
-    "vitest": "^3.0.5"
+    "vitest": "3.2.4"
   }
 }
