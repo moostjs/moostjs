@@ -1,3 +1,4 @@
+// oxlint-disable max-params
 import type { TProvideRegistry, TReplaceRegistry } from '@prostojs/infact'
 import { createProvideRegistry, Infact } from '@prostojs/infact'
 import type { TConsoleBase } from '@prostojs/logger'
