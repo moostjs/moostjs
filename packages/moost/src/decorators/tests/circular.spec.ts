@@ -1,5 +1,6 @@
 import { getMoostMate } from '../../metadata/moost-metadata'
 import { CircularTestClassA, CircularTestClassB } from './circular.artifacts'
+import { describe, it, expect } from 'vitest'
 
 describe('circular.decorator', () => {
   const metaB = getMoostMate().read(CircularTestClassB)

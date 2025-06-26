@@ -116,6 +116,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const externals = options.externals ?? true
 
   let moostMiddleware: TMiddleware | null = null
+
   const adapters = isTest
     ? []
     : [
@@ -123,6 +124,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           MoostHttp.prototype.listen = function (...args: any[]) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+            logger.log('🔌 ' + __DYE_DIM__ + 'Overtaking HTTP.listen')
             moostMiddleware = this.getServerCb()
             setTimeout(() => {
               // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
@@ -289,7 +291,6 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         const modules = this.environment.moduleGraph.getModulesByFile(file)
         if (modules) {
           logger.debug(`🔃 Hot update: ${file}`)
-
           const cleanupInstances = new Set<string>()
           for (const mod of modules) {
             const allImporters = gatherAllImporters(mod)

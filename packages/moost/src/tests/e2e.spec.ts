@@ -1,5 +1,6 @@
 import { MoostHttp } from '@moostjs/event-http'
 import { createProvideRegistry } from '@prostojs/infact'
+import { describe, it, expect, beforeAll, vi, afterAll } from 'vitest'
 
 import type { Moost, TMoostAdapter } from '..'
 import { E2eInterceptor, E2eTestMoost, SECRET } from './e2e.artifacts'

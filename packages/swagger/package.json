@@ -42,12 +42,12 @@
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/swagger#readme",
   "peerDependencies": {
     "@moostjs/event-http": "workspace:^",
+    "@wooksjs/event-http": "^0.6.1",
+    "@moostjs/zod": "0.5.29",
+    "@wooksjs/http-static": "^0.6.1",
     "moost": "workspace:^"
   },
   "dependencies": {
-    "@moostjs/zod": "0.5.29",
-    "@wooksjs/event-http": "^0.6.0",
-    "@wooksjs/http-static": "^0.6.0",
     "swagger-ui-dist": "^5.10.5",
     "zod-parser": "^0.0.3"
   },

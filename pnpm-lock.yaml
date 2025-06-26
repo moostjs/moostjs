@@ -69,8 +69,8 @@ importers:
         specifier: ^12.4.1
         version: 12.4.1(@types/node@22.13.1)
       oxlint:
-        specifier: ^0.15.10
-        version: 0.15.10
+        specifier: ^1.3.0
+        version: 1.3.0
       prettier:
         specifier: 3.1.1
         version: 3.1.1
@@ -105,8 +105,8 @@ importers:
         specifier: ^0.0.2
         version: 0.0.2
       '@wooksjs/event-http':
-        specifier: ^0.6.0
-        version: 0.6.0(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.0)(wooks@0.6.0)
+        specifier: ^0.6.1
+        version: 0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)
       moost:
         specifier: workspace:^
         version: link:../moost
@@ -124,8 +124,8 @@ importers:
         specifier: ^0.1.1
         version: 0.1.1
       '@wooksjs/event-cli':
-        specifier: ^0.6.0
-        version: 0.6.0(@wooksjs/event-core@0.6.0)(wooks@0.6.0)
+        specifier: ^0.6.1
+        version: 0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)
       moost:
         specifier: workspace:^
         version: link:../moost
@@ -134,17 +134,17 @@ importers:
         version: 2.4.2
     devDependencies:
       '@moostjs/vite':
-        specifier: ^0.5.21
-        version: 0.5.21(@moostjs/event-http@0.5.29(wooks@0.6.0))(moost@packages+moost)(vite@6.1.0(@types/node@22.13.1)(jiti@1.21.0))
+        specifier: workspace:^
+        version: link:../vite
       '@types/prompts':
         specifier: ^2.4.9
         version: 2.4.9
       rolldown:
-        specifier: 1.0.0-beta.3
-        version: 1.0.0-beta.3(typescript@5.8.3)
+        specifier: 1.0.0-beta.19
+        version: 1.0.0-beta.19
       unplugin-swc:
-        specifier: ^1.5.1
-        version: 1.5.1(@swc/core@1.10.15)(rollup@4.44.0)
+        specifier: ^1.5.5
+        version: 1.5.5(@swc/core@1.10.15)(rollup@4.44.0)
       vite:
         specifier: ^6.1.0
         version: 6.1.0(@types/node@22.13.1)(jiti@1.21.0)
@@ -155,17 +155,17 @@ importers:
   packages/event-cli:
     dependencies:
       '@wooksjs/event-cli':
-        specifier: ^0.6.0
-        version: 0.6.0(@wooksjs/event-core@0.6.0)(wooks@0.6.0)
+        specifier: ^0.6.1
+        version: 0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)
       '@wooksjs/event-core':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1
       moost:
         specifier: workspace:^
         version: link:../moost
       wooks:
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1
     devDependencies:
       vitest:
         specifier: 3.2.4
@@ -180,14 +180,14 @@ importers:
         specifier: ^0.2.1
         version: 0.2.1
       '@wooksjs/event-core':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1
       '@wooksjs/event-http':
-        specifier: ^0.6.0
-        version: 0.6.0(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.0)(wooks@0.6.0)
+        specifier: ^0.6.1
+        version: 0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)
       '@wooksjs/http-body':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1(@wooksjs/event-http@0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1))
       moost:
         specifier: workspace:^
         version: link:../moost
@@ -208,17 +208,17 @@ importers:
         specifier: ^0.0.18
         version: 0.0.18
       '@wooksjs/event-core':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1
       '@wooksjs/event-wf':
-        specifier: ^0.6.0
-        version: 0.6.0(@wooksjs/event-core@0.6.0)(wooks@0.6.0)
+        specifier: ^0.6.1
+        version: 0.6.1(@prostojs/logger@0.4.3)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)
       moost:
         specifier: workspace:^
         version: link:../moost
       wooks:
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1
     devDependencies:
       vitest:
         specifier: 3.2.4
@@ -236,24 +236,24 @@ importers:
         specifier: ^0.3.3
         version: 0.3.3
       '@wooksjs/event-core':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1
       hookable:
         specifier: ^5.5.3
         version: 5.5.3
       wooks:
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1
     devDependencies:
       '@moostjs/event-http':
         specifier: workspace:^
         version: link:../event-http
       '@wooksjs/event-http':
-        specifier: ^0.6.0
-        version: 0.6.0(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.0)(wooks@0.6.0)
+        specifier: ^0.6.1
+        version: 0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)
       '@wooksjs/http-body':
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.6.1
+        version: 0.6.1(@wooksjs/event-http@0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1))
       vitest:
         specifier: 3.2.4
         version: 3.2.4(@types/node@22.13.1)(jiti@1.21.0)
@@ -283,11 +283,11 @@ importers:
         specifier: 0.5.29
         version: 0.5.29(moost@packages+moost)
       '@wooksjs/event-http':
-        specifier: ^0.6.0
-        version: 0.6.0(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.0)(wooks@0.6.0)
+        specifier: ^0.6.1
+        version: 0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)
       '@wooksjs/http-static':
-        specifier: ^0.6.0
-        version: 0.6.0(@wooksjs/event-http@0.6.0(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.0)(wooks@0.6.0))
+        specifier: ^0.6.1
+        version: 0.6.1(@wooksjs/event-http@0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1))
       moost:
         specifier: workspace:^
         version: link:../moost
@@ -604,20 +604,11 @@ packages:
       search-insights:
         optional: true
 
-  '@emnapi/core@1.3.1':
-    resolution: {integrity: sha512-pVGjBIt1Y6gg3EJN8jTcfpP/+uuRksIo055oE/OBkDNcjZqVbfkWCksG1Jp4yZnj3iKWyWX8fdG/j6UDYPbFog==}
-
   '@emnapi/core@1.4.3':
     resolution: {integrity: sha512-4m62DuCE07lw01soJwPiBGC0nAww0Q+RY70VZ+n49yDIO13yyinhbWCeNnaob0lakDtWQzSdtNWzJeOJt2ma+g==}
 
-  '@emnapi/runtime@1.3.1':
-    resolution: {integrity: sha512-kEBmG8KyqtxJZv+ygbEim+KCGtIq1fC22Ms3S4ziXmYKm8uyoLX0MHONVKwp+9opg390VaKRNt4a7A9NwmpNhw==}
-
   '@emnapi/runtime@1.4.3':
     resolution: {integrity: sha512-pBPWdu6MLKROBX05wSNKcNb++m5Er+KQ9QkB+WVM+pW2Kx9hoSrVTnu3BdkI5eBLZoKu/J6mW/B6i6bJB2ytXQ==}
-
-  '@emnapi/wasi-threads@1.0.1':
-    resolution: {integrity: sha512-iIBu7mwkq4UQGeMEM8bLwNK962nXdhodeScX4slfQnRhEMMzvYivHhutCIk8uojvmASXXPC2WNEjwxFWk72Oqw==}
 
   '@emnapi/wasi-threads@1.0.2':
     resolution: {integrity: sha512-5n3nTJblwRi8LlXkJ9eBzu+kZR8Yxcc7ubakyQTFzPMtIhFpUBRbsnc2Dv88IZDIbCDlBiWrknhB4Lsz7mg6BA==}
@@ -1314,16 +1305,6 @@ packages:
   '@jridgewell/trace-mapping@0.3.20':
     resolution: {integrity: sha512-R8LcPeWZol2zR8mmH3JeKQ6QRCFb7XgUhV9ZlGhHLGyg4wpPiPZNQOOWhFZhxKw8u//yTbNGI42Bx/3paXEQ+Q==}
 
-  '@moostjs/event-http@0.5.29':
-    resolution: {integrity: sha512-1AL9zlfP4vvbNxaKo3bMtmor6dP3+HD1PvXe5JYJmKbzDVyEINfhVJqu7Id4p8g2/sJc9bIh03oJZLPclnXpfQ==}
-
-  '@moostjs/vite@0.5.21':
-    resolution: {integrity: sha512-mG+RWcsTG0JgYk/tlKWxsoTHmPhyWrAEoFWU8yIYhvqr5IGtcbNfT8GDfRvF7xxJdppDMMEjNup9uXWZw2Q5fQ==}
-    peerDependencies:
-      '@moostjs/event-http': 0.5.21
-      moost: 0.5.21
-      vite: ^6.0.5
-
   '@moostjs/zod@0.5.29':
     resolution: {integrity: sha512-D46RGWicT+S3BY5qaUH8HG3dG9lCH1RJNgDhI6dknk+/tgTZIpbI1kwDIdcipI/ni/KxdQB3M6a7B82FtffFWg==}
     deprecated: This package is deprecated. Zod no longer supported. Use @atscript/moost-validator
@@ -1332,9 +1313,6 @@ packages:
 
   '@napi-rs/wasm-runtime@0.2.11':
     resolution: {integrity: sha512-9DPkXtvHydrcOsopiYpUgPHpmj0HWZKMUnL2dZqpvC42lsratuBG06V5ipyno0fUek5VlFsNQ+AcFATSrJXgMA==}
-
-  '@napi-rs/wasm-runtime@0.2.6':
-    resolution: {integrity: sha512-z8YVS3XszxFTO73iwvFDNpQIzdMmSDTP/mB3E/ucR37V3Sx57hSExcXyMoNwaucWxnsWf4xfbZv0iZ30jr0M4Q==}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -1378,49 +1356,46 @@ packages:
     resolution: {integrity: sha512-wbUN3K3zjMRHxAsNm1nKHebSnDY800b3LxQFTr9wSZpdQdhiQQAZpRIFsYjh0sAotoyqahN576sB1DmpPUhl5Q==}
     engines: {node: '>=6.9.0'}
 
-  '@oxc-project/types@0.46.0':
-    resolution: {integrity: sha512-BHU261xrLasw04d2cToR36F6VV0T7t62rtQUprvBRL4Uru9P23moMkDmZUMSZSQj0fIUTA3oTOTwQ7cc4Av/iw==}
-
   '@oxc-project/types@0.73.2':
     resolution: {integrity: sha512-kU2FjfCb9VTNg/KbOTKVi2sYrKTkNQYq1Fi1v1jCKjbUGA9wqkNDqijNBLeDwagFtDuK2EIWvTzNDYU4k/918g==}
 
-  '@oxlint/darwin-arm64@0.15.10':
-    resolution: {integrity: sha512-nGuKO+lZh4vS2Lb9lceePSQkXLhKcBPIAlux8BY+ewk2LnNNWsCbHhoslBwLF2h0MB8HiqOIk8WzRwllCY8sBg==}
+  '@oxlint/darwin-arm64@1.3.0':
+    resolution: {integrity: sha512-TcCaETXYfiEfS+u/gZNND4WwEEtnJJjqg8BIC56WiCQDduYTvmmbQ0vxtqdNXlFzlvmRpZCSs7qaqXNy8/8FLA==}
     cpu: [arm64]
     os: [darwin]
 
-  '@oxlint/darwin-x64@0.15.10':
-    resolution: {integrity: sha512-Xpyk8PiNKIrxYuundViBsxLcltYPGy+M5w/mO7EI9eeqSizMvWNimQgfPzK5fgh3V0gv8bJG0IyPZJVN0uEE9A==}
+  '@oxlint/darwin-x64@1.3.0':
+    resolution: {integrity: sha512-REgq9s1ZWuh++Vi+mUPNddLTp/D+iu+T8nLd3QM1dzQoBD/SZ7wRX3Mdv8QGT/m8dknmDBQuKAP6T47ox9HRSA==}
     cpu: [x64]
     os: [darwin]
 
-  '@oxlint/linux-arm64-gnu@0.15.10':
-    resolution: {integrity: sha512-fUxOOYlQBXc6Cz7d40zE2G6VG4yhR9vz+P1M8T1NhTe6yFUzfCCWV+zmHxpUPEy9dgGZPIvodIx7bP+kOPEmuA==}
+  '@oxlint/linux-arm64-gnu@1.3.0':
+    resolution: {integrity: sha512-QAS8AWKDcDeUe8mJaw/pF2D9+js8FbFTo75AiekZKNm9V6QAAiCkyvesmILD8RrStw9aV2D/apOD71vsfcDoGA==}
     cpu: [arm64]
     os: [linux]
 
-  '@oxlint/linux-arm64-musl@0.15.10':
-    resolution: {integrity: sha512-JESSO73nplnTftaBpWdgjsOtuSfl7Jeg3I37qJYVtHIxxyJMtHuuUd9g0K0MLbwcue2K7DFCnzlDNlxer2yrgQ==}
+  '@oxlint/linux-arm64-musl@1.3.0':
+    resolution: {integrity: sha512-rAbz0KFkk5GPdERoFO4ZUZmVkECnHXjRG0O2MeT5zY7ddlyZUjEk1cWjw+HCtWVdKkqhZJeNFMuEiRLkpzBIIw==}
     cpu: [arm64]
     os: [linux]
 
-  '@oxlint/linux-x64-gnu@0.15.10':
-    resolution: {integrity: sha512-NS4joBtL8Hg7zPBlPxSzrSRqkxtZfABf+fAY8vNxwYMsG8I8VoQZQdhz7+0p6ecg0+jH3CmIpDQfo73eaUBwoA==}
+  '@oxlint/linux-x64-gnu@1.3.0':
+    resolution: {integrity: sha512-6uLO1WsJwCtVNGHtjXwg2TRvxQYttYJKMjSdv6RUXGWY1AI+/+yHzvu+phU/F40uNC7CFhFnqWDuPaSZ49hdAQ==}
     cpu: [x64]
     os: [linux]
 
-  '@oxlint/linux-x64-musl@0.15.10':
-    resolution: {integrity: sha512-zC2eEEe4scfsoUV87YsZFOSfPutxeaAmCI9Ys2G1lQoTyZ+9G9nuxTzBMla/yspX6mQGxonXPxLxYbIlDT24vA==}
+  '@oxlint/linux-x64-musl@1.3.0':
+    resolution: {integrity: sha512-+vrmJUHgtJmgIo+L9eTP04NI/OQNCOZtQo6I49qGWc9cpr+0MnIh9KMcyAOxmzVTF5g+CF1I/1bUz4pk4I3LDw==}
     cpu: [x64]
     os: [linux]
 
-  '@oxlint/win32-arm64@0.15.10':
-    resolution: {integrity: sha512-u8nHap9L96zTQvwHYqn1ZcoiHzLR24ifuKDBIwlmwEVYucUgE55tUc+ea8kPUUB4uvfOv0HtAxNFuKr43biPzg==}
+  '@oxlint/win32-arm64@1.3.0':
+    resolution: {integrity: sha512-k+ETUVl+O3b8Rcd2PP5V3LqQ2QoN/TOX2f19XXHZEynbVLY3twLYPb3hLdXqoo7CKRq3RJdTfn1upHH48/qrZQ==}
     cpu: [arm64]
     os: [win32]
 
-  '@oxlint/win32-x64@0.15.10':
-    resolution: {integrity: sha512-OvG4lRw2AnTDJnCb1Jm1bzE2KuRvJLE+fQ6TDSj0UQSmTGHLXIZLc+Y8HMxntCx0p850FVBtYixdg2sHkv+i3g==}
+  '@oxlint/win32-x64@1.3.0':
+    resolution: {integrity: sha512-nWSgK0fT02TQ/BiAUCd13BaobtHySkCDcQaL+NOmhgeb0tNWjtYiktuluahaIqFcYJPWczVlbs8DU/Eqo8vsug==}
     cpu: [x64]
     os: [win32]
 
@@ -1471,18 +1446,8 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
-  '@rolldown/binding-darwin-arm64@1.0.0-beta.3':
-    resolution: {integrity: sha512-qB1ofY+09nDYYaEi5kVsjqy4cKsVPI9E5bkV46CRrQsTF/BBM29wpvaj8qTRQ41qwInFA5kmqnVVr35yfH7ddw==}
-    cpu: [arm64]
-    os: [darwin]
-
   '@rolldown/binding-darwin-x64@1.0.0-beta.19':
     resolution: {integrity: sha512-EMzFFW+Wshv0d0FnunDOKl3QQK5KW69c9NOo7SL+fXmeDRrhhKnjoAggi6IX+Vq3gz0PqfqsbElT2uFS5g1dcg==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@rolldown/binding-darwin-x64@1.0.0-beta.3':
-    resolution: {integrity: sha512-Fk+rqyeszMaZK12wItqFDXdUadg+TVQqOPh0fdaCefVebd29N+9fpFrARyo8gReyt/lcnEN4nWgdn7l99R70QA==}
     cpu: [x64]
     os: [darwin]
 
@@ -1491,18 +1456,8 @@ packages:
     cpu: [x64]
     os: [freebsd]
 
-  '@rolldown/binding-freebsd-x64@1.0.0-beta.3':
-    resolution: {integrity: sha512-B7QzJKu53MB/hvwO276AsyxN+p9lfgCkIO94TQB6t3auq3pDCC6u6gdRI1Ydwn6/gpMLiUNCW4mnpxCE5fE5tg==}
-    cpu: [x64]
-    os: [freebsd]
-
   '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.19':
     resolution: {integrity: sha512-p5PY3ezHgWN5DurWBMSxrZhnQcJTIuyl8d0aHrC53EXKMG8vMr80L7U545p0nqC14XtWjlMPFxumFxLD+zVL9g==}
-    cpu: [arm]
-    os: [linux]
-
-  '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.3':
-    resolution: {integrity: sha512-NB5JrXP5dAigDTbvVc6VWiOY3Rr/0u1pi/9LYoBtMYiST7hYOrBPO9lvDF9w/23yKCr1+8PF4wFGR/YxKTNN5Q==}
     cpu: [arm]
     os: [linux]
 
@@ -1511,18 +1466,8 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-  '@rolldown/binding-linux-arm64-gnu@1.0.0-beta.3':
-    resolution: {integrity: sha512-bYyZLXzJ2boZ7CdUuCSAaTcWkVKcBUOL+B86zv+tRyrtk4BIpHF+L+vOg5uPD/PHwrIglxAno5MN4NnpkUj5fQ==}
-    cpu: [arm64]
-    os: [linux]
-
   '@rolldown/binding-linux-arm64-musl@1.0.0-beta.19':
     resolution: {integrity: sha512-4FowIEu7YIBKLYMG0659V2kN/drV/ghljDl9k9DGmUL/Mko0tG2itRmgLeZyjrkbQNTkXUTI3/0fEbwAg8Jazg==}
-    cpu: [arm64]
-    os: [linux]
-
-  '@rolldown/binding-linux-arm64-musl@1.0.0-beta.3':
-    resolution: {integrity: sha512-t/jaaFrCSvwX2075jRfa2bwAcsuTtY1/sIT4XqsDg2MVxWQtaUyBx5Mi0pqZKTjdOPnL+f/zoUC9dxT2lUpNmw==}
     cpu: [arm64]
     os: [linux]
 
@@ -1531,18 +1476,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@rolldown/binding-linux-x64-gnu@1.0.0-beta.3':
-    resolution: {integrity: sha512-EeDNLPU0Xw8ByRWxNLO30AF0fKYkdb/6rH5G073NFBDkj7ggYR/CvsNBjtDeCJ7+I6JG4xUjete2+VeV+GQjiA==}
-    cpu: [x64]
-    os: [linux]
-
   '@rolldown/binding-linux-x64-musl@1.0.0-beta.19':
     resolution: {integrity: sha512-TztajvVHulPEn1hKCTxmpkomIUvMaeQ9Vv5TEn3bHBp/3T8W7zOwju0ExXNiLtSoD8Nk85T8O1DBPwuo0h+Uig==}
-    cpu: [x64]
-    os: [linux]
-
-  '@rolldown/binding-linux-x64-musl@1.0.0-beta.3':
-    resolution: {integrity: sha512-iTcAj8FKac3nyQhvFuqKt6Xqu9YNDbe1ew6US2OSN4g3zwfujgylaRCitEG+Uzd7AZfSVVLAfqrxKMa36Sj9Mg==}
     cpu: [x64]
     os: [linux]
 
@@ -1551,18 +1486,8 @@ packages:
     engines: {node: '>=14.21.3'}
     cpu: [wasm32]
 
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.3':
-    resolution: {integrity: sha512-sYgbsbyspvVZ2zplqsTxjf2N3e8UQGQnSsN5u4bMX461gY5vAsjUiA4nf1/ztDBMHWT79lF2QNx4csjnjSxMlA==}
-    engines: {node: '>=14.21.3'}
-    cpu: [wasm32]
-
   '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.19':
     resolution: {integrity: sha512-ak0Dv/IKcbVHr8JhP0rLUCgEQ++GsSQQ2O+VofTXmCeXhquOkVSxcicgDJ4yLgQDIM0DC2pFXWpAoHRGvkrEdQ==}
-    cpu: [arm64]
-    os: [win32]
-
-  '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.3':
-    resolution: {integrity: sha512-qszMtrWybBLTFaew2WgEBRMlz1B/V8XxU87uezXlKcLW36aoRWR8LspZvqqoBkvJzbQtfOgm1HdTIk/v3Rn7QQ==}
     cpu: [arm64]
     os: [win32]
 
@@ -1571,32 +1496,13 @@ packages:
     cpu: [ia32]
     os: [win32]
 
-  '@rolldown/binding-win32-ia32-msvc@1.0.0-beta.3':
-    resolution: {integrity: sha512-J+mzAO68VK91coLVuUln/XN0ummIEOODyupZ2BmXY8suBHPVAyLLAP54rlucBPQmzU8fI6DXM2bl2whZ+KEXpQ==}
-    cpu: [ia32]
-    os: [win32]
-
   '@rolldown/binding-win32-x64-msvc@1.0.0-beta.19':
     resolution: {integrity: sha512-a+GPUvLUkG8Qh2XPn7JI9Ui8wz9HhbrB5iJPMWh7VSv/4uLJZYZqxkL1kC+K/dUjE0CSun/4zds+C0SW83S69A==}
     cpu: [x64]
     os: [win32]
 
-  '@rolldown/binding-win32-x64-msvc@1.0.0-beta.3':
-    resolution: {integrity: sha512-r06rAi+1eStgavGnw+2y4F7gpb0w9ocnKk0Ir7LmegLAkMZ/v4Fjo9jZUrLTLtmI36108v1uvUPrIAFzFOWE7g==}
-    cpu: [x64]
-    os: [win32]
-
   '@rolldown/pluginutils@1.0.0-beta.19':
     resolution: {integrity: sha512-3FL3mnMbPu0muGOCaKAhhFEYmqv9eTfPSJRJmANrCwtgK8VuxpsZDGK+m0LYAGoyO8+0j5uRe4PeyPDK1yA/hA==}
-
-  '@rollup/pluginutils@5.1.0':
-    resolution: {integrity: sha512-XTIWOPPcpvyKI6L1NHo0lFlCyznUEyPmPY1mc3KpPVDYulHSTvyeLNVW00QTLIAFNhR3kYnJTQHeGqU4M3n09g==}
-    engines: {node: '>=14.0.0'}
-    peerDependencies:
-      rollup: ^1.20.0||^2.0.0||^3.0.0||^4.0.0
-    peerDependenciesMeta:
-      rollup:
-        optional: true
 
   '@rollup/pluginutils@5.2.0':
     resolution: {integrity: sha512-qWJ2ZTbmumwiLFomfzTyt5Kng4hwPi9rwCYN4SHb6eaRU1KNO4ccxINHr/VhH4GgPlt1XfSTLX2LBTme8ne4Zw==}
@@ -2002,11 +1908,6 @@ packages:
   '@ungap/structured-clone@1.2.0':
     resolution: {integrity: sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ==}
 
-  '@valibot/to-json-schema@1.0.0-beta.4':
-    resolution: {integrity: sha512-wXBdCyoqec+NLCl5ihitXzZXD4JAjPK3+HfskSXzfhiNFvKje0A/v1LygqKidUgIbaJtREmq/poJGbaS/0MKuQ==}
-    peerDependencies:
-      valibot: ^1.0.0 || ^1.0.0-beta.5 || ^1.0.0-rc
-
   '@vitejs/plugin-vue@5.2.1':
     resolution: {integrity: sha512-cxh314tzaWwOLqVes2gnnCtvBDcM1UMdn+iFR+UjAn411dPT3tOmqrJjbMd7koZpMAmBM/GqeV4n9ge7JSiJJQ==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -2131,35 +2032,41 @@ packages:
   '@vueuse/shared@12.8.2':
     resolution: {integrity: sha512-dznP38YzxZoNloI0qpEfpkms8knDtaoQ6Y/sfS0L7Yki4zh40LFHEhur0odJC6xTHG5dxWVPiUWBXn+wCG2s5w==}
 
-  '@wooksjs/event-cli@0.6.0':
-    resolution: {integrity: sha512-9AnnRQ8OVx5drEjC46G+XYDL+/Xta4m442f3YtV00JNn1XkFKPQFC5OOGrnG4b4vogpGZ79F4JQh9FGvNp4eyA==}
+  '@wooksjs/event-cli@0.6.1':
+    resolution: {integrity: sha512-K8be7amMeN5vSmtRjn7yiptzGooanc85xvBHhm+8P+sPkQcvXewGUOgKZR6gxw/vjw1QbPAYuloEhMLD+GQSaA==}
     peerDependencies:
-      '@wooksjs/event-core': ^0.6.0
-      wooks: ^0.6.0
-
-  '@wooksjs/event-core@0.6.0':
-    resolution: {integrity: sha512-j/P9lFx0v+aYliPrxq4aO6nRqomgdgK7EdFRPyH6Udyd2XFl0NEAavhbNJfqHlfKluJkZKd0IMGvxK1htnV2cw==}
-
-  '@wooksjs/event-http@0.6.0':
-    resolution: {integrity: sha512-0MkK3FT68CtoQ78vj4Yih0iuHdSAfVaShJSPTfkp15LXAn/7D/x2qhkOQu3rHpBMT46JXtwbFAeKL8YjOnWdog==}
-    peerDependencies:
+      '@prostojs/logger': ^0.4.3
       '@prostojs/router': ^0.2.1
-      '@wooksjs/event-core': ^0.6.0
-      wooks: ^0.6.0
+      '@wooksjs/event-core': ^0.6.1
+      wooks: ^0.6.1
 
-  '@wooksjs/event-wf@0.6.0':
-    resolution: {integrity: sha512-6H9T5fLniAFqK1/SA1LfnB87+Bcyk9ahvvZXFMSmD6bK4Etl2ucr1qJJOVKd0AFJRgrGGvSfk9vSaya450EZKQ==}
+  '@wooksjs/event-core@0.6.1':
+    resolution: {integrity: sha512-QvQyIZZL1QaTUMTZYqsgA5u+/dtj6i2pm2PpYjuJVmiweDtMMVnZv9nNpKi0KhI1tGl8sK/J1KHjFa3CclmQPw==}
+
+  '@wooksjs/event-http@0.6.1':
+    resolution: {integrity: sha512-66OJrz8eP95Xq1hXbm5DpNnzoEK2P2neQXLJOvcN6PZT6wLsG1AHL9Msg/JAFzYEX2R1OrMQtnIQ35aPeYLmAA==}
     peerDependencies:
-      '@wooksjs/event-core': ^0.6.0
-      wooks: ^0.6.0
+      '@prostojs/logger': ^0.4.3
+      '@prostojs/router': ^0.2.1
+      '@wooksjs/event-core': ^0.6.1
+      wooks: ^0.6.1
 
-  '@wooksjs/http-body@0.6.0':
-    resolution: {integrity: sha512-y8gOYty8finHWjWgGKoyYsMmGOLqRuqLPw/eizwmL/pGkpPGRDP4coj6mdSododg1ajYt9K9JLqlXRuUHxnKYw==}
-
-  '@wooksjs/http-static@0.6.0':
-    resolution: {integrity: sha512-bSSFATwqGvKR6Dbgdv6CUcWZ8RlaTxRxZv4n7WgbmkHsulEhFHKPwhgg+cpzuaihdFaxh/3uaTViZdpPZQH4DQ==}
+  '@wooksjs/event-wf@0.6.1':
+    resolution: {integrity: sha512-me5hak81PWVrk3A78rdgl2jlTMx65gWGeyRlqZIdFhRQEUTjcWd2Lc8gRLXIs+v5Pdlt4AiD4NXLprQMAtoyww==}
     peerDependencies:
-      '@wooksjs/event-http': ^0.6.0
+      '@prostojs/logger': ^0.4.3
+      '@wooksjs/event-core': ^0.6.1
+      wooks: ^0.6.1
+
+  '@wooksjs/http-body@0.6.1':
+    resolution: {integrity: sha512-oIxYP5oL0mOu9lWNdta6EuplXJN7/c8S2r+jpFXkxlxKsI8R2FqzUVZjJHjrD4vjLsp2JOLbBskz8YpBn5ltpQ==}
+    peerDependencies:
+      '@wooksjs/event-http': ^0.6.1
+
+  '@wooksjs/http-static@0.6.1':
+    resolution: {integrity: sha512-Qa2hi/+CddVcnlwNWRlihwYQhu2rLrlXz8P17v+ZIdz05J2xl6lrI5r27BzMsDkP4vdV5pEOZw4yb+QqkHHAhQ==}
+    peerDependencies:
+      '@wooksjs/event-http': ^0.6.1
 
   JSONStream@1.3.5:
     resolution: {integrity: sha512-E+iruNOY8VV9s4JEbe1aNEm6MiszPRr/UfcHMz0TQh1BXSxHK+ASV1R6W4HpjBhSeS+54PIsAMCBmwD06LLsqQ==}
@@ -2172,11 +2079,6 @@ packages:
 
   acorn@8.11.3:
     resolution: {integrity: sha512-Y9rRfJG5jcKOE0CLisYbojUjIrIEE7AGMzA/Sm4BslANhbS+cDMpgBdcPT91oJ7OuJ9hYJBx59RjbhxVnrF8Xg==}
-    engines: {node: '>=0.4.0'}
-    hasBin: true
-
-  acorn@8.14.0:
-    resolution: {integrity: sha512-cl669nCJTZBsL97OF4kUQm5g5hC2uihk0NxY3WENAC0TYdILVkAyHymAntgxGkl7K+t0cXIrH5siy5S4XkFycA==}
     engines: {node: '>=0.4.0'}
     hasBin: true
 
@@ -3554,9 +3456,6 @@ packages:
   mitt@3.0.1:
     resolution: {integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==}
 
-  moost@0.5.29:
-    resolution: {integrity: sha512-23kGbm2HTYrTKYRotOGyDLLiR4OmYTm8KE5W6BVfCBJLR+nr0J0JCjCY9vZ9YXVn6O1Cp815YVw2j+14g5WlKw==}
-
   ms@2.1.2:
     resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==}
 
@@ -3647,8 +3546,8 @@ packages:
     resolution: {integrity: sha512-D2FR03Vir7FIu45XBY20mTb+/ZSWB00sjU9jdQXt83gDrI4Ztz5Fs7/yy74g2N5SVQY4xY1qDr4rNddwYRVX0g==}
     engines: {node: '>=0.10.0'}
 
-  oxlint@0.15.10:
-    resolution: {integrity: sha512-962UBhpbd041fnx1GjQIY7uGIAXcAl/t45Xd6IZi11PyXVRHz7TjC4qpndrwp98Lfg7HuDaMXoOWOaNsgtEgag==}
+  oxlint@1.3.0:
+    resolution: {integrity: sha512-PzAOmPxnXYpVF1q6h9pkOPH6uJ/44XrtFWJ8JcEMpoEq9HISNelD3lXhACtOAW8CArjLy/qSlu2KkyPxnXgctA==}
     engines: {node: '>=8.*'}
     hasBin: true
 
@@ -3871,15 +3770,6 @@ packages:
   rolldown@1.0.0-beta.19:
     resolution: {integrity: sha512-rEBMUCfaK4LOf2rynaqcgKDGqwZ6GdWFdbgjfBOBvsY3Mr3AL0G6AKx516vDhOj1UVkAnxixfqDrXkZkH27n3w==}
     hasBin: true
-
-  rolldown@1.0.0-beta.3:
-    resolution: {integrity: sha512-DBpF1K8tSwU/0dQ7zL9BYcje0/GjO5lgfdEW0rHHFfGjGDh8TBVNlokfEXtdt/IoJOiTdtySfsrgarLJkZmZTQ==}
-    hasBin: true
-    peerDependencies:
-      '@babel/runtime': '>=7'
-    peerDependenciesMeta:
-      '@babel/runtime':
-        optional: true
 
   rollup-plugin-dts@6.2.1:
     resolution: {integrity: sha512-sR3CxYUl7i2CHa0O7bA45mCrgADyAQ0tVtGSqi3yvH28M+eg1+g5d7kQ9hLvEz5dorK3XVsH5L2jwHLQf72DzA==}
@@ -4251,19 +4141,10 @@ packages:
   unist-util-visit@5.0.0:
     resolution: {integrity: sha512-MR04uvD+07cwl/yhVuVWAtw+3GOR/knlL55Nd/wAdblk27GCVt3lqpTivy/tkJcZoNPzTwS1Y+KMojlLDhoTzg==}
 
-  unplugin-swc@1.5.1:
-    resolution: {integrity: sha512-/ZLrPNjChhGx3Z95pxJ4tQgfI6rWqukgYHKflrNB4zAV1izOQuDhkTn55JWeivpBxDCoK7M/TStb2aS/14PS/g==}
-    peerDependencies:
-      '@swc/core': ^1.2.108
-
   unplugin-swc@1.5.5:
     resolution: {integrity: sha512-BahYtYvQ/KSgOqHoy5FfQgp/oZNAB7jwERxNeFVeN/PtJhg4fpK/ybj9OwKtqGPseOadS7+TGbq6tH2DmDAYvA==}
     peerDependencies:
       '@swc/core': ^1.2.108
-
-  unplugin@1.16.1:
-    resolution: {integrity: sha512-4/u/j4FrCKdi17jaxuJA0jClGxB1AvU2hw/IuayPc4ay1XGaJs/rbb4v5WKwAjNifjmXK9PIFyuPiaK8azyR9w==}
-    engines: {node: '>=14.0.0'}
 
   unplugin@2.3.5:
     resolution: {integrity: sha512-RyWSb5AHmGtjjNQ6gIlA67sHOsWpsbWpwDokLwTcejVdOjEkJZh7QKu14J00gDDVSh8kGH4KYC/TNBceXFZhtw==}
@@ -4281,14 +4162,6 @@ packages:
   v8-to-istanbul@9.2.0:
     resolution: {integrity: sha512-/EH/sDgxU2eGxajKdwLCDmQ4FWq+kpi3uCmBGpw1xJtnAxEjlD8j8PEiGWpCIMIs3ciNAgH0d3TTJiUkYzyZjA==}
     engines: {node: '>=10.12.0'}
-
-  valibot@1.0.0-beta.12:
-    resolution: {integrity: sha512-j3WIxJ0pmUFMfdfUECn3YnZPYOiG0yHYcFEa/+RVgo0I+MXE3ToLt7gNRLtY5pwGfgNmsmhenGZfU5suu9ijUA==}
-    peerDependencies:
-      typescript: '>=5'
-    peerDependenciesMeta:
-      typescript:
-        optional: true
 
   validate-npm-package-license@3.0.4:
     resolution: {integrity: sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==}
@@ -4486,8 +4359,8 @@ packages:
     engines: {node: '>=8'}
     hasBin: true
 
-  wooks@0.6.0:
-    resolution: {integrity: sha512-ENbYR5h6GNi08upFV6AZ0maNsjDiMjTBgi7a00SnbkL1B0FgtWYThwzYwYk8Zop5YH7oHdKPcT2I5ZWQ3ern5w==}
+  wooks@0.6.1:
+    resolution: {integrity: sha512-V3TFxiLtYSgF+ZH4QZ4iC5x2lLbKtWOzgnlw3cdd4xP2dKEpwEyxpIWZjewHIhPSBIJFyGqk5ACJ7qVebrdx/g==}
 
   wordwrap@1.0.0:
     resolution: {integrity: sha512-gvVzJFlPycKc5dZN4yPkP8w7Dc37BtP1yczEneOb4uq34pXZcvrtRTmWV8W+Ume+XCxKgbjM+nevkyFPMybd4Q==}
@@ -4936,29 +4809,13 @@ snapshots:
     transitivePeerDependencies:
       - '@algolia/client-search'
 
-  '@emnapi/core@1.3.1':
-    dependencies:
-      '@emnapi/wasi-threads': 1.0.1
-      tslib: 2.6.2
-    optional: true
-
   '@emnapi/core@1.4.3':
     dependencies:
       '@emnapi/wasi-threads': 1.0.2
       tslib: 2.6.2
     optional: true
 
-  '@emnapi/runtime@1.3.1':
-    dependencies:
-      tslib: 2.6.2
-    optional: true
-
   '@emnapi/runtime@1.4.3':
-    dependencies:
-      tslib: 2.6.2
-    optional: true
-
-  '@emnapi/wasi-threads@1.0.1':
     dependencies:
       tslib: 2.6.2
     optional: true
@@ -5555,23 +5412,6 @@ snapshots:
       '@jridgewell/sourcemap-codec': 1.5.0
     optional: true
 
-  '@moostjs/event-http@0.5.29(wooks@0.6.0)':
-    dependencies:
-      '@prostojs/infact': 0.3.3
-      '@prostojs/router': 0.2.1
-      '@wooksjs/event-core': 0.6.0
-      '@wooksjs/event-http': 0.6.0(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.0)(wooks@0.6.0)
-      '@wooksjs/http-body': 0.6.0
-      moost: 0.5.29
-    transitivePeerDependencies:
-      - wooks
-
-  '@moostjs/vite@0.5.21(@moostjs/event-http@0.5.29(wooks@0.6.0))(moost@packages+moost)(vite@6.1.0(@types/node@22.13.1)(jiti@1.21.0))':
-    dependencies:
-      '@moostjs/event-http': 0.5.29(wooks@0.6.0)
-      moost: link:packages/moost
-      vite: 6.1.0(@types/node@22.13.1)(jiti@1.21.0)
-
   '@moostjs/zod@0.5.29(moost@packages+moost)':
     dependencies:
       moost: link:packages/moost
@@ -5581,13 +5421,6 @@ snapshots:
     dependencies:
       '@emnapi/core': 1.4.3
       '@emnapi/runtime': 1.4.3
-      '@tybys/wasm-util': 0.9.0
-    optional: true
-
-  '@napi-rs/wasm-runtime@0.2.6':
-    dependencies:
-      '@emnapi/core': 1.3.1
-      '@emnapi/runtime': 1.3.1
       '@tybys/wasm-util': 0.9.0
     optional: true
 
@@ -5627,32 +5460,30 @@ snapshots:
 
   '@oxc-project/runtime@0.73.2': {}
 
-  '@oxc-project/types@0.46.0': {}
-
   '@oxc-project/types@0.73.2': {}
 
-  '@oxlint/darwin-arm64@0.15.10':
+  '@oxlint/darwin-arm64@1.3.0':
     optional: true
 
-  '@oxlint/darwin-x64@0.15.10':
+  '@oxlint/darwin-x64@1.3.0':
     optional: true
 
-  '@oxlint/linux-arm64-gnu@0.15.10':
+  '@oxlint/linux-arm64-gnu@1.3.0':
     optional: true
 
-  '@oxlint/linux-arm64-musl@0.15.10':
+  '@oxlint/linux-arm64-musl@1.3.0':
     optional: true
 
-  '@oxlint/linux-x64-gnu@0.15.10':
+  '@oxlint/linux-x64-gnu@1.3.0':
     optional: true
 
-  '@oxlint/linux-x64-musl@0.15.10':
+  '@oxlint/linux-x64-musl@1.3.0':
     optional: true
 
-  '@oxlint/win32-arm64@0.15.10':
+  '@oxlint/win32-arm64@1.3.0':
     optional: true
 
-  '@oxlint/win32-x64@0.15.10':
+  '@oxlint/win32-x64@1.3.0':
     optional: true
 
   '@prostojs/arbac@0.0.2': {}
@@ -5697,49 +5528,25 @@ snapshots:
   '@rolldown/binding-darwin-arm64@1.0.0-beta.19':
     optional: true
 
-  '@rolldown/binding-darwin-arm64@1.0.0-beta.3':
-    optional: true
-
   '@rolldown/binding-darwin-x64@1.0.0-beta.19':
-    optional: true
-
-  '@rolldown/binding-darwin-x64@1.0.0-beta.3':
     optional: true
 
   '@rolldown/binding-freebsd-x64@1.0.0-beta.19':
     optional: true
 
-  '@rolldown/binding-freebsd-x64@1.0.0-beta.3':
-    optional: true
-
   '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.19':
-    optional: true
-
-  '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.3':
     optional: true
 
   '@rolldown/binding-linux-arm64-gnu@1.0.0-beta.19':
     optional: true
 
-  '@rolldown/binding-linux-arm64-gnu@1.0.0-beta.3':
-    optional: true
-
   '@rolldown/binding-linux-arm64-musl@1.0.0-beta.19':
-    optional: true
-
-  '@rolldown/binding-linux-arm64-musl@1.0.0-beta.3':
     optional: true
 
   '@rolldown/binding-linux-x64-gnu@1.0.0-beta.19':
     optional: true
 
-  '@rolldown/binding-linux-x64-gnu@1.0.0-beta.3':
-    optional: true
-
   '@rolldown/binding-linux-x64-musl@1.0.0-beta.19':
-    optional: true
-
-  '@rolldown/binding-linux-x64-musl@1.0.0-beta.3':
     optional: true
 
   '@rolldown/binding-wasm32-wasi@1.0.0-beta.19':
@@ -5747,42 +5554,20 @@ snapshots:
       '@napi-rs/wasm-runtime': 0.2.11
     optional: true
 
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.3':
-    dependencies:
-      '@napi-rs/wasm-runtime': 0.2.6
-    optional: true
-
   '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.19':
-    optional: true
-
-  '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.3':
     optional: true
 
   '@rolldown/binding-win32-ia32-msvc@1.0.0-beta.19':
     optional: true
 
-  '@rolldown/binding-win32-ia32-msvc@1.0.0-beta.3':
-    optional: true
-
   '@rolldown/binding-win32-x64-msvc@1.0.0-beta.19':
-    optional: true
-
-  '@rolldown/binding-win32-x64-msvc@1.0.0-beta.3':
     optional: true
 
   '@rolldown/pluginutils@1.0.0-beta.19': {}
 
-  '@rollup/pluginutils@5.1.0(rollup@4.44.0)':
-    dependencies:
-      '@types/estree': 1.0.6
-      estree-walker: 2.0.2
-      picomatch: 2.3.1
-    optionalDependencies:
-      rollup: 4.44.0
-
   '@rollup/pluginutils@5.2.0(rollup@4.44.0)':
     dependencies:
-      '@types/estree': 1.0.6
+      '@types/estree': 1.0.8
       estree-walker: 2.0.2
       picomatch: 4.0.2
     optionalDependencies:
@@ -6204,10 +5989,6 @@ snapshots:
 
   '@ungap/structured-clone@1.2.0': {}
 
-  '@valibot/to-json-schema@1.0.0-beta.4(valibot@1.0.0-beta.12(typescript@5.8.3))':
-    dependencies:
-      valibot: 1.0.0-beta.12(typescript@5.8.3)
-
   '@vitejs/plugin-vue@5.2.1(vite@5.4.19(@types/node@22.13.1))(vue@3.5.13(typescript@5.8.3))':
     dependencies:
       vite: 5.4.19(@types/node@22.13.1)
@@ -6354,38 +6135,40 @@ snapshots:
     transitivePeerDependencies:
       - typescript
 
-  '@wooksjs/event-cli@0.6.0(@wooksjs/event-core@0.6.0)(wooks@0.6.0)':
+  '@wooksjs/event-cli@0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)':
     dependencies:
       '@prostojs/cli-help': 0.0.11
       '@prostojs/logger': 0.4.3
       '@prostojs/router': 0.2.1
-      '@wooksjs/event-core': 0.6.0
+      '@wooksjs/event-core': 0.6.1
       minimist: 1.2.8
-      wooks: 0.6.0
+      wooks: 0.6.1
 
-  '@wooksjs/event-core@0.6.0':
+  '@wooksjs/event-core@0.6.1':
     dependencies:
       '@prostojs/logger': 0.4.3
 
-  '@wooksjs/event-http@0.6.0(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.0)(wooks@0.6.0)':
+  '@wooksjs/event-http@0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)':
     dependencies:
       '@prostojs/logger': 0.4.3
       '@prostojs/router': 0.2.1
-      '@wooksjs/event-core': 0.6.0
-      wooks: 0.6.0
+      '@wooksjs/event-core': 0.6.1
+      wooks: 0.6.1
 
-  '@wooksjs/event-wf@0.6.0(@wooksjs/event-core@0.6.0)(wooks@0.6.0)':
+  '@wooksjs/event-wf@0.6.1(@prostojs/logger@0.4.3)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)':
     dependencies:
       '@prostojs/logger': 0.4.3
       '@prostojs/wf': 0.0.18
-      '@wooksjs/event-core': 0.6.0
-      wooks: 0.6.0
+      '@wooksjs/event-core': 0.6.1
+      wooks: 0.6.1
 
-  '@wooksjs/http-body@0.6.0': {}
-
-  '@wooksjs/http-static@0.6.0(@wooksjs/event-http@0.6.0(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.0)(wooks@0.6.0))':
+  '@wooksjs/http-body@0.6.1(@wooksjs/event-http@0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1))':
     dependencies:
-      '@wooksjs/event-http': 0.6.0(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.0)(wooks@0.6.0)
+      '@wooksjs/event-http': 0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)
+
+  '@wooksjs/http-static@0.6.1(@wooksjs/event-http@0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1))':
+    dependencies:
+      '@wooksjs/event-http': 0.6.1(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.1)(wooks@0.6.1)
 
   JSONStream@1.3.5:
     dependencies:
@@ -6397,8 +6180,6 @@ snapshots:
       acorn: 8.11.3
 
   acorn@8.11.3: {}
-
-  acorn@8.14.0: {}
 
   acorn@8.15.0: {}
 
@@ -8210,15 +7991,6 @@ snapshots:
 
   mitt@3.0.1: {}
 
-  moost@0.5.29:
-    dependencies:
-      '@prostojs/infact': 0.3.3
-      '@prostojs/logger': 0.4.3
-      '@prostojs/mate': 0.3.3
-      '@wooksjs/event-core': 0.6.0
-      hookable: 5.5.3
-      wooks: 0.6.0
-
   ms@2.1.2: {}
 
   ms@2.1.3: {}
@@ -8319,16 +8091,16 @@ snapshots:
 
   os-tmpdir@1.0.2: {}
 
-  oxlint@0.15.10:
+  oxlint@1.3.0:
     optionalDependencies:
-      '@oxlint/darwin-arm64': 0.15.10
-      '@oxlint/darwin-x64': 0.15.10
-      '@oxlint/linux-arm64-gnu': 0.15.10
-      '@oxlint/linux-arm64-musl': 0.15.10
-      '@oxlint/linux-x64-gnu': 0.15.10
-      '@oxlint/linux-x64-musl': 0.15.10
-      '@oxlint/win32-arm64': 0.15.10
-      '@oxlint/win32-x64': 0.15.10
+      '@oxlint/darwin-arm64': 1.3.0
+      '@oxlint/darwin-x64': 1.3.0
+      '@oxlint/linux-arm64-gnu': 1.3.0
+      '@oxlint/linux-arm64-musl': 1.3.0
+      '@oxlint/linux-x64-gnu': 1.3.0
+      '@oxlint/linux-x64-musl': 1.3.0
+      '@oxlint/win32-arm64': 1.3.0
+      '@oxlint/win32-x64': 1.3.0
 
   p-limit@2.3.0:
     dependencies:
@@ -8550,27 +8322,6 @@ snapshots:
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.19
       '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.19
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.19
-
-  rolldown@1.0.0-beta.3(typescript@5.8.3):
-    dependencies:
-      '@oxc-project/types': 0.46.0
-      '@valibot/to-json-schema': 1.0.0-beta.4(valibot@1.0.0-beta.12(typescript@5.8.3))
-      valibot: 1.0.0-beta.12(typescript@5.8.3)
-    optionalDependencies:
-      '@rolldown/binding-darwin-arm64': 1.0.0-beta.3
-      '@rolldown/binding-darwin-x64': 1.0.0-beta.3
-      '@rolldown/binding-freebsd-x64': 1.0.0-beta.3
-      '@rolldown/binding-linux-arm-gnueabihf': 1.0.0-beta.3
-      '@rolldown/binding-linux-arm64-gnu': 1.0.0-beta.3
-      '@rolldown/binding-linux-arm64-musl': 1.0.0-beta.3
-      '@rolldown/binding-linux-x64-gnu': 1.0.0-beta.3
-      '@rolldown/binding-linux-x64-musl': 1.0.0-beta.3
-      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.3
-      '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.3
-      '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.3
-      '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.3
-    transitivePeerDependencies:
-      - typescript
 
   rollup-plugin-dts@6.2.1(rollup@4.44.0)(typescript@5.8.3):
     dependencies:
@@ -8964,15 +8715,6 @@ snapshots:
       unist-util-is: 6.0.0
       unist-util-visit-parents: 6.0.1
 
-  unplugin-swc@1.5.1(@swc/core@1.10.15)(rollup@4.44.0):
-    dependencies:
-      '@rollup/pluginutils': 5.1.0(rollup@4.44.0)
-      '@swc/core': 1.10.15
-      load-tsconfig: 0.2.5
-      unplugin: 1.16.1
-    transitivePeerDependencies:
-      - rollup
-
   unplugin-swc@1.5.5(@swc/core@1.10.15)(rollup@4.44.0):
     dependencies:
       '@rollup/pluginutils': 5.2.0(rollup@4.44.0)
@@ -8981,11 +8723,6 @@ snapshots:
       unplugin: 2.3.5
     transitivePeerDependencies:
       - rollup
-
-  unplugin@1.16.1:
-    dependencies:
-      acorn: 8.14.0
-      webpack-virtual-modules: 0.6.2
 
   unplugin@2.3.5:
     dependencies:
@@ -9010,10 +8747,6 @@ snapshots:
       '@types/istanbul-lib-coverage': 2.0.6
       convert-source-map: 2.0.0
     optional: true
-
-  valibot@1.0.0-beta.12(typescript@5.8.3):
-    optionalDependencies:
-      typescript: 5.8.3
 
   validate-npm-package-license@3.0.4:
     dependencies:
@@ -9215,11 +8948,11 @@ snapshots:
       siginfo: 2.0.0
       stackback: 0.0.2
 
-  wooks@0.6.0:
+  wooks@0.6.1:
     dependencies:
       '@prostojs/logger': 0.4.3
       '@prostojs/router': 0.2.1
-      '@wooksjs/event-core': 0.6.0
+      '@wooksjs/event-core': 0.6.1
 
   wordwrap@1.0.0: {}
 

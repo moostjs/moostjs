@@ -39,9 +39,9 @@
     "@prostojs/infact": "^0.3.3",
     "@prostojs/logger": "^0.4.3",
     "@prostojs/mate": "^0.3.3",
-    "@wooksjs/event-core": "^0.6.0",
+    "@wooksjs/event-core": "^0.6.1",
     "hookable": "^5.5.3",
-    "wooks": "^0.6.0"
+    "wooks": "^0.6.1"
   },
   "author": "Artem Maltsev",
   "license": "MIT",
@@ -51,8 +51,8 @@
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/moost#readme",
   "devDependencies": {
     "@moostjs/event-http": "workspace:^",
-    "@wooksjs/event-http": "^0.6.0",
-    "@wooksjs/http-body": "^0.6.0",
+    "@wooksjs/event-http": "^0.6.1",
+    "@wooksjs/http-body": "^0.6.1",
     "vitest": "3.2.4"
   }
 }

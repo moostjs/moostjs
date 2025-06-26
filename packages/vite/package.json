@@ -47,8 +47,6 @@
     "vite": "^7.0.0"
   },
   "devDependencies": {
-    "@moostjs/event-http": "^0.5.29",
-    "moost": "^0.5.29",
     "vitest": "3.2.4"
   },
   "dependencies": {

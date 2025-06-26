@@ -11,6 +11,7 @@
   },
   "ignorePatterns": ["**/__snapshots__/**/*", "node_modules", "dist"],
   "globals": {
+    "__dirname": "readonly",
     "describe": "readonly",
     "it": "readonly",
     "expect": "readonly",

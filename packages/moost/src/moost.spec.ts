@@ -4,6 +4,8 @@ import { Get, Post } from '@moostjs/event-http'
 
 import { Moost } from './moost'
 
+import { describe, it, expect } from 'vitest'
+
 class A extends Moost {
   @Get()
   @Post()

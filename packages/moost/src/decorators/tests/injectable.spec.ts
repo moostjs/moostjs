@@ -1,5 +1,6 @@
 import { getMoostMate } from '../../metadata/moost-metadata'
 import { Injectable } from '../injectable.decorator'
+import { describe, it, expect } from 'vitest'
 
 @Injectable()
 class A {}

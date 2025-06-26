@@ -40,9 +40,11 @@
     "url": "https://github.com/moostjs/moostjs/issues"
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/arbac#readme",
+  "peerDependencies": {
+    "@wooksjs/event-http": "^0.6.1",
+    "moost": "workspace:^"
+  },
   "dependencies": {
-    "moost": "workspace:^",
-    "@wooksjs/event-http": "^0.6.0",
     "@prostojs/arbac": "^0.0.2"
   },
   "devDependencies": {

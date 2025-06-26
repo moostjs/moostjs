@@ -2,6 +2,7 @@
 import * as eventCore from '@wooksjs/event-core'
 import * as wooksComposables from '@wooksjs/event-http'
 import * as wooksBody from '@wooksjs/http-body'
+import { describe, it, expect, vi } from 'vitest'
 
 import { getMoostMate } from '../../metadata'
 import { ResolveDecoratorsTestClass } from './resolve.artifacts'

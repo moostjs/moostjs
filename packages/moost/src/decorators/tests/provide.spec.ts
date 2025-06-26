@@ -1,5 +1,6 @@
 import { getMoostMate } from '../../metadata'
 import { ProvideTestClass, ToInjectTestClass } from './provide.artifacts'
+import { describe, it, expect } from 'vitest'
 
 describe('provide.decorator', () => {
   it('must set provide meta', () => {

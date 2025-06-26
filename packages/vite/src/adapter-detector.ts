@@ -2,6 +2,9 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+
+import { getLogger } from './utils'
+
 /**
  * Creates an adapter detector for a specific adapter type.
  * @param adapter
@@ -19,9 +22,11 @@ export function createAdapterDetector(
     async init() {
       this.detected = true
       // @ts-expect-error
-      const module = await import(/* @vite-ignore */ `@moostjs/event-${adapter}`)
-      this.constructor = module[`Moost${adapter.charAt(0).toUpperCase() + adapter.slice(1)}`]
-      if (onInit) {
+      const module = await import(`@moostjs/event-${adapter}`)
+      const constructorName = `Moost${adapter.charAt(0).toUpperCase() + adapter.slice(1)}`
+      getLogger().log(`🔍 ${__DYE_DIM__}Extracting Adapter "${constructorName}"`)
+      this.constructor = module[constructorName]
+      if (onInit && this.constructor) {
         onInit(this.constructor!)
       }
     },

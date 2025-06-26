@@ -1,6 +1,7 @@
 import { getMoostMate } from 'moost'
 
 import { HttpMethodTestClass } from './http-method.artifacts'
+import { describe, it, expect } from 'vitest'
 
 function simpleTest(fnName: string, httpMethod: string, path?: string) {
   const meta = getMoostMate().read(HttpMethodTestClass, fnName)

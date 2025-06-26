@@ -2,6 +2,7 @@
 import type { TFunction } from '../../common-types'
 import { getMoostMate } from '../../metadata/moost-metadata'
 import { Controller, ImportController } from '../controller.decorator'
+import { describe, it, expect } from 'vitest'
 
 @Controller('my-path')
 class A {}

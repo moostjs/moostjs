@@ -1,5 +1,6 @@
 import { getMoostMate } from '../../metadata/moost-metadata'
 import { PipeDecoratorTestClass } from './pipe.artifacts'
+import { describe, it, expect } from 'vitest'
 
 describe('pipe.decorator', () => {
   const meta = getMoostMate().read(PipeDecoratorTestClass)

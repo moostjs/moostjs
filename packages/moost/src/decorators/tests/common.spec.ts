@@ -1,5 +1,6 @@
 import { getMoostMate } from '../../metadata'
 import { CommonDecoratorsTestClass } from './common.artifacts'
+import { describe, it, expect } from 'vitest'
 
 const instance = new CommonDecoratorsTestClass()
 const meta = getMoostMate().read(instance, 'method')

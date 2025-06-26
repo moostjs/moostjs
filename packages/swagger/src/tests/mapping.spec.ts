@@ -4,6 +4,7 @@ import { Moost } from 'moost'
 
 import { mapToSwaggerSpec } from '../mapping'
 import { SwaggerControllerTest } from './mapping.artifacts'
+import { describe, it, expect, beforeAll } from 'vitest'
 
 const app = new Moost()
 app.adapter(new MoostHttp())

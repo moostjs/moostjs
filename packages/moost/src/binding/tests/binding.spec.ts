@@ -1,4 +1,5 @@
 import { getInstanceOwnMethods } from '../utils'
+import { describe, it, expect } from 'vitest'
 
 class A {
   method1() {
