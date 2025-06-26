@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/swagger",
-  "version": "0.5.29",
+  "version": "0.5.30",
   "description": "@moostjs/swagger",
   "sideEffects": false,
   "main": "dist/index.cjs",
