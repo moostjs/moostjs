@@ -1,3 +1,17 @@
+## [0.5.31](https://github.com/moostjs/moostjs/compare/v0.5.30...v0.5.31) (2025-06-26)
+
+
+### Bug Fixes
+
+* imports ([2ef88a2](https://github.com/moostjs/moostjs/commit/2ef88a22e5f34a225961d0f5ce1b06f1d9905d19))
+
+
+### Features
+
+* add instantiate cb into pipes meta ([567b82c](https://github.com/moostjs/moostjs/commit/567b82cb5eed2dc4744eb5c3a350d2fea84eb7d0))
+
+
+
 ## [0.5.30](https://github.com/moostjs/moostjs/compare/v0.5.29...v0.5.30) (2025-06-26)
 
 
