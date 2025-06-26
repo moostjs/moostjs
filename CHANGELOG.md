@@ -1,3 +1,18 @@
+## [0.5.30](https://github.com/moostjs/moostjs/compare/v0.5.29...v0.5.30) (2025-06-26)
+
+
+### Bug Fixes
+
+* deprecate zod, improve vite plugin ([32897b1](https://github.com/moostjs/moostjs/commit/32897b16d17976d2d1173ca5ef3b695542f1e003))
+* minor fixes ([d29072b](https://github.com/moostjs/moostjs/commit/d29072b118c52e9d69259565c1bba49c8192f165))
+
+
+### Features
+
+* **moost:** add ApplyDecorators decorator ([4053a4c](https://github.com/moostjs/moostjs/commit/4053a4c1f40dc62a324e921c04f50c757aa78440))
+
+
+
 ## [0.5.29](https://github.com/moostjs/moostjs/compare/v0.5.28...v0.5.29) (2025-04-29)
 
 
