@@ -1,3 +1,4 @@
+import { TClassConstructor } from 'packages/moost/dist'
 import type { TEmpty, TFunction, TObject } from '../common-types'
 import type { TDecoratorLevel } from '../decorators/types'
 import type { TMoostMetadata, TMoostParamsMetadata } from '../metadata'
@@ -13,6 +14,7 @@ export interface TPipeMetas<T extends TObject = TEmpty> {
   type: TFunction
   index?: number
   key: string | symbol
+  instantiate: <T extends TObject>(t: TClassConstructor<T>) => Promise<T>
 }
 
 export interface TPipeFn<T extends TObject = TEmpty> {

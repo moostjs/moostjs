@@ -9,6 +9,7 @@ import type { TPipeData } from '../pipes'
 import { runPipes } from '../pipes/run-pipes'
 import type { TMoostMetadata, TMoostParamsMetadata } from './moost-metadata'
 import { getMoostMate } from './moost-metadata'
+import { TClassConstructor } from '../common-types'
 
 const sharedMoostInfact = getNewMoostInfact()
 const INFACT_BANNER = `${__DYE_DIM__ + __DYE_MAGENTA__}infact`
@@ -66,7 +67,7 @@ export function getInfactScopeVars<T extends object>(name: string | symbol) {
  * Get Infact instance (used for Dependency Injections)
  */
 export function getNewMoostInfact() {
-  return new Infact<TMoostMetadata, TMoostMetadata, TMoostParamsMetadata, TCustom>({
+  const infactInstance = new Infact<TMoostMetadata, TMoostMetadata, TMoostParamsMetadata, TCustom>({
     describeClass(classConstructor) {
       const meta = getMoostMate().read(classConstructor)
       return {
@@ -79,7 +80,7 @@ export function getNewMoostInfact() {
       } as unknown as TInfactClassMeta<TMoostParamsMetadata> & TMoostMetadata
     },
 
-    resolveParam({ paramMeta, customData, classConstructor, index, scopeId }) {
+    resolveParam({ paramMeta, customData, classConstructor, index, scopeId, instantiate }) {
       if (paramMeta && customData?.pipes) {
         return runPipes(
           customData.pipes,
@@ -92,6 +93,7 @@ export function getNewMoostInfact() {
             classMeta: getMoostMate().read(classConstructor),
             index,
             targetMeta: paramMeta,
+            instantiate,
           },
           'PARAM'
         )
@@ -112,6 +114,7 @@ export function getNewMoostInfact() {
       classMeta,
       customData,
       classConstructor,
+      instantiate,
     }) {
       if (propMeta && customData?.pipes) {
         return runPipes(
@@ -125,6 +128,7 @@ export function getNewMoostInfact() {
             propMeta,
             targetMeta: propMeta,
             classMeta: classMeta as unknown as TMoostMetadata,
+            instantiate,
           },
           'PROP'
         )
@@ -160,6 +164,7 @@ export function getNewMoostInfact() {
           }
           break
         }
+        default:
       }
       let logger
       try {
@@ -218,4 +223,5 @@ export function getNewMoostInfact() {
       }
     },
   })
+  return infactInstance
 }

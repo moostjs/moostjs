@@ -1,5 +1,7 @@
 /* eslint-disable unicorn/consistent-destructuring */
+import { TClassConstructor } from 'packages/moost/dist'
 import type { TEmpty, TObject } from '../common-types'
+import { useControllerContext } from '../composables'
 import type { TMoostHandler, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { getMoostMate } from '../metadata'
 import type { TPipeData } from '../pipes'
@@ -84,6 +86,8 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             key: method,
             index: i,
             targetMeta: paramMeta,
+            instantiate: <T extends TObject>(t: TClassConstructor<T>) =>
+              useControllerContext().instantiate(t),
           },
           'PARAM'
         )
