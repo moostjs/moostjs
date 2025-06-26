@@ -1,6 +1,5 @@
 /* eslint-disable unicorn/consistent-destructuring */
-import { TClassConstructor } from 'packages/moost/dist'
-import type { TEmpty, TObject } from '../common-types'
+import type { TEmpty, TObject, TClassConstructor } from '../common-types'
 import { useControllerContext } from '../composables'
 import type { TMoostHandler, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { getMoostMate } from '../metadata'

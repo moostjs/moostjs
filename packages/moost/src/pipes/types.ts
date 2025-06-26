@@ -1,5 +1,4 @@
-import { TClassConstructor } from 'packages/moost/dist'
-import type { TEmpty, TFunction, TObject } from '../common-types'
+import type { TEmpty, TFunction, TObject, TClassConstructor } from '../common-types'
 import type { TDecoratorLevel } from '../decorators/types'
 import type { TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 
