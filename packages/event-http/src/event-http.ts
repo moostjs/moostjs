@@ -3,7 +3,13 @@
 import { createProvideRegistry } from '@prostojs/infact'
 import type { TProstoRouterPathBuilder } from '@prostojs/router'
 import type { TWooksHttpOptions } from '@wooksjs/event-http'
-import { createHttpApp, HttpError, useRequest, WooksHttp } from '@wooksjs/event-http'
+import {
+  createHttpApp,
+  HttpError,
+  useRequest,
+  WooksHttp,
+  HttpErrorRenderer,
+} from '@wooksjs/event-http'
 import { Server as HttpServer } from 'http'
 import { Server as HttpsServer } from 'https'
 import type {
@@ -55,6 +61,12 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
   protected httpApp: WooksHttp
 
   constructor(httpApp?: WooksHttp | TWooksHttpOptions) {
+    HttpErrorRenderer.registerFramework({
+      image: 'https://moost.org/moost-full-logo.png',
+      link: 'https://moost.org/',
+      poweredBy: 'moostjs',
+      version: __VERSION__,
+    })
     if (httpApp && httpApp instanceof WooksHttp) {
       this.httpApp = httpApp
     } else if (httpApp) {

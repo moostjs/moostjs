@@ -42,14 +42,14 @@
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-http#readme",
   "peerDependencies": {
-    "@wooksjs/event-core": "^0.6.1",
+    "@wooksjs/event-core": "^0.6.2",
     "@prostojs/infact": "^0.3.3",
     "@prostojs/router": "^0.2.1",
     "moost": "workspace:^"
   },
   "dependencies": {
-    "@wooksjs/event-http": "^0.6.1",
-    "@wooksjs/http-body": "^0.6.1"
+    "@wooksjs/event-http": "^0.6.2",
+    "@wooksjs/http-body": "^0.6.2"
   },
   "devDependencies": {
     "vitest": "3.2.4"

@@ -42,9 +42,9 @@
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/swagger#readme",
   "peerDependencies": {
     "@moostjs/event-http": "workspace:^",
-    "@wooksjs/event-http": "^0.6.1",
+    "@wooksjs/event-http": "^0.6.2",
     "@moostjs/zod": "0.5.29",
-    "@wooksjs/http-static": "^0.6.1",
+    "@wooksjs/http-static": "^0.6.2",
     "moost": "workspace:^"
   },
   "dependencies": {

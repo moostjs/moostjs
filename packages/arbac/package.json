@@ -41,7 +41,7 @@
   },
   "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/arbac#readme",
   "peerDependencies": {
-    "@wooksjs/event-http": "^0.6.1",
+    "@wooksjs/event-http": "^0.6.2",
     "moost": "workspace:^"
   },
   "dependencies": {
