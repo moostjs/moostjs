@@ -1,3 +1,12 @@
+## [0.5.33](https://github.com/moostjs/moostjs/compare/v0.5.32...v0.5.33) (2025-09-18)
+
+
+### Features
+
+* **swagger:** update swagger module to work with atscript; update docs ([67855f9](https://github.com/moostjs/moostjs/commit/67855f91387ac3e9a44fec429652989da7792e0e))
+
+
+
 ## [0.5.32](https://github.com/moostjs/moostjs/compare/v0.5.31...v0.5.32) (2025-07-03)
 
 
