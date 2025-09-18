@@ -38,7 +38,7 @@ describe('mapping', () => {
   it('must parse complex query type', () => {
     const toTest = spec.paths['/prefix/test-query'].get
     expect(toTest.operationId).toEqual('GET__prefix_test_query')
-    expect(toTest.parameters).toHaveLength(2)
+    expect(toTest.parameters).toHaveLength(3)
     expect(toTest.parameters[0]).toEqual({
       description: undefined,
       in: 'query',
@@ -60,6 +60,21 @@ describe('mapping', () => {
         type: 'number',
         maximum: 55,
         minimum: 4,
+      },
+    })
+    expect(toTest.parameters[2]).toEqual({
+      description: undefined,
+      in: 'query',
+      name: 'array',
+      required: true,
+      schema: {
+        type: 'array',
+        minItems: 1,
+        maxItems: 2,
+        items: {
+          nullable: true,
+          type: 'string',
+        },
       },
     })
   })
@@ -98,9 +113,12 @@ describe('mapping', () => {
       name: 'name',
       required: true,
       schema: {
-        minLength: 10,
-        type: 'string',
+        $ref: '#/components/schemas/SwaggerNameParam',
       },
+    })
+    expect(spec.components.schemas.SwaggerNameParam).toEqual({
+      minLength: 10,
+      type: 'string',
     })
   })
   it('must parse reponse type', () => {

@@ -1,4 +1,3 @@
-import type { z } from '@moostjs/zod'
 import { getMoostMate, type TMoostMetadata, type Mate, type TMateParamMeta } from 'moost'
 
 import type { TFunction } from './common-types'
@@ -36,7 +35,7 @@ export interface TSwaggerMate {
   }>
 }
 
-export type TSwaggerConfigType = TFunction | z.ZodType | TSwaggerSchema
+export type TSwaggerConfigType = TFunction | { toJsonSchema?: () => unknown } | TSwaggerSchema
 
 interface TSwaggerResponseConfig {
   contentType?: string

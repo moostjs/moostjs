@@ -65,7 +65,7 @@ Controllers group and route events logically:
 Moost’s pipeline system processes data before it reaches your handlers:
 
 - **Resolve Pipeline:** Automatically extract route params, parse input, and inject dependencies as handler arguments.
-- **Validation Pipeline:** Validate data (e.g., using Zod) to ensure your handlers receive clean, type-safe input.
+- **Validation Pipeline:** Validate data (for example, with Atscript-powered schemas) to ensure your handlers receive clean, type-safe input.
 - **Custom Resolvers:** Encapsulate logic that transforms or fetches data, simplifying repetitive tasks.
 
 **Learn more:**  

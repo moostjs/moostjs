@@ -279,9 +279,6 @@ importers:
       '@moostjs/event-http':
         specifier: workspace:^
         version: link:../event-http
-      '@moostjs/zod':
-        specifier: 0.5.29
-        version: 0.5.29(moost@packages+moost)
       '@wooksjs/event-http':
         specifier: ^0.6.2
         version: 0.6.2(@prostojs/logger@0.4.3)(@prostojs/router@0.2.1)(@wooksjs/event-core@0.6.2)(wooks@0.6.2)
@@ -294,9 +291,6 @@ importers:
       swagger-ui-dist:
         specifier: ^5.10.5
         version: 5.18.3
-      zod-parser:
-        specifier: ^0.0.3
-        version: 0.0.3
     devDependencies:
       '@types/swagger-ui-dist':
         specifier: 3.30.5
@@ -1323,12 +1317,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
-
-  '@moostjs/zod@0.5.29':
-    resolution: {integrity: sha512-D46RGWicT+S3BY5qaUH8HG3dG9lCH1RJNgDhI6dknk+/tgTZIpbI1kwDIdcipI/ni/KxdQB3M6a7B82FtffFWg==}
-    deprecated: This package is deprecated. Zod no longer supported. Use @atscript/moost-validator
-    peerDependencies:
-      moost: ^0.5.29
 
   '@napi-rs/wasm-runtime@0.2.11':
     resolution: {integrity: sha512-9DPkXtvHydrcOsopiYpUgPHpmj0HWZKMUnL2dZqpvC42lsratuBG06V5ipyno0fUek5VlFsNQ+AcFATSrJXgMA==}
@@ -4480,12 +4468,6 @@ packages:
     resolution: {integrity: sha512-cYVsTjKl8b+FrnidjibDWskAv7UKOfcwaVZdp/it9n1s9fU3IkgDbhdIRKCW4JDsAlECJY0ytoVPT3sK6kideA==}
     engines: {node: '>=18'}
 
-  zod-parser@0.0.3:
-    resolution: {integrity: sha512-VUegfT8hkgSYEVBVP1OV+h3kRV0DgW+gyXOMyBSks1uUn9RUsb8TPhaxf7Ta+dfFzjlRZ6HLldVwZ6MPgrj/Zw==}
-
-  zod@3.24.1:
-    resolution: {integrity: sha512-muH7gBL9sI1nciMZV67X5fTKKBLtwpZ5VBp1vsOQzj1MhrBZ4wlVCm3gedKZWLp0Oyel8sIGfeiz54Su+OVT+A==}
-
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
@@ -5489,11 +5471,6 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
     optional: true
-
-  '@moostjs/zod@0.5.29(moost@packages+moost)':
-    dependencies:
-      moost: link:packages/moost
-      zod: 3.24.1
 
   '@napi-rs/wasm-runtime@0.2.11':
     dependencies:
@@ -9249,12 +9226,6 @@ snapshots:
   yocto-queue@1.0.0: {}
 
   yoctocolors-cjs@2.1.2: {}
-
-  zod-parser@0.0.3:
-    dependencies:
-      zod: 3.24.1
-
-  zod@3.24.1: {}
 
   zwitch@2.0.4: {}
 

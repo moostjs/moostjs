@@ -30,7 +30,7 @@ In Moost, metadata serves as a mechanism to enrich your code elements with suppl
   Manage dependencies seamlessly with decorators like `@Injectable` and `@Inject`, enabling easy injection of services and repositories.
 
 - **Validation:**  
-  Attach validation schemas to Data Transfer Objects (DTOs) using decorators from packages like `@moostjs/zod`, ensuring data integrity before it reaches your handlers.
+  Attach validation schemas to Data Transfer Objects (DTOs) using decorators such as `@UseValidatorPipe` from `@atscript/moost-validator`, ensuring data integrity before it reaches your handlers.
 
 - **Interceptors:**  
   Apply cross-cutting concerns such as logging, authentication, or transformation logic around your handlers using decorators like `@Interceptor`.

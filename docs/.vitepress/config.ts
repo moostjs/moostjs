@@ -52,7 +52,7 @@ export default defineConfig({
     },
 
     themeConfig: {
-        logo: '/moost-full-logo.png', //'/logo.svg',
+        logo: '/moost-logo-3d.webp', //'/logo.svg',
 
         search: {
             provider: 'local'
@@ -92,7 +92,11 @@ export default defineConfig({
                     link: '/wf/',
                 },
                 {
-                    text: '@moostjs/zod',
+                    text: '@moostjs/swagger',
+                    link: '/swagger/',
+                },
+                {
+                    text: '@atscript/moost-validator',
                     link: '/validation/',
                 },
             ] },
@@ -177,6 +181,16 @@ export default defineConfig({
                 {
                     text: 'Validation API Ref',
                     link: '/validation/api'
+                },
+            ],
+            '/swagger/': [
+                {
+                    text: '@moostjs/swagger',
+                    items: [
+                        { text: 'Overview', link: '/swagger/' },
+                        { text: 'Decorators', link: '/swagger/decorators' },
+                        { text: 'Serving Swagger UI', link: '/swagger/serving-ui' },
+                    ],
                 },
             ],
             '/moost/': [
@@ -324,6 +338,10 @@ export default defineConfig({
                         {
                             text: 'Request',
                             link: '/webapp/request',
+                        },
+                        {
+                            text: 'Swagger Integration',
+                            link: '/webapp/swagger',
                         },
                         {
                             text: 'Response',

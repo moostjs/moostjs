@@ -10,7 +10,7 @@ Typical operations include:
 
 - **Resolving Data:** Extracting route parameters, parsing request bodies, or injecting dependencies.
 - **Transforming Data:** Converting data formats (e.g., strings to numbers), trimming strings, or normalizing data structures.
-- **Validating Data:** Ensuring the data meets certain criteria (e.g., validating input against a Zod schema).
+- **Validating Data:** Ensuring the data meets certain criteria (for example, validating input with Atscript-based schemas).
 
 Each pipe is assigned a priority (e.g., `RESOLVE`, `TRANSFORM`, `VALIDATE`), allowing Moost to run them in a logical order. Pipes also run in other contexts — such as during class instantiation for dependency injection, ensuring consistent data shaping throughout your application.
 
@@ -33,29 +33,29 @@ Moost includes a default **resolve pipe** that’s always enabled. This pipe han
 
 ## Enabling Other Pipes
 
-You can integrate additional pipes, such as validation provided by `@moostjs/zod`. The Zod integration allows you to attach schemas to parameters and properties, ensuring that your handler only receives valid data.
+You can integrate additional pipes, such as validation provided by `@atscript/moost-validator`. The Atscript integration reuses the `validator()` factory emitted by Atscript models so your handlers receive fully validated DTOs without manual checks.
 
 - **`applyGlobalPipes` Method:** Add pipes globally to all parameters or properties. For example, registering a validation pipe at the global level ensures every parameter is validated by default.
 - **`@Pipe` Decorator:** Attach a pipe at the class, method, or parameter level. This approach lets you apply transformations or validations selectively, enabling fine-grained control over your data processing pipeline.
 
 **Example of `applyGlobalPipes`**
 ```ts
-import { Moost } from 'moost';
-import { ZodPipeline } from '@moostjs/zod';
+import { Moost } from 'moost'
+import { validatorPipe } from '@atscript/moost-validator'
 
-const app = new Moost();
+const app = new Moost()
 // ...
-app.applyGlobalPipes(ZodPipeline());
+app.applyGlobalPipes(validatorPipe())
 ```
 
 **Simplified Example `@Pipe`:**
 ```ts
-import { ZodPipeline } from '@moostjs/zod';
+import { UseValidatorPipe } from '@atscript/moost-validator'
 
-@Pipe(ZodPipeline()) // Apply the pipe at the class level
+@UseValidatorPipe() // Apply the pipe at the class level
 class MyController {
   myMethod(@Param('data') data: DTOClass) {
-    // `data` will be validated by zod Validation Pipe before myMethod is called
+    // `data` will be validated by the Atscript pipe before myMethod is called
   }
 }
 ```
@@ -70,4 +70,3 @@ For example, you might create a custom pipe to:
 - Perform custom authorization checks before the handler executes.
 
 We’ll cover writing custom pipes in more detail in a dedicated guide.
-

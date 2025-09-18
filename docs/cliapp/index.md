@@ -1,9 +1,5 @@
 # Quick Start of CLI Application
 
-::: warning
-Work on Moost is still in progress. While it is suitable for out-of-the-box use, some APIs may undergo changes.
-:::
-
 This guide will walk you through the process of setting up a command-line interface (CLI) application using Moost CLI.
 
 ## Prerequisites

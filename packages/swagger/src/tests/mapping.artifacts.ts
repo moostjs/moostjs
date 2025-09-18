@@ -1,14 +1,4 @@
 import { Body, Get, Post, Query } from '@moostjs/event-http'
-import {
-  IsArray,
-  IsNullable,
-  IsNumber,
-  IsString,
-  MatchesRegex,
-  Max,
-  Min,
-  ToNumber,
-} from '@moostjs/zod'
 import { Controller, Label, Optional, Param } from 'moost'
 
 import { SwaggerExample, SwaggerParam, SwaggerRequestBody, SwaggerResponse } from '../decorators'
@@ -20,22 +10,65 @@ import { SwaggerExample, SwaggerParam, SwaggerRequestBody, SwaggerResponse } fro
   array: ['example'],
 })
 export class SwaggerTypeTest {
-  @Min(10)
-  @Max(20)
-  @MatchesRegex(/test/)
   name = 'name'
-
-  @Optional()
-  @Min(4)
-  @Max(55)
   age = 26
+  array: Array<string | null> = []
 
-  @IsNullable()
-  @IsString()
-  @IsArray()
-  @Min(1)
-  @Max(2)
-  array: string[] = []
+  static toJsonSchema() {
+    return {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          minLength: 10,
+          maxLength: 20,
+          pattern: 'test',
+        },
+        age: {
+          type: 'number',
+          minimum: 4,
+          maximum: 55,
+        },
+        array: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 2,
+          items: {
+            type: 'string',
+            nullable: true,
+          },
+        },
+      },
+      required: ['name', 'array'],
+    }
+  }
+}
+
+class SwaggerQuerySingle {
+  static toJsonSchema() {
+    return {
+      type: 'object',
+      properties: {
+        foo: {
+          type: 'string',
+        },
+        bar: {
+          type: 'number',
+          maximum: 100,
+        },
+      },
+      required: [],
+    }
+  }
+}
+
+class SwaggerNameParam {
+  static toJsonSchema() {
+    return {
+      type: 'string',
+      minLength: 10,
+    }
+  }
 }
 
 @Controller('prefix')
@@ -46,12 +79,8 @@ export class SwaggerControllerTest {
   }
 
   @Get('test-query-single')
-  testQuerySingle(
-    // prettier-ignore
-    @(IsString().optional()) @Query('foo') foo: string,
-    @IsNumber() @Max(100) @ToNumber() @Optional() @Query('bar') bar: number
-  ) {
-    return { foo, bar }
+  testQuerySingle(@Query() query: SwaggerQuerySingle) {
+    return query
   }
 
   @Get('test-response/:name')
@@ -69,9 +98,9 @@ export class SwaggerControllerTest {
     },
   })
   @SwaggerResponse(404, String, 'not found')
-  testResponse(@Min(10) @Param('name') name: string) {
+  testResponse(@Param('name') name: SwaggerNameParam) {
     const r = new SwaggerTypeTest()
-    r.name = name
+    r.name = String(name)
     return r
   }
 

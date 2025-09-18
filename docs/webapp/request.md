@@ -190,6 +190,33 @@ export class ExampleController {
 
 The `method` argument will contain the requested HTTP method, such as `GET` or `POST`, in this example.
 
+## Request Security
+
+Moost HTTP includes decorators that enforce request-size limits and body read timeouts. Import them straight from `@moostjs/event-http` and apply per handler or globally via `app.applyGlobalInterceptors(...)`.
+
+```ts
+import {
+  BodySizeLimit,
+  CompressedBodySizeLimit,
+  BodyReadTimeoutMs,
+} from '@moostjs/event-http'
+
+@Controller('upload')
+export class UploadController {
+  @Post()
+  @BodySizeLimit(5 * 1024 * 1024)          // 5 MB inflated body
+  @CompressedBodySizeLimit(1 * 1024 * 1024) // 1 MB compressed body
+  @BodyReadTimeoutMs(5_000)                 // 5 seconds to read the body
+  async receive(@Body() payload: UploadDto) {}
+}
+```
+
+- `BodySizeLimit(n)` limits the inflated (decompressed) body size in bytes.
+- `CompressedBodySizeLimit(n)` limits the compressed payload size.
+- `BodyReadTimeoutMs(ms)` aborts the request if body streaming exceeds the provided timeout.
+
+For organisation-wide policies, use the `globalBodySizeLimit`, `globalCompressedBodySizeLimit`, and `globalBodyReadTimeoutMs` helpers (also exported from `@moostjs/event-http`) with `app.applyGlobalInterceptors(...)`.
+
 ## Request
 
 The `@Req` decorator allows you to retrieve the raw request instance (IncomingMessage) from the incoming request.

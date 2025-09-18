@@ -1,9 +1,5 @@
 # Quick Start Guide
 
-::: warning
-We're still working on Moost. It's ready to use, but some parts might change a bit.
-:::
-
 This guide will show you how to make a web application using Moost HTTP.
 
 ## Prerequisites

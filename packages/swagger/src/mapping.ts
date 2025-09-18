@@ -1,12 +1,8 @@
 /* eslint-disable id-length */
 /* eslint-disable max-depth */
-import type { TMoostZodType, TZodMetadata } from '@moostjs/zod'
-import { getZodType, getZodTypeForProp, z } from '@moostjs/zod'
 import type { TControllerOverview } from 'moost'
-import type { TZodParsed } from 'zod-parser'
-import { parseZodType } from 'zod-parser'
 
-import type { TAny, TLogger } from './common-types'
+import type { TLogger } from './common-types'
 import type { TSwaggerConfigType, TSwaggerMate } from './swagger.mate'
 import { getSwaggerMate } from './swagger.mate'
 
@@ -73,13 +69,40 @@ export interface TSwaggerSchema {
   anyOf?: TSwaggerSchema[]
   oneOf?: TSwaggerSchema[]
   not?: TSwaggerSchema
+  const?: unknown
 }
+
+type SchemaEnsureResult = {
+  schema: TSwaggerSchema
+  ref?: string
+  componentName?: string
+  isComponent: boolean
+}
+
+type SchemaResolution =
+  | {
+      kind: 'component'
+      schema: TSwaggerSchema
+      typeRef: object
+      suggestedName?: string
+    }
+  | {
+      kind: 'inline'
+      schema: TSwaggerSchema
+    }
+
+const globalSchemas: Record<string, TSwaggerSchema> = {}
+let schemaRefs = new WeakMap<object, string>()
+const nameToType = new Map<string, object>()
 
 export function mapToSwaggerSpec(
   metadata: TControllerOverview[],
   options?: TSwaggerOptions,
   logger?: TLogger
 ) {
+  resetSchemaRegistry()
+  void logger
+
   const swaggerSpec = {
     openapi: '3.0.0',
     info: {
@@ -126,65 +149,42 @@ export function mapToSwaggerSpec(
           const newCode = code === '0' ? getDefaultStatusCode(handlerMethod) : code
           for (const [contentType, conf] of Object.entries(responseConfigs)) {
             const { response, example } = conf
-            const schema = getSwaggerSchemaFromSwaggerConfigType(response)
+            const schema = resolveSwaggerSchemaFromConfig(response)
             if (schema) {
               responses = responses || {}
+              const schemaWithExample = example !== undefined ? { ...schema, example } : schema
               responses[newCode] = {
                 content: {
-                  [contentType]: { schema: { ...schema, example: example || schema.example } },
+                  [contentType]: { schema: schemaWithExample },
                 },
               }
             }
           }
         }
       } else if (hmeta?.returnType) {
-        const parsed = myParseZod(
-          getZodType({
-            type: hmeta.returnType,
-          })
-        )
-        if (
-          ['ZodString', 'ZodNumber', 'ZodObject', 'ZodArray', 'ZodBoolean'].includes(parsed.$type)
-        ) {
-          const schema = getSwaggerSchema(parsed)
-          if (schema) {
-            responses = responses || {}
-            responses[getDefaultStatusCode(handlerMethod)] = {
-              content: {
-                '*/*': {
-                  schema,
-                },
+        const ensured = ensureSchema(hmeta.returnType)
+        const schema = toSchemaOrRef(ensured)
+        if (schema) {
+          responses = responses || {}
+          responses[getDefaultStatusCode(handlerMethod)] = {
+            content: {
+              '*/*': {
+                schema,
               },
-            }
+            },
           }
         }
       }
 
       let reqBodyRequired = true
-      const bodyConfig: Record<string, { schema: TSwaggerSchema | undefined }> = {}
+      const bodyContent: Record<string, { schema: TSwaggerSchema }> = {}
 
       if (hmeta?.swaggerRequestBody) {
         for (const [contentType, type] of Object.entries(hmeta.swaggerRequestBody)) {
-          let zt: z.ZodType | undefined
-          let schema: TSwaggerSchema | undefined
-          if (type instanceof z.ZodType) {
-            zt = type
-          } else if (typeof type === 'function') {
-            zt = getZodType({
-              type,
-            })
+          const schema = resolveSwaggerSchemaFromConfig(type)
+          if (schema) {
+            bodyContent[contentType] = { schema }
           }
-          if (zt) {
-            const parsed = myParseZod(zt)
-            if (
-              ['ZodString', 'ZodNumber', 'ZodObject', 'ZodArray', 'ZodBoolean'].includes(
-                parsed.$type
-              )
-            ) {
-              schema = getSwaggerSchema(parsed)
-            }
-          }
-          bodyConfig[contentType] = { schema }
         }
       }
 
@@ -201,15 +201,11 @@ export function mapToSwaggerSpec(
 
       const endpointSpec = swaggerSpec.paths[handlerPath][handlerMethod]
 
-      // eslint-disable-next-line no-inner-declarations
       function addParam(param: TEndpointSpec['parameters'][number]) {
         const key = `${param.in}//${param.name}`
         if (uniqueParams[key]) {
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           uniqueParams[key]!.description = param.description ?? uniqueParams[key]!.description
-          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           uniqueParams[key]!.required = param.required
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/no-non-null-assertion
           uniqueParams[key]!.schema = param.schema ?? uniqueParams[key]!.schema
         } else {
           uniqueParams[key] = param
@@ -223,7 +219,7 @@ export function mapToSwaggerSpec(
           in: param.in,
           description: param.description,
           required: !!param.required,
-          schema: getSwaggerSchemaFromSwaggerConfigType(param.type) || { type: 'string' },
+          schema: resolveSwaggerSchemaFromConfig(param.type) || { type: 'string' },
         })
       }
 
@@ -233,7 +229,7 @@ export function mapToSwaggerSpec(
           in: param.in,
           description: param.description,
           required: !!param.required,
-          schema: getSwaggerSchemaFromSwaggerConfigType(param.type) || { type: 'string' },
+          schema: resolveSwaggerSchemaFromConfig(param.type) || { type: 'string' },
         })
       }
 
@@ -242,118 +238,85 @@ export function mapToSwaggerSpec(
           param => param.paramSource === 'ROUTE' && param.paramName === paramName
         )
         const paramMeta = handler.meta.params[paramIndex]
-        let schema
-        let parsed
-        if (paramMeta) {
-          const zodType = getZodTypeForProp(
-            {
-              type: controller.type,
-              key: handler.method,
-              index: paramIndex,
-            },
-            {
-              type: paramMeta.type,
-              additionalMeta: paramMeta as TZodMetadata,
-            },
-            undefined,
-            logger
-          )
-          parsed = myParseZod(zodType)
-          schema = getSwaggerSchema(parsed, true)
-        }
+        const ensured = ensureSchema(paramMeta?.type)
+        const schema = toSchemaOrRef(ensured) || { type: 'string' }
 
         addParam({
           name: paramName,
           in: 'path',
           description: paramMeta ? paramMeta.description : undefined,
-          required: !paramMeta.optional && !parsed?.$optional,
-          schema: schema || { type: 'string' },
+          required: !paramMeta?.optional,
+          schema,
         })
       }
 
       for (let i = 0; i < handler.meta.params.length; i++) {
         const paramMeta = handler.meta.params[i]
         if (paramMeta.paramSource && ['QUERY_ITEM', 'QUERY'].includes(paramMeta.paramSource)) {
-          const zodType = getZodTypeForProp(
-            {
-              type: controller.type,
-              key: handler.method,
-              index: i,
-            },
-            {
-              type: paramMeta.type,
-              additionalMeta: paramMeta as TZodMetadata,
-            },
-            undefined,
-            logger
-          )
-          const parsed = myParseZod(zodType)
-          const schema = getSwaggerSchema(parsed, true)
+          const ensured = ensureSchema(paramMeta.type)
           if (paramMeta.paramSource === 'QUERY_ITEM') {
+            const schema = toSchemaOrRef(ensured)
+            const normalized = schema ? normalizeQueryParamSchema(schema) : undefined
             endpointSpec.parameters.push({
               name: paramMeta.paramName || '',
               in: 'query',
               description: paramMeta.description,
-              required: !paramMeta.optional && !parsed.$optional,
-              schema: schema || { type: 'string' },
+              required: !paramMeta.optional,
+              schema: normalized || { type: 'string' },
             })
-          } else if (paramMeta.paramSource === 'QUERY' && parsed.$type === 'ZodObject') {
-            for (const [key, value] of Object.entries(parsed.$inner)) {
-              const schema = getSwaggerSchema(value, true)
-              if (schema) {
-                const swaggerSchema = {
-                  name: key,
-                  in: 'query',
-                  description: (value as unknown as { description: string }).description,
-                  required: !parsed.$optional && !value.$optional,
-                  schema,
+          } else if (paramMeta.paramSource === 'QUERY') {
+            const schema = ensured?.schema
+            if (schema?.type === 'object' && schema.properties) {
+              const requiredProps = new Set(schema.required || [])
+              for (const [key, value] of Object.entries(schema.properties)) {
+                const propertySchema = cloneSchema(value)
+                const normalizedProperty = normalizeQueryParamSchema(propertySchema)
+                if (normalizedProperty) {
+                  endpointSpec.parameters.push({
+                    name: key,
+                    in: 'query',
+                    description: (normalizedProperty as { description?: string }).description,
+                    required: !paramMeta.optional && requiredProps.has(key),
+                    schema: normalizedProperty,
+                  })
                 }
-                endpointSpec.parameters.push(swaggerSchema)
               }
+            } else if (ensured) {
+              const schema = toSchemaOrRef(ensured)
+              const normalized = schema ? normalizeQueryParamSchema(schema) : undefined
+              endpointSpec.parameters.push({
+                name: paramMeta.paramName || '',
+                in: 'query',
+                description: paramMeta.description,
+                required: !paramMeta.optional,
+                schema: normalized || { type: 'string' },
+              })
             }
           }
         }
         if (paramMeta.paramSource === 'BODY') {
-          const zodType = getZodTypeForProp(
-            {
-              type: controller.type,
-              key: handler.method,
-              index: i,
-            },
-            {
-              type: paramMeta.type,
-              additionalMeta: paramMeta as TZodMetadata,
-            },
-            undefined,
-            logger
-          )
-          const parsed = myParseZod(zodType)
-          let contentType = ''
-          switch (parsed.$type) {
-            case 'ZodString':
-            case 'ZodNumber':
-            case 'ZodBigInt':
-            case 'ZodBoolean':
-            case 'ZodDate':
-            case 'ZodEnum':
-            case 'ZodNativeEnum':
-            case 'ZodLiteral': {
-              contentType = 'text/plan'
-              break
+          const ensured = ensureSchema(paramMeta.type)
+          const schema = toSchemaOrRef(ensured)
+          if (schema) {
+            const contentType = inferBodyContentType(schema, ensured?.schema)
+            if (!bodyContent[contentType]) {
+              bodyContent[contentType] = { schema }
             }
-            default: {
-              contentType = 'application/json'
-            }
+            reqBodyRequired = !paramMeta.optional
           }
-          if (!bodyConfig[contentType]) {
-            bodyConfig[contentType] = { schema: getSwaggerSchema(parsed) }
-          }
-          reqBodyRequired = !zodType.isOptional() && !paramMeta.optional
         }
       }
-      if (bodyConfig && Object.entries(bodyConfig).some(e => !!e[1])) {
-        swaggerSpec.paths[handlerPath][handlerMethod].requestBody = {
-          content: bodyConfig as Record<string, { schema: TSwaggerSchema }>,
+
+      const bodyEntries = Object.entries(bodyContent).filter(
+        entry => entry[1] && entry[1].schema !== undefined
+      )
+      if (bodyEntries.length) {
+        const content: Record<string, { schema: TSwaggerSchema }> = {}
+        for (const [contentType, { schema }] of bodyEntries) {
+          content[contentType] = { schema }
+        }
+        endpointSpec.requestBody = {
+          content,
           required: reqBodyRequired,
         }
       }
@@ -363,254 +326,388 @@ export function mapToSwaggerSpec(
   return swaggerSpec
 }
 
-const globalSchemas: Record<string, TSwaggerSchema> = {}
-
-function getSwaggerSchema(parsed: TZodParsed, forParam?: boolean): TSwaggerSchema | undefined {
-  const zodType = parsed.$ref as TMoostZodType
-  const meta = zodType.__type_ref ? getSwaggerMate().read(zodType.__type_ref) : undefined
-  if (!forParam && zodType.__type_ref && globalSchemas[zodType.__type_ref.name]) {
-    return { $ref: `#/components/schemas/${zodType.__type_ref.name}` }
+function resolveSwaggerSchemaFromConfig(type?: TSwaggerConfigType) {
+  if (type === undefined) {
+    return undefined
   }
-  if (forParam && zodType.__type_ref && globalSchemas[zodType.__type_ref.name]) {
-    return globalSchemas[zodType.__type_ref.name]
-  }
-
-  const schema: TSwaggerSchema = {}
-
-  if (meta) {
-    if (meta.swaggerExample) {
-      schema.example = meta.swaggerExample
-    }
-    if (meta.label || meta.id) {
-      schema.title = meta.label || meta.id
-    }
-    if (meta.description) {
-      schema.description = meta.description
-    }
-  }
-
-  if (!forParam && zodType.__type_ref) {
-    globalSchemas[zodType.__type_ref.name] = schema
-  }
-  function asString() {
-    schema.type = 'string'
-    if (parsed.$checks) {
-      const { regex } = parsed.$checks as { regex?: RegExp }
-      if (regex) {
-        schema.pattern = regex.source
-      }
-    }
-  }
-
-  function asLiteral() {
-    if (parsed.$type === 'ZodLiteral') {
-      schema.type = 'string'
-      schema.enum = [parsed.$value]
-    }
-  }
-  function asEnum() {
-    if (parsed.$type === 'ZodEnum') {
-      schema.type = 'string'
-      schema.enum = parsed.$value
-    }
-  }
-  function asNativeEnum() {
-    if (parsed.$type === 'ZodNativeEnum') {
-      schema.type = 'string'
-      schema.enum = Object.keys(parsed.$value)
-    }
-  }
-  if (forParam) {
-    switch (parsed.$type) {
-      case 'ZodAny':
-      case 'ZodUnknown':
-      case 'ZodString': {
-        asString()
-        break
-      }
-      case 'ZodNumber': {
-        schema.type = 'number'
-        break
-      }
-      case 'ZodBigInt': {
-        schema.type = 'integer'
-        break
-      }
-      case 'ZodBoolean': {
-        schema.type = 'boolean'
-        break
-      }
-      case 'ZodLiteral': {
-        asLiteral()
-        break
-      }
-      case 'ZodEnum': {
-        asEnum()
-        break
-      }
-      case 'ZodNativeEnum': {
-        asNativeEnum()
-        break
-      }
-      case 'ZodDate': {
-        schema.type = 'string'
-        break
-      }
-      case 'ZodNull': {
-        schema.type = 'null'
-        break
-      }
-      default: {
-        return undefined
-      }
-    }
-  } else {
-    // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check
-    switch (parsed.$type) {
-      case 'ZodString': {
-        asString()
-        break
-      }
-      case 'ZodNumber': {
-        schema.type = 'number'
-        break
-      }
-      case 'ZodBigInt': {
-        schema.type = 'integer'
-        break
-      }
-      case 'ZodBoolean': {
-        schema.type = 'boolean'
-        break
-      }
-      case 'ZodLiteral': {
-        asLiteral()
-        break
-      }
-      case 'ZodEnum': {
-        asEnum()
-        break
-      }
-      case 'ZodNativeEnum': {
-        asNativeEnum()
-        break
-      }
-      case 'ZodDate': {
-        schema.type = 'string'
-        break
-      }
-      case 'ZodNull': {
-        schema.type = 'null'
-        break
-      }
-      case 'ZodFunction':
-      case 'ZodSymbol':
-      case 'ZodUndefined':
-      case 'ZodUnknown':
-      case 'ZodNever':
-      case 'ZodVoid':
-      case 'ZodNaN': {
-        return undefined
-      }
-      // case 'ZodAny':
-      case 'ZodArray': {
-        schema.type = 'array'
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        schema.minItems = (parsed.$checks?.minLength as number) || undefined
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        schema.maxItems = (parsed.$checks?.maxLength as number) || undefined
-        schema.items = getSwaggerSchema(parsed.$inner)
-        break
-      }
-      case 'ZodTuple': {
-        schema.type = 'array'
-        schema.items = parsed.$inner
-          .map(t => getSwaggerSchema(t))
-          .filter(t => !!t) as TSwaggerSchema[]
-        break
-      }
-      case 'ZodObject': {
-        schema.type = 'object'
-        schema.properties = {}
-        schema.required = []
-        if ((zodType as z.ZodObject<TAny>)._def.unknownKeys === 'passthrough') {
-          schema.additionalProperties = {}
-        }
-        for (const [key, val] of Object.entries(parsed.$inner)) {
-          const prop = getSwaggerSchema(val)
-          if (prop) {
-            schema.properties[key] = prop
-            if (!val.$optional) {
-              schema.required.push(key)
-            }
-          }
-        }
-        break
-      }
-      case 'ZodPromise':
-      case 'ZodRecord':
-      case 'ZodMap':
-      case 'ZodSet': {
-        schema.type = 'object'
-        schema.properties = {}
-        schema.additionalProperties = parsed.$type === 'ZodRecord' ? {} : undefined
-        break
-      }
-      case 'ZodUnion':
-      case 'ZodDiscriminatedUnion': {
-        schema.oneOf = parsed.$inner
-          .map(t => getSwaggerSchema(t))
-          .filter(t => !!t) as TSwaggerSchema[]
-        break
-      }
-      case 'ZodIntersection': {
-        schema.allOf = parsed.$inner
-          .map(t => getSwaggerSchema(t))
-          .filter(t => !!t) as TSwaggerSchema[]
-        break
-      }
-      case 'ZodLazy': {
-        return getSwaggerSchema(parsed.$get())
-      }
-      default: {
-        return undefined
-      }
-    }
-  }
-
-  if (parsed.$nullable) {
-    schema.nullable = parsed.$nullable
-  }
-  if ((parsed.$ref as z.ZodString)._def.description!) {
-    schema.description = (parsed.$ref as z.ZodString)._def.description!
-  }
-  if (parsed.$checks) {
-    const checks = parsed.$checks as { min?: number; max?: number }
-    if (parsed.$type === 'ZodString') {
-      if (typeof checks.min === 'number') {
-        schema.minLength = checks.min
-      }
-      if (typeof checks.max === 'number') {
-        schema.maxLength = checks.max
-      }
-    } else {
-      if (typeof checks.min === 'number') {
-        schema.minimum = checks.min
-      }
-      if (typeof checks.max === 'number') {
-        schema.maximum = checks.max
-      }
-    }
-  }
-
-  if (!forParam && zodType.__type_ref) {
-    return { $ref: `#/components/schemas/${zodType.__type_ref.name}` }
-  }
-  return schema
+  const ensured = ensureSchema(type)
+  return toSchemaOrRef(ensured)
 }
 
-function myParseZod(schema: TMoostZodType) {
-  return parseZodType(schema)
+function toSchemaOrRef(result?: SchemaEnsureResult): TSwaggerSchema | undefined {
+  if (!result) {
+    return undefined
+  }
+  if (result.ref) {
+    return { $ref: result.ref }
+  }
+  return cloneSchema(result.schema)
+}
+
+function inferBodyContentType(schema: TSwaggerSchema, resolved?: TSwaggerSchema) {
+  const target = resolved ?? resolveSchemaFromRef(schema)
+  const schemaType = target?.type ?? schema.type
+  if (schemaType && ['string', 'number', 'integer', 'boolean'].includes(schemaType)) {
+    return 'text/plain'
+  }
+  return 'application/json'
+}
+
+const SIMPLE_QUERY_TYPES = new Set(['string', 'number', 'integer', 'boolean'])
+
+function normalizeQueryParamSchema(schema: TSwaggerSchema) {
+  const target = resolveSchemaFromRef(schema) || schema
+  if (!target) {
+    return undefined
+  }
+  if (target.type === 'array') {
+    return isArrayOfSimpleItems(target.items) ? schema : undefined
+  }
+  return isSimpleSchema(schema) ? schema : undefined
+}
+
+function isArrayOfSimpleItems(items: TSwaggerSchema | TSwaggerSchema[] | undefined) {
+  if (!items) {
+    return false
+  }
+  if (Array.isArray(items)) {
+    if (items.length === 0) {
+      return false
+    }
+    return items.every(entry => isSimpleSchema(entry))
+  }
+  return isSimpleSchema(items)
+}
+
+function isSimpleSchema(schema: TSwaggerSchema | undefined, seen = new Set<TSwaggerSchema>()) {
+  if (!schema) {
+    return false
+  }
+  if (seen.has(schema)) {
+    return false
+  }
+  seen.add(schema)
+  if (schema.$ref) {
+    const resolved = resolveSchemaFromRef(schema)
+    if (!resolved) {
+      return false
+    }
+    return isSimpleSchema(resolved, seen)
+  }
+  if (typeof schema.type === 'string' && SIMPLE_QUERY_TYPES.has(schema.type)) {
+    return true
+  }
+  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+    return true
+  }
+  if (schema.const !== undefined) {
+    return true
+  }
+  return false
+}
+
+function resetSchemaRegistry() {
+  schemaRefs = new WeakMap<object, string>()
+  nameToType.clear()
+  for (const key of Object.keys(globalSchemas)) {
+    delete globalSchemas[key]
+  }
+}
+
+function ensureSchema(type: unknown): SchemaEnsureResult | undefined {
+  if (type === undefined || type === null) {
+    return undefined
+  }
+
+  const resolution = createSchemaResolution(type)
+  if (!resolution) {
+    return undefined
+  }
+
+  if (resolution.kind === 'inline') {
+    return {
+      schema: cloneSchema(resolution.schema),
+      isComponent: false,
+    }
+  }
+
+  const schemaClone = cloneSchema(resolution.schema)
+  const componentName = ensureComponentName(resolution.typeRef, schemaClone, resolution.suggestedName)
+
+  return {
+    schema: cloneSchema(globalSchemas[componentName]),
+    ref: `#/components/schemas/${componentName}`,
+    componentName,
+    isComponent: true,
+  }
+}
+
+function createSchemaResolution(type: unknown): SchemaResolution | undefined {
+  if (type === undefined || type === null) {
+    return undefined
+  }
+
+  if (isSwaggerSchema(type)) {
+    return { kind: 'inline', schema: cloneSchema(type) }
+  }
+
+  if (Array.isArray(type)) {
+    if (type.length === 1) {
+      const itemEnsured = ensureSchema(type[0])
+      const itemsSchema = toSchemaOrRef(itemEnsured)
+      return {
+        kind: 'inline',
+        schema: {
+          type: 'array',
+          items: itemsSchema,
+        },
+      }
+    }
+    return { kind: 'inline', schema: { type: 'array' } }
+  }
+
+  if (isLiteralValue(type)) {
+    return { kind: 'inline', schema: schemaFromLiteral(type) }
+  }
+
+  if (isPrimitiveConstructor(type)) {
+    return { kind: 'inline', schema: schemaFromPrimitiveCtor(type as Function) }
+  }
+
+  if (typeof type === 'function') {
+    const resolution = schemaFromFunction(type)
+    if (resolution) {
+      return resolution
+    }
+  }
+
+  if (typeof type === 'object') {
+    const resolution = schemaFromInstance(type as object)
+    if (resolution) {
+      return resolution
+    }
+  }
+
+  return undefined
+}
+
+function schemaFromFunction(fn: Function): SchemaResolution | undefined {
+  const ctor = fn as Function & { toJsonSchema?: () => unknown }
+  if (typeof ctor.toJsonSchema === 'function') {
+    const schema = asSwaggerSchema(ctor.toJsonSchema())
+    return {
+      kind: 'component',
+      schema,
+      typeRef: ctor,
+      suggestedName: ctor.name,
+    }
+  }
+
+  if (fn.length === 0) {
+    try {
+      const result = (fn as () => unknown)()
+      if (result && result !== fn) {
+        return createSchemaResolution(result)
+      }
+    } catch {
+      // ignore runtime errors from invoking factories
+    }
+  }
+
+  return undefined
+}
+
+function schemaFromInstance(obj: object): SchemaResolution | undefined {
+  if (isSwaggerSchema(obj)) {
+    return { kind: 'inline', schema: cloneSchema(obj as TSwaggerSchema) }
+  }
+
+  const ctor = (obj as { constructor?: { toJsonSchema?: () => unknown; name?: string } }).constructor
+  if (ctor && typeof ctor.toJsonSchema === 'function') {
+    const schema = asSwaggerSchema(ctor.toJsonSchema())
+    return {
+      kind: 'component',
+      schema,
+      typeRef: ctor,
+      suggestedName: ctor.name,
+    }
+  }
+
+  if (typeof (obj as { toJsonSchema?: () => unknown }).toJsonSchema === 'function') {
+    const schema = asSwaggerSchema((obj as { toJsonSchema: () => unknown }).toJsonSchema())
+    return {
+      kind: 'component',
+      schema,
+      typeRef: obj,
+      suggestedName: getTypeName(obj),
+    }
+  }
+
+  return undefined
+}
+
+function asSwaggerSchema(schema: unknown): TSwaggerSchema {
+  if (!schema || typeof schema !== 'object') {
+    return {}
+  }
+  return cloneSchema(schema as TSwaggerSchema)
+}
+
+function ensureComponentName(typeRef: object, schema: TSwaggerSchema, suggestedName?: string) {
+  const existing = schemaRefs.get(typeRef)
+  if (existing) {
+    if (!globalSchemas[existing]) {
+      globalSchemas[existing] = cloneSchema(schema)
+    }
+    return existing
+  }
+
+  const baseName = sanitizeComponentName(suggestedName || schema.title || getTypeName(typeRef) || 'Schema')
+  let candidate = baseName || 'Schema'
+  let counter = 1
+  while (nameToType.has(candidate)) {
+    candidate = `${baseName}_${counter++}`
+  }
+
+  nameToType.set(candidate, typeRef)
+  schemaRefs.set(typeRef, candidate)
+  applySwaggerMetadata(typeRef, schema)
+  globalSchemas[candidate] = cloneSchema(schema)
+
+  return candidate
+}
+
+function applySwaggerMetadata(typeRef: object, schema: TSwaggerSchema) {
+  try {
+    const mate = getSwaggerMate()
+    const meta = mate.read(typeRef as never) as
+      | (TSwaggerMate & { label?: string; id?: string; description?: string })
+      | undefined
+    if (!meta) {
+      return
+    }
+    if (meta.swaggerExample !== undefined && schema.example === undefined) {
+      schema.example = meta.swaggerExample
+    }
+    const title = meta.label || meta.id
+    if (title && !schema.title) {
+      schema.title = title
+    }
+    if (meta.swaggerDescription && !schema.description) {
+      schema.description = meta.swaggerDescription
+    } else if (meta.description && !schema.description) {
+      schema.description = meta.description
+    }
+  } catch {
+    // ignore metadata errors
+  }
+}
+
+function sanitizeComponentName(name: string) {
+  const sanitized = name.replace(/[^A-Za-z0-9_.-]/g, '_')
+  return sanitized || 'Schema'
+}
+
+function getTypeName(typeRef: object) {
+  if (typeof typeRef === 'function' && typeRef.name) {
+    return typeRef.name
+  }
+  const ctor = (typeRef as { constructor?: { name?: string } }).constructor
+  if (ctor && ctor !== Object && ctor.name) {
+    return ctor.name
+  }
+  return undefined
+}
+
+function isSwaggerSchema(candidate: unknown): candidate is TSwaggerSchema {
+  if (!candidate || typeof candidate !== 'object') {
+    return false
+  }
+  const obj = candidate as Record<string, unknown>
+  return (
+    '$ref' in obj ||
+    'type' in obj ||
+    'properties' in obj ||
+    'items' in obj ||
+    'allOf' in obj ||
+    'anyOf' in obj ||
+    'oneOf' in obj
+  )
+}
+
+function isLiteralValue(value: unknown): value is string | number | boolean | bigint {
+  const type = typeof value
+  return type === 'string' || type === 'number' || type === 'boolean' || type === 'bigint'
+}
+
+function schemaFromLiteral(value: string | number | boolean | bigint): TSwaggerSchema {
+  if (typeof value === 'string') {
+    if (['string', 'number', 'boolean', 'integer', 'object', 'array'].includes(value)) {
+      return { type: value }
+    }
+    return { const: value, type: 'string' }
+  }
+  if (typeof value === 'number') {
+    return {
+      const: value,
+      type: Number.isInteger(value) ? 'integer' : 'number',
+    }
+  }
+  if (typeof value === 'boolean') {
+    return { const: value, type: 'boolean' }
+  }
+  return { const: value.toString(), type: 'integer' }
+}
+
+function isPrimitiveConstructor(value: unknown): value is Function {
+  if (typeof value !== 'function') {
+    return false
+  }
+  return (
+    value === String ||
+    value === Number ||
+    value === Boolean ||
+    value === BigInt ||
+    value === Date ||
+    value === Array ||
+    value === Object ||
+    value === Symbol
+  )
+}
+
+function schemaFromPrimitiveCtor(fn: Function): TSwaggerSchema {
+  switch (fn) {
+    case String:
+      return { type: 'string' }
+    case Number:
+      return { type: 'number' }
+    case Boolean:
+      return { type: 'boolean' }
+    case BigInt:
+      return { type: 'integer' }
+    case Date:
+      return { type: 'string', format: 'date-time' }
+    case Array:
+      return { type: 'array' }
+    case Object:
+      return { type: 'object' }
+    case Symbol:
+      return { type: 'string' }
+    default:
+      return { type: 'object' }
+  }
+}
+
+function resolveSchemaFromRef(schema: TSwaggerSchema): TSwaggerSchema | undefined {
+  if (!schema.$ref) {
+    return schema
+  }
+  const refName = schema.$ref.replace('#/components/schemas/', '')
+  return globalSchemas[refName]
+}
+
+function cloneSchema(schema: TSwaggerSchema): TSwaggerSchema {
+  return JSON.parse(JSON.stringify(schema)) as TSwaggerSchema
 }
 
 function getDefaultStatusCode(httpMethod: string) {
@@ -622,25 +719,4 @@ function getDefaultStatusCode(httpMethod: string) {
   }
 
   return defaultStatusCodes[httpMethod.toUpperCase() as keyof typeof defaultStatusCodes] || 200
-}
-
-function getSwaggerSchemaFromSwaggerConfigType(type?: TSwaggerConfigType) {
-  let schema: TSwaggerSchema | undefined
-  let zt: z.ZodType | undefined
-  if (type instanceof z.ZodType) {
-    zt = type
-  } else if (typeof type === 'function') {
-    zt = getZodType({
-      type,
-    })
-  }
-  if (zt) {
-    const parsed = myParseZod(zt)
-    if (['ZodString', 'ZodNumber', 'ZodObject', 'ZodArray', 'ZodBoolean'].includes(parsed.$type)) {
-      schema = getSwaggerSchema(parsed)
-    }
-  } else if ((type as TSwaggerSchema).type || (type as TSwaggerSchema).$ref) {
-    schema = type as TSwaggerSchema
-  }
-  return schema
 }
