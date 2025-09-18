@@ -1,4 +1,5 @@
 import { defineConfig, DefaultTheme } from 'vitepress'
+import { llmstxtPlugin } from 'vitepress-plugin-llmstxt'
 // import { configRu } from './config.ru'
 
 const ogDescription = 'Moost is a Metadata Driven Event Processing Framework. Official Documentation Website.'
@@ -19,6 +20,12 @@ export default defineConfig({
     ignoreDeadLinks: 'localhostLinks',
 
     titleTemplate: ':title | Moost',
+
+    vite: {
+        plugins: [llmstxtPlugin({
+            hostname: 'moost.org',
+        })],
+    },
 
     // locales: {
     //     root: {
@@ -52,7 +59,7 @@ export default defineConfig({
     },
 
     themeConfig: {
-        logo: '/moost-logo-3d.webp', //'/logo.svg',
+        logo: '/moost-full-logo.png', //'/logo.svg',
 
         search: {
             provider: 'local'

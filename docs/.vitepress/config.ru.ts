@@ -8,7 +8,7 @@ export const configRu: LocaleSpecificConfig = {
     titleTemplate: ':title | Moost',
 
     themeConfig: {
-        logo: '/moost-logo-3d.webp', //'/logo.svg',
+        logo: '/moost-full-logo.png', //'/logo.svg',
 
         search: {
             provider: 'local'
