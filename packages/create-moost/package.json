@@ -57,8 +57,8 @@
     "@moostjs/vite": "workspace:^",
     "@types/prompts": "^2.4.9",
     "rolldown": "1.0.0-beta.19",
-    "unplugin-swc": "^1.5.5",
-    "vite": "^6.1.0",
+    "unplugin-swc": "^1.5.9",
+    "vite": "^6.4.1",
     "vitest": "3.2.4"
   }
 }
