@@ -94,6 +94,54 @@ async show(@Param('id') id: string) {}
 
 The generated schema will include both the Atscript-derived structure and the example payload.
 
+### Auto-generated examples via `toExampleData()`
+
+If a type exposes a static `toExampleData()` method, the generator will call it automatically to populate the `example` field in the component schema. This works the same way as `toJsonSchema()` — pure duck typing with no import needed.
+
+```ts
+class CreateUserDto {
+  static toJsonSchema() {
+    return {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        email: { type: 'string', format: 'email' },
+      },
+      required: ['name', 'email'],
+    }
+  }
+
+  static toExampleData() {
+    return { name: 'Alice', email: 'alice@example.com' }
+  }
+}
+```
+
+Atscript-generated types can implement `toExampleData()` using `@meta.example` annotations, making examples fully automatic. To enable this, set `exampleData: true` in your `atscript.config.ts`:
+
+```ts
+import { defineConfig } from '@atscript/core'
+import tsPlugin from '@atscript/typescript'
+
+export default defineConfig({
+  entries: ['src/**/*.as'],
+  plugins: [
+    tsPlugin({
+      jsonSchema: 'bundle', // or 'lazy'
+      exampleData: true,    // enables toExampleData() on generated types
+    }),
+  ],
+})
+```
+
+With this enabled, every `.as` type with `@meta.example` annotations will expose `toExampleData()`, and the swagger generator will pick it up automatically. See the [Atscript configuration docs](https://atscript.moost.org/packages/typescript/configuration#exampledata) for details.
+
+Priority order for the `example` field:
+
+1. `example` already present in the `toJsonSchema()` output
+2. `@SwaggerExample` decorator
+3. `toExampleData()` method (lowest priority, auto-generation fallback)
+
 ## Common Moost metadata
 
 `@moostjs/swagger` recognises several framework-level decorators from `moost`:

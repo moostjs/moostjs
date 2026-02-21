@@ -90,5 +90,8 @@ export const WorkflowParam = (
     case 'input': {
       return Resolve(() => useWfState().input()!, 'Workflow-Input')
     }
+    default: {
+      throw new Error(`Unknown WorkflowParam: ${name as string}`)
+    }
   }
 }

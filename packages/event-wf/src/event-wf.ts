@@ -162,6 +162,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
         if (!wfSchema) {
           wfSchema = mate.read(opts.fakeInstance)?.wfSchema
         }
+        // eslint-disable-next-line no-loop-func
         const _fn = (async () => {
           // the fn() will be instantiating real controller
           // so we have to provide Moost as controller for now

@@ -15,7 +15,7 @@ class A extends Moost {
 describe('moost', () => {
   it('must work', () => {
     const a: Record<symbol, number> = {}
-    const symbols = [Symbol(), Symbol()]
+    const symbols = [Symbol('a'), Symbol('b')]
     a[symbols[0]] = 0
     a[symbols[1]] = 1
     console.log(`a[0] = ${a[symbols[0]]}`)

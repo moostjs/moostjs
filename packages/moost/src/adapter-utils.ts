@@ -1,3 +1,4 @@
+// oxlint-disable complexity
 import { getConstructor } from '@prostojs/mate'
 import { getContextInjector, useEventId, useEventLogger } from '@wooksjs/event-core'
 
@@ -82,7 +83,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           return await endWithResponse()
         }
       } catch (error) {
-        options.logErrors && logger.error(error)
+        if (options.logErrors) {
+          logger.error(error)
+        }
         response = error
         return endWithResponse(true)
       }
@@ -96,7 +99,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         args = await ci.with('Arguments:resolve', () => options.resolveArgs!())
         // logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
       } catch (error) {
-        options.logErrors && logger.error(error)
+        if (options.logErrors) {
+          logger.error(error)
+        }
         response = error
         return endWithResponse(true)
       }
@@ -133,7 +138,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         () => callControllerMethod(),
       )
     } catch (error) {
-      options.logErrors && logger.error(error)
+      if (options.logErrors) {
+        logger.error(error)
+      }
       response = error
       return endWithResponse(true)
     }
@@ -147,7 +154,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
             interceptorHandler.fireAfter(response),
           )
         } catch (error) {
-          options.logErrors && logger.error(error)
+          if (options.logErrors) {
+          logger.error(error)
+        }
           if (!options.manualUnscope) {
             unscope()
           }
@@ -162,7 +171,8 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         await options.hooks.end(hookOptions)
       }
       if (raise) {
-        throw response
+        // oxlint-disable-next-line no-throw-literal it is an Error instance
+        throw (response as Error)
       }
       return response
     }

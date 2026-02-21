@@ -16,7 +16,9 @@ class Commands extends CliApp {
   }
 
   async execute(name?: string) {
-    useAutoHelp() && process.exit(0)
+    if (useAutoHelp()) {
+      process.exit(0)
+    }
 
     const prompts = await getPrompts({
       name,

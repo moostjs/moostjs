@@ -192,7 +192,40 @@ The `method` argument will contain the requested HTTP method, such as `GET` or `
 
 ## Request Security
 
-Moost HTTP includes decorators that enforce request-size limits and body read timeouts. Import them straight from `@moostjs/event-http` and apply per handler or globally via `app.applyGlobalInterceptors(...)`.
+Moost HTTP provides three levels of control over request body limits — app-wide defaults, global interceptors, and per-handler decorators. Each level overrides the previous one.
+
+### App-Wide Defaults (Constructor)
+
+Pass `requestLimits` when creating the `MoostHttp` adapter to set defaults for every request:
+
+```ts
+import { MoostHttp } from '@moostjs/event-http'
+import { Moost } from 'moost'
+
+const app = new Moost()
+
+void app.adapter(new MoostHttp({
+    requestLimits: {
+        maxCompressed: 5 * 1024 * 1024,   // 5 MB compressed body (default: 1 MB)
+        maxInflated: 50 * 1024 * 1024,     // 50 MB decompressed body (default: 10 MB)
+        maxRatio: 200,                     // max compression ratio (default: 100)
+        readTimeoutMs: 30_000,             // body read timeout (default: 10 000 ms)
+    },
+})).listen(3000)
+
+void app.init()
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `maxCompressed` | 1 MB (1 048 576) | Max compressed body size in bytes |
+| `maxInflated` | 10 MB (10 485 760) | Max decompressed body size in bytes |
+| `maxRatio` | 100 | Max compression ratio (zip-bomb protection) |
+| `readTimeoutMs` | 10 000 | Body read timeout in milliseconds |
+
+### Per-Handler Decorators
+
+Use decorators to override limits on specific handlers or controllers:
 
 ```ts
 import {
@@ -214,6 +247,8 @@ export class UploadController {
 - `BodySizeLimit(n)` limits the inflated (decompressed) body size in bytes.
 - `CompressedBodySizeLimit(n)` limits the compressed payload size.
 - `BodyReadTimeoutMs(ms)` aborts the request if body streaming exceeds the provided timeout.
+
+### Global Interceptors
 
 For organisation-wide policies, use the `globalBodySizeLimit`, `globalCompressedBodySizeLimit`, and `globalBodyReadTimeoutMs` helpers (also exported from `@moostjs/event-http`) with `app.applyGlobalInterceptors(...)`.
 

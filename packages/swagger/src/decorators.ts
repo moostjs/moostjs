@@ -21,11 +21,11 @@ export const SwaggerDescription = (descr: string) =>
  * @SwaggerResponse(404, { response: ErrorDto })
  * ```
  */
-export function SwaggerResponse(opts: TSwaggerResponseOpts, exmaple?: unknown): MethodDecorator
+export function SwaggerResponse(opts: TSwaggerResponseOpts, example?: unknown): MethodDecorator
 export function SwaggerResponse(
   code: number,
   opts: TSwaggerResponseOpts,
-  exmaple?: unknown,
+  example?: unknown,
 ): MethodDecorator
 export function SwaggerResponse(
   code: number | TSwaggerResponseOpts,

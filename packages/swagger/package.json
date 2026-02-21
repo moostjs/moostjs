@@ -39,12 +39,14 @@
   },
   "scripts": {
     "pub": "pnpm publish --access public",
-    "test": "vitest"
+    "test": "vitest",
+    "postinstall": "node ./node_modules/@atscript/typescript/scripts/setup-skills.js --postinstall"
   },
   "dependencies": {
     "swagger-ui-dist": "^5.31.2"
   },
   "devDependencies": {
+    "@atscript/typescript": "^0.1.21",
     "@types/swagger-ui-dist": "3.30.5",
     "vitest": "3.2.4"
   },

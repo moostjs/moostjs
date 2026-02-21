@@ -34,10 +34,11 @@ export interface TSwaggerOptions {
   description?: string
   version?: string
   cors?: boolean | string
+  openapiVersion?: '3.0' | '3.1'
 }
 
 export interface TSwaggerSchema {
-  type?: string
+  type?: string | string[]
   $ref?: string
   title?: string
   description?: string
@@ -101,8 +102,10 @@ export function mapToSwaggerSpec(
   resetSchemaRegistry()
   void logger
 
+  const is31 = options?.openapiVersion === '3.1'
+
   const swaggerSpec = {
-    openapi: '3.0.0',
+    openapi: is31 ? '3.1.0' : '3.0.0',
     info: {
       title: options?.title || 'API Documentation',
       version: options?.version || '1.0.0',
@@ -320,6 +323,17 @@ export function mapToSwaggerSpec(
     }
   }
 
+  // Detach from the global registry so subsequent calls don't overwrite this spec's schemas
+  const ownedSchemas: Record<string, TSwaggerSchema> = {}
+  for (const [key, value] of Object.entries(globalSchemas)) {
+    ownedSchemas[key] = cloneSchema(value)
+  }
+  swaggerSpec.components.schemas = ownedSchemas
+
+  if (is31) {
+    transformSpecTo31(swaggerSpec)
+  }
+
   return swaggerSpec
 }
 
@@ -344,7 +358,7 @@ function toSchemaOrRef(result?: SchemaEnsureResult): TSwaggerSchema | undefined 
 function inferBodyContentType(schema: TSwaggerSchema, resolved?: TSwaggerSchema) {
   const target = resolved ?? resolveSchemaFromRef(schema)
   const schemaType = target?.type ?? schema.type
-  if (schemaType && ['string', 'number', 'integer', 'boolean'].includes(schemaType)) {
+  if (typeof schemaType === 'string' && ['string', 'number', 'integer', 'boolean'].includes(schemaType)) {
     return 'text/plain'
   }
   return 'application/json'
@@ -587,23 +601,31 @@ function applySwaggerMetadata(typeRef: object, schema: TSwaggerSchema) {
     const meta = mate.read(typeRef as never) as
       | (TSwaggerMate & { label?: string; id?: string; description?: string })
       | undefined
-    if (!meta) {
-      return
-    }
-    if (meta.swaggerExample !== undefined && schema.example === undefined) {
-      schema.example = meta.swaggerExample
-    }
-    const title = meta.label || meta.id
-    if (title && !schema.title) {
-      schema.title = title
-    }
-    if (meta.swaggerDescription && !schema.description) {
-      schema.description = meta.swaggerDescription
-    } else if (meta.description && !schema.description) {
-      schema.description = meta.description
+    if (meta) {
+      if (meta.swaggerExample !== undefined && schema.example === undefined) {
+        schema.example = meta.swaggerExample
+      }
+      const title = meta.label || meta.id
+      if (title && !schema.title) {
+        schema.title = title
+      }
+      if (meta.swaggerDescription && !schema.description) {
+        schema.description = meta.swaggerDescription
+      } else if (meta.description && !schema.description) {
+        schema.description = meta.description
+      }
     }
   } catch {
     // ignore metadata errors
+  }
+  if (schema.example === undefined) {
+    const exampleFn = (typeRef as { toExampleData?: () => unknown }).toExampleData
+    if (typeof exampleFn === 'function') {
+      const example = exampleFn()
+      if (example !== undefined) {
+        schema.example = example
+      }
+    }
   }
 }
 
@@ -732,4 +754,85 @@ function getDefaultStatusCode(httpMethod: string) {
   }
 
   return defaultStatusCodes[httpMethod.toUpperCase() as keyof typeof defaultStatusCodes] || 200
+}
+
+// --- OpenAPI 3.1 transform ---
+
+function transformSpecTo31(spec: {
+  paths: Record<string, Record<string, TEndpointSpec>>
+  components: { schemas: Record<string, TSwaggerSchema> }
+}) {
+  for (const schema of Object.values(spec.components.schemas)) {
+    convertSchemaTo31(schema)
+  }
+  for (const methods of Object.values(spec.paths)) {
+    for (const endpoint of Object.values(methods)) {
+      for (const param of endpoint.parameters) {
+        convertSchemaTo31(param.schema)
+      }
+      if (endpoint.responses) {
+        for (const response of Object.values(endpoint.responses)) {
+          for (const media of Object.values(response.content)) {
+            convertSchemaTo31(media.schema)
+          }
+        }
+      }
+      if (endpoint.requestBody) {
+        for (const media of Object.values(endpoint.requestBody.content)) {
+          convertSchemaTo31(media.schema)
+        }
+      }
+    }
+  }
+}
+
+function convertSchemaTo31(schema: TSwaggerSchema) {
+  if (schema.nullable) {
+    delete schema.nullable
+    if (typeof schema.type === 'string') {
+      schema.type = [schema.type, 'null']
+    } else if (Array.isArray(schema.type)) {
+      if (!schema.type.includes('null')) {
+        schema.type.push('null')
+      }
+    } else {
+      schema.type = 'null'
+    }
+  }
+
+  if (schema.properties) {
+    for (const prop of Object.values(schema.properties)) {
+      convertSchemaTo31(prop)
+    }
+  }
+  if (schema.items) {
+    if (Array.isArray(schema.items)) {
+      for (const item of schema.items) {
+        convertSchemaTo31(item)
+      }
+    } else {
+      convertSchemaTo31(schema.items)
+    }
+  }
+  if (schema.allOf) {
+    for (const sub of schema.allOf) {
+      convertSchemaTo31(sub)
+    }
+  }
+  if (schema.anyOf) {
+    for (const sub of schema.anyOf) {
+      convertSchemaTo31(sub)
+    }
+  }
+  if (schema.oneOf) {
+    for (const sub of schema.oneOf) {
+      convertSchemaTo31(sub)
+    }
+  }
+  if (schema.not) {
+    convertSchemaTo31(schema.not)
+  }
+  if (typeof schema.additionalProperties === 'object' && schema.additionalProperties) {
+    convertSchemaTo31(schema.additionalProperties)
+  }
 }

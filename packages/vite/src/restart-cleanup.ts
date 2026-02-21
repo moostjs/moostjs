@@ -94,23 +94,39 @@ function clearDependantRegistry(
     }
     for (const key of Object.getOwnPropertySymbols(registry)) {
       const instance = registry[key]
-      scanParams(instance, (type: Function) => {
-        if (!objSet.has(type) && (!onEject || onEject(instance, type))) {
-          delete registry[key]
-          logger.debug(
-            `✖️  Ejecting "${constructorName(instance)}" (depends on "${
-              type.name
-            }" which is not in registry)`,
-          )
-          somethingIsDeleted = true
-          return true
-        }
-      })
+      const ejected = checkAndEject(instance, objSet, onEject, registry, key, logger)
+      if (ejected) {
+        somethingIsDeleted = true
+      }
     }
   }
 }
 
-function scanParams(instance: object, cb: (type: Function) => boolean | void) {
+function checkAndEject(
+  instance: object,
+  objSet: Set<unknown>,
+  onEject: TMoostViteDevOptions['onEject'] | undefined,
+  registry: Record<symbol, object>,
+  key: symbol,
+  logger: ReturnType<typeof getLogger>,
+): boolean {
+  let ejected = false
+  scanParams(instance, (type: Function) => {
+    if (!objSet.has(type) && (!onEject || onEject(instance, type))) {
+      delete registry[key]
+      logger.debug(
+        `✖️  Ejecting "${constructorName(instance)}" (depends on "${
+          type.name
+        }" which is not in registry)`,
+      )
+      ejected = true
+      return true
+    }
+  })
+  return ejected
+}
+
+function scanParams(instance: object, cb: (type: Function) => boolean | undefined) {
   const mate = getMoostMate()
   const params = mate.read(instance)?.params
   if (params?.length) {

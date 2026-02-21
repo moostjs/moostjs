@@ -55,7 +55,7 @@ export interface CreateUserDto {
 }
 ```
 
-Any handler return type, `@Body()` payload, or `@Query()` DTO that points to an Atscript type like the one above automatically feeds the Swagger generator. Components are registered once and reused via `$ref`, so your documentation, validation, and DTOs stay in sync. See the [Atscript documentation](https://atscript.moost.org/) for authoring guidance and CLI tooling.
+Any handler return type, `@Body()` payload, or `@Query()` DTO that points to an Atscript type like the one above automatically feeds the Swagger generator. Components are registered once and reused via `$ref`, so your documentation, validation, and DTOs stay in sync. Types that also expose `toExampleData()` will have their examples populated automatically. See the [Atscript documentation](https://atscript.moost.org/) for authoring guidance and CLI tooling.
 
 ## Registering the controller
 

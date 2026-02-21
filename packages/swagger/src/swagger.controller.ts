@@ -88,8 +88,8 @@ export class SwaggerController {
   @Get()
   async 'spec.json'() {
     this.processCors()
-    const logger = useEventLogger('@moostjs/zod')
     if (!this.spec) {
+      const logger = useEventLogger('@moostjs/swagger')
       const { instantiate } = useControllerContext()
       const moost = await instantiate(Moost)
       this.spec = mapToSwaggerSpec(moost.getControllersOverview(), this.opts, logger)

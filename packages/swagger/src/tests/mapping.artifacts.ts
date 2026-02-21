@@ -1,7 +1,15 @@
-import { Body, Get, Post, Query } from '@moostjs/event-http'
-import { Controller, Label, Optional, Param } from 'moost'
+import { Body, Delete, Get, Post, Put, Query } from '@moostjs/event-http'
+import { Controller, Description, Label, Optional, Param } from 'moost'
 
-import { SwaggerExample, SwaggerParam, SwaggerRequestBody, SwaggerResponse } from '../decorators'
+import {
+  SwaggerDescription,
+  SwaggerExample,
+  SwaggerExclude,
+  SwaggerParam,
+  SwaggerRequestBody,
+  SwaggerResponse,
+  SwaggerTag,
+} from '../decorators'
 
 @Label('Type Definition')
 @SwaggerExample({
@@ -123,5 +131,262 @@ export class SwaggerControllerTest {
   })
   withHeader() {
     return 'ok'
+  }
+}
+
+// --- @SwaggerExclude artifacts ---
+
+@SwaggerExclude()
+@Controller('excluded-ctrl')
+export class ExcludedController {
+  @Get('visible')
+  handler() {
+    return 'should not appear'
+  }
+}
+
+@Controller('partial-exclude')
+export class PartialExcludeController {
+  @SwaggerExclude()
+  @Get('hidden')
+  hiddenHandler() {
+    return 'hidden'
+  }
+
+  @Get('visible')
+  visibleHandler() {
+    return 'visible'
+  }
+}
+
+// --- @SwaggerTag + @Description artifacts ---
+
+@SwaggerTag('admin')
+@Controller('tagged')
+export class TaggedController {
+  @SwaggerTag('users')
+  @Get('both-tags')
+  bothTags() {
+    return 'ok'
+  }
+
+  @Get('controller-tag-only')
+  controllerTagOnly() {
+    return 'ok'
+  }
+
+  @Description('Get user details')
+  @SwaggerTag('detail')
+  @Get('described')
+  describedHandler() {
+    return 'ok'
+  }
+}
+
+// --- PUT/DELETE status code artifacts ---
+
+@Controller('status-codes')
+export class StatusCodeController {
+  @Put('update')
+  @SwaggerResponse({ type: 'string' })
+  updateHandler() {
+    return 'updated'
+  }
+
+  @Delete('remove')
+  @SwaggerResponse({ type: 'string' })
+  deleteHandler() {
+    return 'deleted'
+  }
+}
+
+// --- Primitive constructor artifacts ---
+
+@Controller('primitives')
+export class PrimitiveController {
+  @Get('number')
+  @SwaggerResponse(Number)
+  getNumber() {
+    return 42
+  }
+
+  @Get('boolean')
+  @SwaggerResponse(Boolean)
+  getBoolean() {
+    return true
+  }
+
+  @Get('date')
+  @SwaggerResponse(Date)
+  getDate() {
+    return new Date()
+  }
+
+  @Get('array')
+  @SwaggerResponse(Array)
+  getArray() {
+    return []
+  }
+
+  @Get('object')
+  @SwaggerResponse(Object)
+  getObject() {
+    return {}
+  }
+}
+
+// --- Required body artifacts ---
+
+@Controller('required-body')
+export class RequiredBodyController {
+  @Post('required')
+  postRequired(@Body() body: SwaggerTypeTest) {
+    return body
+  }
+
+  @Post('optional')
+  postOptional(@Optional() @Body() body: SwaggerTypeTest) {
+    return body
+  }
+}
+
+// --- Array type artifacts ---
+
+class ArrayItemType {
+  static toJsonSchema() {
+    return {
+      type: 'object',
+      properties: {
+        value: { type: 'string' },
+      },
+    }
+  }
+}
+
+@Controller('arrays')
+export class ArrayController {
+  @Get('typed-array')
+  @SwaggerResponse({ response: ArrayItemType })
+  getTypedArray() {
+    return []
+  }
+}
+
+// --- Component name collision artifacts ---
+
+class CollisionType {
+  static toJsonSchema() {
+    return {
+      type: 'object',
+      properties: {
+        alpha: { type: 'string' },
+      },
+    }
+  }
+}
+
+const CollisionType2 = (() => {
+  const cls = class CollisionType {
+    static toJsonSchema() {
+      return {
+        type: 'object',
+        properties: {
+          beta: { type: 'number' },
+        },
+      }
+    }
+  }
+  return cls
+})()
+
+@Controller('collision')
+export class CollisionController {
+  @Get('first')
+  @SwaggerResponse(CollisionType)
+  getFirst() {
+    return {}
+  }
+
+  @Get('second')
+  @SwaggerResponse(CollisionType2)
+  getSecond() {
+    return {}
+  }
+}
+
+// --- @SwaggerDescription on schema artifacts ---
+
+// --- toExampleData() duck-typing artifacts ---
+
+class ExampleDataType {
+  static toJsonSchema() {
+    return {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        count: { type: 'number' },
+      },
+      required: ['name'],
+    }
+  }
+
+  static toExampleData() {
+    return { name: 'Alice', count: 42 }
+  }
+}
+
+@Controller('example-data')
+export class ExampleDataController {
+  @Get('auto')
+  @SwaggerResponse(ExampleDataType)
+  getAuto() {
+    return {}
+  }
+}
+
+@SwaggerExample({ name: 'Override', count: 99 })
+class ExampleDataWithOverride {
+  static toJsonSchema() {
+    return {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        count: { type: 'number' },
+      },
+    }
+  }
+
+  static toExampleData() {
+    return { name: 'Fallback', count: 0 }
+  }
+}
+
+@Controller('example-data-override')
+export class ExampleDataOverrideController {
+  @Get('item')
+  @SwaggerResponse(ExampleDataWithOverride)
+  getItem() {
+    return {}
+  }
+}
+
+@SwaggerDescription('A described schema')
+export class DescribedSchema {
+  static toJsonSchema() {
+    return {
+      type: 'object',
+      properties: {
+        id: { type: 'number' },
+      },
+    }
+  }
+}
+
+@Controller('described-schema')
+export class DescribedSchemaController {
+  @Get('item')
+  @SwaggerResponse(DescribedSchema)
+  getItem() {
+    return {}
   }
 }
