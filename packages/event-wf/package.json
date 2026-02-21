@@ -39,11 +39,12 @@
   },
   "scripts": {
     "pub": "pnpm publish --access public",
-    "test": "vitest"
+    "test": "vitest",
+    "postinstall": "npx @wooksjs/event-wf setup-skills --postinstall"
   },
   "dependencies": {
     "@prostojs/wf": "^0.0.18",
-    "@wooksjs/event-wf": "^0.6.2"
+    "@wooksjs/event-wf": "^0.6.4"
   },
   "devDependencies": {
     "vitest": "3.2.4"
@@ -51,8 +52,8 @@
   "peerDependencies": {
     "@prostojs/infact": "^0.3.3",
     "@prostojs/mate": "^0.3.3",
-    "@wooksjs/event-core": "^0.6.2",
+    "@wooksjs/event-core": "^0.6.4",
     "moost": "workspace:^",
-    "wooks": "^0.6.2"
+    "wooks": "^0.6.4"
   }
 }

@@ -39,11 +39,12 @@
   },
   "scripts": {
     "pub": "pnpm publish --access public",
-    "test": "vitest"
+    "test": "vitest",
+    "postinstall": "npx @wooksjs/event-http setup-skills --postinstall"
   },
   "dependencies": {
-    "@wooksjs/event-http": "^0.6.2",
-    "@wooksjs/http-body": "^0.6.2"
+    "@wooksjs/event-http": "^0.6.4",
+    "@wooksjs/http-body": "^0.6.4"
   },
   "devDependencies": {
     "vitest": "3.2.4"
@@ -51,7 +52,7 @@
   "peerDependencies": {
     "@prostojs/infact": "^0.3.3",
     "@prostojs/router": "^0.2.1",
-    "@wooksjs/event-core": "^0.6.2",
+    "@wooksjs/event-core": "^0.6.4",
     "moost": "workspace:^"
   }
 }
