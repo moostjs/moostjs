@@ -21,7 +21,7 @@ To create a Moost HTTP app, use the following command in your terminal:
 npm create moost -- --http
 ```
 
-This command will initiate the creation of a new Moost HTTP app. It will prompt you with a series of questions to configure your app, such as enabling eslint and prettier, and choosing between the esbuild and rollup bundlers.
+This command will initiate the creation of a new Moost HTTP app. It will prompt you to configure the project name, whether to include a Moost Workflows example, and whether to add do-me-lint (smart eslint installer).
 
 ### Creating a CLI App
 
@@ -31,6 +31,6 @@ To create a Moost CLI app, use the following command in your terminal:
 npm create moost -- --cli
 ```
 
-This command will start the creation process for a new Moost CLI app. It will ask you questions to customize your app, including eslint and prettier preferences, as well as the choice between the esbuild and rollup bundlers.
+This command will start the creation process for a new Moost CLI app. It will prompt you to configure the project name and whether to add do-me-lint (smart eslint installer).
 
 ## [Official Documentation](https://moost.org/)

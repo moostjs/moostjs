@@ -2,6 +2,7 @@ import { getConstructor } from '@prostojs/mate'
 
 import type { TAny, TClassConstructor } from '../common-types'
 
+/** Returns the own method names of an instance, including inherited methods from parent classes. */
 export function getInstanceOwnMethods<T = TAny>(instance: T): (keyof T)[] {
   const proto = Object.getPrototypeOf(instance)
   return [
@@ -11,6 +12,7 @@ export function getInstanceOwnMethods<T = TAny>(instance: T): (keyof T)[] {
   ].filter((m) => typeof instance[m as keyof typeof instance] === 'function') as (keyof T)[]
 }
 
+/** Returns the own non-method property names of an instance, including inherited properties. */
 export function getInstanceOwnProps<T = TAny>(instance: T): (keyof T)[] {
   const proto = Object.getPrototypeOf(instance)
   return [

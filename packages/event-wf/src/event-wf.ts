@@ -7,6 +7,7 @@ import { defineMoostEventHandler, getMoostInfact, setControllerContext } from 'm
 
 import { getWfMate } from './meta-types'
 
+/** Metadata attached to a workflow handler by the adapter. */
 export interface TWfHandlerMeta {
   path: string
 }
@@ -14,6 +15,20 @@ export interface TWfHandlerMeta {
 const LOGGER_TITLE = 'moost-wf'
 const CONTEXT_TYPE = 'WF'
 
+/**
+ * Moost adapter for workflow events. Wraps `@wooksjs/event-wf` to register
+ * `@Step` and `@Workflow` handlers with full Moost DI and interceptor support.
+ *
+ * @template T - Workflow context type.
+ * @template IR - Intermediate result type.
+ *
+ * @example
+ * ```ts
+ * const wf = new MoostWf()
+ * app.adapter(wf).controllers(MyWorkflows).init()
+ * const result = await wf.start('my-flow', {}, input)
+ * ```
+ */
 export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta> {
   public readonly name = 'workflow'
 
@@ -55,18 +70,28 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     })
   }
 
+  /** Returns the underlying `WooksWf` application instance. */
   getWfApp() {
     return this.wfApp
   }
 
+  /** Attaches a spy function that observes workflow step executions. */
   public attachSpy<I>(fn: TWorkflowSpy<T, I, IR>) {
     return this.wfApp.attachSpy<I>(fn)
   }
 
+  /** Detaches a previously attached workflow spy. */
   public detachSpy<I>(fn: TWorkflowSpy<T, I, IR>) {
     this.wfApp.detachSpy<I>(fn)
   }
 
+  /**
+   * Starts a new workflow execution.
+   *
+   * @param schemaId - Identifier of the registered workflow schema.
+   * @param initialContext - Initial context data for the workflow.
+   * @param input - Optional input passed to the first step.
+   */
   public start<I>(schemaId: string, initialContext: T, input?: I): Promise<TFlowOutput<T, I, IR>> {
     return this.wfApp.start(
       schemaId,
@@ -80,6 +105,12 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     )
   }
 
+  /**
+   * Resumes a previously paused workflow from a saved state.
+   *
+   * @param state - Saved workflow state containing schema, context, and step indexes.
+   * @param input - Optional input for the resumed step.
+   */
   public resume<I>(
     state: { schemaId: string; context: T; indexes: number[] },
     input?: I,

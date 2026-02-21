@@ -2,6 +2,7 @@ import type { Span, SpanOptions, TimeInput } from '@opentelemetry/api'
 import { context, trace } from '@opentelemetry/api'
 import { useAsyncEventContext } from 'moost'
 
+/** Event context shape used by the OTEL integration to store span and metric data. */
 export interface TOtelContext {
   otel?: {
     span?: Span
@@ -14,6 +15,12 @@ export interface TOtelContext {
 
 const spanStack = [] as Span[]
 
+/**
+ * Provides OpenTelemetry tracing utilities scoped to the current event.
+ * Must be called within an active event handler context.
+ *
+ * @returns Tracing utilities including span access, propagation headers, and custom attributes.
+ */
 export function useOtelContext() {
   const eventContext = useAsyncEventContext<TOtelContext>()
   const store = eventContext.store('otel')
@@ -86,14 +93,21 @@ export function useOtelContext() {
   }
 }
 
+/** Returns the OpenTelemetry `trace` API for creating tracers and spans. */
 export function useTrace() {
   return trace
 }
 
+/** Returns the root span for the current event, or `undefined` if no span is active. */
 export function useSpan() {
   return useOtelContext().getSpan()
 }
 
+/**
+ * Returns W3C trace-context propagation data for the current event.
+ * Use the returned `headers` (traceparent, tracestate) in outgoing HTTP requests
+ * to propagate the trace to downstream services.
+ */
 export function useOtelPropagation() {
   const { getPropagationHeaders, getSpanContext } = useOtelContext()
   return {

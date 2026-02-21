@@ -29,10 +29,10 @@ You can also provide a name for your project:
 npm create moost my-cli-app -- --cli
 ```
 
-This command will initiate a setup tool that will guide you through the project initialization process. It will prompt you to make certain choices such as:
+This command will initiate a setup tool that will guide you through the project initialization process. It will prompt you to configure:
 
-- Whether you want to integrate eslint and prettier.
-- Which bundler you prefer to use: esbuild or rollup.
+- Project and package name.
+- Whether to add do-me-lint (smart eslint installer).
 
 ## [Official Documentation](https://moost.org/cliapp/)
 

@@ -1,13 +1,26 @@
 import type { TSwaggerConfigType, TSwaggerMate, TSwaggerResponseOpts } from './swagger.mate'
 import { getSwaggerMate } from './swagger.mate'
 
+/** Adds an OpenAPI tag to a controller or handler for grouping in the Swagger UI. */
 export const SwaggerTag = (tag: string) => getSwaggerMate().decorate('swaggerTags', tag, true)
 
+/** Excludes a controller or handler from the generated OpenAPI spec. */
 export const SwaggerExclude = () => getSwaggerMate().decorate('swaggerExclude', true)
 
+/** Sets the OpenAPI description for a handler. */
 export const SwaggerDescription = (descr: string) =>
   getSwaggerMate().decorate('swaggerDescription', descr)
 
+/**
+ * Defines a response schema in the OpenAPI spec.
+ * Can be called with just options (uses status 200) or with an explicit status code.
+ *
+ * @example
+ * ```ts
+ * @SwaggerResponse({ response: MyDto })
+ * @SwaggerResponse(404, { response: ErrorDto })
+ * ```
+ */
 export function SwaggerResponse(opts: TSwaggerResponseOpts, exmaple?: unknown): MethodDecorator
 export function SwaggerResponse(
   code: number,
@@ -47,6 +60,12 @@ export function SwaggerResponse(
   })
 }
 
+/**
+ * Defines the request body schema in the OpenAPI spec.
+ *
+ * @param opt - Schema definition. Use `{ response: MyDto }` for a typed schema,
+ *   or `{ response: MyDto, contentType: 'multipart/form-data' }` for a specific content type.
+ */
 export function SwaggerRequestBody(opt: TSwaggerResponseOpts) {
   return getSwaggerMate().decorate((meta) => {
     meta.swaggerRequestBody = meta.swaggerRequestBody || {}
@@ -64,10 +83,12 @@ export function SwaggerRequestBody(opt: TSwaggerResponseOpts) {
   })
 }
 
+/** Defines a parameter (query, path, header, cookie) in the OpenAPI spec. */
 export function SwaggerParam(opts: TSwaggerMate['swaggerParams'][number]) {
   return getSwaggerMate().decorate('swaggerParams', opts, true)
 }
 
+/** Attaches an example value to a handler's OpenAPI documentation. */
 export function SwaggerExample(example: unknown) {
   return getSwaggerMate().decorate('swaggerExample', example)
 }

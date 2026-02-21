@@ -71,11 +71,11 @@ app.setReplaceRegistry(ArbacReplaceRegistry)
 ### Protect Routes with `@Authorized()`
 
 ```typescript
-import { Authorized, Public } from '@moostjs/arbac'
+import { ArbacAuthorize, ArbacPublic } from '@moostjs/arbac'
 import { Controller, Get } from 'moost'
 
 @Controller('/data')
-@ArbacAuthorized()
+@ArbacAuthorize()
 export class DataController {
   @Get()
   getProtectedData() {
@@ -100,7 +100,7 @@ Extends `@prostojs/arbac` and integrates with MoostJS DI.
 
 Abstract class for defining user-related access control logic.
 
-### `@ArbacAuthorized()`
+### `@ArbacAuthorize()`
 
 Method decorator to enforce ARBAC checks.
 

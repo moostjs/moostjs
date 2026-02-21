@@ -17,7 +17,7 @@ Once the package is installed, you can import and use the `useProxy` composable 
 Example:
 
 ```ts
-import { Controller, Get } from '@wooksjs/event-http';
+import { Controller, Get } from '@moostjs/event-http';
 import { useProxy } from '@wooksjs/http-proxy';
 
 @Controller()
@@ -42,7 +42,7 @@ You can restrict the cookies and headers that are passed in the proxy request by
 Example:
 
 ```ts
-import { Controller, Get } from '@wooksjs/event-http';
+import { Controller, Get } from '@moostjs/event-http';
 import { useProxy } from '@wooksjs/http-proxy';
 
 @Controller()
@@ -67,7 +67,7 @@ The proxy function returned by `useProxy` behaves like a regular `fetch` call an
 Example:
 
 ```ts
-import { Controller, Get } from '@wooksjs/event-http';
+import { Controller, Get } from '@moostjs/event-http';
 import { useProxy } from '@wooksjs/http-proxy';
 
 @Controller()

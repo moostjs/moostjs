@@ -7,6 +7,10 @@ interface TControllerContext<T> {
   controller: { instance: T; method: keyof T; route: string }
 }
 
+/**
+ * Sets the controller context for the current event scope.
+ * Called internally by adapters when dispatching events to handlers.
+ */
 export function setControllerContext<T>(controller: T, method: keyof T, route: string) {
   const { store } = useAsyncEventContext<TControllerContext<T>>()
   const { set } = store('controller')
@@ -15,6 +19,10 @@ export function setControllerContext<T>(controller: T, method: keyof T, route: s
   set('route', route)
 }
 
+/**
+ * Provides access to the current controller context within an event handler.
+ * Returns utilities for accessing the controller instance, method metadata, and DI.
+ */
 export function useControllerContext<T extends object>() {
   const { store } = useAsyncEventContext<TControllerContext<T>>()
   const { get } = store('controller')
