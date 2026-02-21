@@ -24,7 +24,7 @@ export function Controller(prefix?: string): ClassDecorator {
  */
 export function ImportController(
   controller: TFunction | TObject,
-  provide?: TProvideRegistry
+  provide?: TProvideRegistry,
 ): ClassDecorator
 
 /**
@@ -38,13 +38,13 @@ export function ImportController(
 export function ImportController(
   prefix: string,
   controller: TFunction | TObject,
-  provide?: TProvideRegistry
+  provide?: TProvideRegistry,
 ): ClassDecorator
 
 export function ImportController(
   prefix: string | TFunction | TObject,
   controller?: TFunction | TObject | TProvideRegistry,
-  provide?: TProvideRegistry
+  provide?: TProvideRegistry,
 ): ClassDecorator {
   return getMoostMate().decorate(
     'importController',
@@ -59,6 +59,6 @@ export function ImportController(
           ? provide || undefined
           : (controller as TProvideRegistry) || undefined,
     },
-    true
+    true,
   )
 }

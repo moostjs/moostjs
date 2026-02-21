@@ -2,10 +2,33 @@
   "name": "@moostjs/vite",
   "version": "0.5.33",
   "description": "Vite Dev plugin for moostjs",
+  "keywords": [
+    "composables",
+    "framework",
+    "moost",
+    "moostjs",
+    "prostojs",
+    "vite",
+    "wooksjs"
+  ],
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/vite#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "license": "MIT",
+  "author": "Artem Maltsev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/vite"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "sideEffects": false,
   "exports": {
     "./package.json": "./package.json",
     ".": {
@@ -14,42 +37,19 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "pub": "pnpm publish --access public",
     "test": "vitest"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/moostjs/moostjs.git",
-    "directory": "packages/vite"
-  },
-  "keywords": [
-    "moost",
-    "moostjs",
-    "composables",
-    "framework",
-    "wooksjs",
-    "prostojs",
-    "vite"
-  ],
-  "author": "Artem Maltsev",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/moostjs/moostjs/issues"
-  },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/vite#readme",
-  "peerDependencies": {
-    "@moostjs/event-http": "workspace:^",
-    "moost": "workspace:^",
-    "vite": "^7.0.0"
+  "dependencies": {
+    "magic-string": "^0.30.21"
   },
   "devDependencies": {
     "vitest": "3.2.4"
   },
-  "dependencies": {
-    "magic-string": "^0.30.21"
+  "peerDependencies": {
+    "@moostjs/event-http": "workspace:^",
+    "moost": "workspace:^",
+    "vite": "^7.0.0"
   }
 }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import type { TProvideRegistry, TReplaceRegistry } from '@prostojs/infact'
 import type { TMateParamMeta } from '@prostojs/mate'
 import { Mate } from '@prostojs/mate'
@@ -12,28 +11,27 @@ import type { TPipeData, TPipeMetas } from '../pipes'
 const METADATA_WORKSPACE = 'moost'
 
 export interface TMoostMetadata<H extends TObject = TEmpty>
-  extends TCommonMetaFields,
-    TCommonMoostMeta {
-  requiredProps?: Array<string | symbol>
+  extends TCommonMetaFields, TCommonMoostMeta {
+  requiredProps?: (string | symbol)[]
   controller?: {
     prefix?: string
   }
-  importController?: Array<{
+  importController?: {
     prefix?: string
     typeResolver?:
       | TClassConstructor
       | (() => TClassConstructor | TObject | Promise<TClassConstructor | TObject>)
     provide?: TProvideRegistry
-  }>
-  properties?: Array<string | symbol>
+  }[]
+  properties?: (string | symbol)[]
   injectable?: true | TInjectableScope
   interceptors?: TInterceptorData[]
-  handlers?: Array<TMoostHandler<H>>
+  handlers?: TMoostHandler<H>[]
   returnType?: TFunction
   provide?: TProvideRegistry
   replace?: TReplaceRegistry
   loggerTopic?: string
-  params: Array<TMateParamMeta & TMoostParamsMetadata>
+  params: (TMateParamMeta & TMoostParamsMetadata)[]
 }
 
 export interface TMoostParamsMetadata extends TCommonMetaFields, TCommonMoostMeta {
@@ -78,8 +76,8 @@ export function getMoostMate<
   Param extends TObject = TEmpty,
 >() {
   return moostMate as unknown as Mate<
-    TMoostMetadata & Class & { params: Array<Param & TMateParamMeta> },
-    TMoostMetadata & Prop & { params: Array<Param & TMateParamMeta> }
+    TMoostMetadata & Class & { params: (Param & TMateParamMeta)[] },
+    TMoostMetadata & Prop & { params: (Param & TMateParamMeta)[] }
   >
 }
 

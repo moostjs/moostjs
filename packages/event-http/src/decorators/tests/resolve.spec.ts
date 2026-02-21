@@ -2,8 +2,7 @@ import * as eventCore from '@wooksjs/event-core'
 import * as wooksComposables from '@wooksjs/event-http'
 import * as wooksBody from '@wooksjs/http-body'
 import { getMoostMate } from 'moost'
-import { vi } from 'vitest'
-import { describe, it, expect } from 'vitest'
+import { vi, describe, it, expect } from 'vitest'
 
 import { ResolveDecoratorsTestClass } from './resolve.artifacts'
 
@@ -32,7 +31,7 @@ mEventCore.useRouteParams.mockImplementation(
     ({
       get: () => 'test route param',
       params: { test: 'test route param' },
-    }) as ReturnType<typeof mEventCore.useRouteParams>
+    }) as ReturnType<typeof mEventCore.useRouteParams>,
 )
 
 mWooksComposables.useSearchParams.mockImplementation(
@@ -40,7 +39,7 @@ mWooksComposables.useSearchParams.mockImplementation(
     ({
       jsonSearchParams: () => ({ test: 'test query value' }),
       urlSearchParams: () => ({ get: () => 'test query value' }),
-    }) as unknown as ReturnType<typeof wooksComposables.useSearchParams>
+    }) as unknown as ReturnType<typeof wooksComposables.useSearchParams>,
 )
 
 mWooksComposables.useRequest.mockImplementation(
@@ -50,14 +49,14 @@ mWooksComposables.useRequest.mockImplementation(
       method: 'PUT',
       rawRequest: 'raw request',
       rawResponse: () => 'raw response',
-    }) as unknown as ReturnType<typeof wooksComposables.useRequest>
+    }) as unknown as ReturnType<typeof wooksComposables.useRequest>,
 )
 
 mWooksComposables.useResponse.mockImplementation(
   () =>
     ({
       rawResponse: () => 'raw response',
-    }) as unknown as ReturnType<typeof wooksComposables.useResponse>
+    }) as unknown as ReturnType<typeof wooksComposables.useResponse>,
 )
 
 mWooksBody.useBody.mockImplementation(
@@ -65,7 +64,7 @@ mWooksBody.useBody.mockImplementation(
     ({
       parseBody: () => 'parsed body',
       rawBody: () => 'raw body',
-    }) as unknown as ReturnType<typeof mWooksBody.useBody>
+    }) as unknown as ReturnType<typeof mWooksBody.useBody>,
 )
 
 const instance = new ResolveDecoratorsTestClass()
@@ -86,8 +85,8 @@ describe('resolve http-decorators', () => {
               paramMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe('test header value')
       }
     }
@@ -106,8 +105,8 @@ describe('resolve http-decorators', () => {
               paramMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe('test cookie value')
       }
     }
@@ -126,8 +125,8 @@ describe('resolve http-decorators', () => {
               paramMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toEqual({ test: 'test query value' })
       }
     }
@@ -146,8 +145,8 @@ describe('resolve http-decorators', () => {
               paramMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe('test url')
       }
     }
@@ -166,8 +165,8 @@ describe('resolve http-decorators', () => {
               paramMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe('PUT')
       }
     }
@@ -186,8 +185,8 @@ describe('resolve http-decorators', () => {
               paramMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe('raw request')
       }
     }
@@ -206,8 +205,8 @@ describe('resolve http-decorators', () => {
               paramMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe('raw response')
       }
     }
@@ -226,8 +225,8 @@ describe('resolve http-decorators', () => {
               paramMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe('parsed body')
       }
     }
@@ -246,8 +245,8 @@ describe('resolve http-decorators', () => {
               paramMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe('raw body')
       }
     }

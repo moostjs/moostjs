@@ -1,8 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-
 import { getLogger } from './utils'
 
 /**
@@ -13,7 +8,7 @@ import { getLogger } from './utils'
  */
 export function createAdapterDetector(
   adapter: 'http' | 'wf' | 'cli',
-  onInit?: (constructor: new (...args: any[]) => unknown) => void
+  onInit?: (constructor: new (...args: any[]) => unknown) => void,
 ) {
   return {
     detected: false,

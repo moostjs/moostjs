@@ -14,7 +14,7 @@ export function Injectable(scope: true | TInjectableScope = true): ClassDecorato
   return getMoostMate().decorate('injectable', scope)
 }
 
-export const insureInjectable = getMoostMate().decorate(meta => {
+export const insureInjectable = getMoostMate().decorate((meta) => {
   if (!meta.injectable) {
     meta.injectable = true
   }

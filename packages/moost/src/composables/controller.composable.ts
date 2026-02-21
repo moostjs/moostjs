@@ -32,7 +32,7 @@ export function useControllerContext<T extends object>() {
   function instantiate<TT>(c: TClassConstructor<TT>) {
     return getMoostInfact().getForInstance(
       getController(),
-      c as TClassConstructor<TAny>
+      c as TClassConstructor<TAny>,
     ) as Promise<TT>
   }
 

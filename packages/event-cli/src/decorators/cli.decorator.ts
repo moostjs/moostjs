@@ -17,7 +17,11 @@ import { getCliMate } from '../meta-types'
  * @returns
  */
 export function Cli(path?: string): MethodDecorator {
-  return getCliMate().decorate('handlers', { path: path?.replace(/\s+/g, '/'), type: 'CLI' }, true)
+  return getCliMate().decorate(
+    'handlers',
+    { path: path?.replaceAll(/\s+/g, '/'), type: 'CLI' },
+    true,
+  )
 }
 
 /**

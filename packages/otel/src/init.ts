@@ -1,5 +1,3 @@
-/* eslint-disable max-depth */
-
 import { replaceContextInjector } from 'moost'
 
 import { SpanInjector } from './span-injector'

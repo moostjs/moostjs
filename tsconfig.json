@@ -22,7 +22,7 @@
     "skipLibCheck": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "removeComments": false,
+    "removeComments": false
   },
   "include": ["packages/*/src/**/*.ts", "globals.d.ts"],
   "exclude": ["**/*.spec.ts"]

@@ -19,7 +19,7 @@ describe('moost', () => {
     moost
       .applyGlobalInterceptors(globalInterceptor)
       .setProvideRegistry(
-        createProvideRegistry([E2eInterceptor, () => new E2eInterceptor(e2eInterceptor)])
+        createProvideRegistry([E2eInterceptor, () => new E2eInterceptor(e2eInterceptor)]),
       )
     await moostHttp.listen(request.PORT)
     await moost.init()
@@ -123,7 +123,7 @@ describe('moost', () => {
       const response2 = await request.get('intercept/for_request?second_time')
       expect(response2.status()).toEqual(200)
       expect(await response2.body()).toEqual(
-        'intercepted for url /intercept/for_request?second_time'
+        'intercepted for url /intercept/for_request?second_time',
       )
     })
   })

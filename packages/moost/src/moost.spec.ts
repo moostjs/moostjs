@@ -1,5 +1,3 @@
-/* eslint-disable symbol-description */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Get, Post } from '@moostjs/event-http'
 
 import { Moost } from './moost'

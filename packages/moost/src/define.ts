@@ -31,7 +31,7 @@ import { TPipePriority } from './pipes'
  */
 export function defineInterceptorFn(
   fn: TInterceptorFn,
-  priority: TInterceptorPriority = TInterceptorPriority.INTERCEPTOR
+  priority: TInterceptorPriority = TInterceptorPriority.INTERCEPTOR,
 ) {
   fn.priority = priority
   return fn
@@ -79,7 +79,7 @@ export type TInterceptorClass = TClassFunction<TInterceptorFn>
  */
 export function definePipeFn<T extends TObject = TEmpty>(
   fn: TPipeFn<T>,
-  priority: TPipePriority = TPipePriority.TRANSFORM
+  priority: TPipePriority = TPipePriority.TRANSFORM,
 ) {
   fn.priority = priority
   return fn

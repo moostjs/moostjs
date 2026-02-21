@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/promise-function-async */
 import { Injectable } from 'moost'
 
 /**

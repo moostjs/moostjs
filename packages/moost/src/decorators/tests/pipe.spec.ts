@@ -19,8 +19,8 @@ describe('pipe.decorator', () => {
             key: '',
             targetMeta: methodMeta.params[0] || {},
           },
-          'PARAM'
-        )
+          'PARAM',
+        ),
       ).toBe('test pipe 1')
     }
   })
@@ -38,8 +38,8 @@ describe('pipe.decorator', () => {
             key: '',
             targetMeta: methodMeta.params[0] || {},
           },
-          'PARAM'
-        )
+          'PARAM',
+        ),
       ).toBe('test pipe 2')
     }
   })
@@ -58,8 +58,8 @@ describe('pipe.decorator', () => {
             key: '',
             targetMeta: methodMeta.params[0] || {},
           },
-          'PARAM'
-        )
+          'PARAM',
+        ),
       ).toBe('test pipe 3')
     }
   })

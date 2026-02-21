@@ -5,7 +5,7 @@ export async function runPipes(
   pipes: TPipeData[],
   initialValue: unknown,
   metas: TPipeMetas,
-  level: TDecoratorLevel
+  level: TDecoratorLevel,
 ): Promise<unknown> {
   let v = initialValue
   for (const pipe of pipes) {

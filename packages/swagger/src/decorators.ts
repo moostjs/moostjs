@@ -12,14 +12,14 @@ export function SwaggerResponse(opts: TSwaggerResponseOpts, exmaple?: unknown): 
 export function SwaggerResponse(
   code: number,
   opts: TSwaggerResponseOpts,
-  exmaple?: unknown
+  exmaple?: unknown,
 ): MethodDecorator
 export function SwaggerResponse(
   code: number | TSwaggerResponseOpts,
   opts?: TSwaggerResponseOpts | unknown,
-  example?: unknown
+  example?: unknown,
 ): MethodDecorator {
-  return getSwaggerMate().decorate(meta => {
+  return getSwaggerMate().decorate((meta) => {
     let ex: unknown
     if (example) {
       ex = example
@@ -48,7 +48,7 @@ export function SwaggerResponse(
 }
 
 export function SwaggerRequestBody(opt: TSwaggerResponseOpts) {
-  return getSwaggerMate().decorate(meta => {
+  return getSwaggerMate().decorate((meta) => {
     meta.swaggerRequestBody = meta.swaggerRequestBody || {}
     const contentType =
       typeof (opt as { contentType: string }).contentType === 'string'

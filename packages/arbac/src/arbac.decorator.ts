@@ -1,4 +1,3 @@
-/* eslint-disable complexity */
 import { HttpError } from '@wooksjs/event-http'
 import {
   defineInterceptorFn,
@@ -32,7 +31,7 @@ export const arbackAuthorizeInterceptor = defineInterceptorFn(async (before, aft
     if (!allowed) {
       throw new HttpError(
         403,
-        `Insufficient privileges for action "${action}" on resource "${resource}"`
+        `Insufficient privileges for action "${action}" on resource "${resource}"`,
       )
     }
     setScopes(scopes)

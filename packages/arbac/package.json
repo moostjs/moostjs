@@ -2,10 +2,32 @@
   "name": "@moostjs/arbac",
   "version": "0.5.33",
   "description": "Access Control @prostojs/arbac",
+  "keywords": [
+    "abac",
+    "access control",
+    "arbac",
+    "moost",
+    "moostjs",
+    "rbac"
+  ],
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/arbac#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "license": "MIT",
+  "author": "Artem Maltsev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/arbac"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "sideEffects": false,
   "exports": {
     "./package.json": "./package.json",
     ".": {
@@ -14,40 +36,18 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "pub": "pnpm publish --access public",
     "test": "vitest"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/moostjs/moostjs.git",
-    "directory": "packages/arbac"
-  },
-  "keywords": [
-    "moost",
-    "moostjs",
-    "arbac",
-    "rbac",
-    "abac",
-    "access control"
-  ],
-  "author": "Artem Maltsev",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/moostjs/moostjs/issues"
-  },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/arbac#readme",
-  "peerDependencies": {
-    "@wooksjs/event-http": "^0.6.2",
-    "moost": "workspace:^"
   },
   "dependencies": {
     "@prostojs/arbac": "^0.0.2"
   },
   "devDependencies": {
     "vitest": "3.2.4"
+  },
+  "peerDependencies": {
+    "@wooksjs/event-http": "^0.6.2",
+    "moost": "workspace:^"
   }
 }

@@ -23,7 +23,7 @@ export interface TMoostCliOpts {
   /**
    * Array of cli options applicable to every cli command
    */
-  globalCliOptions?: Array<{ keys: string[]; description?: string; type?: TFunction }>
+  globalCliOptions?: { keys: string[]; description?: string; type?: TFunction }[]
 }
 
 const LOGGER_TITLE = 'moost-cli'
@@ -130,13 +130,13 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
           : typeof opts.method === 'string'
             ? opts.method
             : ''
-      const prefix = opts.prefix.replace(/\s+/g, '/') || ''
+      const prefix = opts.prefix.replaceAll(/\s+/g, '/') || ''
       const makePath = (p: string) =>
         `${prefix}/${p}`
-          .replace(/\/\/+/g, '/')
+          .replaceAll(/\/\/+/g, '/')
           // avoid interpreting "cmd:tail" as "cmd/:tail"
-          .replace(/\/\\:/g, '\\:')
-          .replace(/^\/+/g, '')
+          .replaceAll(/\/\\:/g, '\\:')
+          .replaceAll(/^\/+/g, '')
 
       const targetPath = makePath(path)
 
@@ -165,14 +165,13 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
           ? meta.params
               .filter((param: TCliClassMeta) => param.cliOptionsKeys?.length)
               .map((param: TCliClassMeta & TMoostParamsMetadata) => ({
-                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
                 keys: param.cliOptionsKeys!,
                 value: typeof param.value === 'string' ? param.value : '',
                 description: param.description || '',
                 type: param.type,
               }))
           : []),
-      ].forEach(o => cliOptions.set(o.keys[0], o))
+      ].forEach((o) => cliOptions.set(o.keys[0], o))
 
       const aliases = []
       if (meta?.cliAliases) {
@@ -183,7 +182,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
       }
 
       const cliOptionsArray = Array.from(cliOptions.values())
-      cliOptionsArray.forEach(o => {
+      cliOptionsArray.forEach((o) => {
         for (const key of o.keys) {
           if (!this.optionTypes[key]) {
             this.optionTypes[key] = []
@@ -196,8 +195,8 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
 
       const args: Record<string, string> = {}
       meta?.params
-        .filter(p => p.paramSource === 'ROUTE' && p.description)
-        .forEach(p => (args[p.paramName!] = p.description!))
+        .filter((p) => p.paramSource === 'ROUTE' && p.description)
+        .forEach((p) => (args[p.paramName!] = p.description!))
 
       const routerBinding = this.cliApp.cli(targetPath, {
         description: meta?.description || '',
@@ -206,7 +205,6 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
         aliases,
         examples: meta?.cliExamples || [],
         handler: fn,
-        // eslint-disable-next-line @typescript-eslint/no-loop-func
         onRegister: (path, aliasType, route) => {
           opts.register(handler, path, route?.getArgs() || routerBinding.getArgs())
           if (this.opts?.debug) {

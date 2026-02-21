@@ -1,4 +1,3 @@
-/* eslint-disable unicorn/import-style */
 import { ProstoRewrite } from '@prostojs/rewrite'
 import {
   existsSync,
@@ -62,7 +61,7 @@ export async function scaffold(data: TPrompts) {
         return filename
       },
     },
-    context
+    context,
   )
   await rw.rewriteDir(
     {
@@ -76,7 +75,7 @@ export async function scaffold(data: TPrompts) {
         return filename
       },
     },
-    context
+    context,
   )
   if (data.wf) {
     await rw.rewriteDir(
@@ -90,14 +89,14 @@ export async function scaffold(data: TPrompts) {
           return filename
         },
       },
-      context
+      context,
     )
   }
 }
 
 function emptyDirectorySync(directory: string) {
   if (existsSync(directory)) {
-    readdirSync(directory).forEach(file => {
+    readdirSync(directory).forEach((file) => {
       const currentPath = join(directory, file)
 
       if (lstatSync(currentPath).isDirectory()) {

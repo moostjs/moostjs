@@ -1,4 +1,3 @@
-/* eslint-disable sonarjs/no-duplicate-string */
 import type { Span } from '@opentelemetry/api'
 import { SpanKind, trace } from '@opentelemetry/api'
 import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from 'http'
@@ -28,16 +27,15 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     } else if (name !== 'Event:start') {
       if (this.getIgnoreSpan()) {
         return fn()
-      } else {
-        const span = tracer.startSpan(name, {
-          kind: SpanKind.INTERNAL,
-          attributes: attrs,
-        })
-        return this.withSpan(span, fn, {
-          withMetrics: false,
-          endSpan: true,
-        })
       }
+      const span = tracer.startSpan(name, {
+        kind: SpanKind.INTERNAL,
+        attributes: attrs,
+      })
+      return this.withSpan(span, fn, {
+        withMetrics: false,
+        endSpan: true,
+      })
     }
     return fn()
   }
@@ -50,7 +48,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
         writeHead: (
           arg0: number,
           arg1?: string | OutgoingHttpHeaders,
-          arg2?: OutgoingHttpHeaders
+          arg2?: OutgoingHttpHeaders,
         ) => {
           res._statusCode = arg0
           const headers =
@@ -123,7 +121,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
   hook(
     method: string,
     name: 'Handler:not_found' | 'Handler:routed' | 'Controller:registered',
-    route?: string
+    route?: string,
   ): void {
     if (method === 'WF_STEP') {
       // ignore "WF_STEP" to prevent interference with "WF_FLOW"
@@ -172,7 +170,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     opts: {
       withMetrics: boolean
       endSpan: boolean
-    }
+    },
   ): T {
     return withSpan(span, cb, (_span, exception, result) => {
       if (result instanceof Error) {
@@ -212,7 +210,6 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       'moost.is_error': error ? 1 : 0,
     } as Record<string, string | number>
     if (a['moost.event_type'] === 'HTTP') {
-      // eslint-disable-next-line unicorn/no-lonely-if
       if (!attrs.route) {
         attrs.route = this.getRequest()?.url || ''
       }

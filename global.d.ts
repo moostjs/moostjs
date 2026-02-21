@@ -1,5 +1,3 @@
-/* eslint-disable unicorn/no-abusive-eslint-disable */
-/* eslint-disable */
 // Global compile-time constants
 declare var __DEV__: boolean
 declare var __TEST__: boolean

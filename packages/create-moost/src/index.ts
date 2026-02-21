@@ -16,7 +16,6 @@ class Commands extends CliApp {
   }
 
   async execute(name?: string) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
     useAutoHelp() && process.exit(0)
 
     const prompts = await getPrompts({

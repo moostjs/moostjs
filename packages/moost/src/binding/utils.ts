@@ -2,24 +2,22 @@ import { getConstructor } from '@prostojs/mate'
 
 import type { TAny, TClassConstructor } from '../common-types'
 
-export function getInstanceOwnMethods<T = TAny>(instance: T): Array<keyof T> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+export function getInstanceOwnMethods<T = TAny>(instance: T): (keyof T)[] {
   const proto = Object.getPrototypeOf(instance)
   return [
     ...getParentProps(getConstructor(instance) as TClassConstructor), // Inheritance support
     ...Object.getOwnPropertyNames(proto),
     ...Object.getOwnPropertyNames(instance),
-  ].filter(m => typeof instance[m as keyof typeof instance] === 'function') as Array<keyof T>
+  ].filter((m) => typeof instance[m as keyof typeof instance] === 'function') as (keyof T)[]
 }
 
-export function getInstanceOwnProps<T = TAny>(instance: T): Array<keyof T> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+export function getInstanceOwnProps<T = TAny>(instance: T): (keyof T)[] {
   const proto = Object.getPrototypeOf(instance)
   return [
     ...getParentProps(getConstructor(instance) as TClassConstructor), // Inheritance support
     ...Object.getOwnPropertyNames(proto),
     ...Object.getOwnPropertyNames(instance),
-  ].filter(m => typeof instance[m as keyof typeof instance] !== 'function') as Array<keyof T>
+  ].filter((m) => typeof instance[m as keyof typeof instance] !== 'function') as (keyof T)[]
 }
 
 const fnProto = Object.getPrototypeOf(Function) as TClassConstructor

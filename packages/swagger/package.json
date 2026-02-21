@@ -2,6 +2,28 @@
   "name": "@moostjs/swagger",
   "version": "0.5.33",
   "description": "@moostjs/swagger",
+  "keywords": [
+    "composables",
+    "framework",
+    "moost",
+    "moostjs",
+    "prostojs",
+    "wooksjs"
+  ],
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/swagger#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "license": "MIT",
+  "author": "Artem Maltsev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/swagger"
+  },
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
@@ -14,37 +36,9 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "pub": "pnpm publish --access public",
     "test": "vitest"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/moostjs/moostjs.git",
-    "directory": "packages/swagger"
-  },
-  "keywords": [
-    "moost",
-    "moostjs",
-    "composables",
-    "framework",
-    "wooksjs",
-    "prostojs"
-  ],
-  "author": "Artem Maltsev",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/moostjs/moostjs/issues"
-  },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/swagger#readme",
-  "peerDependencies": {
-    "@moostjs/event-http": "workspace:^",
-    "@wooksjs/event-http": "^0.6.2",
-    "@wooksjs/http-static": "^0.6.2",
-    "moost": "workspace:^"
   },
   "dependencies": {
     "swagger-ui-dist": "^5.31.2"
@@ -52,5 +46,11 @@
   "devDependencies": {
     "@types/swagger-ui-dist": "3.30.5",
     "vitest": "3.2.4"
+  },
+  "peerDependencies": {
+    "@moostjs/event-http": "workspace:^",
+    "@wooksjs/event-http": "^0.6.2",
+    "@wooksjs/http-static": "^0.6.2",
+    "moost": "workspace:^"
   }
 }

@@ -12,9 +12,9 @@ export const send = (
   method: string,
   path: string,
   body?: unknown,
-  _headers?: Record<string, string>
+  _headers?: Record<string, string>,
 ): Promise<TRequestResponse> =>
-  new Promise(resolve => {
+  new Promise((resolve) => {
     const headers: Record<string, string> = _headers || {}
     if (body) {
       if (typeof body === 'object') {
@@ -31,15 +31,15 @@ export const send = (
     const req = http.request(
       `http://localhost:${PORT.toString()}/${path}`,
       { method, headers },
-      res => {
+      (res) => {
         resolve({
           body(): Promise<string> {
             return new Promise((resolve, reject) => {
               let body = Buffer.from('')
-              res.on('data', chunk => {
+              res.on('data', (chunk) => {
                 body = Buffer.concat([body, chunk])
               })
-              res.on('error', err => {
+              res.on('error', (err) => {
                 reject(err)
               })
               res.on('end', () => {
@@ -54,7 +54,7 @@ export const send = (
             return res.statusCode || 0
           },
         })
-      }
+      },
     )
     if (body) {
       req.write(body)

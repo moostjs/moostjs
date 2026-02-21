@@ -32,7 +32,7 @@ const tests = [
 ]
 
 describe('http-method.decorator', () => {
-  for (const t of tests as Array<[string, string, string, string]>) {
+  for (const t of tests as [string, string, string, string][]) {
     const s = JSON.stringify(t[3])
     it(`@${t[0]} must resolve to http method '${t[2]}' for "${t[1]}" with path = ${s}`, () => {
       simpleTest(...(t.slice(1) as [string, string, string]))

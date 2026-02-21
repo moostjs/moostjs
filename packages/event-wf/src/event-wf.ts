@@ -14,7 +14,6 @@ export interface TWfHandlerMeta {
 const LOGGER_TITLE = 'moost-wf'
 const CONTEXT_TYPE = 'WF'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta> {
   public readonly name = 'workflow'
 
@@ -22,7 +21,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
 
   constructor(
     protected opts?: WooksWf<T, IR> | TWooksWfOptions,
-    private readonly debug?: boolean
+    private readonly debug?: boolean,
   ) {
     if (opts && opts instanceof WooksWf) {
       this.wfApp = opts
@@ -47,11 +46,11 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
 
   protected moost?: Moost
 
-  protected toInit: Array<() => void> = []
+  protected toInit: (() => void)[] = []
 
   onInit(moost: Moost) {
     this.moost = moost
-    this.toInit.forEach(fn => {
+    this.toInit.forEach((fn) => {
       fn()
     })
   }
@@ -77,13 +76,13 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
       () => {
         const scopeId = useEventId().getId()
         getMoostInfact().unregisterScope(scopeId)
-      }
+      },
     )
   }
 
   public resume<I>(
     state: { schemaId: string; context: T; indexes: number[] },
-    input?: I
+    input?: I,
   ): Promise<TFlowOutput<T, I, IR>> {
     return this.wfApp.resume(
       state,
@@ -92,7 +91,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
       () => {
         const scopeId = useEventId().getId()
         getMoostInfact().unregisterScope(scopeId)
-      }
+      },
     )
   }
 
@@ -105,8 +104,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
       const schemaId = handler.path
       const path =
         typeof schemaId === 'string' ? schemaId : typeof opts.method === 'string' ? opts.method : ''
-      // eslint-disable-next-line sonarjs/no-nested-template-literals
-      const targetPath = `${`${opts.prefix || ''}/${path}`.replace(/\/\/+/g, '/')}${
+      const targetPath = `${`${opts.prefix || ''}/${path}`.replaceAll(/\/\/+/g, '/')}${
         path.endsWith('//') ? '/' : ''
       }` // explicit double slash "//" -> force url to end with slash
 
@@ -133,7 +131,6 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
         if (!wfSchema) {
           wfSchema = mate.read(opts.fakeInstance)?.wfSchema
         }
-        // eslint-disable-next-line @typescript-eslint/no-loop-func
         const _fn = (async () => {
           // the fn() will be instantiating real controller
           // so we have to provide Moost as controller for now
@@ -142,7 +139,6 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
           setControllerContext(this.moost!, 'bindHandler' as keyof typeof this.moost, targetPath)
           return fn()
         }) as () => void
-        // eslint-disable-next-line @typescript-eslint/no-loop-func
         this.toInit.push(() => {
           this.wfApp.flow(targetPath, wfSchema || [], opts.prefix === '/' ? '' : opts.prefix, _fn)
           opts.logHandler(`${__DYE_CYAN__}(${handler.type})${__DYE_GREEN__}${targetPath}`)

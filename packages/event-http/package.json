@@ -2,11 +2,33 @@
   "name": "@moostjs/event-http",
   "version": "0.5.33",
   "description": "@moostjs/event-http",
+  "keywords": [
+    "composables",
+    "framework",
+    "moost",
+    "moostjs",
+    "prostojs",
+    "wooksjs"
+  ],
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-http#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "license": "MIT",
+  "author": "Artem Maltsev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/event-http"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "sideEffects": false,
-  "type": "module",
   "exports": {
     "./package.json": "./package.json",
     ".": {
@@ -15,37 +37,9 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
     "pub": "pnpm publish --access public",
     "test": "vitest"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/moostjs/moostjs.git",
-    "directory": "packages/event-http"
-  },
-  "keywords": [
-    "moost",
-    "moostjs",
-    "composables",
-    "framework",
-    "wooksjs",
-    "prostojs"
-  ],
-  "author": "Artem Maltsev",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/moostjs/moostjs/issues"
-  },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/event-http#readme",
-  "peerDependencies": {
-    "@wooksjs/event-core": "^0.6.2",
-    "@prostojs/infact": "^0.3.3",
-    "@prostojs/router": "^0.2.1",
-    "moost": "workspace:^"
   },
   "dependencies": {
     "@wooksjs/event-http": "^0.6.2",
@@ -53,5 +47,11 @@
   },
   "devDependencies": {
     "vitest": "3.2.4"
+  },
+  "peerDependencies": {
+    "@prostojs/infact": "^0.3.3",
+    "@prostojs/router": "^0.2.1",
+    "@wooksjs/event-core": "^0.6.2",
+    "moost": "workspace:^"
   }
 }

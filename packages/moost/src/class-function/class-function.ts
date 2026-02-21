@@ -11,7 +11,7 @@ export async function getCallableFn<T extends TAnyFn = TAnyFn>(
   targetInstance: TObject,
   fn: TCallableClassFunction<T>,
   pipes: TPipeData[],
-  logger: TConsoleBase
+  logger: TConsoleBase,
 ): Promise<T> {
   const mate = getMoostMate()
   const meta = mate.read(fn)
@@ -19,7 +19,9 @@ export async function getCallableFn<T extends TAnyFn = TAnyFn>(
     const infact = getMoostInfact()
     const instance = (await infact.getForInstance(targetInstance, fn as TClassConstructor<TAny>, {
       customData: {
-        pipes: [...(pipes || []), ...(meta.pipes || [])].sort((a, b) => a.priority - b.priority),
+        pipes: [...(pipes || []), ...(meta.pipes || [])].toSorted(
+          (a, b) => a.priority - b.priority,
+        ),
       },
     })) as TClassFunction<T>
     return ((...args: TAny[]) => instance.handler(...(args as Parameters<T>))) as unknown as T
@@ -30,7 +32,7 @@ export async function getCallableFn<T extends TAnyFn = TAnyFn>(
   const e = new Error(
     `getCallableFn failed for "${
       getConstructor(targetInstance).name
-    }" because the passed arg is not a Function nor TClassFunction`
+    }" because the passed arg is not a Function nor TClassFunction`,
   )
   logger.error(e)
   throw e

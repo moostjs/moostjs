@@ -1,4 +1,3 @@
-/* eslint-disable sonarjs/no-duplicate-string */
 import * as eventCore from '@wooksjs/event-core'
 import * as wooksComposables from '@wooksjs/event-http'
 import * as wooksBody from '@wooksjs/http-body'
@@ -30,7 +29,7 @@ mEventCore.useRouteParams.mockImplementation(
     ({
       get: () => 'test route param',
       params: { test: 'test route param' },
-    }) as ReturnType<typeof mEventCore.useRouteParams>
+    }) as ReturnType<typeof mEventCore.useRouteParams>,
 )
 
 mWooksComposables.useSearchParams.mockImplementation(
@@ -38,7 +37,7 @@ mWooksComposables.useSearchParams.mockImplementation(
     ({
       jsonSearchParams: () => ({ test: 'test query value' }),
       urlSearchParams: () => ({ get: () => 'test query value' }),
-    }) as unknown as ReturnType<typeof wooksComposables.useSearchParams>
+    }) as unknown as ReturnType<typeof wooksComposables.useSearchParams>,
 )
 
 mWooksComposables.useRequest.mockImplementation(
@@ -48,14 +47,14 @@ mWooksComposables.useRequest.mockImplementation(
       method: 'PUT',
       rawRequest: 'raw request',
       rawResponse: () => 'raw response',
-    }) as unknown as ReturnType<typeof wooksComposables.useRequest>
+    }) as unknown as ReturnType<typeof wooksComposables.useRequest>,
 )
 
 mWooksComposables.useResponse.mockImplementation(
   () =>
     ({
       rawResponse: () => 'raw response',
-    }) as unknown as ReturnType<typeof wooksComposables.useResponse>
+    }) as unknown as ReturnType<typeof wooksComposables.useResponse>,
 )
 
 mWooksBody.useBody.mockImplementation(
@@ -63,7 +62,7 @@ mWooksBody.useBody.mockImplementation(
     ({
       parseBody: () => 'parsed body',
       rawBody: () => 'raw body',
-    }) as unknown as ReturnType<typeof mWooksBody.useBody>
+    }) as unknown as ReturnType<typeof mWooksBody.useBody>,
 )
 
 const instance = new ResolveDecoratorsTestClass()
@@ -85,8 +84,8 @@ describe('resolve decorators', () => {
               targetMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe('resolved')
       }
     }
@@ -107,8 +106,8 @@ describe('resolve decorators', () => {
               targetMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe('test route param')
       }
     }
@@ -128,8 +127,8 @@ describe('resolve decorators', () => {
               targetMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toEqual({ test: 'test route param' })
       }
     }
@@ -149,8 +148,8 @@ describe('resolve decorators', () => {
               targetMeta: meta.params[i],
               key: '',
             },
-            'PARAM'
-          )
+            'PARAM',
+          ),
         ).toBe(10)
       }
     }

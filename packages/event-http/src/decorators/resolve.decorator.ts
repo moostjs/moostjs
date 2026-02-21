@@ -34,9 +34,9 @@ export const StatusHook = () =>
         metas.instance,
         {
           get: () => hook.value,
-          set: v => (hook.value = v),
+          set: (v) => (hook.value = v),
         },
-        metas.key
+        metas.key,
       )
       return typeof initialValue === 'number' ? initialValue : 200
     }
@@ -60,9 +60,9 @@ export const HeaderHook = (name: string) =>
         metas.instance,
         {
           get: () => hook.value,
-          set: v => (hook.value = v),
+          set: (v) => (hook.value = v),
         },
-        metas.key
+        metas.key,
       )
       return typeof initialValue === 'string' ? initialValue : ''
     }
@@ -86,9 +86,9 @@ export const CookieHook = (name: string) =>
         metas.instance,
         {
           get: () => hook.value,
-          set: v => (hook.value = v),
+          set: (v) => (hook.value = v),
         },
-        metas.key
+        metas.key,
       )
       return typeof initialValue === 'string' ? initialValue : ''
     }
@@ -108,8 +108,8 @@ export const CookieAttrsHook = (name: string) =>
         {},
         {
           get: () => hook.attrs,
-          set: v => (hook.attrs = v),
-        }
+          set: (v) => (hook.attrs = v),
+        },
       )
     }
     if (level === 'PROP' && metas.instance && metas.key) {
@@ -118,9 +118,9 @@ export const CookieAttrsHook = (name: string) =>
         metas.instance,
         {
           get: () => hook.attrs,
-          set: v => (hook.attrs = v),
+          set: (v) => (hook.attrs = v),
         },
-        metas.key
+        metas.key,
       )
       return typeof initialValue === 'object' ? initialValue : {}
     }
@@ -202,7 +202,7 @@ export function Query(name?: string): ParameterDecorator {
       }
       const json = jsonSearchParams() as TObject
       return Object.keys(json).length > 0 ? json : undefined
-    }, _name)
+    }, _name),
   )
 }
 
@@ -278,7 +278,7 @@ export function IpList() {
 export function Body() {
   return getMoostMate().apply(
     getMoostMate().decorate('paramSource', 'BODY'),
-    Resolve(() => useBody().parseBody(), 'body')
+    Resolve(() => useBody().parseBody(), 'body'),
   )
 }
 

@@ -2,11 +2,38 @@
   "name": "create-moost",
   "version": "0.5.33",
   "description": "create-moost",
+  "keywords": [
+    "composables",
+    "framework",
+    "moost",
+    "moostjs",
+    "prostojs",
+    "wooksjs"
+  ],
+  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/create-moost#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "license": "MIT",
+  "author": "Artem Maltsev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git",
+    "directory": "packages/create-moost"
+  },
+  "bin": {
+    "create-moost": "./bin.cjs"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "bin.js"
+  ],
+  "type": "module",
+  "sideEffects": false,
   "main": "dist/index.cjs",
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
-  "sideEffects": false,
-  "type": "module",
   "exports": {
     "./package.json": "./package.json",
     ".": {
@@ -15,37 +42,10 @@
       "require": "./dist/index.cjs"
     }
   },
-  "bin": {
-    "create-moost": "./bin.cjs"
-  },
   "scripts": {
     "pub": "pnpm publish --access public",
     "test": "vitest"
   },
-  "files": [
-    "dist",
-    "templates",
-    "bin.js"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/moostjs/moostjs.git",
-    "directory": "packages/create-moost"
-  },
-  "keywords": [
-    "moost",
-    "moostjs",
-    "composables",
-    "framework",
-    "wooksjs",
-    "prostojs"
-  ],
-  "author": "Artem Maltsev",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/moostjs/moostjs/issues"
-  },
-  "homepage": "https://github.com/moostjs/moostjs/tree/main/packages/create-moost#readme",
   "dependencies": {
     "@moostjs/event-cli": "workspace:^",
     "@prostojs/rewrite": "^0.1.1",

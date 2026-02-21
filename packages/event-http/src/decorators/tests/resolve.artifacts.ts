@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Body, Cookie, Header, Method, Query, RawBody, Req, Res, Url } from '../resolve.decorator'
 
 export class ResolveDecoratorsTestClass {
@@ -11,7 +10,7 @@ export class ResolveDecoratorsTestClass {
     @Req() _p8: string,
     @Res() _p9: string,
     @Body() _p11: string,
-    @RawBody() _p12: string
+    @RawBody() _p12: string,
   ) {
     /** */
   }

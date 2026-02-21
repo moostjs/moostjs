@@ -14,7 +14,7 @@ export interface THandlerOverview {
   type: string
   method: string
   handler: TMoostHandler<TEmpty>
-  registeredAs: Array<{ path: string; args: string[] }>
+  registeredAs: { path: string; args: string[] }[]
 }
 
 export type TContextInjectorHook =

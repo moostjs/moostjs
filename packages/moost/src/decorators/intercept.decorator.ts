@@ -5,17 +5,17 @@ import { getMoostMate } from '../metadata/moost-metadata'
 export type TInterceptorBefore = (reply: (response: TAny) => void) => void | Promise<void>
 export type TInterceptorAfter = (
   response: TAny,
-  reply: (response: TAny) => void
+  reply: (response: TAny) => void,
 ) => void | Promise<void>
 export type TInterceptorOnError = (
   error: Error,
-  reply: (response: TAny) => void
+  reply: (response: TAny) => void,
 ) => void | Promise<void>
 export interface TInterceptorFn {
   (
     before: (fn: TInterceptorBefore) => void,
     after: (fn: TInterceptorAfter) => void,
-    onError: (fn: TInterceptorOnError) => void
+    onError: (fn: TInterceptorOnError) => void,
   ): unknown | Promise<unknown>
   priority?: TInterceptorPriority
   _name?: string
@@ -46,7 +46,7 @@ export enum TInterceptorPriority {
 export function Intercept(
   handler: TCallableClassFunction<TInterceptorFn>,
   priority?: TInterceptorPriority,
-  name?: string
+  name?: string,
 ): ClassDecorator & MethodDecorator {
   return getMoostMate().decorate(
     'interceptors',
@@ -56,6 +56,6 @@ export function Intercept(
         priority || (handler as TInterceptorFn).priority || TInterceptorPriority.INTERCEPTOR,
       name: name || (handler as TInterceptorFn)._name || handler.name,
     },
-    true
+    true,
   )
 }

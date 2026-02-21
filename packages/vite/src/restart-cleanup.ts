@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-loop-func */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/ban-types */
-/* eslint-disable @typescript-eslint/naming-convention */
 import { clearGlobalWooks, getMoostInfact, getMoostMate, Moost } from 'moost'
 
 import type { createAdapterDetector } from './adapter-detector'
@@ -14,9 +10,9 @@ import { getLogger } from './utils'
  * @param {Set<string>} [cleanupInstances] A set of module IDs to remove from the registry.
  */
 export function moostRestartCleanup(
-  adapters: Array<ReturnType<typeof createAdapterDetector>>,
+  adapters: ReturnType<typeof createAdapterDetector>[],
   onEject?: TMoostViteDevOptions['onEject'],
-  cleanupInstances?: Set<string>
+  cleanupInstances?: Set<string>,
 ) {
   const logger = getLogger()
   const infact = getMoostInfact() as unknown as {
@@ -54,7 +50,7 @@ export function moostRestartCleanup(
           ) {
             delete reg[key]
             logger.debug(
-              `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "Moost")`
+              `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "Moost")`,
             )
             return true
           }
@@ -64,7 +60,7 @@ export function moostRestartCleanup(
               logger.debug(
                 `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "${
                   adapter.constructor!.name
-                }")`
+                }")`,
               )
               return true
             }
@@ -85,7 +81,7 @@ export function moostRestartCleanup(
 
 function clearDependantRegistry(
   registry: Record<symbol, object>,
-  onEject?: TMoostViteDevOptions['onEject']
+  onEject?: TMoostViteDevOptions['onEject'],
 ) {
   const logger = getLogger()
   const objSet = new Set()
@@ -104,7 +100,7 @@ function clearDependantRegistry(
           logger.debug(
             `✖️  Ejecting "${constructorName(instance)}" (depends on "${
               type.name
-            }" which is not in registry)`
+            }" which is not in registry)`,
           )
           somethingIsDeleted = true
           return true
@@ -114,7 +110,6 @@ function clearDependantRegistry(
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-invalid-void-type
 function scanParams(instance: object, cb: (type: Function) => boolean | void) {
   const mate = getMoostMate()
   const params = mate.read(instance)?.params
@@ -123,7 +118,7 @@ function scanParams(instance: object, cb: (type: Function) => boolean | void) {
       if (
         param.type === undefined ||
         [Array, String, Number, Boolean, Object].includes(
-          param.type as unknown as StringConstructor
+          param.type as unknown as StringConstructor,
         )
       ) {
         // skip undefined and primitive types
@@ -137,6 +132,5 @@ function scanParams(instance: object, cb: (type: Function) => boolean | void) {
 }
 
 function constructorName(i: object) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return Object.getPrototypeOf(i).constructor.name
 }

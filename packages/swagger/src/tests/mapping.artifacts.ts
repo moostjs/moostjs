@@ -12,7 +12,7 @@ import { SwaggerExample, SwaggerParam, SwaggerRequestBody, SwaggerResponse } fro
 export class SwaggerTypeTest {
   name = 'name'
   age = 26
-  array: Array<string | null> = []
+  array: (string | null)[] = []
 
   static toJsonSchema() {
     return {

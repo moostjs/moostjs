@@ -12,7 +12,7 @@ import { TPipePriority } from '../pipes/types'
  */
 export function Pipe(
   handler: TPipeFn,
-  priority?: TPipePriority
+  priority?: TPipePriority,
 ): ClassDecorator & MethodDecorator & ParameterDecorator {
   if (typeof priority !== 'number') {
     priority = typeof handler.priority === 'number' ? handler.priority : TPipePriority.TRANSFORM

@@ -1,4 +1,3 @@
-/* eslint-disable unicorn/consistent-destructuring */
 import type { TEmpty, TObject, TClassConstructor } from '../common-types'
 import { useControllerContext } from '../composables'
 import type { TMoostHandler, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
@@ -17,7 +16,6 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
   const { adapters } = opts
   opts.globalPrefix = opts.globalPrefix || ''
   opts.provide = opts.provide || {}
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   const fakeInstance = Object.create(classConstructor.prototype) as TObject
   const methods = getInstanceOwnMethods(fakeInstance)
   const mate = getMoostMate()
@@ -42,32 +40,32 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
       continue
     }
 
-    const pipes = [...(opts.pipes || []), ...(methodMeta.pipes || [])].sort(
-      (a, b) => a.priority - b.priority
+    const pipes = [...(opts.pipes || []), ...(methodMeta.pipes || [])].toSorted(
+      (a, b) => a.priority - b.priority,
     )
     // preparing interceptors
     const interceptors = [
       ...(opts.interceptors || []),
       ...(meta.interceptors || []),
       ...(methodMeta.interceptors || []),
-    ].sort((a, b) => a.priority - b.priority)
+    ].toSorted((a, b) => a.priority - b.priority)
 
     const getIterceptorHandler = getIterceptorHandlerFactory(
       interceptors,
       getInstance,
       pipes,
-      options.logger
+      options.logger,
     )
 
     // preparing pipes
-    const argsPipes: Array<{
+    const argsPipes: {
       meta: TMoostParamsMetadata
       pipes: TPipeData[]
-    }> = []
+    }[] = []
     for (const p of methodMeta.params || ([] as TMoostParamsMetadata[])) {
       argsPipes.push({
         meta: p,
-        pipes: [...pipes, ...(p.pipes || [])].sort((a, b) => a.priority - b.priority),
+        pipes: [...pipes, ...(p.pipes || [])].toSorted((a, b) => a.priority - b.priority),
       })
     }
 
@@ -88,7 +86,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
             instantiate: <T extends TObject>(t: TClassConstructor<T>) =>
               useControllerContext().instantiate(t),
           },
-          'PARAM'
+          'PARAM',
         )
       }
       return args
@@ -97,7 +95,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
     const wm = new WeakMap<Required<typeof methodMeta>['handlers'][0], THandlerOverview>()
 
     controllerOverview.handlers.push(
-      ...methodMeta.handlers.map(h => {
+      ...methodMeta.handlers.map((h) => {
         const data: THandlerOverview = {
           meta: methodMeta,
           path: h.path,
@@ -108,7 +106,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
         }
         wm.set(h, data)
         return data
-      })
+      }),
     )
 
     for (const adapter of adapters) {
@@ -120,7 +118,6 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
         handlers: methodMeta.handlers,
         getIterceptorHandler,
         resolveArgs,
-        // eslint-disable-next-line @typescript-eslint/no-loop-func
         logHandler: (eventName: string) => {
           options.moostInstance.logMappedHandler(eventName, classConstructor, method as string)
         },

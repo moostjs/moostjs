@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
 import { Moost } from 'moost'
 
 /**
@@ -145,7 +144,7 @@ export function patchMoostHandlerLogging(): void {
         item.classConstructor,
         item.method,
         true,
-        '❌ '
+        '❌ ',
       )
     })
   }
@@ -162,7 +161,7 @@ export function patchMoostHandlerLogging(): void {
   Moost.prototype.logMappedHandler = function logMappedHandler(
     eventName: string,
     classConstructor: Function,
-    method: string
+    method: string,
   ) {
     // logsStorage.record returns true if this item is new
     // (not seen in oldMap)
@@ -173,7 +172,7 @@ export function patchMoostHandlerLogging(): void {
         classConstructor,
         method,
         false,
-        logsStorage!.isFirstRun ? '' : '✅ '
+        logsStorage!.isFirstRun ? '' : '✅ ',
       )
     }
   }

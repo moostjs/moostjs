@@ -1,10 +1,11 @@
-import { getMoostMate, type TMoostMetadata, type Mate, type TMateParamMeta } from 'moost'
+import { getMoostMate } from 'moost'
+import type { TMoostMetadata, Mate, TMateParamMeta } from 'moost'
 
 export interface TCliClassMeta {
   cliOptionsKeys?: string[]
   cliAliases?: string[]
-  cliExamples?: Array<{ cmd: string; description?: string }>
-  cliOptions?: Array<{ keys: string[]; description?: string; value?: string }>
+  cliExamples?: { cmd: string; description?: string }[]
+  cliOptions?: { keys: string[]; description?: string; value?: string }[]
   params?: TCliClassMeta[]
   // cliHelpUsed?: boolean
 }
@@ -12,11 +13,11 @@ export interface TCliClassMeta {
 export function getCliMate(): Mate<
   TMoostMetadata &
     TCliClassMeta & {
-      params: Array<TMateParamMeta>
+      params: TMateParamMeta[]
     },
   TMoostMetadata &
     TCliClassMeta & {
-      params: Array<TMateParamMeta>
+      params: TMateParamMeta[]
     }
 > {
   return getMoostMate<TCliClassMeta, TCliClassMeta>()

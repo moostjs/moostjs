@@ -92,18 +92,18 @@ export class Moost extends Hookable {
 
   protected interceptors: TInterceptorData[] = []
 
-  protected adapters: Array<TMoostAdapter<TAny>> = []
+  protected adapters: TMoostAdapter<TAny>[] = []
 
   protected controllersOverview: TControllerOverview[] = []
 
   protected provide: TProvideRegistry = createProvideRegistry(
     [Infact, getMoostInfact],
-    [Mate, getMoostMate]
+    [Mate, getMoostMate],
   )
 
   protected replace: TReplaceRegistry = {}
 
-  protected unregisteredControllers: Array<TObject | TFunction | [string, TObject | TFunction]> = []
+  protected unregisteredControllers: (TObject | TFunction | [string, TObject | TFunction])[] = []
 
   constructor(protected options?: TMoostOptions) {
     super()
@@ -157,8 +157,8 @@ export class Moost extends Hookable {
       createProvideRegistry(
         [Moost, () => this],
         [ProstoLogger, () => this.logger],
-        ['MOOST_LOGGER', () => this.logger]
-      )
+        ['MOOST_LOGGER', () => this.logger],
+      ),
     )
     for (const a of this.adapters) {
       const constructor = getConstructor(a)
@@ -193,7 +193,7 @@ export class Moost extends Hookable {
         provide,
         replace,
         this.options?.globalPrefix || '',
-        newPrefix
+        newPrefix,
       )
     }
     this.unregisteredControllers = []
@@ -204,15 +204,15 @@ export class Moost extends Hookable {
     provide: TProvideRegistry,
     replace: TReplaceRegistry,
     globalPrefix: string,
-    replaceOwnPrefix?: string
+    replaceOwnPrefix?: string,
   ) {
     const mate = getMoostMate()
     const classMeta = mate.read(controller)
     const infact = getMoostInfact()
     const isControllerConsructor = isConstructor(controller)
 
-    const pipes = [...this.pipes, ...(classMeta?.pipes || [])].sort(
-      (a, b) => a.priority - b.priority
+    const pipes = [...this.pipes, ...(classMeta?.pipes || [])].toSorted(
+      (a, b) => a.priority - b.priority,
     )
     let instance: TObject | undefined
     const infactOpts = { provide, replace, customData: { pipes } }
@@ -227,7 +227,7 @@ export class Moost extends Hookable {
         setControllerContext(this, 'bindController' as keyof this, '')
         instance = (await infact.get(
           controller as TClassConstructor<TAny>,
-          infactOpts
+          infactOpts,
         )) as Promise<TObject>
       })
     } else if (!isControllerConsructor) {
@@ -259,7 +259,7 @@ export class Moost extends Hookable {
         replace: classMeta?.replace,
         logger: this.logger,
         moostInstance: this,
-      })
+      }),
     )
     if (classMeta?.importController) {
       const prefix =
@@ -271,7 +271,6 @@ export class Moost extends Hookable {
           const isConstr = isConstructor(ic.typeResolver)
           const isFunc = typeof ic.typeResolver === 'function'
           await this.bindController(
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             isConstr
               ? ic.typeResolver
               : isFunc
@@ -280,14 +279,14 @@ export class Moost extends Hookable {
             ic.provide ? { ...mergedProvide, ...ic.provide } : mergedProvide,
             mergedReplace,
             `${globalPrefix}/${prefix || ''}`,
-            ic.prefix
+            ic.prefix,
           )
         }
       }
     }
   }
 
-  applyGlobalPipes(...items: Array<TPipeFn | TPipeData>) {
+  applyGlobalPipes(...items: (TPipeFn | TPipeData)[]) {
     for (const item of items) {
       if (typeof item === 'function') {
         this.pipes.push({
@@ -317,23 +316,23 @@ export class Moost extends Hookable {
     if (!this.globalInterceptorHandler) {
       const mate = getMoostMate()
       const thisMeta = mate.read(this)
-      const pipes = [...(this.pipes || []), ...(thisMeta?.pipes || [])].sort(
-        (a, b) => a.priority - b.priority
+      const pipes = [...(this.pipes || []), ...(thisMeta?.pipes || [])].toSorted(
+        (a, b) => a.priority - b.priority,
       )
-      const interceptors = [...this.interceptors, ...(thisMeta?.interceptors || [])].sort(
-        (a, b) => a.priority - b.priority
+      const interceptors = [...this.interceptors, ...(thisMeta?.interceptors || [])].toSorted(
+        (a, b) => a.priority - b.priority,
       )
       this.globalInterceptorHandler = getIterceptorHandlerFactory(
         interceptors,
         () => Promise.resolve(this as unknown as TObject),
         pipes,
-        this.logger
+        this.logger,
       )
     }
     return this.globalInterceptorHandler()
   }
 
-  applyGlobalInterceptors(...items: Array<TInterceptorData['handler'] | TInterceptorData>) {
+  applyGlobalInterceptors(...items: (TInterceptorData['handler'] | TInterceptorData)[]) {
     for (const item of items) {
       if (typeof item === 'function') {
         this.interceptors.push({
@@ -386,7 +385,7 @@ export class Moost extends Hookable {
    * @returns
    */
   public registerControllers(
-    ...controllers: Array<TObject | TFunction | [string, TObject | TFunction]>
+    ...controllers: (TObject | TFunction | [string, TObject | TFunction])[]
   ) {
     this.unregisteredControllers.push(...controllers)
     return this
@@ -394,18 +393,17 @@ export class Moost extends Hookable {
 
   public logMappedHandler(
     eventName: string,
-    // eslint-disable-next-line @typescript-eslint/ban-types
     classConstructor: Function,
     method: string,
     stroke?: boolean,
-    prefix?: string
+    prefix?: string,
   ) {
     const c = stroke ? '\u001B[9m' : '' // crossed
     const coff = stroke ? '\u001B[29m' : '' // crossed off
     this.logger.info(
       `${prefix || ''}${c}${eventName} ${__DYE_RESET__ + __DYE_DIM__ + __DYE_GREEN__ + c}→ ${
         classConstructor.name
-      }.${__DYE_CYAN__ + c}${method}${__DYE_GREEN__}()${coff}`
+      }.${__DYE_CYAN__ + c}${method}${__DYE_GREEN__}()${coff}`,
     )
   }
 }
@@ -415,7 +413,7 @@ export interface TMoostAdapterOptions<H, T> {
   fakeInstance: T
   getInstance: () => Promise<T>
   method: keyof T
-  handlers: Array<TMoostHandler<H>>
+  handlers: TMoostHandler<H>[]
   getIterceptorHandler: () => Promise<InterceptorHandler>
   resolveArgs: () => Promise<unknown[]>
   logHandler: (eventName: string) => void
@@ -425,7 +423,7 @@ export interface TMoostAdapterOptions<H, T> {
 export interface TMoostAdapter<H> {
   name: string
   bindHandler: <T extends TObject = TObject>(
-    options: TMoostAdapterOptions<H, T>
+    options: TMoostAdapterOptions<H, T>,
   ) => void | Promise<void>
   onInit?: (moost: Moost) => void | Promise<void>
   getProvideRegistry?: () => TProvideRegistry

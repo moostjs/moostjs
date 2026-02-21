@@ -5,7 +5,7 @@ export class CommonDecoratorsTestClass {
     @Label('my-label')
     _labelled: string,
     @Optional()
-    _optional: string
+    _optional: string,
   ) {
     /** */
   }

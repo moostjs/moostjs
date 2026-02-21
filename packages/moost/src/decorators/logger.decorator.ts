@@ -20,7 +20,7 @@ export function InjectEventLogger(topic?: string) {
  * @returns
  */
 export function InjectMoostLogger(topic?: string) {
-  return Resolve(async metas => {
+  return Resolve(async (metas) => {
     const { instantiate, getController } = useControllerContext()
     const controller = getController()
     const moostApp = controller instanceof Moost ? controller : await instantiate(Moost)

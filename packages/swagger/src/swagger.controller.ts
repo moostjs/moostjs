@@ -1,23 +1,25 @@
 import { Get, HeaderHook, SetHeader, StatusHook, Url } from '@moostjs/event-http'
-import { THeaderHook, type TStatusHook, useSetHeaders } from '@wooksjs/event-http'
+import type { THeaderHook, TStatusHook } from '@wooksjs/event-http'
+import { useSetHeaders } from '@wooksjs/event-http'
 import { serveFile } from '@wooksjs/http-static'
 import { Const, Controller, Moost, useControllerContext, useEventLogger } from 'moost'
 import Path from 'path'
 import { getAbsoluteFSPath } from 'swagger-ui-dist'
 
 import { SwaggerExclude } from './decorators'
-import { mapToSwaggerSpec, type TSwaggerOptions } from './mapping'
+import { mapToSwaggerSpec } from './mapping'
+import type { TSwaggerOptions } from './mapping'
 
 @SwaggerExclude()
 @Controller('api-docs')
 export class SwaggerController {
-  'constructor'(
-    @Const({ title: 'Moost API' }) protected opts: TSwaggerOptions = { title: 'Moost API' }
+  constructor(
+    @Const({ title: 'Moost API' }) protected opts: TSwaggerOptions = { title: 'Moost API' },
   ) {}
 
   'assetPath' = getAbsoluteFSPath()
 
-  protected 'processCors'() {
+  protected processCors() {
     if (this.opts.cors) {
       const { enableCors } = useSetHeaders()
       enableCors(this.opts.cors === true ? undefined : this.opts.cors)
@@ -28,10 +30,10 @@ export class SwaggerController {
   @Get('//')
   @Get('index.html')
   @SetHeader('content-type', 'text/html')
-  'serveIndex'(
+  serveIndex(
     @Url() url: string,
     @HeaderHook('location') location: THeaderHook,
-    @StatusHook() status: TStatusHook
+    @StatusHook() status: TStatusHook,
   ) {
     this.processCors()
     if (!url.endsWith('index.html') && !url.endsWith('/')) {
@@ -99,12 +101,12 @@ export class SwaggerController {
   @Get('swagger-ui-standalone-preset.*(js|js\\.map)')
   @Get('swagger-ui.*(css|css\\.map)')
   @Get('index.*(css|css\\.map)')
-  'files'(@Url() url: string) {
+  files(@Url() url: string) {
     this.processCors()
     return this.serve(url.split('/').pop()!)
   }
 
-  'serve'(path: string) {
+  serve(path: string) {
     return serveFile(path, {
       baseDir: this.assetPath,
       cacheControl: {

@@ -1,4 +1,5 @@
-import { getMoostMate, type TMoostMetadata, type Mate, type TMateParamMeta } from 'moost'
+import { getMoostMate } from 'moost'
+import type { TMoostMetadata, Mate, TMateParamMeta } from 'moost'
 
 export interface TArbacMeta {
   arbacResourceId?: string
@@ -9,11 +10,11 @@ export interface TArbacMeta {
 export function getArbacMate(): Mate<
   TMoostMetadata &
     TArbacMeta & {
-      params: Array<TMateParamMeta>
+      params: TMateParamMeta[]
     },
   TMoostMetadata &
     TArbacMeta & {
-      params: Array<TMateParamMeta>
+      params: TMateParamMeta[]
     }
 > {
   return getMoostMate<TArbacMeta, TArbacMeta>()

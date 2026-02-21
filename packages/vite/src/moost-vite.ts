@@ -1,7 +1,5 @@
-/* eslint-disable max-depth */
-/* eslint-disable func-names */
 import type { IncomingMessage, ServerResponse } from 'http'
-import { PluginOption } from 'vite'
+import type { PluginOption } from 'vite'
 import MagicString from 'magic-string'
 
 import { createAdapterDetector } from './adapter-detector'
@@ -87,7 +85,6 @@ export interface TMoostViteDevOptions {
         workspace?: boolean
       }
     | boolean
-  // eslint-disable-next-line @typescript-eslint/ban-types
   onEject?: (instance: object, dependency: Function) => boolean
 }
 
@@ -120,15 +117,12 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const adapters = isTest
     ? []
     : [
-        createAdapterDetector('http', MoostHttp => {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        createAdapterDetector('http', (MoostHttp) => {
           MoostHttp.prototype.listen = function (...args: any[]) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
-            logger.log('🔌 ' + __DYE_DIM__ + 'Overtaking HTTP.listen')
+            logger.log(`🔌 ${__DYE_DIM__}Overtaking HTTP.listen`)
             moostMiddleware = this.getServerCb()
             setTimeout(() => {
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
-              args.filter(a => typeof a === 'function').forEach(a => a())
+              args.filter((a) => typeof a === 'function').forEach((a) => a())
             }, 1)
             return Promise.resolve()
           }
@@ -260,7 +254,6 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
       await server.ssrLoadModule(options.entry)
 
       // Attach Moost as a middleware if present
-      // eslint-disable-next-line @typescript-eslint/no-misused-promises
       server.middlewares.use(async (req, res, next) => {
         if (reloadRequired) {
           reloadRequired = false
@@ -268,11 +261,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           logger.debug('🚀 Reloading Moost App...')
           console.log()
           await server.ssrLoadModule(options.entry)
-          // eslint-disable-next-line no-promise-executor-return
-          await new Promise(resolve => setTimeout(resolve, 1))
+          await new Promise((resolve) => setTimeout(resolve, 1))
         }
         if (moostMiddleware) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return moostMiddleware(req, res)
         }
         next()

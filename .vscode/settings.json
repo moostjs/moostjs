@@ -1,7 +1,5 @@
 {
-  "eslint.validate": [
-    "yaml"
-  ],
+  "eslint.validate": ["yaml"],
   "[css]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -57,6 +55,6 @@
   "[yaml]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
+  }
   // "vue.server.includeLanguages": ["vue", "markdown"]
 }

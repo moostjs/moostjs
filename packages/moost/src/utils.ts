@@ -14,10 +14,10 @@ export function getIterceptorHandlerFactory(
   interceptors: TInterceptorData[],
   getTargetInstance: () => Promise<TObject>,
   pipes: TPipeData[],
-  logger: TConsoleBase
+  logger: TConsoleBase,
 ) {
   return () => {
-    const interceptorHandlers: Array<{ handler: TInterceptorFn; name: string }> = []
+    const interceptorHandlers: { handler: TInterceptorFn; name: string }[] = []
     for (const { handler, name } of interceptors) {
       const interceptorMeta = mate.read(handler)
       if (interceptorMeta?.injectable) {

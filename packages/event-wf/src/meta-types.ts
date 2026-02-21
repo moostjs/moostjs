@@ -1,5 +1,6 @@
 import type { TWorkflowSchema } from '@wooksjs/event-wf'
-import { getMoostMate, type TMoostMetadata, type Mate, type TMateParamMeta } from 'moost'
+import { getMoostMate } from 'moost'
+import type { TMoostMetadata, Mate, TMateParamMeta } from 'moost'
 
 export interface TWfClassMeta {
   wfSchema: TWorkflowSchema<any>
@@ -9,11 +10,11 @@ export interface TWfClassMeta {
 export function getWfMate(): Mate<
   TMoostMetadata &
     TWfClassMeta & {
-      params: Array<TMateParamMeta>
+      params: TMateParamMeta[]
     },
   TMoostMetadata &
     TWfClassMeta & {
-      params: Array<TMateParamMeta>
+      params: TMateParamMeta[]
     }
 > {
   return getMoostMate<TWfClassMeta, TWfClassMeta>()

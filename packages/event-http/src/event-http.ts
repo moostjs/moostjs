@@ -1,5 +1,3 @@
-/* eslint-disable sonarjs/no-nested-template-literals */
-/* eslint-disable @typescript-eslint/unified-signatures */
 import { createProvideRegistry } from '@prostojs/infact'
 import type { TProstoRouterPathBuilder } from '@prostojs/router'
 import type { TWooksHttpOptions } from '@wooksjs/event-http'
@@ -93,7 +91,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     port?: number,
     hostname?: string,
     backlog?: number,
-    listeningListener?: () => void
+    listeningListener?: () => void,
   ): Promise<void>
   public listen(port?: number, hostname?: string, listeningListener?: () => void): Promise<void>
   public listen(port?: number, backlog?: number, listeningListener?: () => void): Promise<void>
@@ -101,22 +99,19 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
   public listen(path: string, backlog?: number, listeningListener?: () => void): Promise<void>
   public listen(path: string, listeningListener?: () => void): Promise<void>
   public listen(options: ListenOptions, listeningListener?: () => void): Promise<void>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public listen(handle: any, backlog?: number, listeningListener?: () => void): Promise<void>
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public listen(handle: any, listeningListener?: () => void): Promise<void>
   public listen(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     port?: number | string | ListenOptions | any,
     hostname?: number | string | (() => void),
     backlog?: number | (() => void),
-    listeningListener?: () => void
+    listeningListener?: () => void,
   ) {
     return this.httpApp.listen(
       port as number,
       hostname as string,
       backlog as number,
-      listeningListener
+      listeningListener,
     )
   }
 
@@ -153,7 +148,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
       [WooksHttp, () => this.getHttpApp()],
       ['WooksHttp', () => this.getHttpApp()],
       [HttpServer, () => this.getHttpApp().getServer() as unknown as HttpServer],
-      [HttpsServer, () => this.getHttpApp().getServer() as unknown as HttpsServer]
+      [HttpsServer, () => this.getHttpApp().getServer() as unknown as HttpsServer],
     )
   }
 
@@ -170,7 +165,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
       const httpPath = handler.path
       const path =
         typeof httpPath === 'string' ? httpPath : typeof opts.method === 'string' ? opts.method : ''
-      const targetPath = `${`${opts.prefix || ''}/${path}`.replace(/\/\/+/g, '/')}${
+      const targetPath = `${`${opts.prefix || ''}/${path}`.replaceAll(/\/\/+/g, '/')}${
         path.endsWith('//') ? '/' : ''
       }` // explicit double slash "//" -> force url to end with slash
 
@@ -213,7 +208,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
       opts.logHandler(`${__DYE_CYAN__}(${handler.method})${__DYE_GREEN__}${targetPath}`)
       const args = routerBinding.getArgs()
       const params: Record<string, string> = {}
-      args.forEach(a => (params[a] = `{${a}}`))
+      args.forEach((a) => (params[a] = `{${a}}`))
       opts.register(handler, routerBinding.getPath(params), args)
     }
   }

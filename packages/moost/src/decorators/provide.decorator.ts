@@ -15,9 +15,9 @@ import { Resolve } from './resolve.decorator'
  */
 export function Provide(
   type: string | TClassConstructor,
-  fn: TProvideFn
+  fn: TProvideFn,
 ): ClassDecorator & ParameterDecorator & PropertyDecorator {
-  return getMoostMate().decorate(meta => {
+  return getMoostMate().decorate((meta) => {
     meta.provide = meta.provide || {}
     Object.assign(meta.provide, createProvideRegistry([type, fn]))
     return meta
@@ -32,7 +32,7 @@ export function Provide(
  * @param newType - new class
  */
 export function Replace(type: TClassConstructor, newType: TClassConstructor): ClassDecorator {
-  return getMoostMate().decorate(meta => {
+  return getMoostMate().decorate((meta) => {
     meta.replace = meta.replace || {}
     Object.assign(meta.replace, createReplaceRegistry([type, newType]))
     return meta

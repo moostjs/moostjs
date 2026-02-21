@@ -1,4 +1,5 @@
-import { getMoostMate, type TMoostMetadata, type Mate, type TMateParamMeta } from 'moost'
+import { getMoostMate } from 'moost'
+import type { TMoostMetadata, Mate, TMateParamMeta } from 'moost'
 
 import type { TFunction } from './common-types'
 import type { TSwaggerSchema } from './mapping'
@@ -6,11 +7,11 @@ import type { TSwaggerSchema } from './mapping'
 export function getSwaggerMate(): Mate<
   TMoostMetadata &
     TSwaggerMate & {
-      params: Array<TMateParamMeta>
+      params: TMateParamMeta[]
     },
   TMoostMetadata &
     TSwaggerMate & {
-      params: Array<TMateParamMeta>
+      params: TMateParamMeta[]
     }
 > {
   return getMoostMate<TSwaggerMate, TSwaggerMate>()
@@ -26,13 +27,13 @@ export interface TSwaggerMate {
   >
   swaggerRequestBody: Record<string, TSwaggerConfigType>
   swaggerExample?: unknown
-  swaggerParams: Array<{
+  swaggerParams: {
     name: string
     in: 'query' | 'header' | 'path' | 'formData' | 'body'
     description?: string
     required?: boolean
     type?: TSwaggerConfigType
-  }>
+  }[]
 }
 
 export type TSwaggerConfigType = TFunction | { toJsonSchema?: () => unknown } | TSwaggerSchema

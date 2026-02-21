@@ -1,8 +1,9 @@
 import { Moost } from 'moost'
-import { MoostCli, TMoostCliOpts } from './event-cli'
+import type { TMoostCliOpts } from './event-cli'
+import { MoostCli } from './event-cli'
 import { cliHelpInterceptor } from './interceptors'
 
-type THelpOptions = {
+interface THelpOptions {
   name?: string
   title?: string
   maxWidth?: number
@@ -43,7 +44,7 @@ export class CliApp extends Moost {
    *   Each controller can be an object, a class, or a tuple with a name and the controller.
    * @returns {this} The CliApp instance for method chaining.
    */
-  controllers(...controllers: Array<object | Function | [string, object | Function]>) {
+  controllers(...controllers: (object | Function | [string, object | Function])[]) {
     return this.registerControllers(...controllers)
   }
 
@@ -110,7 +111,7 @@ export class CliApp extends Moost {
         cliHelpInterceptor({
           colors: this._helpOpts.colors,
           lookupLevel: this._helpOpts.lookupLevel,
-        })
+        }),
       )
     }
     return this.init()

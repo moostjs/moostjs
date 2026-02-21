@@ -1,4 +1,3 @@
-/* eslint-disable sonarjs/no-nested-switch */
 import type { TInfactClassMeta } from '@prostojs/infact'
 import { Infact } from '@prostojs/infact'
 import { getConstructor } from '@prostojs/mate'
@@ -95,7 +94,7 @@ export function getNewMoostInfact() {
             targetMeta: paramMeta,
             instantiate,
           },
-          'PARAM'
+          'PARAM',
         )
       }
     },
@@ -130,7 +129,7 @@ export function getNewMoostInfact() {
             classMeta: classMeta as unknown as TMoostMetadata,
             instantiate,
           },
-          'PROP'
+          'PROP',
         )
       }
     },
@@ -177,7 +176,7 @@ export function getNewMoostInfact() {
         case 'new-instance': {
           const params =
             args
-              ?.map(a => {
+              ?.map((a) => {
                 switch (typeof a) {
                   case 'number':
                   case 'boolean': {
@@ -202,7 +201,7 @@ export function getNewMoostInfact() {
                   }
                 }
               })
-              .map(a => `${__DYE_DIM__ + __DYE_BOLD__}${a}${__DYE_BOLD_OFF__ + __DYE_DIM__}`)
+              .map((a) => `${__DYE_DIM__ + __DYE_BOLD__}${a}${__DYE_BOLD_OFF__ + __DYE_DIM__}`)
               .join(', ') || ''
           logger.info(`new ${instance}${__DYE_DIM__ + __DYE_BLUE__}(${params})`)
           break

@@ -5,13 +5,12 @@ import { defineInterceptorFn, Intercept, TInterceptorPriority } from 'moost'
 const setHeaderInterceptor: (
   name: string,
   value: string,
-  opts?: { force?: boolean; status?: number; when?: 'always' | 'error' | 'ok' }
+  opts?: { force?: boolean; status?: number; when?: 'always' | 'error' | 'ok' },
 ) => TInterceptorFn = (name, value, opts) => {
   const fn: TInterceptorFn = (_before, after, onError) => {
     const h = useSetHeader(name)
     const status = useStatus()
     const cb = () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       if ((!h.value || opts?.force) && (!opts?.status || opts.status === status.value)) {
         h.value = value
       }

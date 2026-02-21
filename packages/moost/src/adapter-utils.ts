@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-confusing-void-expression */
-/* eslint-disable require-atomic-updates */
-/* eslint-disable @typescript-eslint/no-unused-expressions */
 import { getConstructor } from '@prostojs/mate'
 import { getContextInjector, useEventId, useEventLogger } from '@wooksjs/event-core'
 
@@ -72,7 +69,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       setControllerContext(
         instance,
         options.controllerMethod || ('' as keyof T),
-        options.targetPath
+        options.targetPath,
       )
       ci.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
     }
@@ -122,7 +119,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         typeof instance[options.controllerMethod] === 'function'
       ) {
         return (instance[options.controllerMethod] as unknown as (...a: typeof args) => unknown)(
-          ...args
+          ...args,
         )
       }
     }
@@ -133,7 +130,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           'moost.handler': (options.controllerMethod as string) || '',
           'moost.controller': getConstructor(instance).name,
         },
-        () => callControllerMethod()
+        () => callControllerMethod(),
       )
     } catch (error) {
       options.logErrors && logger.error(error)
@@ -147,7 +144,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         try {
           // logger.trace('firing after interceptors')
           response = await ci.with('Interceptors:after', () =>
-            interceptorHandler.fireAfter(response)
+            interceptorHandler.fireAfter(response),
           )
         } catch (error) {
           options.logErrors && logger.error(error)

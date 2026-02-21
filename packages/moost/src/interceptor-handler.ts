@@ -8,13 +8,13 @@ import type {
 } from './decorators'
 
 export class InterceptorHandler {
-  constructor(protected handlers: Array<{ handler: TInterceptorFn; name: string }>) {}
+  constructor(protected handlers: { handler: TInterceptorFn; name: string }[]) {}
 
-  protected before: Array<{ name: string; fn: TInterceptorBefore }> = []
+  protected before: { name: string; fn: TInterceptorBefore }[] = []
 
-  protected after: Array<{ name: string; fn: TInterceptorAfter }> = []
+  protected after: { name: string; fn: TInterceptorAfter }[] = []
 
-  protected onError: Array<{ name: string; fn: TInterceptorOnError }> = []
+  protected onError: { name: string; fn: TInterceptorOnError }[] = []
 
   public response?: unknown
 
@@ -51,16 +51,16 @@ export class InterceptorHandler {
         },
         () =>
           handler(
-            fn => {
+            (fn) => {
               this.before.push({ name, fn })
             },
-            fn => {
+            (fn) => {
               this.after.unshift({ name, fn })
             },
-            fn => {
+            (fn) => {
               this.onError.unshift({ name, fn })
-            }
-          )
+            },
+          ),
       )
       if (response !== undefined) {
         return response
@@ -77,7 +77,7 @@ export class InterceptorHandler {
         {
           'moost.interceptor.stage': 'before',
         },
-        () => fn(this.replyFn.bind(this))
+        () => fn(this.replyFn.bind(this)),
       )
       if (this.responseOverwritten) {
         break
@@ -96,7 +96,7 @@ export class InterceptorHandler {
           {
             'moost.interceptor.stage': 'after',
           },
-          () => fn(response, this.replyFn.bind(this))
+          () => fn(response, this.replyFn.bind(this)),
         )
       }
     } else {
@@ -106,7 +106,7 @@ export class InterceptorHandler {
           {
             'moost.interceptor.stage': 'onError',
           },
-          () => fn(response, this.replyFn.bind(this))
+          () => fn(response, this.replyFn.bind(this)),
         )
       }
     }

@@ -27,7 +27,7 @@ export function CliOption(...keys: string[]): ParameterDecorator {
   const mate = getCliMate()
   return mate.apply(
     mate.decorate('cliOptionsKeys', keys, false),
-    Resolve(() => useCliOption(keys[0]), formatParams(keys).join(', '))
+    Resolve(() => useCliOption(keys[0]), formatParams(keys).join(', ')),
   )
 }
 

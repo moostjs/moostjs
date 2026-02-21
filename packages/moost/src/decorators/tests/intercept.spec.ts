@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { getMoostMate } from '../../metadata/moost-metadata'
 import { Intercept } from '../intercept.decorator'
 import { describe, it, expect } from 'vitest'

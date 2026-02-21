@@ -91,7 +91,7 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
         onCancel: () => {
           throw new Error('Operation cancelled')
         },
-      }
+      },
     )
     return {
       ...predefined,
@@ -128,7 +128,7 @@ function toValidPackageName(projectName: string) {
   return projectName
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, '-')
+    .replaceAll(/\s+/g, '-')
     .replace(/^[._]/, '')
-    .replace(/[^\da-z~-]+/g, '-')
+    .replaceAll(/[^\da-z~-]+/g, '-')
 }

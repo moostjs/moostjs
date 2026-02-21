@@ -17,7 +17,7 @@ export function WorkflowSchema<T>(schema: TWorkflowSchema<T>): MethodDecorator {
 }
 
 export const WorkflowParam = (
-  name: 'resume' | 'indexes' | 'schemaId' | 'stepId' | 'context' | 'input' | 'state'
+  name: 'resume' | 'indexes' | 'schemaId' | 'stepId' | 'context' | 'input' | 'state',
 ) => {
   switch (name) {
     case 'state': {

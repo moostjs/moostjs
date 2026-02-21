@@ -2,13 +2,40 @@
   "name": "moostjs",
   "version": "0.5.33",
   "description": "Metadata driven Event Framework inspired by nestjs and powered by wooksjs",
-  "main": "index.js",
+  "keywords": [
+    "api",
+    "app",
+    "framework",
+    "http",
+    "moost",
+    "moostjs",
+    "prostojs",
+    "rest",
+    "restful",
+    "web",
+    "wooks",
+    "wooksjs"
+  ],
+  "homepage": "https://github.com/moostjs/moostjs#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/moostjs/issues"
+  },
+  "license": "MIT",
+  "author": "Artem Maltsev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/moostjs.git"
+  },
   "type": "module",
+  "main": "index.js",
   "scripts": {
     "docs": "vitepress dev docs --host \"0.0.0.0\"",
     "docs-build": "vitepress build docs",
     "docs-serve": "vitepress serve docs --host \"0.0.0.0\"",
-    "lint": "oxlint -c .oxlintrc.json && eslint --ext .ts packages/**/src/**/**.ts",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "build": "node ./scripts/build.js",
     "test": "vitest run -c ./vitest.config.js",
     "test:watch": "vitest",
@@ -18,58 +45,17 @@
     "release": "pnpm build && pnpm test && node ./scripts/versions && pnpm -r run pub",
     "sync": "node ./scripts/versions"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/moostjs/moostjs.git"
-  },
-  "keywords": [
-    "http",
-    "wooks",
-    "moost",
-    "wooksjs",
-    "moostjs",
-    "web",
-    "framework",
-    "app",
-    "api",
-    "rest",
-    "restful",
-    "prostojs"
-  ],
-  "author": "Artem Maltsev",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/moostjs/moostjs/issues"
-  },
-  "homepage": "https://github.com/moostjs/moostjs#readme",
-  "pnpm": {
-    "overrides": {
-      "minimatch@<10": "^10.2.1"
-    }
-  },
   "devDependencies": {
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/sdk-trace-base": "^2.5.1",
     "@prostojs/dye": "^0.4.9",
     "@types/node": "^22.19.11",
-    "@typescript-eslint/eslint-plugin": "6.3.0",
-    "@typescript-eslint/parser": "6.3.0",
     "conventional-changelog": "^5.1.0",
     "conventional-changelog-cli": "^4.1.0",
-    "eslint": "8.55.0",
-    "eslint-import-resolver-typescript": "3.6.1",
-    "eslint-plugin-array-func": "4.0.0",
-    "eslint-plugin-import": "2.29.0",
-    "eslint-plugin-jest": "27.6.0",
-    "eslint-plugin-promise": "6.1.1",
-    "eslint-plugin-simple-import-sort": "10.0.0",
-    "eslint-plugin-sonarjs": "0.23.0",
-    "eslint-plugin-unicorn": "49.0.0",
-    "eslint-plugin-yml": "1.10.0",
     "husky": "^9.1.7",
     "inquirer": "^12.11.1",
+    "oxfmt": "^0.34.0",
     "oxlint": "^1.49.0",
-    "prettier": "3.1.1",
     "rolldown": "1.0.0-beta.19",
     "rollup": "^4.58.0",
     "rollup-plugin-dts": "^6.3.0",
@@ -79,5 +65,10 @@
     "vitepress-plugin-llmstxt": "^0.4.2",
     "vitest": "3.2.4",
     "zx": "^8.8.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "minimatch@<10": "^10.2.1"
+    }
   }
 }

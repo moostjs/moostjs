@@ -1,5 +1,3 @@
-/* eslint-disable id-length */
-/* eslint-disable max-depth */
 import type { TControllerOverview } from 'moost'
 
 import type { TLogger } from './common-types'
@@ -18,13 +16,13 @@ interface TEndpointSpec {
       content: Record<string, { schema: TSwaggerSchema }>
     }
   >
-  parameters: Array<{
+  parameters: {
     name: string
     in: string
     description?: string
     required: boolean
     schema: TSwaggerSchema
-  }>
+  }[]
   requestBody?: {
     required?: boolean
     content: Record<string, { schema: TSwaggerSchema }>
@@ -72,7 +70,7 @@ export interface TSwaggerSchema {
   const?: unknown
 }
 
-type SchemaEnsureResult = {
+interface SchemaEnsureResult {
   schema: TSwaggerSchema
   ref?: string
   componentName?: string
@@ -98,7 +96,7 @@ const nameToType = new Map<string, object>()
 export function mapToSwaggerSpec(
   metadata: TControllerOverview[],
   options?: TSwaggerOptions,
-  logger?: TLogger
+  logger?: TLogger,
 ) {
   resetSchemaRegistry()
   void logger
@@ -191,9 +189,9 @@ export function mapToSwaggerSpec(
       swaggerSpec.paths[handlerPath][handlerMethod] = {
         summary: handlerDescription,
         operationId: `${handlerMethod.toUpperCase()}_${handlerPath
-          .replace(/\//g, '_')
-          .replace(/[{}]/g, '__')
-          .replace(/[^\dA-Za-z]/g, '_')}`,
+          .replaceAll(/\//g, '_')
+          .replaceAll(/[{}]/g, '__')
+          .replaceAll(/[^\dA-Za-z]/g, '_')}`,
         tags: handlerTags,
         parameters: [],
         responses,
@@ -235,7 +233,7 @@ export function mapToSwaggerSpec(
 
       for (const paramName of handler.registeredAs[0].args) {
         const paramIndex = handler.meta.params.findIndex(
-          param => param.paramSource === 'ROUTE' && param.paramName === paramName
+          (param) => param.paramSource === 'ROUTE' && param.paramName === paramName,
         )
         const paramMeta = handler.meta.params[paramIndex]
         const ensured = ensureSchema(paramMeta?.type)
@@ -250,8 +248,7 @@ export function mapToSwaggerSpec(
         })
       }
 
-      for (let i = 0; i < handler.meta.params.length; i++) {
-        const paramMeta = handler.meta.params[i]
+      for (const paramMeta of handler.meta.params) {
         if (paramMeta.paramSource && ['QUERY_ITEM', 'QUERY'].includes(paramMeta.paramSource)) {
           const ensured = ensureSchema(paramMeta.type)
           if (paramMeta.paramSource === 'QUERY_ITEM') {
@@ -308,9 +305,9 @@ export function mapToSwaggerSpec(
       }
 
       const bodyEntries = Object.entries(bodyContent).filter(
-        entry => entry[1] && entry[1].schema !== undefined
+        (entry) => entry[1] && entry[1].schema !== undefined,
       )
-      if (bodyEntries.length) {
+      if (bodyEntries.length > 0) {
         const content: Record<string, { schema: TSwaggerSchema }> = {}
         for (const [contentType, { schema }] of bodyEntries) {
           content[contentType] = { schema }
@@ -374,7 +371,7 @@ function isArrayOfSimpleItems(items: TSwaggerSchema | TSwaggerSchema[] | undefin
     if (items.length === 0) {
       return false
     }
-    return items.every(entry => isSimpleSchema(entry))
+    return items.every((entry) => isSimpleSchema(entry))
   }
   return isSimpleSchema(items)
 }
@@ -432,7 +429,11 @@ function ensureSchema(type: unknown): SchemaEnsureResult | undefined {
   }
 
   const schemaClone = cloneSchema(resolution.schema)
-  const componentName = ensureComponentName(resolution.typeRef, schemaClone, resolution.suggestedName)
+  const componentName = ensureComponentName(
+    resolution.typeRef,
+    schemaClone,
+    resolution.suggestedName,
+  )
 
   return {
     schema: cloneSchema(globalSchemas[componentName]),
@@ -522,7 +523,8 @@ function schemaFromInstance(obj: object): SchemaResolution | undefined {
     return { kind: 'inline', schema: cloneSchema(obj as TSwaggerSchema) }
   }
 
-  const ctor = (obj as { constructor?: { toJsonSchema?: () => unknown; name?: string } }).constructor
+  const ctor = (obj as { constructor?: { toJsonSchema?: () => unknown; name?: string } })
+    .constructor
   if (ctor && typeof ctor.toJsonSchema === 'function') {
     const schema = asSwaggerSchema(ctor.toJsonSchema())
     return {
@@ -562,7 +564,9 @@ function ensureComponentName(typeRef: object, schema: TSwaggerSchema, suggestedN
     return existing
   }
 
-  const baseName = sanitizeComponentName(suggestedName || schema.title || getTypeName(typeRef) || 'Schema')
+  const baseName = sanitizeComponentName(
+    suggestedName || schema.title || getTypeName(typeRef) || 'Schema',
+  )
   let candidate = baseName || 'Schema'
   let counter = 1
   while (nameToType.has(candidate)) {
@@ -604,7 +608,7 @@ function applySwaggerMetadata(typeRef: object, schema: TSwaggerSchema) {
 }
 
 function sanitizeComponentName(name: string) {
-  const sanitized = name.replace(/[^A-Za-z0-9_.-]/g, '_')
+  const sanitized = name.replaceAll(/[^A-Za-z0-9_.-]/g, '_')
   return sanitized || 'Schema'
 }
 
@@ -677,24 +681,33 @@ function isPrimitiveConstructor(value: unknown): value is Function {
 
 function schemaFromPrimitiveCtor(fn: Function): TSwaggerSchema {
   switch (fn) {
-    case String:
+    case String: {
       return { type: 'string' }
-    case Number:
+    }
+    case Number: {
       return { type: 'number' }
-    case Boolean:
+    }
+    case Boolean: {
       return { type: 'boolean' }
-    case BigInt:
+    }
+    case BigInt: {
       return { type: 'integer' }
-    case Date:
+    }
+    case Date: {
       return { type: 'string', format: 'date-time' }
-    case Array:
+    }
+    case Array: {
       return { type: 'array' }
-    case Object:
+    }
+    case Object: {
       return { type: 'object' }
-    case Symbol:
+    }
+    case Symbol: {
       return { type: 'string' }
-    default:
+    }
+    default: {
       return { type: 'object' }
+    }
   }
 }
 

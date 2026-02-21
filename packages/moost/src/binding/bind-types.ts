@@ -8,7 +8,7 @@ import type { TPipeData } from '../pipes'
 export interface TBindControllerOptions {
   getInstance: () => Promise<TObject>
   classConstructor: TClassConstructor
-  adapters: Array<TMoostAdapter<TAny>>
+  adapters: TMoostAdapter<TAny>[]
   globalPrefix?: string
   replaceOwnPrefix?: string
   provide?: TMoostMetadata['provide']

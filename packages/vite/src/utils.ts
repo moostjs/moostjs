@@ -15,7 +15,7 @@ export const PLUGIN_NAME = 'moost-vite'
  */
 export function gatherAllImporters(
   moduleNode?: EnvironmentModuleNode,
-  visited = new Set<EnvironmentModuleNode>()
+  visited = new Set<EnvironmentModuleNode>(),
 ): Set<EnvironmentModuleNode> {
   if (!moduleNode) {
     return visited
@@ -25,7 +25,6 @@ export function gatherAllImporters(
   }
 
   visited.add(moduleNode)
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (moduleNode.importers) {
     for (const importer of moduleNode.importers) {
       gatherAllImporters(importer, visited)
@@ -35,7 +34,7 @@ export function gatherAllImporters(
 }
 
 const logger = new EventLogger('', { level: 99 }).createTopic(
-  __DYE_DIM__ + __DYE_CYAN__ + PLUGIN_NAME
+  __DYE_DIM__ + __DYE_CYAN__ + PLUGIN_NAME,
 )
 export function getLogger(): EventLogger {
   return logger
@@ -49,11 +48,11 @@ export function getExternals({ node, workspace }: { node: boolean; workspace: bo
     ? Object.keys(pkg.dependencies || {})
     : Object.entries(pkg.dependencies || {})
         .filter(([key, ver]) => !ver.startsWith('workspace:'))
-        .map(i => i[0])
+        .map((i) => i[0])
   if (node) {
     externals.push(
       ...builtinModules, // e.g. 'fs'
-      ...builtinModules.map(m => `node:${m}`) // e.g. 'node:fs'
+      ...builtinModules.map((m) => `node:${m}`), // e.g. 'node:fs'
     )
   }
   return externals

@@ -1,4 +1,3 @@
-/* eslint-disable simple-import-sort/exports */
 export * from './adapter-utils'
 export { getInstanceOwnMethods, getInstanceOwnProps } from './binding/utils'
 export type { TClassConstructor } from './common-types'

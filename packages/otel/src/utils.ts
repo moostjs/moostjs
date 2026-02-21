@@ -4,7 +4,7 @@ import { context, SpanStatusCode, trace } from '@opentelemetry/api'
 export type TPostSpanProcessFn<T> = (
   span: Span,
   exception: Error | undefined,
-  result: Awaited<T> | undefined
+  result: Awaited<T> | undefined,
 ) => void
 
 export interface TSpanInput {
@@ -27,10 +27,9 @@ export interface TSpanInput {
 export function withSpan<T>(
   span: TSpanInput | Span,
   cb: () => T,
-  postProcess?: TPostSpanProcessFn<T>
+  postProcess?: TPostSpanProcessFn<T>,
 ): T {
   const _span =
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     typeof (span as TSpanInput).name === 'string' && !(span as Span).spanContext
       ? trace
           .getTracer('default')
@@ -62,11 +61,11 @@ export function withSpan<T>(
     }
     if (result instanceof Promise) {
       result
-        .then(r => {
+        .then((r) => {
           finalizeSpan(undefined, r as Awaited<T>)
           return r as Awaited<T>
         })
-        .catch(error => {
+        .catch((error) => {
           finalizeSpan(error as Error, undefined as Awaited<T>)
         })
     } else {

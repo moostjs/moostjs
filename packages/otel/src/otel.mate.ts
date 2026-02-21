@@ -1,4 +1,5 @@
-import { getMoostMate, type TMoostMetadata, type Mate, type TMateParamMeta } from 'moost'
+import { getMoostMate } from 'moost'
+import type { TMoostMetadata, Mate, TMateParamMeta } from 'moost'
 
 export interface TOtelMate {
   otelIgnoreSpan: boolean
@@ -8,11 +9,11 @@ export interface TOtelMate {
 export function getOtelMate(): Mate<
   TMoostMetadata &
     TOtelMate & {
-      params: Array<TOtelMate & TMateParamMeta>
+      params: (TOtelMate & TMateParamMeta)[]
     },
   TMoostMetadata &
     TOtelMate & {
-      params: Array<TOtelMate & TMateParamMeta>
+      params: (TOtelMate & TMateParamMeta)[]
     }
 > {
   return getMoostMate<TOtelMate, TOtelMate, TOtelMate>()

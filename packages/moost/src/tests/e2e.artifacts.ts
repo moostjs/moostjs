@@ -1,9 +1,8 @@
-/* eslint-disable import/no-extraneous-dependencies */
 import { Delete, Get, Patch, Post, Query, Url } from '@moostjs/event-http'
 import { useRequest } from '@wooksjs/event-http'
 
 import type { TClassFunction } from '../class-function'
-import { TFunction } from '../common-types'
+import type { TFunction } from '../common-types'
 import type { TInterceptorFn } from '../decorators'
 import {
   Controller,
@@ -30,8 +29,8 @@ export class E2eInterceptor implements TClassFunction<TInterceptorFn> {
 class E2eInterceptorForRequest implements TClassFunction<TInterceptorFn> {
   constructor(@Url() private readonly url: string) {}
 
-  handler: TInterceptorFn = before => {
-    before(reply => {
+  handler: TInterceptorFn = (before) => {
+    before((reply) => {
       reply(`intercepted for url ${this.url}`)
     })
   }
@@ -83,7 +82,7 @@ class E2eRequestController {
     @Optional()
     @Query()
     private readonly query: string | undefined,
-    private readonly commonDep: E2eCommonDep
+    private readonly commonDep: E2eCommonDep,
   ) {}
 
   @Get('nestedControllerMethod')
