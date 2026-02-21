@@ -7,12 +7,17 @@
     "outDir": ".types",
     "declaration": true,
     "emitDeclarationOnly": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "target": "es2020",
+    "module": "ESNext",
     "lib": ["ESNext", "DOM", "WebWorker", "DOM.Iterable"],
     "noUnusedLocals": true,
-    "types": ["node", "@prostojs/dye/global"],
+    "paths": {
+      "moost": ["packages/moost/src"],
+      "@moostjs/*": ["packages/*/src"]
+    },
+    "types": ["node"],
     "declarationMap": false,
     "resolveJsonModule": true,
     "downlevelIteration": true,
@@ -24,6 +29,6 @@
     "experimentalDecorators": true,
     "removeComments": false
   },
-  "include": ["packages/*/src/**/*.ts", "globals.d.ts"],
+  "include": ["packages/*/src/**/*.ts", "global.d.ts"],
   "exclude": ["**/*.spec.ts"]
 }

@@ -1,4 +1,3 @@
-import { TClassConstructor } from '../common-types'
 import { getCliMate } from '../meta-types'
 
 /**

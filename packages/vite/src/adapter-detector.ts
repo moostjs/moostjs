@@ -16,7 +16,6 @@ export function createAdapterDetector(
     constructor: null as (new (...args: any[]) => unknown) | null,
     async init() {
       this.detected = true
-      // @ts-expect-error
       const module = await import(`@moostjs/event-${adapter}`)
       const constructorName = `Moost${adapter.charAt(0).toUpperCase() + adapter.slice(1)}`
       getLogger().log(`🔍 ${__DYE_DIM__}Extracting Adapter "${constructorName}"`)

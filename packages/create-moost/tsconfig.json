@@ -3,6 +3,6 @@
   "compilerOptions": {
     "outDir": ".types"
   },
-  "include": ["src", "templates", "../../globals.d.ts"],
+  "include": ["src", "templates", "../../global.d.ts"],
   "exclude": []
 }

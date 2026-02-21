@@ -8,7 +8,6 @@ import type { TPipeData } from '../pipes'
 import { runPipes } from '../pipes/run-pipes'
 import type { TMoostMetadata, TMoostParamsMetadata } from './moost-metadata'
 import { getMoostMate } from './moost-metadata'
-import { TClassConstructor } from '../common-types'
 
 const sharedMoostInfact = getNewMoostInfact()
 const INFACT_BANNER = `${__DYE_DIM__ + __DYE_MAGENTA__}infact`
