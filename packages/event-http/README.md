@@ -35,6 +35,47 @@ This command will initiate a setup tool that will guide you through the project 
 - Whether to include a Moost Workflows example.
 - Whether to add do-me-lint (smart eslint installer).
 
+## Auth Guards
+
+Declarative authentication guards with automatic Swagger/OpenAPI security scheme discovery.
+
+### Functional API
+
+```ts
+import { Authenticate, defineAuthGuard, HttpError } from '@moostjs/event-http'
+
+const jwtGuard = defineAuthGuard({ bearer: { format: 'JWT' } }, (transports) => {
+  if (!transports.bearer) throw new HttpError(401, 'Missing token')
+  // verify and return user info
+})
+
+@Authenticate(jwtGuard)
+@Controller('users')
+class UsersController { ... }
+```
+
+### Class-based API
+
+```ts
+import { AuthGuard, Authenticate, HttpError } from '@moostjs/event-http'
+import { Injectable } from 'moost'
+
+@Injectable()
+class JwtGuard extends AuthGuard<{ bearer: { format: 'JWT' } }> {
+  static transports = { bearer: { format: 'JWT' } } as const
+
+  handle(transports: { bearer: string }) {
+    if (!transports.bearer) throw new HttpError(401, 'Missing token')
+  }
+}
+
+@Authenticate(JwtGuard)
+@Controller('users')
+class UsersController { ... }
+```
+
+Supported transports: `bearer`, `basic`, `apiKey` (header/query/cookie), `cookie`.
+
 ## [Official Documentation](https://moost.org/webapp/)
 
 ## Contributing

@@ -7,6 +7,7 @@ HTTP adapter for Moost. Bridges Moost's decorator-driven controller system with 
 ## Key Files
 
 - `src/event-http.ts` — `MoostHttp` class implementing `TMoostAdapter<THttpHandlerMeta>`
+- `src/auth-guard.ts` — Auth guard system: `defineAuthGuard()`, `AuthGuard` base class, `Authenticate` decorator, transport extraction
 - `src/decorators/http-method.decorator.ts` — `Get`, `Post`, `Put`, `Delete`, `Patch`, `All`, `HttpMethod`
 - `src/decorators/resolve.decorator.ts` — `Body`, `Query`, `Header`, `Cookie`, `Url`, `Method`, `Req`, `Res`, `Authorization`, `StatusHook`, `HeaderHook`, `CookieHook`, etc.
 - `src/decorators/set.decorator.ts` — `SetHeader`, `SetCookie`, `SetStatus` (interceptor-based)
@@ -37,3 +38,27 @@ Moost App → MoostHttp (adapter) → WooksHttp (@wooksjs/event-http) → Node.j
 **`Query()` with no argument returns `undefined` when empty** (not `{}`), making it safe for optional parameter typing.
 
 **`HEAD` and `OPTIONS` have no convenience wrappers.** Use `HttpMethod('HEAD')` or `HttpMethod('OPTIONS')` directly.
+
+## Auth Guard System
+
+Declarative auth guards with automatic swagger security scheme discovery. Two APIs:
+
+**Functional** — `defineAuthGuard(transports, handler)` returns `TAuthGuardFn`:
+```ts
+const jwtGuard = defineAuthGuard({ bearer: { format: 'JWT' } }, (transports) => {
+  // transports.bearer is the raw token (no "Bearer " prefix)
+})
+```
+
+**Class-based** — extend `AuthGuard<T>` with static `transports` and `handle()` method:
+```ts
+@Injectable()
+class JwtGuard extends AuthGuard<{ bearer: { format: 'JWT' } }> {
+  static transports = { bearer: { format: 'JWT' } } as const
+  handle(transports: { bearer: string }) { /* verify token */ }
+}
+```
+
+**`@Authenticate(guard)`** — registers guard as interceptor + stores `authTransports` in metadata (read by `@moostjs/swagger` for auto-discovery). Accepts both functional and class-based guards, properly typed via `TAuthGuardHandler`.
+
+**Transport types**: `bearer` (Authorization header), `basic` (username/password), `apiKey` (header/query/cookie), `cookie` (named cookie). `extractTransports()` uses `@wooksjs/event-http` composables (`useAuthorization`, `useCookies`, `useHeaders`, `useSearchParams`).

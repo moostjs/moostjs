@@ -1,4 +1,9 @@
-import type { TSwaggerConfigType, TSwaggerMate, TSwaggerResponseOpts } from './swagger.mate'
+import type {
+  TSwaggerConfigType,
+  TSwaggerMate,
+  TSwaggerResponseOpts,
+  TSwaggerSecurityRequirement,
+} from './swagger.mate'
 import { getSwaggerMate } from './swagger.mate'
 
 /** Adds an OpenAPI tag to a controller or handler for grouping in the Swagger UI. */
@@ -47,15 +52,20 @@ export function SwaggerResponse(
       typeof (opt as { contentType: string }).contentType === 'string'
         ? (opt as { contentType: string }).contentType
         : '*/*'
-    // const description = typeof (opt as { description: string }).description === 'string' ? (opt as { description: string }).description : undefined
+    const description =
+      typeof (opt as { description: string }).description === 'string'
+        ? (opt as { description: string }).description
+        : undefined
     const response = (
       ['object', 'function'].includes(typeof (opt as { response: unknown }).response)
         ? (opt as { response: unknown }).response
         : opt
     ) as TSwaggerConfigType
-    meta.swaggerResponses[keyCode] = meta.swaggerResponses[keyCode] || {}
-    meta.swaggerResponses[keyCode][contentType] = { response, example: ex }
-    // meta.swaggerResponses[keyCode].description = description
+    meta.swaggerResponses[keyCode] = meta.swaggerResponses[keyCode] || { content: {} }
+    meta.swaggerResponses[keyCode].content[contentType] = { response, example: ex }
+    if (description) {
+      meta.swaggerResponses[keyCode].description = description
+    }
     return meta
   })
 }
@@ -91,4 +101,26 @@ export function SwaggerParam(opts: TSwaggerMate['swaggerParams'][number]) {
 /** Attaches an example value to a handler's OpenAPI documentation. */
 export function SwaggerExample(example: unknown) {
   return getSwaggerMate().decorate('swaggerExample', example)
+}
+
+/** Marks a handler or controller as public, opting out of inherited security requirements. */
+export const SwaggerPublic = () => getSwaggerMate().decorate('swaggerPublic', true)
+
+/**
+ * Attaches a security requirement to a handler or controller (OR semantics).
+ * Multiple calls add alternative requirements — any one suffices.
+ *
+ * @param schemeName - The name of the security scheme (must match a key in securitySchemes)
+ * @param scopes - OAuth2/OIDC scopes required (default: [])
+ */
+export function SwaggerSecurity(schemeName: string, scopes: string[] = []) {
+  return getSwaggerMate().decorate('swaggerSecurity', { [schemeName]: scopes }, true)
+}
+
+/**
+ * Attaches a combined security requirement (AND semantics).
+ * All schemes in the requirement must be satisfied simultaneously.
+ */
+export function SwaggerSecurityAll(requirement: TSwaggerSecurityRequirement) {
+  return getSwaggerMate().decorate('swaggerSecurity', requirement, true)
 }

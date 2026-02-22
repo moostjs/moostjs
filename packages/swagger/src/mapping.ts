@@ -1,7 +1,12 @@
 import type { TControllerOverview } from 'moost'
 
 import type { TLogger } from './common-types'
-import type { TSwaggerConfigType, TSwaggerMate } from './swagger.mate'
+import type {
+  TSwaggerConfigType,
+  TSwaggerMate,
+  TSwaggerSecurityRequirement,
+  TSwaggerSecurityScheme,
+} from './swagger.mate'
 import { getSwaggerMate } from './swagger.mate'
 
 interface TEndpointSpec {
@@ -27,6 +32,7 @@ interface TEndpointSpec {
     required?: boolean
     content: Record<string, { schema: TSwaggerSchema }>
   }
+  security?: TSwaggerSecurityRequirement[]
 }
 
 export interface TSwaggerOptions {
@@ -35,6 +41,8 @@ export interface TSwaggerOptions {
   version?: string
   cors?: boolean | string
   openapiVersion?: '3.0' | '3.1'
+  securitySchemes?: Record<string, TSwaggerSecurityScheme>
+  security?: TSwaggerSecurityRequirement[]
 }
 
 export interface TSwaggerSchema {
@@ -104,6 +112,10 @@ export function mapToSwaggerSpec(
 
   const is31 = options?.openapiVersion === '3.1'
 
+  const collectedSecuritySchemes: Record<string, TSwaggerSecurityScheme> = {
+    ...options?.securitySchemes,
+  }
+
   const swaggerSpec = {
     openapi: is31 ? '3.1.0' : '3.0.0',
     info: {
@@ -112,9 +124,10 @@ export function mapToSwaggerSpec(
     },
     paths: {} as Record<string, Record<string, TEndpointSpec>>,
     tags: [],
+    ...(options?.security ? { security: options.security } : {}),
     components: {
       schemas: globalSchemas,
-    },
+    } as { schemas: typeof globalSchemas; securitySchemes?: Record<string, TSwaggerSecurityScheme> },
   }
 
   for (const controller of metadata) {
@@ -146,15 +159,17 @@ export function mapToSwaggerSpec(
       let responses: TEndpointSpec['responses'] | undefined
 
       if (hmeta?.swaggerResponses) {
-        for (const [code, responseConfigs] of Object.entries(hmeta.swaggerResponses)) {
+        for (const [code, responseEntry] of Object.entries(hmeta.swaggerResponses)) {
           const newCode = code === '0' ? getDefaultStatusCode(handlerMethod) : code
-          for (const [contentType, conf] of Object.entries(responseConfigs)) {
+          for (const [contentType, conf] of Object.entries(responseEntry.content)) {
             const { response, example } = conf
             const schema = resolveSwaggerSchemaFromConfig(response)
             if (schema) {
               responses = responses || {}
               const schemaWithExample = example !== undefined ? { ...schema, example } : schema
               responses[newCode] = {
+                description:
+                  responseEntry.description || defaultStatusDescription(Number(newCode)),
                 content: {
                   [contentType]: { schema: schemaWithExample },
                 },
@@ -162,12 +177,17 @@ export function mapToSwaggerSpec(
             }
           }
         }
-      } else if (hmeta?.returnType) {
+      }
+
+      // Fall back to return type for success response when no explicit success code is declared
+      const defaultCode = getDefaultStatusCode(handlerMethod)
+      if (!responses?.[defaultCode] && hmeta?.returnType) {
         const ensured = ensureSchema(hmeta.returnType)
         const schema = toSchemaOrRef(ensured)
         if (schema) {
           responses = responses || {}
-          responses[getDefaultStatusCode(handlerMethod)] = {
+          responses[defaultCode] = {
+            description: defaultStatusDescription(Number(defaultCode)),
             content: {
               '*/*': {
                 schema,
@@ -201,6 +221,11 @@ export function mapToSwaggerSpec(
       }
 
       const endpointSpec = swaggerSpec.paths[handlerPath][handlerMethod]
+
+      const opSecurity = resolveOperationSecurity(cmeta, hmeta, collectedSecuritySchemes)
+      if (opSecurity !== undefined) {
+        endpointSpec.security = opSecurity
+      }
 
       function addParam(param: TEndpointSpec['parameters'][number]) {
         const key = `${param.in}//${param.name}`
@@ -329,6 +354,10 @@ export function mapToSwaggerSpec(
     ownedSchemas[key] = cloneSchema(value)
   }
   swaggerSpec.components.schemas = ownedSchemas
+
+  if (Object.keys(collectedSecuritySchemes).length > 0) {
+    swaggerSpec.components.securitySchemes = collectedSecuritySchemes
+  }
 
   if (is31) {
     transformSpecTo31(swaggerSpec)
@@ -756,6 +785,33 @@ function getDefaultStatusCode(httpMethod: string) {
   return defaultStatusCodes[httpMethod.toUpperCase() as keyof typeof defaultStatusCodes] || 200
 }
 
+const STATUS_DESCRIPTIONS: Record<number, string> = {
+  200: 'OK',
+  201: 'Created',
+  202: 'Accepted',
+  204: 'No Content',
+  301: 'Moved Permanently',
+  302: 'Found',
+  304: 'Not Modified',
+  400: 'Bad Request',
+  401: 'Unauthorized',
+  403: 'Forbidden',
+  404: 'Not Found',
+  405: 'Method Not Allowed',
+  409: 'Conflict',
+  410: 'Gone',
+  415: 'Unsupported Media Type',
+  422: 'Unprocessable Entity',
+  429: 'Too Many Requests',
+  500: 'Internal Server Error',
+  502: 'Bad Gateway',
+  503: 'Service Unavailable',
+}
+
+function defaultStatusDescription(code: number): string {
+  return STATUS_DESCRIPTIONS[code] || 'Response'
+}
+
 // --- OpenAPI 3.1 transform ---
 
 function transformSpecTo31(spec: {
@@ -835,4 +891,103 @@ function convertSchemaTo31(schema: TSwaggerSchema) {
   if (typeof schema.additionalProperties === 'object' && schema.additionalProperties) {
     convertSchemaTo31(schema.additionalProperties)
   }
+}
+
+// --- Security scheme helpers ---
+
+interface TAuthTransportDeclaration {
+  bearer?: { format?: string; description?: string }
+  basic?: { description?: string }
+  apiKey?: { name: string; in: 'header' | 'query' | 'cookie'; description?: string }
+  cookie?: { name: string; description?: string }
+}
+
+function collectSchemesFromTransports(
+  transports: TAuthTransportDeclaration,
+  schemes: Record<string, TSwaggerSecurityScheme>,
+) {
+  if (transports.bearer) {
+    schemes.bearerAuth = {
+      type: 'http',
+      scheme: 'bearer',
+      ...(transports.bearer.format ? { bearerFormat: transports.bearer.format } : {}),
+      ...(transports.bearer.description ? { description: transports.bearer.description } : {}),
+    }
+  }
+  if (transports.basic) {
+    schemes.basicAuth = {
+      type: 'http',
+      scheme: 'basic',
+      ...(transports.basic.description ? { description: transports.basic.description } : {}),
+    }
+  }
+  if (transports.apiKey) {
+    schemes.apiKeyAuth = {
+      type: 'apiKey',
+      name: transports.apiKey.name,
+      in: transports.apiKey.in,
+      ...(transports.apiKey.description ? { description: transports.apiKey.description } : {}),
+    }
+  }
+  if (transports.cookie) {
+    schemes.cookieAuth = {
+      type: 'apiKey',
+      name: transports.cookie.name,
+      in: 'cookie',
+      ...(transports.cookie.description ? { description: transports.cookie.description } : {}),
+    }
+  }
+}
+
+function transportsToSecurityRequirement(
+  transports: TAuthTransportDeclaration,
+): TSwaggerSecurityRequirement[] {
+  const requirements: TSwaggerSecurityRequirement[] = []
+  if (transports.bearer) {
+    requirements.push({ bearerAuth: [] })
+  }
+  if (transports.basic) {
+    requirements.push({ basicAuth: [] })
+  }
+  if (transports.apiKey) {
+    requirements.push({ apiKeyAuth: [] })
+  }
+  if (transports.cookie) {
+    requirements.push({ cookieAuth: [] })
+  }
+  return requirements
+}
+
+type TMetaWithSecurity = TSwaggerMate & { authTransports?: TAuthTransportDeclaration }
+
+function resolveOperationSecurity(
+  cmeta: TMetaWithSecurity | undefined,
+  hmeta: TMetaWithSecurity | undefined,
+  schemes: Record<string, TSwaggerSecurityScheme>,
+): TSwaggerSecurityRequirement[] | undefined {
+  // Handler-level swagger overrides first
+  if (hmeta?.swaggerPublic) {
+    return []
+  }
+  if (hmeta?.swaggerSecurity?.length) {
+    return hmeta.swaggerSecurity
+  }
+  if (hmeta?.authTransports) {
+    collectSchemesFromTransports(hmeta.authTransports, schemes)
+    return transportsToSecurityRequirement(hmeta.authTransports)
+  }
+
+  // Controller-level
+  if (cmeta?.swaggerPublic) {
+    return []
+  }
+  if (cmeta?.swaggerSecurity?.length) {
+    return cmeta.swaggerSecurity
+  }
+  if (cmeta?.authTransports) {
+    collectSchemesFromTransports(cmeta.authTransports, schemes)
+    return transportsToSecurityRequirement(cmeta.authTransports)
+  }
+
+  return undefined
 }

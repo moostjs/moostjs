@@ -6,10 +6,23 @@ import {
   SwaggerExample,
   SwaggerExclude,
   SwaggerParam,
+  SwaggerPublic,
   SwaggerRequestBody,
   SwaggerResponse,
+  SwaggerSecurity,
   SwaggerTag,
 } from '../decorators'
+import { getSwaggerMate } from '../swagger.mate'
+
+/**
+ * Helper to set authTransports metadata directly on a class.
+ * In production, @Authenticate(guard) from event-http stores this.
+ * For swagger tests, we set it directly to avoid workspace resolution issues
+ * (published moost@0.5.33 doesn't have the Authenticate decorator yet).
+ */
+function AuthTransports(transports: Record<string, unknown>) {
+  return getSwaggerMate().decorate('authTransports' as 'swaggerTags', transports as never)
+}
 
 @Label('Type Definition')
 @SwaggerExample({
@@ -388,5 +401,62 @@ export class DescribedSchemaController {
   @SwaggerResponse(DescribedSchema)
   getItem() {
     return {}
+  }
+}
+
+// --- Security scheme artifacts ---
+// AuthTransports simulates what @Intercept(defineAuthGuard(...)) does at the metadata level.
+
+@AuthTransports({ bearer: { format: 'JWT' } })
+@Controller('secured')
+export class SecuredController {
+  @Get('protected')
+  protectedEndpoint() {
+    return 'ok'
+  }
+
+  @SwaggerPublic()
+  @Get('public')
+  publicEndpoint() {
+    return 'ok'
+  }
+
+  @SwaggerSecurity('customScheme', ['read', 'write'])
+  @Get('custom-security')
+  customSecurity() {
+    return 'ok'
+  }
+}
+
+@SwaggerPublic()
+@Controller('all-public')
+export class AllPublicController {
+  @Get('open')
+  openEndpoint() {
+    return 'ok'
+  }
+}
+
+@AuthTransports({ bearer: { format: 'JWT' }, apiKey: { name: 'X-API-Key', in: 'header' } })
+@Controller('multi-auth')
+export class MultiAuthController {
+  @Get('multi')
+  multiEndpoint() {
+    return 'ok'
+  }
+}
+
+@SwaggerSecurity('oauth2', ['read'])
+@Controller('ctrl-security')
+export class ControllerSecurityController {
+  @Get('inherited')
+  inheritedEndpoint() {
+    return 'ok'
+  }
+
+  @SwaggerPublic()
+  @Get('override-public')
+  overridePublic() {
+    return 'ok'
   }
 }

@@ -81,7 +81,12 @@ Navigate to <http://localhost:3000/api-docs> to see the UI. The controller cache
 
 > Pro tip: the same Atscript DTOs can be validated at runtime using [`@atscript/moost-validator`](../validation/), ensuring documentation and validation stay in sync.
 
+## Return type inference
+
+For simple synchronous handlers, the generator can infer the success response schema from the method's return type — no `@SwaggerResponse` needed. However, TypeScript's `emitDecoratorMetadata` loses type information for `Promise<T>`, type aliases, and generics. For async handlers, always use `@SwaggerResponse` explicitly. See [Return type inference](/swagger/decorators#return-type-inference) for details.
+
 ## Next steps
 
 - [Swagger Decorators](/swagger/decorators)
+- [Security Schemes](/swagger/security)
 - [Serving Swagger UI](/swagger/serving-ui)

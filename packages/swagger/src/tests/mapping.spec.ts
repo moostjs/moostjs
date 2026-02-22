@@ -4,15 +4,19 @@ import { Moost } from 'moost'
 
 import { mapToSwaggerSpec } from '../mapping'
 import {
+  AllPublicController,
   ArrayController,
   CollisionController,
+  ControllerSecurityController,
   DescribedSchemaController,
   ExampleDataController,
   ExampleDataOverrideController,
   ExcludedController,
+  MultiAuthController,
   PartialExcludeController,
   PrimitiveController,
   RequiredBodyController,
+  SecuredController,
   StatusCodeController,
   SwaggerControllerTest,
   TaggedController,
@@ -139,6 +143,7 @@ describe('mapping', () => {
     expect(toTest.responses).toBeDefined()
     expect(toTest.responses).toEqual({
       '200': {
+        description: 'OK',
         content: {
           '*/*': {
             schema: {
@@ -153,6 +158,7 @@ describe('mapping', () => {
         },
       },
       '400': {
+        description: 'Error text',
         content: {
           'text/plain': {
             schema: {
@@ -163,6 +169,7 @@ describe('mapping', () => {
         },
       },
       '404': {
+        description: 'Not Found',
         content: {
           '*/*': {
             schema: {
@@ -476,6 +483,116 @@ describe('toExampleData() duck-typing', () => {
     expect(spec.components.schemas.ExampleDataWithOverride.example).toEqual({
       name: 'Override',
       count: 99,
+    })
+  })
+})
+
+describe('security schemes', () => {
+  const secApp = new Moost()
+  secApp.adapter(new MoostHttp())
+  secApp.registerControllers(
+    SecuredController,
+    AllPublicController,
+    MultiAuthController,
+    ControllerSecurityController,
+  )
+  let spec: ReturnType<typeof mapToSwaggerSpec>
+
+  beforeAll(async () => {
+    await secApp.init()
+    spec = mapToSwaggerSpec(secApp.getControllersOverview())
+  })
+
+  it('must auto-discover securitySchemes from authTransports', () => {
+    expect(spec.components.securitySchemes).toBeDefined()
+    expect(spec.components.securitySchemes!.bearerAuth).toEqual({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+    })
+  })
+
+  it('must auto-discover multiple security schemes from multi-transport guard', () => {
+    expect(spec.components.securitySchemes!.apiKeyAuth).toEqual({
+      type: 'apiKey',
+      name: 'X-API-Key',
+      in: 'header',
+    })
+  })
+
+  it('must set per-operation security from controller authTransports', () => {
+    const security = spec.paths['/secured/protected'].get.security
+    expect(security).toEqual([{ bearerAuth: [] }])
+  })
+
+  it('must emit security: [] for @SwaggerPublic handler', () => {
+    const security = spec.paths['/secured/public'].get.security
+    expect(security).toEqual([])
+  })
+
+  it('must use @SwaggerSecurity override on handler', () => {
+    const security = spec.paths['/secured/custom-security'].get.security
+    expect(security).toEqual([{ customScheme: ['read', 'write'] }])
+  })
+
+  it('must emit security: [] for controller-level @SwaggerPublic', () => {
+    const security = spec.paths['/all-public/open'].get.security
+    expect(security).toEqual([])
+  })
+
+  it('must emit multiple security requirements for multi-transport guard', () => {
+    const security = spec.paths['/multi-auth/multi'].get.security
+    expect(security).toEqual([{ bearerAuth: [] }, { apiKeyAuth: [] }])
+  })
+
+  it('must use controller-level @SwaggerSecurity', () => {
+    const security = spec.paths['/ctrl-security/inherited'].get.security
+    expect(security).toEqual([{ oauth2: ['read'] }])
+  })
+
+  it('must allow handler @SwaggerPublic to override controller @SwaggerSecurity', () => {
+    const security = spec.paths['/ctrl-security/override-public'].get.security
+    expect(security).toEqual([])
+  })
+
+  it('must omit security for endpoints with no auth configuration', () => {
+    const noAuthApp = new Moost()
+    noAuthApp.adapter(new MoostHttp())
+    noAuthApp.registerControllers(PrimitiveController)
+    return noAuthApp.init().then(() => {
+      const noAuthSpec = mapToSwaggerSpec(noAuthApp.getControllersOverview())
+      const endpoint = noAuthSpec.paths['/primitives/number'].get
+      expect(endpoint.security).toBeUndefined()
+    })
+  })
+
+  it('must merge manual securitySchemes from options with auto-discovered', () => {
+    const customSpec = mapToSwaggerSpec(secApp.getControllersOverview(), {
+      securitySchemes: {
+        myCustom: { type: 'http', scheme: 'digest' },
+      },
+    })
+    expect(customSpec.components.securitySchemes!.myCustom).toEqual({
+      type: 'http',
+      scheme: 'digest',
+    })
+    expect(customSpec.components.securitySchemes!.bearerAuth).toBeDefined()
+  })
+
+  it('must set global security from options', () => {
+    const globalSecSpec = mapToSwaggerSpec(secApp.getControllersOverview(), {
+      security: [{ bearerAuth: [] }],
+    })
+    expect(globalSecSpec.security).toEqual([{ bearerAuth: [] }])
+  })
+
+  it('must not include securitySchemes when no auth is configured', () => {
+    const noAuthApp = new Moost()
+    noAuthApp.adapter(new MoostHttp())
+    noAuthApp.registerControllers(PrimitiveController)
+    return noAuthApp.init().then(() => {
+      const noAuthSpec = mapToSwaggerSpec(noAuthApp.getControllersOverview())
+      expect(noAuthSpec.components.securitySchemes).toBeUndefined()
     })
   })
 })

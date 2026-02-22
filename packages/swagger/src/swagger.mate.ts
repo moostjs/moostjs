@@ -23,7 +23,10 @@ export interface TSwaggerMate {
   swaggerDescription: string
   swaggerResponses: Record<
     number,
-    Record<string, { response: TSwaggerConfigType; example?: unknown }>
+    {
+      description?: string
+      content: Record<string, { response: TSwaggerConfigType; example?: unknown }>
+    }
   >
   swaggerRequestBody: Record<string, TSwaggerConfigType>
   swaggerExample?: unknown
@@ -34,6 +37,8 @@ export interface TSwaggerMate {
     required?: boolean
     type?: TSwaggerConfigType
   }[]
+  swaggerSecurity?: TSwaggerSecurityRequirement[]
+  swaggerPublic?: boolean
 }
 
 export type TSwaggerConfigType = TFunction | { toJsonSchema?: () => unknown } | TSwaggerSchema
@@ -45,3 +50,51 @@ interface TSwaggerResponseConfig {
 }
 
 export type TSwaggerResponseOpts = TSwaggerConfigType | TSwaggerResponseConfig
+
+// --- Security scheme types (OpenAPI 3.0) ---
+
+export type TSwaggerSecurityRequirement = Record<string, string[]>
+
+export interface TSwaggerSecuritySchemeHttp {
+  type: 'http'
+  scheme: string
+  bearerFormat?: string
+  description?: string
+}
+
+export interface TSwaggerSecuritySchemeApiKey {
+  type: 'apiKey'
+  in: 'header' | 'query' | 'cookie'
+  name: string
+  description?: string
+}
+
+export interface TSwaggerSecuritySchemeOAuth2Flow {
+  authorizationUrl?: string
+  tokenUrl?: string
+  refreshUrl?: string
+  scopes: Record<string, string>
+}
+
+export interface TSwaggerSecuritySchemeOAuth2 {
+  type: 'oauth2'
+  flows: {
+    implicit?: TSwaggerSecuritySchemeOAuth2Flow
+    password?: TSwaggerSecuritySchemeOAuth2Flow
+    clientCredentials?: TSwaggerSecuritySchemeOAuth2Flow
+    authorizationCode?: TSwaggerSecuritySchemeOAuth2Flow
+  }
+  description?: string
+}
+
+export interface TSwaggerSecuritySchemeOpenIdConnect {
+  type: 'openIdConnect'
+  openIdConnectUrl: string
+  description?: string
+}
+
+export type TSwaggerSecurityScheme =
+  | TSwaggerSecuritySchemeHttp
+  | TSwaggerSecuritySchemeApiKey
+  | TSwaggerSecuritySchemeOAuth2
+  | TSwaggerSecuritySchemeOpenIdConnect

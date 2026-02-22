@@ -43,6 +43,43 @@ Usage patterns:
 
 If the supplied value exposes `toJsonSchema()`, the generator stores it under `#/components/schemas/<Name>` and references it automatically.
 
+#### Response descriptions
+
+Every response object in the OpenAPI spec requires a `description` field. The generator fills it automatically using the standard HTTP reason phrase for the status code (e.g., `"OK"` for 200, `"Not Found"` for 404). To override the default, pass `description` in the config object:
+
+```ts
+@SwaggerResponse(409, {
+  description: 'Username already taken',
+  response: ConflictErrorDto,
+})
+```
+
+This is most useful for non-obvious status codes where the standard phrase doesn't explain *when* the response occurs.
+
+#### Return type inference
+
+When no `@SwaggerResponse` is declared for the success status code (200 for GET, 201 for POST), the generator falls back to the method's TypeScript return type via `emitDecoratorMetadata`. If the return type exposes `toJsonSchema()` (e.g. an Atscript type), it will be used as the success response schema automatically:
+
+```ts
+@Get(':id')
+@SwaggerResponse(404, String, 'User not found')
+find(@Param('id') id: string): User {
+  // 200 response schema inferred from `: User` return type
+  // 404 response schema from @SwaggerResponse
+}
+```
+
+::: warning TypeScript limitations
+Return type inference relies on TypeScript's `emitDecoratorMetadata`, which has significant limitations:
+
+- **Async methods** — `Promise<User>` emits as `Promise`, losing the generic parameter. The generator cannot extract `User` from it.
+- **Type aliases** — `type Users = User[]` emits as `Array`. Only class types (including Atscript-generated classes) are preserved correctly.
+- **Generics** — Any generic wrapper (`Observable<T>`, `Result<T>`, etc.) loses its type argument.
+- **Transpiler differences** — SWC and tsc may handle edge cases differently (e.g. `class Users extends Array<User>` works with tsc but not SWC).
+
+For reliable response documentation, especially with async handlers, **always use `@SwaggerResponse` explicitly**. Return type inference is a convenience for simple synchronous handlers with concrete class return types.
+:::
+
 ### `SwaggerRequestBody`
 
 Pass either an Atscript type or a raw JSON Schema wrapped in a config object:

@@ -8,8 +8,8 @@ Swagger/OpenAPI 3.0 integration for Moost. Generates an OpenAPI spec from contro
 
 - `src/mapping.ts` — Core engine (736 lines): `mapToSwaggerSpec()` transforms `TControllerOverview[]` into an OpenAPI 3.0 spec
 - `src/swagger.controller.ts` — `SwaggerController` serving Swagger UI + `spec.json` at `/api-docs/`
-- `src/decorators.ts` — `SwaggerTag`, `SwaggerExclude`, `SwaggerDescription`, `SwaggerResponse`, `SwaggerRequestBody`, `SwaggerParam`, `SwaggerExample`
-- `src/swagger.mate.ts` — `getSwaggerMate()` extending moost's Mate instance with swagger metadata fields
+- `src/decorators.ts` — `SwaggerTag`, `SwaggerExclude`, `SwaggerDescription`, `SwaggerResponse`, `SwaggerRequestBody`, `SwaggerParam`, `SwaggerExample`, `SwaggerPublic`, `SwaggerSecurity`, `SwaggerSecurityAll`
+- `src/swagger.mate.ts` — `getSwaggerMate()` extending moost's Mate instance with swagger metadata fields (includes `swaggerPublic`, `swaggerSecurity`, `authTransports`)
 
 ## Schema Resolution
 
@@ -42,3 +42,22 @@ Classes used as types are deduplicated via a `WeakMap<object, string>` — same 
 **Moost core decorators feed into OpenAPI.** `@Label()` becomes schema `title`, `@Description()` becomes `description`, `@Optional()` affects `required` arrays. No swagger-specific decorators needed for basic metadata.
 
 **`toJsonSchema()` convention.** Any class with a `static toJsonSchema()` method integrates automatically. This is the expected convention for typed DTOs.
+
+## Security Schemes
+
+Security schemes are auto-discovered from `authTransports` metadata set by `@Authenticate()` (from `@moostjs/event-http`). The mapping engine collects transport declarations during traversal and emits `components.securitySchemes`.
+
+**Transport → OpenAPI scheme mapping:**
+- `bearer: { format }` → `{ type: 'http', scheme: 'bearer', bearerFormat: format }` as `bearerAuth`
+- `basic: {}` → `{ type: 'http', scheme: 'basic' }` as `basicAuth`
+- `apiKey: { name, in }` → `{ type: 'apiKey', name, in }` as `apiKeyAuth`
+- `cookie: { name }` → `{ type: 'apiKey', name, in: 'cookie' }` as `cookieAuth`
+
+**Per-operation security resolution (precedence):**
+1. Handler `swaggerPublic` → `security: []`
+2. Handler `swaggerSecurity` → handler's explicit array
+3. Handler `authTransports` → converted to security requirement
+4. Controller `swaggerPublic` → `security: []`
+5. Controller `swaggerSecurity` → controller's explicit array
+6. Controller `authTransports` → converted to security requirement
+7. None → omit `security` (inherits global)

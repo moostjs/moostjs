@@ -9,33 +9,7 @@
 
 ## High Impact
 
-### 1. Security Schemes (authentication documentation)
-
-**Impact**: Critical — almost every production API uses auth
-**Effort**: M
-
-No support for `securitySchemes` in `components` or `security` on operations. Users cannot document Bearer tokens, API keys, OAuth2 flows, or OpenID Connect.
-
-**How to fill**: Add a `@SwaggerSecurity` decorator that stores security requirements in metadata. Add `securitySchemes` option to `TSwaggerOptions` (or a separate registration API). In `mapToSwaggerSpec`, emit `components.securitySchemes` and attach `security` arrays to endpoints. Could also add a `@SwaggerBearerAuth()` / `@SwaggerApiKey()` shorthand.
-
----
-
-### 2. Response `description` is silently dropped
-
-**Impact**: High — every response in a valid OpenAPI spec requires `description`
-**Effort**: S
-
-In `decorators.ts:58`, the line that sets `description` on responses is commented out:
-```ts
-// meta.swaggerResponses[keyCode].description = description
-```
-The `TSwaggerResponseConfig` interface has `description?: string` but it never reaches the spec. OpenAPI spec requires `description` on every response object — tooling may warn or reject specs without it.
-
-**How to fill**: Uncomment and wire the description through. Store it in `swaggerResponses[code].description` (alongside content types). In `mapToSwaggerSpec`, attach it to the response object. Also add a sensible default (e.g., `"Success"` for 2xx, `"Error"` for 4xx/5xx).
-
----
-
-### 3. `info.description` option exists but is not emitted
+### 2. `info.description` option exists but is not emitted
 
 **Impact**: Medium-high — users pass `description` in options and expect it in the spec
 **Effort**: S
@@ -46,7 +20,7 @@ The `TSwaggerResponseConfig` interface has `description?: string` but it never r
 
 ---
 
-### 4. `servers` array
+### 3. `servers` array
 
 **Impact**: Medium-high — without it, Swagger UI defaults to the current host, which breaks for proxied/multi-env setups
 **Effort**: S
@@ -57,7 +31,7 @@ No `servers` field in the generated spec. OpenAPI 3.0+ uses `servers` to define 
 
 ---
 
-### 5. Top-level `tags` array is always empty
+### 4. Top-level `tags` array is always empty
 
 **Impact**: Medium — tags appear on endpoints but Swagger UI can't show tag descriptions or ordering
 **Effort**: S
@@ -68,7 +42,7 @@ No `servers` field in the generated spec. OpenAPI 3.0+ uses `servers` to define 
 
 ---
 
-### 6. `deprecated` flag
+### 5. `deprecated` flag
 
 **Impact**: Medium — common need for evolving APIs
 **Effort**: S
@@ -81,7 +55,7 @@ No way to mark endpoints or schemas as deprecated. OpenAPI supports `deprecated:
 
 ## Medium Impact
 
-### 7. `operationId` customization
+### 6. `operationId` customization
 
 **Impact**: Medium — auto-generated IDs are ugly (`GET__prefix_test_query`), matter for SDK codegen
 **Effort**: S
@@ -92,18 +66,7 @@ No way to mark endpoints or schemas as deprecated. OpenAPI supports `deprecated:
 
 ---
 
-### 8. `cookie` parameter location
-
-**Impact**: Medium — common for session-based auth
-**Effort**: S
-
-`TSwaggerMate.swaggerParams[].in` only allows `'query' | 'header' | 'path' | 'formData' | 'body'`. The `formData` and `body` values are OpenAPI 2.0 concepts. OpenAPI 3.0+ uses `'cookie'` instead.
-
-**How to fill**: Add `'cookie'` to the `in` union type. Remove `'formData'` and `'body'` (they're OAS 2.0 only) or keep for backward compat and map them.
-
----
-
-### 9. `info` extended fields (`contact`, `license`, `termsOfService`)
+### 7. `info` extended fields (`contact`, `license`, `termsOfService`)
 
 **Impact**: Medium — required for published/public APIs
 **Effort**: S
@@ -114,7 +77,7 @@ Only `title` and `version` are emitted in `info`. The OpenAPI spec supports `con
 
 ---
 
-### 10. `@Description` maps to `summary`, no way to set `description` on endpoints
+### 8. `@Description` maps to `summary`, no way to set `description` on endpoints
 
 **Impact**: Medium — `summary` is a short label, `description` supports markdown and longer text
 **Effort**: S
@@ -125,7 +88,7 @@ The core `@Description` decorator maps to `summary` on the endpoint (not `descri
 
 ---
 
-### 11. Response headers documentation
+### 9. Response headers documentation
 
 **Impact**: Medium — important for pagination, rate-limiting, caching headers
 **Effort**: M
@@ -136,7 +99,7 @@ No way to document response headers (e.g., `X-Total-Count`, `X-Rate-Limit`). Ope
 
 ---
 
-### 12. Multiple content types per response status code
+### 10. Multiple content types per response status code
 
 **Impact**: Low-medium — needed for APIs that return JSON or XML
 **Effort**: S
@@ -149,7 +112,7 @@ The current `swaggerResponses` structure is `Record<code, Record<contentType, co
 
 ## Lower Impact
 
-### 13. `externalDocs`
+### 11. `externalDocs`
 
 **Impact**: Low — nice-to-have for linking to external wikis/docs
 **Effort**: S
@@ -160,7 +123,7 @@ No support for `externalDocs` at spec or operation level.
 
 ---
 
-### 14. `discriminator` for polymorphic schemas
+### 12. `discriminator` for polymorphic schemas
 
 **Impact**: Low — only needed for advanced inheritance/polymorphism patterns
 **Effort**: M
@@ -171,7 +134,7 @@ No support for `discriminator` in `oneOf`/`anyOf` schemas. Needed when different
 
 ---
 
-### 15. `callbacks` (webhooks)
+### 13. `callbacks` (webhooks)
 
 **Impact**: Low — niche, only for APIs that send webhooks
 **Effort**: L
@@ -182,7 +145,7 @@ No support for OpenAPI `callbacks` (used to document webhook payloads).
 
 ---
 
-### 16. `links` (response-driven navigation)
+### 14. `links` (response-driven navigation)
 
 **Impact**: Low — rarely used in practice
 **Effort**: M
@@ -193,7 +156,7 @@ No support for OpenAPI `links` on responses (for HATEOAS-style APIs).
 
 ---
 
-### 17. YAML output format
+### 15. YAML output format
 
 **Impact**: Low — most tooling accepts JSON, but some prefer YAML
 **Effort**: S
@@ -204,7 +167,7 @@ Only JSON output via `spec.json`. Some teams prefer YAML for readability.
 
 ---
 
-### 18. Spec validation
+### 16. Spec validation
 
 **Impact**: Low — helpful for catching issues during development
 **Effort**: M
@@ -219,8 +182,8 @@ The generated spec is never validated against the OpenAPI schema. Invalid specs 
 
 | Priority | Count | Effort mostly |
 |----------|-------|---------------|
-| High     | 6     | S-M           |
-| Medium   | 6     | S-M           |
+| High     | 4     | S             |
+| Medium   | 5     | S-M           |
 | Lower    | 6     | S-M           |
 
-Recommended order: tackle #2 (response description), #3 (info.description), #4 (servers), #1 (security schemes), #5 (tags), #6 (deprecated).
+Recommended order: tackle #2 (info.description), #3 (servers), #4 (tags), #5 (deprecated).

@@ -196,6 +196,7 @@ export default defineConfig({
                     items: [
                         { text: 'Overview', link: '/swagger/' },
                         { text: 'Decorators', link: '/swagger/decorators' },
+                        { text: 'Security Schemes', link: '/swagger/security' },
                         { text: 'Serving Swagger UI', link: '/swagger/serving-ui' },
                     ],
                 },
@@ -345,6 +346,10 @@ export default defineConfig({
                         {
                             text: 'Request',
                             link: '/webapp/request',
+                        },
+                        {
+                            text: 'Authentication',
+                            link: '/webapp/auth',
                         },
                         {
                             text: 'Swagger Integration',

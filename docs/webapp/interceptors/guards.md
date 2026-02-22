@@ -1,5 +1,11 @@
 # Guard Example
 
+::: tip Recommended: Use Auth Guards for HTTP authentication
+For HTTP authentication (bearer tokens, basic auth, API keys, cookies), use the dedicated [Authentication Guards](/webapp/auth) system from `@moostjs/event-http`. It provides declarative transport extraction and automatic Swagger security scheme documentation.
+
+The examples below show how to build **generic** guard interceptors from scratch, which is useful for non-HTTP guards or custom authorization logic.
+:::
+
 In this example we will create an AuthGuard interceptor with pseudo-logic of checking client authorization.
 
 ::: info
