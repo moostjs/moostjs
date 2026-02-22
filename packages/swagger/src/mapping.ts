@@ -621,7 +621,7 @@ function applySwaggerMetadata(typeRef: object, schema: TSwaggerSchema) {
   if (schema.example === undefined) {
     const exampleFn = (typeRef as { toExampleData?: () => unknown }).toExampleData
     if (typeof exampleFn === 'function') {
-      const example = exampleFn()
+      const example = exampleFn.call(typeRef)
       if (example !== undefined) {
         schema.example = example
       }

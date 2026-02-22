@@ -247,6 +247,12 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
      * - Hooks into the server middlewares to use our Moost callback.
      */
     async configureServer(server) {
+      // Wire up SSR module loading so adapter detection patches
+      // the same module instances that the SSR app will use.
+      for (const adapter of adapters) {
+        adapter.ssrLoadModule = (id) => server.ssrLoadModule(id)
+      }
+
       moostRestartCleanup(adapters, options.onEject)
 
       // Import the SSR entry so the app initializes
