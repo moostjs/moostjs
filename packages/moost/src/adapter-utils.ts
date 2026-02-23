@@ -60,89 +60,104 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       reply: (r: unknown) => (response = r),
     }
 
-    if (options.hooks?.init) {
-      await options.hooks.init(hookOptions)
-    }
+    let interceptorHandler: InterceptorHandler | undefined
 
-    const instance = await options.getControllerInstance()
-
-    if (instance) {
-      setControllerContext(
-        instance,
-        options.controllerMethod || ('' as keyof T),
-        options.targetPath,
-      )
-      ci.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
-    }
-
-    const interceptorHandler = await options.getIterceptorHandler()
-    if (interceptorHandler?.count) {
-      try {
-        response = await ci.with('Interceptors:init', () => interceptorHandler.init())
-        if (response !== undefined) {
-          return await endWithResponse()
-        }
-      } catch (error) {
-        if (options.logErrors) {
-          logger.error(error)
-        }
-        response = error
-        return endWithResponse(true)
-      }
-    }
-
-    let args: unknown[] = []
-    if (options.resolveArgs) {
-      // params
-      try {
-        // logger.trace(`resolving method args for "${ opts.method as string }"`)
-        args = await ci.with('Arguments:resolve', () => options.resolveArgs!())
-        // logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
-      } catch (error) {
-        if (options.logErrors) {
-          logger.error(error)
-        }
-        response = error
-        return endWithResponse(true)
-      }
-    }
-
-    if (interceptorHandler?.countBefore) {
-      response = await ci.with('Interceptors:before', () => interceptorHandler.fireBefore(response))
-      if (response !== undefined) {
-        return endWithResponse()
-      }
-    }
-
-    // fire request handler
-    const callControllerMethod = () => {
-      if (options.callControllerMethod) {
-        return options.callControllerMethod(args)
-      } else if (
-        instance &&
-        options.controllerMethod &&
-        typeof instance[options.controllerMethod] === 'function'
-      ) {
-        return (instance[options.controllerMethod] as unknown as (...a: typeof args) => unknown)(
-          ...args,
-        )
-      }
-    }
     try {
-      response = await ci.with(
-        `Handler:${options.targetPath}` as 'Handler',
-        {
-          'moost.handler': (options.controllerMethod as string) || '',
-          'moost.controller': getConstructor(instance).name,
-        },
-        () => callControllerMethod(),
-      )
-    } catch (error) {
-      if (options.logErrors) {
-        logger.error(error)
+      if (options.hooks?.init) {
+        await options.hooks.init(hookOptions)
       }
-      response = error
-      return endWithResponse(true)
+
+      const instance = await options.getControllerInstance()
+
+      if (instance) {
+        setControllerContext(
+          instance,
+          options.controllerMethod || ('' as keyof T),
+          options.targetPath,
+        )
+        ci.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
+      }
+
+      interceptorHandler = (await options.getIterceptorHandler()) as
+        | InterceptorHandler
+        | undefined
+      if (interceptorHandler?.count) {
+        try {
+          response = await ci.with('Interceptors:init', () => interceptorHandler?.init())
+          if (response !== undefined) {
+            return await endWithResponse()
+          }
+        } catch (error) {
+          if (options.logErrors) {
+            logger.error(error)
+          }
+          response = error
+          return endWithResponse(true)
+        }
+      }
+
+      let args: unknown[] = []
+      if (options.resolveArgs) {
+        // params
+        try {
+          // logger.trace(`resolving method args for "${ opts.method as string }"`)
+          args = await ci.with('Arguments:resolve', () => options.resolveArgs?.())
+          // logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
+        } catch (error) {
+          if (options.logErrors) {
+            logger.error(error)
+          }
+          response = error
+          return endWithResponse(true)
+        }
+      }
+
+      if (interceptorHandler?.countBefore) {
+        response = await ci.with('Interceptors:before', () =>
+          interceptorHandler?.fireBefore(response),
+        )
+        if (response !== undefined) {
+          return endWithResponse()
+        }
+      }
+
+      // fire request handler
+      const callControllerMethod = () => {
+        if (options.callControllerMethod) {
+          return options.callControllerMethod(args)
+        } else if (
+          instance &&
+          options.controllerMethod &&
+          typeof instance[options.controllerMethod] === 'function'
+        ) {
+          return (instance[options.controllerMethod] as unknown as (...a: typeof args) => unknown)(
+            ...args,
+          )
+        }
+      }
+      try {
+        response = await ci.with(
+          `Handler:${options.targetPath}` as 'Handler',
+          {
+            'moost.handler': (options.controllerMethod as string) || '',
+            'moost.controller': getConstructor(instance).name,
+          },
+          () => callControllerMethod(),
+        )
+      } catch (error) {
+        if (options.logErrors) {
+          logger.error(error)
+        }
+        response = error
+        return endWithResponse(true)
+      }
+
+      return endWithResponse()
+    } catch (error) {
+      if (!options.manualUnscope) {
+        unscope()
+      }
+      throw error
     }
 
     async function endWithResponse(raise = false) {
@@ -151,12 +166,12 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         try {
           // logger.trace('firing after interceptors')
           response = await ci.with('Interceptors:after', () =>
-            interceptorHandler.fireAfter(response),
+            interceptorHandler?.fireAfter(response),
           )
         } catch (error) {
           if (options.logErrors) {
-          logger.error(error)
-        }
+            logger.error(error)
+          }
           if (!options.manualUnscope) {
             unscope()
           }
@@ -176,6 +191,5 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       }
       return response
     }
-    return endWithResponse()
   }
 }

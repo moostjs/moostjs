@@ -1,44 +1,69 @@
-# Overview
+# @moostjs/swagger
 
-`@moostjs/swagger` converts your Moost controllers into an OpenAPI 3 document and serves a Swagger UI. Once registered, it inspects Atscript-annotated DTOs, controller metadata, and standard argument resolvers (`@Query`, `@Header`, `@Body`, `@Param`) to produce accurate schemas with minimal configuration.
+`@moostjs/swagger` generates an [OpenAPI 3](https://spec.openapis.org/oas/v3.0.3) document from your Moost controllers and serves a Swagger UI. It reads controller metadata, argument resolvers (`@Param`, `@Query`, `@Header`, `@Body`), and Atscript-annotated DTOs to produce accurate schemas with minimal manual annotation.
 
-> Need a refresher on Atscript itself? Visit the official docs at [atscript.moost.org](https://atscript.moost.org/) for language syntax, CLI usage, and IDE tooling.
+## Installation
 
-## Minimal example
+```bash
+npm install @moostjs/swagger swagger-ui-dist
+```
+
+`swagger-ui-dist` provides the static UI assets. It is a peer dependency — install it alongside the main package.
+
+## Quick start
+
+Register `SwaggerController` like any other Moost controller:
 
 ```ts
-import { Controller, Description, Optional } from 'moost'
-import { Body, Get, Header, Param, Post, Query } from '@moostjs/event-http'
-import { SwaggerController, SwaggerTag } from '@moostjs/swagger'
-import { CreateUserDto } from './CreateUserDto.as'
+import { Moost } from 'moost'
+import { MoostHttp } from '@moostjs/event-http'
+import { SwaggerController } from '@moostjs/swagger'
 
-@SwaggerTag('users')
+const app = new Moost()
+app.adapter(new MoostHttp())
+app.registerControllers(SwaggerController)
+await app.init()
+```
+
+Open <http://localhost:3000/api-docs> to see the Swagger UI. The JSON spec is available at `/api-docs/spec.json` and YAML at `/api-docs/spec.yaml`.
+
+### Adding a controller
+
+```ts
+import { Controller, Description } from 'moost'
+import { Body, Get, Param, Post, Query } from '@moostjs/event-http'
+import { SwaggerTag } from '@moostjs/swagger'
+import { CreateUserDto, UserDto } from './types/User.as'
+
+@SwaggerTag('Users')
 @Controller('users')
 export class UsersController {
   @Get(':id')
-  @Description('Fetch a user by identifier')
-  async find(
-    @Param('id') id: string,
-    @Query('expand') expand?: string,
-    @Header('X-Trace') trace?: string
-  ) {
-    return { id, expand, trace }
+  @Description('Fetch a user by ID')
+  find(@Param('id') id: string, @Query('expand') expand?: string): UserDto {
+    // ...
   }
 
   @Post()
-  async create(@Optional() @Body() dto: CreateUserDto) {
-    return dto
+  create(@Body() dto: CreateUserDto): UserDto {
+    // ...
   }
 }
 ```
 
-- `@Query`, `@Header`, and `@Body` are resolved by Moost, so they appear in the spec automatically.
-- `@Description` is the common Moost decorator; Swagger reads it directly, so you rarely need `SwaggerDescription`.
-- `CreateUserDto` comes from an Atscript `.as` file; the generator calls `toJsonSchema()` behind the scenes.
-- Add optional decorators from `@moostjs/swagger` (e.g., `SwaggerResponse`, `SwaggerParam`) when you need extra metadata such as examples or alternative content types.
+The generator automatically detects:
+- **Path parameters** from `@Param('id')` and the `:id` route segment
+- **Query parameters** from `@Query('expand')`
+- **Request body** from `@Body()` with the `CreateUserDto` type
+- **Response schemas** from return types (when using Atscript types with `toJsonSchema()`)
 
-```ts
-// CreateUserDto.as
+### Atscript DTOs
+
+Atscript `.as` files provide type-safe schemas that the generator reads via `toJsonSchema()`:
+
+```as
+// types/User.as
+
 @label "Create User"
 export interface CreateUserDto {
   @label "Display name"
@@ -47,46 +72,46 @@ export interface CreateUserDto {
   @expect.pattern "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", "u", "Invalid email"
   email: string
 
-  @label "Password"
-  password: string
-
-  @labelOptional
   roles?: string[]
+}
+
+@label "User"
+export interface UserDto {
+  id: string
+  name: string
+  email: string
+  roles: string[]
 }
 ```
 
-Any handler return type, `@Body()` payload, or `@Query()` DTO that points to an Atscript type like the one above automatically feeds the Swagger generator. Components are registered once and reused via `$ref`, so your documentation, validation, and DTOs stay in sync. Types that also expose `toExampleData()` will have their examples populated automatically. See the [Atscript documentation](https://atscript.moost.org/) for authoring guidance and CLI tooling.
+Types are registered as named components in `#/components/schemas/` and reused via `$ref` throughout the spec. Types that expose `toExampleData()` have their examples populated automatically.
 
-## Registering the controller
+> Visit [atscript.moost.org](https://atscript.moost.org/) for full Atscript syntax, CLI usage, and IDE tooling.
 
-```ts
-import { Moost } from 'moost'
-import { MoostHttp } from '@moostjs/event-http'
-import { SwaggerController } from '@moostjs/swagger'
-import { createProvideRegistry } from '@prostojs/infact'
+## How it works
 
-const swagger = new SwaggerController({
-  title: 'My API',
-  cors: true,
-})
-
-const app = new Moost()
-app.adapter(new MoostHttp())
-app.setProvideRegistry(createProvideRegistry([SwaggerController, () => swagger]))
-app.registerControllers(UsersController, SwaggerController)
-await app.init()
+```
+Decorators & metadata   ──>   mapToSwaggerSpec()   ──>   OpenAPI 3.0/3.1 JSON
+  @Controller, @Get,                                        served by
+  @Body, @Query,           reads controller overview,       SwaggerController
+  @SwaggerTag, ...         resolves schemas, builds         at /api-docs/
+                           paths + components
 ```
 
-Navigate to <http://localhost:3000/api-docs> to see the UI. The controller caches the OpenAPI document (`spec.json`) to keep responses fast.
+1. **Metadata collection** — Moost decorators and `@moostjs/swagger` decorators store metadata on controllers and handlers via the `Mate` system.
+2. **Spec mapping** — `mapToSwaggerSpec()` iterates all registered controllers, resolves types to JSON Schema, and builds the OpenAPI document.
+3. **Serving** — `SwaggerController` caches the spec and serves it alongside the Swagger UI assets.
 
-> Pro tip: the same Atscript DTOs can be validated at runtime using [`@atscript/moost-validator`](../validation/), ensuring documentation and validation stay in sync.
+## What to read next
 
-## Return type inference
-
-For simple synchronous handlers, the generator can infer the success response schema from the method's return type — no `@SwaggerResponse` needed. However, TypeScript's `emitDecoratorMetadata` loses type information for `Promise<T>`, type aliases, and generics. For async handlers, always use `@SwaggerResponse` explicitly. See [Return type inference](/swagger/decorators#return-type-inference) for details.
-
-## Next steps
-
-- [Swagger Decorators](/swagger/decorators)
-- [Security Schemes](/swagger/security)
-- [Serving Swagger UI](/swagger/serving-ui)
+| Page | What you'll learn |
+|------|-------------------|
+| [Configuration](/swagger/configuration) | Customize title, version, servers, tags, OpenAPI version, and CORS |
+| [Operations](/swagger/operations) | Tags, descriptions, operationId, deprecated, and external docs |
+| [Responses](/swagger/responses) | Status codes, content types, headers, examples, and return type inference |
+| [Request Body](/swagger/request-body) | Body schemas, content types, and discriminated unions |
+| [Parameters](/swagger/parameters) | Path, query, and header params — auto-inferred and manual |
+| [Schemas & Types](/swagger/schemas) | How types become JSON Schema components |
+| [Security](/swagger/security) | Auth scheme auto-discovery and security decorators |
+| [Links & Callbacks](/swagger/links-callbacks) | Response links and webhook documentation |
+| [Serving the UI](/swagger/serving-ui) | Endpoints, mount path, YAML, and programmatic access |

@@ -7,6 +7,7 @@ import Path from 'path'
 import { getAbsoluteFSPath } from 'swagger-ui-dist'
 
 import { SwaggerExclude } from './decorators'
+import { jsonToYaml } from './json-to-yaml'
 import { mapToSwaggerSpec } from './mapping'
 import type { TSwaggerOptions } from './mapping'
 
@@ -85,9 +86,7 @@ export class SwaggerController {
 
   'spec'?: Record<string, unknown>
 
-  @Get()
-  async 'spec.json'() {
-    this.processCors()
+  protected async resolveSpec() {
     if (!this.spec) {
       const logger = useEventLogger('@moostjs/swagger')
       const { instantiate } = useControllerContext()
@@ -95,6 +94,19 @@ export class SwaggerController {
       this.spec = mapToSwaggerSpec(moost.getControllersOverview(), this.opts, logger)
     }
     return this.spec
+  }
+
+  @Get()
+  async 'spec.json'() {
+    this.processCors()
+    return this.resolveSpec()
+  }
+
+  @Get()
+  @SetHeader('content-type', 'text/yaml')
+  async 'spec.yaml'() {
+    this.processCors()
+    return jsonToYaml(await this.resolveSpec())
   }
 
   @Get('swagger-ui-bundle.*(js|js\\.map)')

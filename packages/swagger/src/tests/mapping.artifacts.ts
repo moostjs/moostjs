@@ -1,10 +1,15 @@
 import { Body, Delete, Get, Post, Put, Query } from '@moostjs/event-http'
-import { Controller, Description, Label, Optional, Param } from 'moost'
+import { Controller, Description, Id, Label, Optional, Param } from 'moost'
 
 import {
+  SwaggerCallback,
+  SwaggerDeprecated,
   SwaggerDescription,
   SwaggerExample,
   SwaggerExclude,
+  SwaggerExternalDocs,
+  SwaggerLink,
+  SwaggerOperationId,
   SwaggerParam,
   SwaggerPublic,
   SwaggerRequestBody,
@@ -147,6 +152,58 @@ export class SwaggerControllerTest {
   }
 }
 
+// --- Multiple content types per status code artifacts ---
+
+@Controller('multi-content')
+export class MultiContentTypeController {
+  @SwaggerResponse(200, {
+    contentType: 'application/json',
+    response: SwaggerTypeTest,
+  })
+  @SwaggerResponse(200, {
+    contentType: 'application/xml',
+    response: { type: 'string' },
+  })
+  @Get('dual')
+  dualContentType() {
+    return {}
+  }
+}
+
+// --- Response headers artifacts ---
+
+@Controller('response-headers')
+export class ResponseHeadersController {
+  @Get('paginated')
+  @SwaggerResponse(200, {
+    response: { type: 'array', items: { type: 'string' } },
+    headers: {
+      'X-Total-Count': { type: Number, description: 'Total number of items', required: true },
+      'X-Page-Size': { type: Number, description: 'Items per page' },
+    },
+  })
+  paginatedEndpoint() {
+    return []
+  }
+
+  @Get('rate-limited')
+  @SwaggerResponse(200, {
+    response: { type: 'string' },
+    headers: {
+      'X-Rate-Limit': { type: Number, example: 100 },
+    },
+  })
+  rateLimitedEndpoint() {
+    return 'ok'
+  }
+
+  @Get('no-headers')
+  @SwaggerResponse(200, { response: { type: 'string' } })
+  noHeadersEndpoint() {
+    return 'ok'
+  }
+}
+
 // --- @SwaggerExclude artifacts ---
 
 @SwaggerExclude()
@@ -192,6 +249,13 @@ export class TaggedController {
   @SwaggerTag('detail')
   @Get('described')
   describedHandler() {
+    return 'ok'
+  }
+
+  @Label('Get user summary')
+  @Description('Returns a detailed user summary including activity history')
+  @Get('labeled')
+  labeledHandler() {
     return 'ok'
   }
 }
@@ -458,5 +522,305 @@ export class ControllerSecurityController {
   @Get('override-public')
   overridePublic() {
     return 'ok'
+  }
+}
+
+// --- @SwaggerDeprecated artifacts ---
+
+@SwaggerDeprecated()
+@Controller('deprecated-ctrl')
+export class DeprecatedController {
+  @Get('old')
+  oldEndpoint() {
+    return 'ok'
+  }
+}
+
+@Controller('partial-deprecated')
+export class PartialDeprecatedController {
+  @SwaggerDeprecated()
+  @Get('legacy')
+  legacyEndpoint() {
+    return 'legacy'
+  }
+
+  @Get('current')
+  currentEndpoint() {
+    return 'current'
+  }
+}
+
+// --- @SwaggerOperationId / @Id artifacts ---
+
+@Controller('op-id')
+export class OperationIdController {
+  @SwaggerOperationId('listItems')
+  @Get('items')
+  listItems() {
+    return []
+  }
+
+  @Id('findItem')
+  @Get('items/:id')
+  findItem(@Param('id') id: string) {
+    return { id }
+  }
+
+  @SwaggerOperationId('createItem')
+  @Id('createItemId')
+  @Get('override')
+  overrideHandler() {
+    return 'ok'
+  }
+
+  @Get('auto')
+  autoHandler() {
+    return 'ok'
+  }
+}
+
+// --- @SwaggerExternalDocs artifacts ---
+
+@Controller('ext-docs')
+export class ExternalDocsController {
+  @SwaggerExternalDocs('https://example.com/docs/list', 'Full list documentation')
+  @Get('with-description')
+  withDescription() {
+    return 'ok'
+  }
+
+  @SwaggerExternalDocs('https://example.com/docs/item')
+  @Get('url-only')
+  urlOnly() {
+    return 'ok'
+  }
+
+  @Get('none')
+  noExternalDocs() {
+    return 'ok'
+  }
+}
+
+// --- discriminator artifacts ---
+
+class CatOrDog {
+  static toJsonSchema() {
+    return {
+      oneOf: [{ $ref: '#/$defs/Dog' }, { $ref: '#/$defs/Cat' }],
+      discriminator: {
+        propertyName: 'petType',
+        mapping: {
+          dog: '#/$defs/Dog',
+          cat: '#/$defs/Cat',
+        },
+      },
+      $defs: {
+        Dog: {
+          type: 'object',
+          properties: {
+            petType: { const: 'dog', type: 'string' },
+            name: { type: 'string' },
+            isHunt: { type: 'boolean' },
+          },
+          required: ['petType', 'name', 'isHunt'],
+        },
+        Cat: {
+          type: 'object',
+          properties: {
+            petType: { const: 'cat', type: 'string' },
+            name: { type: 'string' },
+          },
+          required: ['petType', 'name'],
+        },
+      },
+    }
+  }
+}
+
+class CatOrDogList {
+  static toJsonSchema() {
+    return {
+      type: 'array',
+      items: {
+        oneOf: [{ $ref: '#/$defs/Dog' }, { $ref: '#/$defs/Cat' }],
+        discriminator: {
+          propertyName: 'petType',
+          mapping: {
+            dog: '#/$defs/Dog',
+            cat: '#/$defs/Cat',
+          },
+        },
+      },
+      $defs: {
+        Dog: {
+          type: 'object',
+          properties: {
+            petType: { const: 'dog', type: 'string' },
+            name: { type: 'string' },
+            isHunt: { type: 'boolean' },
+          },
+          required: ['petType', 'name', 'isHunt'],
+        },
+        Cat: {
+          type: 'object',
+          properties: {
+            petType: { const: 'cat', type: 'string' },
+            name: { type: 'string' },
+          },
+          required: ['petType', 'name'],
+        },
+      },
+    }
+  }
+}
+
+@Controller('discriminator')
+export class DiscriminatorController {
+  @Get('pet')
+  @SwaggerResponse(200, CatOrDog)
+  getPet() {
+    return {}
+  }
+
+  @Get('pets')
+  @SwaggerResponse(200, CatOrDogList)
+  getPets() {
+    return []
+  }
+}
+
+// --- @SwaggerLink artifacts ---
+
+@Controller('link-opid')
+export class LinkByOperationIdController {
+  @SwaggerLink('GetUser', {
+    operationId: 'getUser',
+    parameters: { userId: '$response.body#/id' },
+    description: 'Get the created user',
+  })
+  @SwaggerResponse(201, { response: { type: 'object', properties: { id: { type: 'string' } } } })
+  @Post('users')
+  createUser() {
+    return { id: '123' }
+  }
+
+  @SwaggerOperationId('getUser')
+  @Get('users/:id')
+  getUser(@Param('id') id: string) {
+    return { id }
+  }
+}
+
+@Controller('link-ref')
+export class LinkByHandlerRefController {
+  @SwaggerLink('GetItem', {
+    handler: [LinkByHandlerRefController, 'getItem'],
+    parameters: { itemId: '$response.body#/itemId' },
+  })
+  @SwaggerResponse(201, { response: { type: 'object', properties: { itemId: { type: 'string' } } } })
+  @Post('items')
+  createItem() {
+    return { itemId: '456' }
+  }
+
+  @SwaggerOperationId('getItemById')
+  @Get('items/:id')
+  getItem(@Param('id') id: string) {
+    return { id }
+  }
+}
+
+@Controller('multi-link')
+export class MultiLinkController {
+  @SwaggerLink('GetUser', {
+    operationId: 'getUser',
+    parameters: { userId: '$response.body#/id' },
+  })
+  @SwaggerLink('ListUserOrders', {
+    operationId: 'listOrders',
+    parameters: { userId: '$response.body#/id' },
+  })
+  @SwaggerResponse(201, { response: { type: 'object', properties: { id: { type: 'string' } } } })
+  @Post('users')
+  createUser() {
+    return { id: '123' }
+  }
+}
+
+// --- @SwaggerCallback artifacts ---
+
+class EventPayload {
+  static toJsonSchema() {
+    return {
+      type: 'object',
+      properties: {
+        event: { type: 'string' },
+        data: { type: 'object' },
+      },
+      required: ['event'],
+    }
+  }
+}
+
+@Controller('callback-basic')
+export class CallbackBasicController {
+  @SwaggerCallback('onEvent', {
+    expression: '{$request.body#/callbackUrl}',
+    requestBody: EventPayload,
+    description: 'Event notification sent to subscriber',
+  })
+  @Post('subscribe')
+  subscribe() {
+    return 'ok'
+  }
+}
+
+@Controller('callback-custom')
+export class CallbackCustomController {
+  @SwaggerCallback('onStatus', {
+    expression: '{$request.body#/hookUrl}',
+    method: 'put',
+    contentType: 'text/plain',
+    requestBody: { type: 'string' },
+    responseStatus: 204,
+    responseDescription: 'Acknowledged',
+  })
+  @Post('register')
+  register() {
+    return 'ok'
+  }
+}
+
+@Controller('callback-multi')
+export class CallbackMultiController {
+  @SwaggerCallback('onCreate', {
+    expression: '{$request.body#/callbackUrl}',
+    requestBody: { type: 'object', properties: { id: { type: 'string' } } },
+  })
+  @SwaggerCallback('onDelete', {
+    expression: '{$request.body#/callbackUrl}',
+    requestBody: { type: 'object', properties: { id: { type: 'string' }, deleted: { type: 'boolean' } } },
+  })
+  @Post('watch')
+  watch() {
+    return 'ok'
+  }
+}
+
+@Controller('link-status')
+export class LinkStatusCodeController {
+  @SwaggerLink(201, 'GetCreated', {
+    operationId: 'getCreated',
+    parameters: { id: '$response.body#/id' },
+  })
+  @SwaggerLink(200, 'GetUpdated', {
+    operationId: 'getUpdated',
+    parameters: { id: '$response.body#/id' },
+  })
+  @SwaggerResponse(201, { response: { type: 'object', properties: { id: { type: 'string' } } } })
+  @SwaggerResponse(200, { response: { type: 'object', properties: { id: { type: 'string' } } } })
+  @Post('upsert')
+  upsert() {
+    return { id: '789' }
   }
 }

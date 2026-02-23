@@ -6,13 +6,27 @@ import { mapToSwaggerSpec } from '../mapping'
 import {
   AllPublicController,
   ArrayController,
+  CallbackBasicController,
+  CallbackCustomController,
+  CallbackMultiController,
   CollisionController,
   ControllerSecurityController,
+  DeprecatedController,
   DescribedSchemaController,
+  DiscriminatorController,
+  LinkByHandlerRefController,
+  LinkByOperationIdController,
+  LinkStatusCodeController,
+  MultiLinkController,
+  OperationIdController,
+  ResponseHeadersController,
   ExampleDataController,
   ExampleDataOverrideController,
   ExcludedController,
+  ExternalDocsController,
   MultiAuthController,
+  MultiContentTypeController,
+  PartialDeprecatedController,
   PartialExcludeController,
   PrimitiveController,
   RequiredBodyController,
@@ -253,6 +267,58 @@ describe('mapping', () => {
     expect(custom.info.version).toBe('2.0.0')
   })
 
+  it('must include description in info when provided', () => {
+    const custom = mapToSwaggerSpec(metadata, { title: 'My API', description: 'Service docs' })
+    expect(custom.info).toEqual({
+      title: 'My API',
+      description: 'Service docs',
+      version: '1.0.0',
+    })
+  })
+
+  it('must omit description from info when not provided', () => {
+    const custom = mapToSwaggerSpec(metadata, { title: 'My API' })
+    expect('description' in custom.info).toBe(false)
+  })
+
+  it('must include servers when provided', () => {
+    const servers = [
+      { url: 'https://api.example.com', description: 'Production' },
+      { url: 'https://staging.example.com' },
+    ]
+    const custom = mapToSwaggerSpec(metadata, { servers })
+    expect((custom as Record<string, unknown>).servers).toEqual(servers)
+  })
+
+  it('must omit servers when not provided', () => {
+    const custom = mapToSwaggerSpec(metadata)
+    expect('servers' in custom).toBe(false)
+  })
+
+  it('must include contact in info when provided', () => {
+    const contact = { name: 'API Team', url: 'https://example.com', email: 'api@example.com' }
+    const custom = mapToSwaggerSpec(metadata, { contact })
+    expect(custom.info.contact).toEqual(contact)
+  })
+
+  it('must include license in info when provided', () => {
+    const license = { name: 'MIT', url: 'https://opensource.org/licenses/MIT' }
+    const custom = mapToSwaggerSpec(metadata, { license })
+    expect(custom.info.license).toEqual(license)
+  })
+
+  it('must include termsOfService in info when provided', () => {
+    const custom = mapToSwaggerSpec(metadata, { termsOfService: 'https://example.com/tos' })
+    expect(custom.info.termsOfService).toBe('https://example.com/tos')
+  })
+
+  it('must omit contact, license, termsOfService when not provided', () => {
+    const custom = mapToSwaggerSpec(metadata)
+    expect('contact' in custom.info).toBe(false)
+    expect('license' in custom.info).toBe(false)
+    expect('termsOfService' in custom.info).toBe(false)
+  })
+
   it('must use default version when only title is provided', () => {
     const custom = mapToSwaggerSpec(metadata, { title: 'Custom Title' })
     expect(custom.info.title).toBe('Custom Title')
@@ -306,15 +372,39 @@ describe('@SwaggerTag and @Description', () => {
     expect(tags).toEqual(['admin'])
   })
 
-  it('must set summary from @Description on handler', () => {
+  it('must set description from @Description on handler', () => {
     const endpoint = spec.paths['/tagged/described'].get
-    expect(endpoint.summary).toBe('Get user details')
+    expect(endpoint.description).toBe('Get user details')
     expect(endpoint.tags).toEqual(['admin', 'detail'])
+  })
+
+  it('must map @Label to summary and @Description to description', () => {
+    const endpoint = spec.paths['/tagged/labeled'].get
+    expect(endpoint.summary).toBe('Get user summary')
+    expect(endpoint.description).toBe('Returns a detailed user summary including activity history')
   })
 
   it('must apply @SwaggerDescription to component schema', () => {
     expect(spec.components.schemas.DescribedSchema).toBeDefined()
     expect(spec.components.schemas.DescribedSchema.description).toBe('A described schema')
+  })
+
+  it('must auto-collect tags from endpoints into top-level tags', () => {
+    const tagNames = spec.tags.map((t: { name: string }) => t.name)
+    expect(tagNames).toContain('admin')
+    expect(tagNames).toContain('users')
+    expect(tagNames).toContain('detail')
+  })
+
+  it('must merge manual tags with auto-collected, manual first', () => {
+    const custom = mapToSwaggerSpec(tagApp.getControllersOverview(), {
+      tags: [{ name: 'admin', description: 'Admin operations' }],
+    })
+    const adminTag = custom.tags.find((t: { name: string }) => t.name === 'admin')
+    expect(adminTag).toEqual({ name: 'admin', description: 'Admin operations' })
+    const tagNames = custom.tags.map((t: { name: string }) => t.name)
+    expect(tagNames).toContain('users')
+    expect(tagNames.filter((n: string) => n === 'admin')).toHaveLength(1)
   })
 })
 
@@ -654,5 +744,400 @@ describe('OpenAPI 3.1 support', () => {
     expect(schema.properties?.name?.maxLength).toBe(20)
     expect(schema.properties?.age?.minimum).toBe(4)
     expect(schema.properties?.age?.maximum).toBe(55)
+  })
+})
+
+describe('@SwaggerDeprecated', () => {
+  const depApp = new Moost()
+  depApp.adapter(new MoostHttp())
+  depApp.registerControllers(DeprecatedController, PartialDeprecatedController)
+  let spec: ReturnType<typeof mapToSwaggerSpec>
+
+  beforeAll(async () => {
+    await depApp.init()
+    spec = mapToSwaggerSpec(depApp.getControllersOverview())
+  })
+
+  it('must mark all endpoints as deprecated when controller has @SwaggerDeprecated', () => {
+    expect(spec.paths['/deprecated-ctrl/old'].get.deprecated).toBe(true)
+  })
+
+  it('must mark individual handler as deprecated with @SwaggerDeprecated on method', () => {
+    expect(spec.paths['/partial-deprecated/legacy'].get.deprecated).toBe(true)
+  })
+
+  it('must not mark non-deprecated handler as deprecated', () => {
+    expect(spec.paths['/partial-deprecated/current'].get.deprecated).toBeUndefined()
+  })
+})
+
+describe('operationId customization', () => {
+  const opIdApp = new Moost()
+  opIdApp.adapter(new MoostHttp())
+  opIdApp.registerControllers(OperationIdController)
+  let spec: ReturnType<typeof mapToSwaggerSpec>
+
+  beforeAll(async () => {
+    await opIdApp.init()
+    spec = mapToSwaggerSpec(opIdApp.getControllersOverview())
+  })
+
+  it('must use @SwaggerOperationId when provided', () => {
+    expect(spec.paths['/op-id/items'].get.operationId).toBe('listItems')
+  })
+
+  it('must fall back to @Id when no @SwaggerOperationId', () => {
+    expect(spec.paths['/op-id/items/{id}'].get.operationId).toBe('findItem')
+  })
+
+  it('must prefer @SwaggerOperationId over @Id', () => {
+    expect(spec.paths['/op-id/override'].get.operationId).toBe('createItem')
+  })
+
+  it('must auto-generate operationId when neither decorator is set', () => {
+    expect(spec.paths['/op-id/auto'].get.operationId).toBe('GET__op_id_auto')
+  })
+})
+
+describe('response headers', () => {
+  const headerApp = new Moost()
+  headerApp.adapter(new MoostHttp())
+  headerApp.registerControllers(ResponseHeadersController)
+  let spec: ReturnType<typeof mapToSwaggerSpec>
+
+  beforeAll(async () => {
+    await headerApp.init()
+    spec = mapToSwaggerSpec(headerApp.getControllersOverview())
+  })
+
+  it('must emit headers on response with description, required, and schema', () => {
+    const response = spec.paths['/response-headers/paginated'].get.responses!['200']
+    expect(response.headers).toBeDefined()
+    expect(response.headers!['X-Total-Count']).toEqual({
+      description: 'Total number of items',
+      required: true,
+      schema: { type: 'number' },
+    })
+    expect(response.headers!['X-Page-Size']).toEqual({
+      description: 'Items per page',
+      schema: { type: 'number' },
+    })
+  })
+
+  it('must emit header with example', () => {
+    const response = spec.paths['/response-headers/rate-limited'].get.responses!['200']
+    expect(response.headers).toBeDefined()
+    expect(response.headers!['X-Rate-Limit']).toEqual({
+      schema: { type: 'number' },
+      example: 100,
+    })
+  })
+
+  it('must not emit headers when none are declared', () => {
+    const response = spec.paths['/response-headers/no-headers'].get.responses!['200']
+    expect(response.headers).toBeUndefined()
+  })
+})
+
+describe('multiple content types per status code', () => {
+  const mcApp = new Moost()
+  mcApp.adapter(new MoostHttp())
+  mcApp.registerControllers(MultiContentTypeController)
+  let spec: ReturnType<typeof mapToSwaggerSpec>
+
+  beforeAll(async () => {
+    await mcApp.init()
+    spec = mapToSwaggerSpec(mcApp.getControllersOverview())
+  })
+
+  it('must merge multiple content types under the same status code', () => {
+    const response = spec.paths['/multi-content/dual'].get.responses!['200']
+    expect(response).toBeDefined()
+    expect(response.content['application/json']).toBeDefined()
+    expect(response.content['application/xml']).toBeDefined()
+    expect(response.content['application/json'].schema).toEqual({
+      $ref: '#/components/schemas/SwaggerTypeTest',
+    })
+    expect(response.content['application/xml'].schema).toEqual({
+      type: 'string',
+    })
+  })
+})
+
+describe('externalDocs', () => {
+  const edApp = new Moost()
+  edApp.adapter(new MoostHttp())
+  edApp.registerControllers(ExternalDocsController)
+  let spec: ReturnType<typeof mapToSwaggerSpec>
+
+  beforeAll(async () => {
+    await edApp.init()
+    spec = mapToSwaggerSpec(edApp.getControllersOverview())
+  })
+
+  it('must emit externalDocs with url and description on operation', () => {
+    const op = spec.paths['/ext-docs/with-description'].get
+    expect(op.externalDocs).toEqual({
+      url: 'https://example.com/docs/list',
+      description: 'Full list documentation',
+    })
+  })
+
+  it('must emit externalDocs with url only on operation', () => {
+    const op = spec.paths['/ext-docs/url-only'].get
+    expect(op.externalDocs).toEqual({
+      url: 'https://example.com/docs/item',
+    })
+  })
+
+  it('must not emit externalDocs when not declared', () => {
+    const op = spec.paths['/ext-docs/none'].get
+    expect(op.externalDocs).toBeUndefined()
+  })
+
+  it('must emit spec-level externalDocs from options', () => {
+    const specWithDocs = mapToSwaggerSpec(edApp.getControllersOverview(), {
+      externalDocs: { url: 'https://example.com/api', description: 'API docs' },
+    })
+    expect(specWithDocs.externalDocs).toEqual({
+      url: 'https://example.com/api',
+      description: 'API docs',
+    })
+  })
+
+  it('must emit tag-level externalDocs from options', () => {
+    const specWithTags = mapToSwaggerSpec(edApp.getControllersOverview(), {
+      tags: [{ name: 'Users', description: 'User ops', externalDocs: { url: 'https://example.com/users' } }],
+    })
+    const usersTag = specWithTags.tags.find((t: { name: string }) => t.name === 'Users')
+    expect(usersTag).toBeDefined()
+    expect(usersTag!.externalDocs).toEqual({ url: 'https://example.com/users' })
+  })
+})
+
+describe('discriminator ($defs hoisting)', () => {
+  const discApp = new Moost()
+  discApp.adapter(new MoostHttp())
+  discApp.registerControllers(DiscriminatorController)
+  let spec: ReturnType<typeof mapToSwaggerSpec>
+
+  beforeAll(async () => {
+    await discApp.init()
+    spec = mapToSwaggerSpec(discApp.getControllersOverview())
+  })
+
+  it('must hoist $defs into component schemas', () => {
+    expect(spec.components.schemas['Dog']).toBeDefined()
+    expect(spec.components.schemas['Cat']).toBeDefined()
+  })
+
+  it('must rewrite oneOf $refs from $defs to components', () => {
+    const schema = spec.components.schemas['CatOrDog']
+    expect(schema.oneOf).toEqual([
+      { $ref: '#/components/schemas/Dog' },
+      { $ref: '#/components/schemas/Cat' },
+    ])
+  })
+
+  it('must rewrite discriminator mapping to component refs', () => {
+    const schema = spec.components.schemas['CatOrDog']
+    expect(schema.discriminator).toEqual({
+      propertyName: 'petType',
+      mapping: {
+        dog: '#/components/schemas/Dog',
+        cat: '#/components/schemas/Cat',
+      },
+    })
+  })
+
+  it('must strip $defs from the stored component schema', () => {
+    const schema = spec.components.schemas['CatOrDog']
+    expect(schema.$defs).toBeUndefined()
+  })
+
+  it('must preserve hoisted schema content', () => {
+    const dog = spec.components.schemas['Dog']
+    expect(dog.properties!.petType).toEqual({ const: 'dog', type: 'string' })
+    expect(dog.properties!.name).toEqual({ type: 'string' })
+    expect(dog.properties!.isHunt).toEqual({ type: 'boolean' })
+    expect(dog.required).toEqual(['petType', 'name', 'isHunt'])
+  })
+
+  it('must use component ref in response', () => {
+    const response = spec.paths['/discriminator/pet'].get.responses!['200']
+    expect(response.content['*/*'].schema).toEqual({
+      $ref: '#/components/schemas/CatOrDog',
+    })
+  })
+
+  it('must hoist $defs from array items (nested)', () => {
+    const schema = spec.components.schemas['CatOrDogList']
+    expect(schema.$defs).toBeUndefined()
+    expect(schema.type).toBe('array')
+    expect(schema.items).toEqual({
+      oneOf: [
+        { $ref: '#/components/schemas/Dog' },
+        { $ref: '#/components/schemas/Cat' },
+      ],
+      discriminator: {
+        propertyName: 'petType',
+        mapping: {
+          dog: '#/components/schemas/Dog',
+          cat: '#/components/schemas/Cat',
+        },
+      },
+    })
+  })
+})
+
+describe('@SwaggerLink', () => {
+  const linkApp = new Moost()
+  linkApp.adapter(new MoostHttp())
+  linkApp.registerControllers(
+    LinkByOperationIdController,
+    LinkByHandlerRefController,
+    MultiLinkController,
+    LinkStatusCodeController,
+  )
+  let spec: ReturnType<typeof mapToSwaggerSpec>
+
+  beforeAll(async () => {
+    await linkApp.init()
+    spec = mapToSwaggerSpec(linkApp.getControllersOverview())
+  })
+
+  it('must emit link with operationId on default status code', () => {
+    const response = spec.paths['/link-opid/users'].post.responses!['201']
+    expect(response).toBeDefined()
+    expect(response.links).toBeDefined()
+    expect(response.links!['GetUser']).toEqual({
+      operationId: 'getUser',
+      parameters: { userId: '$response.body#/id' },
+      description: 'Get the created user',
+    })
+  })
+
+  it('must resolve handler reference to operationId', () => {
+    const response = spec.paths['/link-ref/items'].post.responses!['201']
+    expect(response).toBeDefined()
+    expect(response.links).toBeDefined()
+    expect(response.links!['GetItem']).toEqual({
+      operationId: 'getItemById',
+      parameters: { itemId: '$response.body#/itemId' },
+    })
+  })
+
+  it('must emit multiple links on same response', () => {
+    const response = spec.paths['/multi-link/users'].post.responses!['201']
+    expect(response).toBeDefined()
+    expect(response.links).toBeDefined()
+    expect(Object.keys(response.links!)).toHaveLength(2)
+    expect(response.links!['GetUser']).toEqual({
+      operationId: 'getUser',
+      parameters: { userId: '$response.body#/id' },
+    })
+    expect(response.links!['ListUserOrders']).toEqual({
+      operationId: 'listOrders',
+      parameters: { userId: '$response.body#/id' },
+    })
+  })
+
+  it('must attach links to correct status codes', () => {
+    const r201 = spec.paths['/link-status/upsert'].post.responses!['201']
+    const r200 = spec.paths['/link-status/upsert'].post.responses!['200']
+    expect(r201.links).toBeDefined()
+    expect(r201.links!['GetCreated']).toEqual({
+      operationId: 'getCreated',
+      parameters: { id: '$response.body#/id' },
+    })
+    expect(r200.links).toBeDefined()
+    expect(r200.links!['GetUpdated']).toEqual({
+      operationId: 'getUpdated',
+      parameters: { id: '$response.body#/id' },
+    })
+  })
+
+  it('must not emit links when none are declared', () => {
+    const response = spec.paths['/link-opid/users/{id}'].get.responses
+    if (response) {
+      for (const entry of Object.values(response)) {
+        expect(entry.links).toBeUndefined()
+      }
+    }
+  })
+})
+
+describe('@SwaggerCallback', () => {
+  const cbApp = new Moost()
+  cbApp.adapter(new MoostHttp())
+  cbApp.registerControllers(
+    CallbackBasicController,
+    CallbackCustomController,
+    CallbackMultiController,
+  )
+  let spec: ReturnType<typeof mapToSwaggerSpec>
+
+  beforeAll(async () => {
+    await cbApp.init()
+    spec = mapToSwaggerSpec(cbApp.getControllersOverview())
+  })
+
+  it('must emit callback with schema-resolved request body', () => {
+    const op = spec.paths['/callback-basic/subscribe'].post
+    expect(op.callbacks).toBeDefined()
+    expect(op.callbacks!['onEvent']).toBeDefined()
+    const pathItem = op.callbacks!['onEvent']['{$request.body#/callbackUrl}']
+    expect(pathItem).toBeDefined()
+    expect(pathItem.post).toBeDefined()
+    expect(pathItem.post.description).toBe('Event notification sent to subscriber')
+    expect(pathItem.post.requestBody).toEqual({
+      content: {
+        'application/json': {
+          schema: { $ref: '#/components/schemas/EventPayload' },
+        },
+      },
+    })
+    expect(pathItem.post.responses).toEqual({
+      '200': { description: 'OK' },
+    })
+  })
+
+  it('must support custom method, content type, and response status', () => {
+    const op = spec.paths['/callback-custom/register'].post
+    expect(op.callbacks).toBeDefined()
+    const pathItem = op.callbacks!['onStatus']['{$request.body#/hookUrl}']
+    expect(pathItem).toBeDefined()
+    expect(pathItem.put).toBeDefined()
+    expect(pathItem.put.requestBody).toEqual({
+      content: {
+        'text/plain': {
+          schema: { type: 'string' },
+        },
+      },
+    })
+    expect(pathItem.put.responses).toEqual({
+      '204': { description: 'Acknowledged' },
+    })
+  })
+
+  it('must emit multiple callbacks on same handler', () => {
+    const op = spec.paths['/callback-multi/watch'].post
+    expect(op.callbacks).toBeDefined()
+    expect(Object.keys(op.callbacks!)).toHaveLength(2)
+    expect(op.callbacks!['onCreate']).toBeDefined()
+    expect(op.callbacks!['onDelete']).toBeDefined()
+  })
+
+  it('must not emit callbacks when none are declared', () => {
+    const op = spec.paths['/callback-basic/subscribe'].post
+    // The handler has callbacks, but let's check another app with no callbacks
+    const noCallbackApp = new Moost()
+    noCallbackApp.adapter(new MoostHttp())
+    noCallbackApp.registerControllers(PrimitiveController)
+    return noCallbackApp.init().then(() => {
+      const noCallbackSpec = mapToSwaggerSpec(noCallbackApp.getControllersOverview())
+      const endpoint = noCallbackSpec.paths['/primitives/number'].get
+      expect(endpoint.callbacks).toBeUndefined()
+    })
   })
 })

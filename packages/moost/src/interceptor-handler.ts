@@ -94,7 +94,7 @@ export class InterceptorHandler {
         await ci.with(
           `Interceptor:${name}`,
           {
-            'moost.interceptor.stage': 'after',
+            'moost.interceptor.stage': 'onError',
           },
           () => fn(response, this.replyFn.bind(this)),
         )
@@ -104,7 +104,7 @@ export class InterceptorHandler {
         await ci.with(
           `Interceptor:${name}`,
           {
-            'moost.interceptor.stage': 'onError',
+            'moost.interceptor.stage': 'after',
           },
           () => fn(response, this.replyFn.bind(this)),
         )

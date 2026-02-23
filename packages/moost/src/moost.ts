@@ -326,7 +326,6 @@ export class Moost extends Hookable {
         interceptors,
         () => Promise.resolve(this as unknown as TObject),
         pipes,
-        this.logger,
       )
     }
     return this.globalInterceptorHandler()

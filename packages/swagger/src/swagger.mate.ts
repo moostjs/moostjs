@@ -25,6 +25,7 @@ export interface TSwaggerMate {
     number,
     {
       description?: string
+      headers?: Record<string, TSwaggerResponseHeader>
       content: Record<string, { response: TSwaggerConfigType; example?: unknown }>
     }
   >
@@ -37,19 +38,82 @@ export interface TSwaggerMate {
     required?: boolean
     type?: TSwaggerConfigType
   }[]
+  swaggerLinks?: TSwaggerLinkConfig[]
+  swaggerCallbacks?: TSwaggerCallbackConfig[]
   swaggerSecurity?: TSwaggerSecurityRequirement[]
   swaggerPublic?: boolean
+  swaggerDeprecated?: boolean
+  swaggerOperationId?: string
+  swaggerExternalDocs?: TSwaggerExternalDocs
 }
 
 export type TSwaggerConfigType = TFunction | { toJsonSchema?: () => unknown } | TSwaggerSchema
+
+export interface TSwaggerResponseHeader {
+  description?: string
+  required?: boolean
+  type?: TSwaggerConfigType
+  example?: unknown
+}
 
 interface TSwaggerResponseConfig {
   contentType?: string
   description?: string
   response: TSwaggerConfigType
+  example?: unknown
+  headers?: Record<string, TSwaggerResponseHeader>
 }
 
 export type TSwaggerResponseOpts = TSwaggerConfigType | TSwaggerResponseConfig
+
+export interface TSwaggerExternalDocs {
+  url: string
+  description?: string
+}
+
+// --- Link types (OpenAPI 3.0 links) ---
+
+export interface TSwaggerLinkConfig {
+  /** Status code this link applies to. 0 = use default for the HTTP method. */
+  statusCode: number
+  /** The link name (key in the response `links` object). */
+  name: string
+  /** Target operation by explicit operationId string. */
+  operationId?: string
+  /** Target operation by JSON pointer (operationRef). */
+  operationRef?: string
+  /** Target operation by controller class + method name, resolved at mapping time. */
+  handler?: [TFunction, string]
+  /** Map of parameter name to runtime expression (e.g. `'$response.body#/id'`). */
+  parameters?: Record<string, string>
+  /** Runtime expression for the request body. */
+  requestBody?: string
+  /** Human-readable description. */
+  description?: string
+  /** Alternative server for the link target. */
+  server?: { url: string; description?: string }
+}
+
+// --- Callback types (OpenAPI 3.0 callbacks) ---
+
+export interface TSwaggerCallbackConfig {
+  /** Callback name (key in the operation's `callbacks` object). */
+  name: string
+  /** Runtime expression for the callback URL (e.g. `'{$request.body#/callbackUrl}'`). */
+  expression: string
+  /** HTTP method your server uses to call the webhook (default: `'post'`). */
+  method?: string
+  /** Schema for the request body your server sends. Resolved via the schema pipeline. */
+  requestBody?: TSwaggerConfigType
+  /** Content type for the request body (default: `'application/json'`). */
+  contentType?: string
+  /** Description for the callback operation. */
+  description?: string
+  /** Expected response status code from the webhook receiver (default: `200`). */
+  responseStatus?: number
+  /** Description for the expected response (default: `'OK'`). */
+  responseDescription?: string
+}
 
 // --- Security scheme types (OpenAPI 3.0) ---
 

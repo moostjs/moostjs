@@ -54,7 +54,6 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
       interceptors,
       getInstance,
       pipes,
-      options.logger,
     )
 
     // preparing pipes

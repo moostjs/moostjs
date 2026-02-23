@@ -46,7 +46,7 @@
     "swagger-ui-dist": "^5.31.2"
   },
   "devDependencies": {
-    "@atscript/typescript": "^0.1.21",
+    "@atscript/typescript": "^0.1.26",
     "@types/swagger-ui-dist": "3.30.5",
     "vitest": "3.2.4"
   },

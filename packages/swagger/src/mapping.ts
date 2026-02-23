@@ -1,24 +1,40 @@
 import type { TControllerOverview } from 'moost'
 
-import type { TLogger } from './common-types'
+import type { TFunction, TLogger } from './common-types'
 import type {
+  TSwaggerCallbackConfig,
   TSwaggerConfigType,
+  TSwaggerExternalDocs,
+  TSwaggerLinkConfig,
   TSwaggerMate,
+  TSwaggerResponseHeader,
   TSwaggerSecurityRequirement,
   TSwaggerSecurityScheme,
 } from './swagger.mate'
 import { getSwaggerMate } from './swagger.mate'
+
+interface TOpenApiLink {
+  operationId?: string
+  operationRef?: string
+  parameters?: Record<string, string>
+  requestBody?: string
+  description?: string
+  server?: { url: string; description?: string }
+}
 
 interface TEndpointSpec {
   summary?: string
   tags: string[]
   operationId?: string
   description?: string
+  deprecated?: boolean
   responses?: Record<
     string,
     {
       description?: string
+      headers?: Record<string, { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown }>
       content: Record<string, { schema: TSwaggerSchema }>
+      links?: Record<string, TOpenApiLink>
     }
   >
   parameters: {
@@ -32,14 +48,22 @@ interface TEndpointSpec {
     required?: boolean
     content: Record<string, { schema: TSwaggerSchema }>
   }
+  externalDocs?: TSwaggerExternalDocs
   security?: TSwaggerSecurityRequirement[]
+  callbacks?: Record<string, Record<string, Record<string, unknown>>>
 }
 
 export interface TSwaggerOptions {
   title?: string
   description?: string
   version?: string
+  contact?: { name?: string; url?: string; email?: string }
+  license?: { name: string; url?: string }
+  termsOfService?: string
   cors?: boolean | string
+  servers?: { url: string; description?: string }[]
+  tags?: { name: string; description?: string; externalDocs?: TSwaggerExternalDocs }[]
+  externalDocs?: TSwaggerExternalDocs
   openapiVersion?: '3.0' | '3.1'
   securitySchemes?: Record<string, TSwaggerSecurityScheme>
   security?: TSwaggerSecurityRequirement[]
@@ -77,6 +101,8 @@ export interface TSwaggerSchema {
   oneOf?: TSwaggerSchema[]
   not?: TSwaggerSchema
   const?: unknown
+  discriminator?: { propertyName: string; mapping?: Record<string, string> }
+  $defs?: Record<string, TSwaggerSchema>
 }
 
 interface SchemaEnsureResult {
@@ -120,15 +146,27 @@ export function mapToSwaggerSpec(
     openapi: is31 ? '3.1.0' : '3.0.0',
     info: {
       title: options?.title || 'API Documentation',
+      ...(options?.description ? { description: options.description } : {}),
       version: options?.version || '1.0.0',
+      ...(options?.contact ? { contact: options.contact } : {}),
+      ...(options?.license ? { license: options.license } : {}),
+      ...(options?.termsOfService ? { termsOfService: options.termsOfService } : {}),
     },
     paths: {} as Record<string, Record<string, TEndpointSpec>>,
-    tags: [],
+    tags: [] as { name: string; description?: string; externalDocs?: TSwaggerExternalDocs }[],
+    ...(options?.servers?.length ? { servers: options.servers } : {}),
+    ...(options?.externalDocs ? { externalDocs: options.externalDocs } : {}),
     ...(options?.security ? { security: options.security } : {}),
     components: {
       schemas: globalSchemas,
     } as { schemas: typeof globalSchemas; securitySchemes?: Record<string, TSwaggerSecurityScheme> },
   }
+
+  const deferredLinks: {
+    endpointSpec: TEndpointSpec
+    httpMethod: string
+    config: TSwaggerLinkConfig
+  }[] = []
 
   for (const controller of metadata) {
     const cmeta = controller.meta as (TControllerOverview['meta'] & TSwaggerMate) | undefined
@@ -149,7 +187,8 @@ export function mapToSwaggerSpec(
 
       const handlerPath = handler.registeredAs[0].path
       const handlerMethod = hh.method?.toLowerCase() || 'get'
-      const handlerDescription = hmeta?.description
+      const handlerSummary = (hmeta as { label?: string } | undefined)?.label
+      const handlerDescription = hmeta?.swaggerDescription || hmeta?.description
       const handlerTags = [...controllerTags, ...(hmeta?.swaggerTags || [])]
 
       if (!swaggerSpec.paths[handlerPath]) {
@@ -167,13 +206,27 @@ export function mapToSwaggerSpec(
             if (schema) {
               responses = responses || {}
               const schemaWithExample = example !== undefined ? { ...schema, example } : schema
-              responses[newCode] = {
-                description:
-                  responseEntry.description || defaultStatusDescription(Number(newCode)),
-                content: {
-                  [contentType]: { schema: schemaWithExample },
-                },
+              if (!responses[newCode]) {
+                responses[newCode] = {
+                  description:
+                    responseEntry.description || defaultStatusDescription(Number(newCode)),
+                  content: {},
+                }
               }
+              responses[newCode].content[contentType] = { schema: schemaWithExample }
+            }
+          }
+          if (responseEntry.headers) {
+            const resolvedHeaders = resolveResponseHeaders(responseEntry.headers)
+            if (resolvedHeaders) {
+              responses = responses || {}
+              if (!responses[newCode]) {
+                responses[newCode] = {
+                  description: defaultStatusDescription(Number(newCode)),
+                  content: {},
+                }
+              }
+              responses[newCode].headers = resolvedHeaders
             }
           }
         }
@@ -210,11 +263,15 @@ export function mapToSwaggerSpec(
       }
 
       swaggerSpec.paths[handlerPath][handlerMethod] = {
-        summary: handlerDescription,
-        operationId: `${handlerMethod.toUpperCase()}_${handlerPath
-          .replaceAll(/\//g, '_')
-          .replaceAll(/[{}]/g, '__')
-          .replaceAll(/[^\dA-Za-z]/g, '_')}`,
+        summary: handlerSummary,
+        description: handlerDescription,
+        operationId:
+          hmeta?.swaggerOperationId ||
+          (hmeta as { id?: string } | undefined)?.id ||
+          `${handlerMethod.toUpperCase()}_${handlerPath
+            .replaceAll(/\//g, '_')
+            .replaceAll(/[{}]/g, '__')
+            .replaceAll(/[^\dA-Za-z]/g, '_')}`,
         tags: handlerTags,
         parameters: [],
         responses,
@@ -222,9 +279,60 @@ export function mapToSwaggerSpec(
 
       const endpointSpec = swaggerSpec.paths[handlerPath][handlerMethod]
 
+      if (hmeta?.swaggerDeprecated || cmeta?.swaggerDeprecated) {
+        endpointSpec.deprecated = true
+      }
+
+      if (hmeta?.swaggerExternalDocs) {
+        endpointSpec.externalDocs = hmeta.swaggerExternalDocs
+      }
+
       const opSecurity = resolveOperationSecurity(cmeta, hmeta, collectedSecuritySchemes)
       if (opSecurity !== undefined) {
         endpointSpec.security = opSecurity
+      }
+
+      if (hmeta?.swaggerLinks?.length) {
+        for (const linkConfig of hmeta.swaggerLinks) {
+          deferredLinks.push({ endpointSpec, httpMethod: handlerMethod, config: linkConfig })
+        }
+      }
+
+      if (hmeta?.swaggerCallbacks?.length) {
+        endpointSpec.callbacks = endpointSpec.callbacks || {}
+        for (const cb of hmeta.swaggerCallbacks) {
+          const method = (cb.method || 'post').toLowerCase()
+          const contentType = cb.contentType || 'application/json'
+          const status = String(cb.responseStatus || 200)
+          const responseDesc = cb.responseDescription || 'OK'
+
+          const pathItem: Record<string, unknown> = {
+            responses: {
+              [status]: { description: responseDesc },
+            },
+          }
+
+          if (cb.description) {
+            pathItem.description = cb.description
+          }
+
+          if (cb.requestBody) {
+            const schema = resolveSwaggerSchemaFromConfig(cb.requestBody)
+            if (schema) {
+              pathItem.requestBody = {
+                content: {
+                  [contentType]: { schema },
+                },
+              }
+            }
+          }
+
+          endpointSpec.callbacks[cb.name] = {
+            [cb.expression]: {
+              [method]: pathItem,
+            },
+          }
+        }
       }
 
       function addParam(param: TEndpointSpec['parameters'][number]) {
@@ -348,6 +456,98 @@ export function mapToSwaggerSpec(
     }
   }
 
+  // Resolve deferred links: build operationId lookup then attach links to response entries
+  if (deferredLinks.length > 0) {
+    const handlerOpIds = new Map<TFunction, Map<string, string>>()
+    for (const controller of metadata) {
+      for (const handler of controller.handlers) {
+        const hh = handler.handler as typeof handler.handler & { method?: string }
+        if (hh.type !== 'HTTP' || handler.registeredAs.length === 0) {
+          continue
+        }
+        const path = handler.registeredAs[0].path
+        const method = hh.method?.toLowerCase() || 'get'
+        const opId = swaggerSpec.paths[path]?.[method]?.operationId
+        if (opId) {
+          if (!handlerOpIds.has(controller.type)) {
+            handlerOpIds.set(controller.type, new Map())
+          }
+          const methodMap = handlerOpIds.get(controller.type)
+          methodMap?.set(handler.method, opId)
+        }
+      }
+    }
+
+    for (const { endpointSpec, httpMethod, config } of deferredLinks) {
+      const statusCode = config.statusCode === 0
+        ? String(getDefaultStatusCode(httpMethod))
+        : String(config.statusCode)
+
+      const link: TOpenApiLink = {}
+
+      if (config.handler) {
+        const [ctrlClass, methodName] = config.handler
+        const resolvedId = handlerOpIds.get(ctrlClass)?.get(methodName)
+        if (!resolvedId) {
+          continue
+        }
+        link.operationId = resolvedId
+      } else if (config.operationId) {
+        link.operationId = config.operationId
+      } else if (config.operationRef) {
+        link.operationRef = config.operationRef
+      }
+
+      if (config.parameters) {
+        link.parameters = config.parameters
+      }
+      if (config.requestBody) {
+        link.requestBody = config.requestBody
+      }
+      if (config.description) {
+        link.description = config.description
+      }
+      if (config.server) {
+        link.server = config.server
+      }
+
+      if (!endpointSpec.responses) {
+        endpointSpec.responses = {}
+      }
+      if (!endpointSpec.responses[statusCode]) {
+        endpointSpec.responses[statusCode] = {
+          description: defaultStatusDescription(Number(statusCode)),
+          content: {},
+        }
+      }
+      const responseEntry = endpointSpec.responses[statusCode]
+      if (!responseEntry.links) {
+        responseEntry.links = {}
+      }
+      responseEntry.links[config.name] = link
+    }
+  }
+
+  // Populate top-level tags: merge manual tags from options with auto-collected from endpoints
+  const manualTags = new Map((options?.tags || []).map((t) => [t.name, t]))
+  const discoveredNames = new Set<string>()
+  for (const methods of Object.values(swaggerSpec.paths)) {
+    for (const endpoint of Object.values(methods)) {
+      for (const tag of endpoint.tags) {
+        discoveredNames.add(tag)
+      }
+    }
+  }
+  // Manual tags first (preserves user ordering), then auto-discovered ones
+  for (const tag of manualTags.values()) {
+    swaggerSpec.tags.push(tag)
+  }
+  for (const name of discoveredNames) {
+    if (!manualTags.has(name)) {
+      swaggerSpec.tags.push({ name })
+    }
+  }
+
   // Detach from the global registry so subsequent calls don't overwrite this spec's schemas
   const ownedSchemas: Record<string, TSwaggerSchema> = {}
   for (const [key, value] of Object.entries(globalSchemas)) {
@@ -372,6 +572,29 @@ function resolveSwaggerSchemaFromConfig(type?: TSwaggerConfigType) {
   }
   const ensured = ensureSchema(type)
   return toSchemaOrRef(ensured)
+}
+
+function resolveResponseHeaders(
+  headers: Record<string, TSwaggerResponseHeader>,
+): Record<string, { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown }> | undefined {
+  const resolved: Record<string, { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown }> = {}
+  let hasAny = false
+  for (const [name, header] of Object.entries(headers)) {
+    const schema = resolveSwaggerSchemaFromConfig(header.type) || { type: 'string' }
+    const entry: { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown } = { schema }
+    if (header.description) {
+      entry.description = header.description
+    }
+    if (header.required !== undefined) {
+      entry.required = header.required
+    }
+    if (header.example !== undefined) {
+      entry.example = header.example
+    }
+    resolved[name] = entry
+    hasAny = true
+  }
+  return hasAny ? resolved : undefined
 }
 
 function toSchemaOrRef(result?: SchemaEnsureResult): TSwaggerSchema | undefined {
@@ -620,8 +843,65 @@ function ensureComponentName(typeRef: object, schema: TSwaggerSchema, suggestedN
   schemaRefs.set(typeRef, candidate)
   applySwaggerMetadata(typeRef, schema)
   globalSchemas[candidate] = cloneSchema(schema)
+  hoistDefs(globalSchemas[candidate])
 
   return candidate
+}
+
+/**
+ * When a schema has `$defs`, hoist each definition into `globalSchemas`
+ * (i.e. `#/components/schemas/`) and rewrite all `#/$defs/X` references
+ * throughout the schema tree to `#/components/schemas/X`.
+ * Removes the `$defs` property from the schema after hoisting.
+ */
+function hoistDefs(schema: TSwaggerSchema) {
+  if (!schema.$defs) {
+    return
+  }
+  for (const [name, def] of Object.entries(schema.$defs)) {
+    if (!globalSchemas[name]) {
+      globalSchemas[name] = cloneSchema(def)
+      // Recurse: the hoisted def may itself contain $defs
+      hoistDefs(globalSchemas[name])
+    }
+  }
+  delete schema.$defs
+  rewriteDefsRefs(schema)
+}
+
+/** Recursively rewrite `$ref: '#/$defs/X'` → `$ref: '#/components/schemas/X'` */
+function rewriteDefsRefs(schema: TSwaggerSchema) {
+  if (schema.$ref?.startsWith('#/$defs/')) {
+    schema.$ref = schema.$ref.replace('#/$defs/', '#/components/schemas/')
+  }
+  if (schema.discriminator?.mapping) {
+    for (const [key, value] of Object.entries(schema.discriminator.mapping)) {
+      if (value.startsWith('#/$defs/')) {
+        schema.discriminator.mapping[key] = value.replace('#/$defs/', '#/components/schemas/')
+      }
+    }
+  }
+  if (schema.items && !Array.isArray(schema.items)) {
+    rewriteDefsRefs(schema.items)
+  }
+  if (schema.properties) {
+    for (const prop of Object.values(schema.properties)) {
+      rewriteDefsRefs(prop)
+    }
+  }
+  for (const list of [schema.allOf, schema.anyOf, schema.oneOf]) {
+    if (list) {
+      for (const item of list) {
+        rewriteDefsRefs(item)
+      }
+    }
+  }
+  if (typeof schema.additionalProperties === 'object' && schema.additionalProperties) {
+    rewriteDefsRefs(schema.additionalProperties)
+  }
+  if (schema.not) {
+    rewriteDefsRefs(schema.not)
+  }
 }
 
 function applySwaggerMetadata(typeRef: object, schema: TSwaggerSchema) {
@@ -830,6 +1110,11 @@ function transformSpecTo31(spec: {
         for (const response of Object.values(endpoint.responses)) {
           for (const media of Object.values(response.content)) {
             convertSchemaTo31(media.schema)
+          }
+          if (response.headers) {
+            for (const header of Object.values(response.headers)) {
+              convertSchemaTo31(header.schema)
+            }
           }
         }
       }

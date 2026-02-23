@@ -25,17 +25,23 @@ app
 
 http.listen(3000)
 // Swagger UI available at http://localhost:3000/api-docs/
+// JSON spec at http://localhost:3000/api-docs/spec.json
+// YAML spec at http://localhost:3000/api-docs/spec.yaml
 ```
 
 ## Decorators
 
-- `@SwaggerTag(tag)` — Add an OpenAPI tag to a controller or handler.
+- `@SwaggerTag(tag)` — Add an OpenAPI tag to a controller or handler. Tags used on endpoints are auto-collected into the top-level `tags` array. Provide `tags` in options to add descriptions or control ordering.
 - `@SwaggerDescription(text)` — Set a description for a handler.
 - `@SwaggerResponse(opts)` / `@SwaggerResponse(code, opts)` — Define response schemas. Supports optional `description` to document the status code; when omitted, a standard HTTP reason phrase is used automatically.
 - `@SwaggerRequestBody(opts)` — Define request body schema.
 - `@SwaggerParam(opts)` — Define a parameter.
 - `@SwaggerExample(example)` — Attach an example value.
+- `@SwaggerOperationId(id)` — Override the auto-generated operationId. Falls back to `@Id()` from moost core, then to the auto-generated value.
+- `@SwaggerDeprecated()` — Mark a controller or handler as deprecated.
 - `@SwaggerExclude()` — Exclude a controller or handler from the spec.
+- `@SwaggerLink(name, opts)` / `@SwaggerLink(code, name, opts)` — Add an OpenAPI link to a response, describing how response values feed into another operation. Supports `operationId`, `operationRef`, or type-safe `handler: [Class, 'method']` references.
+- `@SwaggerCallback(name, opts)` — Document an OpenAPI callback (webhook) on an operation. Describes a request your server sends to a client-provided URL.
 - `@SwaggerPublic()` — Mark an endpoint or controller as public (no auth required in docs).
 - `@SwaggerSecurity(schemeName, scopes?)` — Explicitly set a security requirement.
 - `@SwaggerSecurityAll(requirement)` — Set security with AND semantics.
