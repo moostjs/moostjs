@@ -47,7 +47,11 @@ export interface TSwaggerMate {
   swaggerExternalDocs?: TSwaggerExternalDocs
 }
 
-export type TSwaggerConfigType = TFunction | { toJsonSchema?: () => unknown } | TSwaggerSchema
+export type TSwaggerConfigType =
+  | TFunction
+  | { toJsonSchema?: () => unknown }
+  | TSwaggerSchema
+  | [TSwaggerConfigType]
 
 export interface TSwaggerResponseHeader {
   description?: string

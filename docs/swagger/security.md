@@ -154,7 +154,32 @@ Manually defined `securitySchemes` are merged with auto-discovered ones. The roo
 
 ## Multiple auth schemes
 
-A realistic API might support several auth methods:
+### OR — accept any one of several methods
+
+To accept **either** JWT **or** API key, declare both transports in a **single guard**. `extractTransports()` collects whichever credentials are present and only throws when none are found:
+
+```ts
+const flexibleGuard = defineAuthGuard(
+  { bearer: { format: 'JWT' }, apiKey: { name: 'X-API-Key', in: 'header' } },
+  (transports) => {
+    if (transports.bearer) { /* verify JWT */ }
+    else if (transports.apiKey) { /* verify API key */ }
+  },
+)
+
+@Controller('data')
+export class DataController {
+  @Authenticate(flexibleGuard)
+  @Get()
+  list() { /* ... */ }
+}
+```
+
+The swagger mapping auto-discovers both transports and emits OR security (separate entries in the `security` array).
+
+### AND — require all methods simultaneously
+
+Stacking multiple `@Authenticate()` decorators registers separate interceptors that **all** run during the init phase. Every guard must pass:
 
 ```ts
 const jwtGuard = defineAuthGuard(
@@ -169,12 +194,11 @@ const apiKeyGuard = defineAuthGuard(
 
 @Controller('data')
 export class DataController {
-  // Accepts either JWT or API key
+  // Requires BOTH JWT and API key
   @Authenticate(jwtGuard)
-  @SwaggerSecurity('bearerAuth')
-  @SwaggerSecurity('apiKeyAuth')
-  @Get()
-  list() { /* ... */ }
+  @Authenticate(apiKeyGuard)
+  @Get('admin')
+  admin() { /* ... */ }
 
   // Requires JWT only
   @Authenticate(jwtGuard)
@@ -182,3 +206,7 @@ export class DataController {
   create(@Body() dto: CreateDataDto) { /* ... */ }
 }
 ```
+
+::: warning Runtime vs docs
+`@SwaggerSecurity` and `@SwaggerSecurityAll` only affect the OpenAPI spec — they do not add runtime guards. To enforce authentication, always use `@Authenticate()`. Use the swagger decorators when you need to override or fine-tune the generated security section (e.g. adding OAuth2 scopes).
+:::

@@ -66,6 +66,45 @@ app.registerControllers(SwaggerController)
 
 See [Configuration](/swagger/configuration) for the full options reference.
 
+## Multiple swagger instances
+
+You can serve several swagger UIs from different paths — for example, side-by-side OpenAPI 3.0 and 3.1 specs, or separate public/internal docs.
+
+Create distinct instances with their own options and register each under a different prefix:
+
+```ts
+import { createProvideRegistry } from '@prostojs/infact'
+import { SwaggerController } from '@moostjs/swagger'
+
+// OpenAPI 3.0 instance
+class Swagger30 extends SwaggerController {}
+const swagger30 = new Swagger30({
+  title: 'My API (3.0)',
+  openapiVersion: '3.0',
+})
+
+// OpenAPI 3.1 instance
+class Swagger31 extends SwaggerController {}
+const swagger31 = new Swagger31({
+  title: 'My API (3.1)',
+  openapiVersion: '3.1',
+})
+
+app.setProvideRegistry(
+  createProvideRegistry(
+    [Swagger30, () => swagger30],
+    [Swagger31, () => swagger31],
+  ),
+)
+
+app.registerControllers(
+  ['docs/v3.0', Swagger30],
+  ['docs/v3.1', Swagger31],
+)
+```
+
+This serves two independent UIs at `/docs/v3.0` and `/docs/v3.1`, each with its own cached spec. The same approach works for any split — public vs internal, versioned APIs, etc.
+
 ## YAML output
 
 The spec is available in both JSON and YAML formats. YAML is converted from the JSON spec using a built-in zero-dependency converter. This is useful when:
