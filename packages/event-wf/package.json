@@ -44,7 +44,7 @@
   },
   "dependencies": {
     "@prostojs/wf": "^0.0.18",
-    "@wooksjs/event-wf": "^0.6.4"
+    "@wooksjs/event-wf": "^0.6.5"
   },
   "devDependencies": {
     "vitest": "3.2.4"
@@ -52,8 +52,8 @@
   "peerDependencies": {
     "@prostojs/infact": "^0.4.0",
     "@prostojs/mate": "^0.4.0",
-    "@wooksjs/event-core": "^0.6.4",
+    "@wooksjs/event-core": "^0.6.5",
     "moost": "workspace:^",
-    "wooks": "^0.6.4"
+    "wooks": "^0.6.5"
   }
 }

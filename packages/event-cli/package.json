@@ -43,14 +43,14 @@
     "postinstall": "npx @wooksjs/event-cli setup-skills --postinstall"
   },
   "dependencies": {
-    "@wooksjs/event-cli": "^0.6.4"
+    "@wooksjs/event-cli": "^0.6.5"
   },
   "devDependencies": {
     "vitest": "3.2.4"
   },
   "peerDependencies": {
-    "@wooksjs/event-core": "^0.6.4",
+    "@wooksjs/event-core": "^0.6.5",
     "moost": "workspace:^",
-    "wooks": "^0.6.4"
+    "wooks": "^0.6.5"
   }
 }

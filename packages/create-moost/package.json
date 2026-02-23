@@ -49,7 +49,7 @@
   "dependencies": {
     "@moostjs/event-cli": "workspace:^",
     "@prostojs/rewrite": "^0.1.1",
-    "@wooksjs/event-cli": "^0.6.4",
+    "@wooksjs/event-cli": "^0.6.5",
     "moost": "workspace:^",
     "prompts": "^2.4.2"
   },

@@ -45,14 +45,14 @@
     "@prostojs/infact": "^0.3.6",
     "@prostojs/logger": "^0.4.3",
     "@prostojs/mate": "^0.4.0",
-    "@wooksjs/event-core": "^0.6.4",
+    "@wooksjs/event-core": "^0.6.5",
     "hookable": "^5.5.3",
-    "wooks": "^0.6.4"
+    "wooks": "^0.6.5"
   },
   "devDependencies": {
     "@moostjs/event-http": "workspace:^",
-    "@wooksjs/event-http": "^0.6.4",
-    "@wooksjs/http-body": "^0.6.4",
+    "@wooksjs/event-http": "^0.6.5",
+    "@wooksjs/http-body": "^0.6.5",
     "vitest": "3.2.4"
   }
 }
