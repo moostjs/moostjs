@@ -181,8 +181,8 @@ importers:
   packages/event-http:
     dependencies:
       '@prostojs/infact':
-        specifier: ^0.3.3
-        version: 0.3.6
+        specifier: ^0.4.0
+        version: 0.4.0
       '@prostojs/router':
         specifier: ^0.2.1
         version: 0.2.1
@@ -206,11 +206,11 @@ importers:
   packages/event-wf:
     dependencies:
       '@prostojs/infact':
-        specifier: ^0.3.3
-        version: 0.3.6
+        specifier: ^0.4.0
+        version: 0.4.0
       '@prostojs/mate':
-        specifier: ^0.3.3
-        version: 0.3.3
+        specifier: ^0.4.0
+        version: 0.4.0
       '@prostojs/wf':
         specifier: ^0.0.18
         version: 0.0.18
@@ -240,8 +240,8 @@ importers:
         specifier: ^0.4.3
         version: 0.4.3
       '@prostojs/mate':
-        specifier: ^0.3.3
-        version: 0.3.3
+        specifier: ^0.4.0
+        version: 0.4.0
       '@wooksjs/event-core':
         specifier: ^0.6.4
         version: 0.6.4
@@ -1373,11 +1373,17 @@ packages:
   '@prostojs/infact@0.3.6':
     resolution: {integrity: sha512-91eBUSRTnoI71GNP7Fl/IL6p6hIYYSHt0rG6Y8w8V2Y0vP/VvXpL2wv9O3+ofxLmllQkcEWf9DeOk2ffKAI1Zg==}
 
+  '@prostojs/infact@0.4.0':
+    resolution: {integrity: sha512-rtCigc1G1cn8S2YMYTKeECh44ODEsSO30E/SgCdxu/opv6NUiEY7pnxkOj3on4riGtsp180ZAVJh4LFrOmkzvQ==}
+
   '@prostojs/logger@0.4.3':
     resolution: {integrity: sha512-d1+lZBNIX8TZeXjLqc/mz+gcqKadZ1ezoS8geVto9EZ+Dlgh4quiXOAICat64yZpHVyGkdbOsZu7ba4zJmivFQ==}
 
   '@prostojs/mate@0.3.3':
     resolution: {integrity: sha512-lrBoo36Qkf1zC+TF7uEHQ1hBSzGW51Mv1lNUD2jaiv4dPCteK1SVXpPFlAD8CZaM3wcuBnoO3CH3YkCeo7tN4g==}
+
+  '@prostojs/mate@0.4.0':
+    resolution: {integrity: sha512-nDts3D16LilgQxKiyMi8YaRGBK6qybV6QsQDeWuGebLRraEkXfUJmz0wd+TMGywj5h/G00KLsLoLsnAFsV+/9w==}
 
   '@prostojs/parser@0.5.11':
     resolution: {integrity: sha512-apV1PUbnu7EAsn0/QGE5unyNmqe+o3tCcsa3lYOsplXV55u43ax3vQ/4jxVUOrcF13vKkYkhR4jl6111kHHxpA==}
@@ -3697,9 +3703,13 @@ snapshots:
 
   '@prostojs/infact@0.3.6': {}
 
+  '@prostojs/infact@0.4.0': {}
+
   '@prostojs/logger@0.4.3': {}
 
   '@prostojs/mate@0.3.3': {}
+
+  '@prostojs/mate@0.4.0': {}
 
   '@prostojs/parser@0.5.11':
     dependencies:
