@@ -1,5 +1,6 @@
 import type { TWooksCliOptions } from '@wooksjs/event-cli'
-import { createCliApp, useCliContext, WooksCli } from '@wooksjs/event-cli'
+import { cliKind, createCliApp, WooksCli } from '@wooksjs/event-cli'
+import { current } from '@wooksjs/event-core'
 import type { Moost, TMoostAdapter, TMoostAdapterOptions, TMoostParamsMetadata } from 'moost'
 import { defineMoostEventHandler, setInfactLoggingOptions } from 'moost'
 
@@ -90,7 +91,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
   }
 
   async onNotFound() {
-    const pathParams = useCliContext().store('event').get('pathParams') || []
+    const pathParams = current().get(cliKind.keys.pathParams) || []
     const response = await defineMoostEventHandler({
       loggerTitle: LOGGER_TITLE,
       getIterceptorHandler: () => this.moost?.getGlobalInterceptorHandler(),

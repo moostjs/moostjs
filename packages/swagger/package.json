@@ -39,8 +39,7 @@
   },
   "scripts": {
     "pub": "pnpm publish --access public",
-    "test": "vitest",
-    "postinstall": "node ./node_modules/@atscript/typescript/scripts/setup-skills.js --postinstall"
+    "test": "vitest"
   },
   "dependencies": {
     "swagger-ui-dist": "^5.31.2"
@@ -52,8 +51,8 @@
   },
   "peerDependencies": {
     "@moostjs/event-http": "workspace:^",
-    "@wooksjs/event-http": "^0.6.5",
-    "@wooksjs/http-static": "^0.6.5",
+    "@wooksjs/event-http": "^0.7.1",
+    "@wooksjs/http-static": "^0.7.1",
     "moost": "workspace:^"
   }
 }

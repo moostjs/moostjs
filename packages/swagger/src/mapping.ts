@@ -32,7 +32,10 @@ interface TEndpointSpec {
     string,
     {
       description?: string
-      headers?: Record<string, { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown }>
+      headers?: Record<
+        string,
+        { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown }
+      >
       content: Record<string, { schema: TSwaggerSchema }>
       links?: Record<string, TOpenApiLink>
     }
@@ -159,7 +162,10 @@ export function mapToSwaggerSpec(
     ...(options?.security ? { security: options.security } : {}),
     components: {
       schemas: globalSchemas,
-    } as { schemas: typeof globalSchemas; securitySchemes?: Record<string, TSwaggerSecurityScheme> },
+    } as {
+      schemas: typeof globalSchemas
+      securitySchemes?: Record<string, TSwaggerSecurityScheme>
+    },
   }
 
   const deferredLinks: {
@@ -479,9 +485,10 @@ export function mapToSwaggerSpec(
     }
 
     for (const { endpointSpec, httpMethod, config } of deferredLinks) {
-      const statusCode = config.statusCode === 0
-        ? String(getDefaultStatusCode(httpMethod))
-        : String(config.statusCode)
+      const statusCode =
+        config.statusCode === 0
+          ? String(getDefaultStatusCode(httpMethod))
+          : String(config.statusCode)
 
       const link: TOpenApiLink = {}
 
@@ -576,12 +583,25 @@ function resolveSwaggerSchemaFromConfig(type?: TSwaggerConfigType) {
 
 function resolveResponseHeaders(
   headers: Record<string, TSwaggerResponseHeader>,
-): Record<string, { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown }> | undefined {
-  const resolved: Record<string, { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown }> = {}
+):
+  | Record<
+      string,
+      { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown }
+    >
+  | undefined {
+  const resolved: Record<
+    string,
+    { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown }
+  > = {}
   let hasAny = false
   for (const [name, header] of Object.entries(headers)) {
     const schema = resolveSwaggerSchemaFromConfig(header.type) || { type: 'string' }
-    const entry: { description?: string; required?: boolean; schema: TSwaggerSchema; example?: unknown } = { schema }
+    const entry: {
+      description?: string
+      required?: boolean
+      schema: TSwaggerSchema
+      example?: unknown
+    } = { schema }
     if (header.description) {
       entry.description = header.description
     }
@@ -610,7 +630,10 @@ function toSchemaOrRef(result?: SchemaEnsureResult): TSwaggerSchema | undefined 
 function inferBodyContentType(schema: TSwaggerSchema, resolved?: TSwaggerSchema) {
   const target = resolved ?? resolveSchemaFromRef(schema)
   const schemaType = target?.type ?? schema.type
-  if (typeof schemaType === 'string' && ['string', 'number', 'integer', 'boolean'].includes(schemaType)) {
+  if (
+    typeof schemaType === 'string' &&
+    ['string', 'number', 'integer', 'boolean'].includes(schemaType)
+  ) {
     return 'text/plain'
   }
   return 'application/json'

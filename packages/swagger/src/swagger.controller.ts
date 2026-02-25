@@ -1,8 +1,8 @@
+import type { THeaderHook, TStatusHook } from '@moostjs/event-http'
 import { Get, HeaderHook, SetHeader, StatusHook, Url } from '@moostjs/event-http'
-import type { THeaderHook, TStatusHook } from '@wooksjs/event-http'
-import { useSetHeaders } from '@wooksjs/event-http'
+import { useResponse } from '@wooksjs/event-http'
 import { serveFile } from '@wooksjs/http-static'
-import { Const, Controller, Moost, useControllerContext, useEventLogger } from 'moost'
+import { Const, Controller, current, Moost, useControllerContext, useLogger } from 'moost'
 import Path from 'path'
 import { getAbsoluteFSPath } from 'swagger-ui-dist'
 
@@ -22,8 +22,7 @@ export class SwaggerController {
 
   protected processCors() {
     if (this.opts.cors) {
-      const { enableCors } = useSetHeaders()
-      enableCors(this.opts.cors === true ? undefined : this.opts.cors)
+      useResponse().enableCors(this.opts.cors === true ? undefined : this.opts.cors)
     }
   }
 
@@ -88,8 +87,10 @@ export class SwaggerController {
 
   protected async resolveSpec() {
     if (!this.spec) {
-      const logger = useEventLogger('@moostjs/swagger')
-      const { instantiate } = useControllerContext()
+      const ctx = current()
+      const l = useLogger(ctx)
+      const logger = typeof l.topic === 'function' ? l.topic('@moostjs/swagger') : l
+      const { instantiate } = useControllerContext(ctx)
       const moost = await instantiate(Moost)
       this.spec = mapToSwaggerSpec(moost.getControllersOverview(), this.opts, logger)
     }

@@ -717,7 +717,9 @@ export class LinkByHandlerRefController {
     handler: [LinkByHandlerRefController, 'getItem'],
     parameters: { itemId: '$response.body#/itemId' },
   })
-  @SwaggerResponse(201, { response: { type: 'object', properties: { itemId: { type: 'string' } } } })
+  @SwaggerResponse(201, {
+    response: { type: 'object', properties: { itemId: { type: 'string' } } },
+  })
   @Post('items')
   createItem() {
     return { itemId: '456' }
@@ -799,7 +801,10 @@ export class CallbackMultiController {
   })
   @SwaggerCallback('onDelete', {
     expression: '{$request.body#/callbackUrl}',
-    requestBody: { type: 'object', properties: { id: { type: 'string' }, deleted: { type: 'boolean' } } },
+    requestBody: {
+      type: 'object',
+      properties: { id: { type: 'string' }, deleted: { type: 'boolean' } },
+    },
   })
   @Post('watch')
   watch() {

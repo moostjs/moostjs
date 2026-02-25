@@ -93,16 +93,13 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
    * @param input - Optional input passed to the first step.
    */
   public start<I>(schemaId: string, initialContext: T, input?: I): Promise<TFlowOutput<T, I, IR>> {
-    return this.wfApp.start(
-      schemaId,
-      initialContext,
+    return this.wfApp.start(schemaId, initialContext, {
       input,
-      () => {},
-      () => {
+      cleanup: () => {
         const scopeId = useEventId().getId()
         getMoostInfact().unregisterScope(scopeId)
       },
-    )
+    })
   }
 
   /**
@@ -115,15 +112,13 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     state: { schemaId: string; context: T; indexes: number[] },
     input?: I,
   ): Promise<TFlowOutput<T, I, IR>> {
-    return this.wfApp.resume(
-      state,
+    return this.wfApp.resume(state, {
       input,
-      () => {},
-      () => {
+      cleanup: () => {
         const scopeId = useEventId().getId()
         getMoostInfact().unregisterScope(scopeId)
       },
-    )
+    })
   }
 
   bindHandler<T extends object = object>(opts: TMoostAdapterOptions<TWfHandlerMeta, T>): void {

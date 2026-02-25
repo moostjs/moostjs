@@ -52,9 +52,7 @@ describe('jsonToYaml', () => {
     const input = {
       tags: [{ name: 'users' }, { name: 'posts' }],
     }
-    expect(jsonToYaml(input)).toBe(
-      'tags:\n  - name: users\n  - name: posts\n',
-    )
+    expect(jsonToYaml(input)).toBe('tags:\n  - name: users\n  - name: posts\n')
   })
 
   it('should handle deeply nested structures', () => {
@@ -141,7 +139,7 @@ describe('jsonToYaml', () => {
     const yaml = jsonToYaml(spec)
     expect(yaml).toContain('openapi: 3.0.3')
     expect(yaml).toContain('  title: Moost API')
-    expect(yaml).toContain("  /pets:")
+    expect(yaml).toContain('  /pets:')
     expect(yaml).toContain('$ref: "#/components/schemas/Pet"')
     expect(yaml).toContain('    Pet:')
     expect(yaml).toContain('      required:')

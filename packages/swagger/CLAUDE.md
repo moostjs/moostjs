@@ -15,13 +15,13 @@ Swagger/OpenAPI 3.0 integration for Moost. Generates an OpenAPI spec from contro
 
 The mapping engine resolves types to JSON Schema through `createSchemaResolution()`:
 
-| Input | Output |
-|-------|--------|
-| Class with `static toJsonSchema()` | Calls it, registers as named component |
-| `[SomeType]` (array literal) | `{ type: 'array', items: <resolved> }` |
-| Primitive constructor (`String`, `Number`, etc.) | Corresponding JSON Schema type |
-| Literal value | Const schema |
-| Zero-arg function | Invokes it, resolves return value |
+| Input                                            | Output                                 |
+| ------------------------------------------------ | -------------------------------------- |
+| Class with `static toJsonSchema()`               | Calls it, registers as named component |
+| `[SomeType]` (array literal)                     | `{ type: 'array', items: <resolved> }` |
+| Primitive constructor (`String`, `Number`, etc.) | Corresponding JSON Schema type         |
+| Literal value                                    | Const schema                           |
+| Zero-arg function                                | Invokes it, resolves return value      |
 
 Classes used as types are deduplicated via a `WeakMap<object, string>` — same class reference produces one `$ref` component.
 
@@ -48,12 +48,14 @@ Classes used as types are deduplicated via a `WeakMap<object, string>` — same 
 Security schemes are auto-discovered from `authTransports` metadata set by `@Authenticate()` (from `@moostjs/event-http`). The mapping engine collects transport declarations during traversal and emits `components.securitySchemes`.
 
 **Transport → OpenAPI scheme mapping:**
+
 - `bearer: { format }` → `{ type: 'http', scheme: 'bearer', bearerFormat: format }` as `bearerAuth`
 - `basic: {}` → `{ type: 'http', scheme: 'basic' }` as `basicAuth`
 - `apiKey: { name, in }` → `{ type: 'apiKey', name, in }` as `apiKeyAuth`
 - `cookie: { name }` → `{ type: 'apiKey', name, in: 'cookie' }` as `cookieAuth`
 
 **Per-operation security resolution (precedence):**
+
 1. Handler `swaggerPublic` → `security: []`
 2. Handler `swaggerSecurity` → handler's explicit array
 3. Handler `authTransports` → converted to security requirement

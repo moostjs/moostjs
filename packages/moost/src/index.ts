@@ -11,11 +11,15 @@ export * from './interceptor-handler'
 export * from './composables'
 export * from './adapter-utils'
 export * from './define'
-export type { THook } from '@wooksjs/event-core'
+export type { Logger, Key, Cached, EventContext, EventContextOptions } from '@wooksjs/event-core'
 export {
-  EventLogger,
-  useAsyncEventContext,
-  useEventLogger,
+  current,
+  useLogger,
+  key,
+  cached,
+  createEventContext,
+  run,
+  eventTypeKey,
   ContextInjector,
   getContextInjector,
   replaceContextInjector,

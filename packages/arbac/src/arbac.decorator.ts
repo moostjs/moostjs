@@ -1,10 +1,11 @@
 import { HttpError } from '@wooksjs/event-http'
 import {
+  current,
   defineInterceptorFn,
   Intercept,
   Resolve,
   TInterceptorPriority,
-  useEventLogger,
+  useLogger,
 } from 'moost'
 
 import { useArbac } from './arbac.composables'
@@ -17,9 +18,11 @@ import { getArbacMate } from './arbac.mate'
  * @constant
  */
 export const arbackAuthorizeInterceptor = defineInterceptorFn(async (before, after, onError) => {
-  const logger = useEventLogger('arbac')
+  const ctx = current()
+  const l = useLogger(ctx)
+  const logger = typeof l.topic === 'function' ? l.topic('arbac') : l
 
-  const { setScopes, evaluate, resource, action, isPublic } = useArbac<any>()
+  const { setScopes, evaluate, resource, action, isPublic } = useArbac<any>(ctx)
 
   if (!action || !resource || isPublic) {
     return
@@ -39,7 +42,7 @@ export const arbackAuthorizeInterceptor = defineInterceptorFn(async (before, aft
     if (error instanceof HttpError) {
       throw error
     }
-    logger.warn(error)
+    logger.warn(String(error))
     throw new HttpError(401, `Authorization error`)
   }
 }, TInterceptorPriority.GUARD)

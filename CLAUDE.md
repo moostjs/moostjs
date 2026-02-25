@@ -8,17 +8,17 @@ Moost is a metadata-driven Event Processing Framework for TypeScript, inspired b
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm build` | Build all packages (types via tsc+rollup-plugin-dts, bundles via rolldown+swc) |
-| `pnpm build <folder>` | Build a single package by its folder name under packages/ |
-| `pnpm test` | Run all tests once with vitest |
-| `pnpm test:watch` | Run tests in watch mode |
-| `pnpm test:cov` | Run tests with coverage |
-| `pnpm lint` | Lint with oxlint |
-| `pnpm lint:fix` | Lint and auto-fix with oxlint |
-| `pnpm format` | Format with oxfmt |
-| `pnpm format:check` | Check formatting with oxfmt |
+| Command               | Description                                                                    |
+| --------------------- | ------------------------------------------------------------------------------ |
+| `pnpm build`          | Build all packages (types via tsc+rollup-plugin-dts, bundles via rolldown+swc) |
+| `pnpm build <folder>` | Build a single package by its folder name under packages/                      |
+| `pnpm test`           | Run all tests once with vitest                                                 |
+| `pnpm test:watch`     | Run tests in watch mode                                                        |
+| `pnpm test:cov`       | Run tests with coverage                                                        |
+| `pnpm lint`           | Lint with oxlint                                                               |
+| `pnpm lint:fix`       | Lint and auto-fix with oxlint                                                  |
+| `pnpm format`         | Format with oxfmt                                                              |
+| `pnpm format:check`   | Check formatting with oxfmt                                                    |
 
 To run a single test file: `pnpm vitest run -c ./vitest.config.js <path-to-spec>`
 
@@ -26,17 +26,17 @@ To run a single test file: `pnpm vitest run -c ./vitest.config.js <path-to-spec>
 
 pnpm workspace with all packages under `packages/`. All packages share the same version number (currently 0.5.33), use `"type": "module"`, and ship dual ESM/CJS outputs.
 
-| Package folder | npm name | Purpose |
-|---------------|----------|---------|
-| `moost` | `moost` | Core framework: Moost class, decorators, DI, pipes, interceptors |
-| `event-http` | `@moostjs/event-http` | HTTP adapter wrapping `@wooksjs/event-http` |
-| `event-cli` | `@moostjs/event-cli` | CLI adapter wrapping `@wooksjs/event-cli` |
-| `event-wf` | `@moostjs/event-wf` | Workflow adapter wrapping `@wooksjs/event-wf` |
-| `swagger` | `@moostjs/swagger` | Swagger/OpenAPI integration |
-| `otel` | `@moostjs/otel` | OpenTelemetry tracing |
-| `arbac` | `@moostjs/arbac` | RBAC/ABAC access control |
-| `vite` | `@moostjs/vite` | Vite dev plugin |
-| `create-moost` | `create-moost` | CLI scaffolding tool |
+| Package folder | npm name              | Purpose                                                          |
+| -------------- | --------------------- | ---------------------------------------------------------------- |
+| `moost`        | `moost`               | Core framework: Moost class, decorators, DI, pipes, interceptors |
+| `event-http`   | `@moostjs/event-http` | HTTP adapter wrapping `@wooksjs/event-http`                      |
+| `event-cli`    | `@moostjs/event-cli`  | CLI adapter wrapping `@wooksjs/event-cli`                        |
+| `event-wf`     | `@moostjs/event-wf`   | Workflow adapter wrapping `@wooksjs/event-wf`                    |
+| `swagger`      | `@moostjs/swagger`    | Swagger/OpenAPI integration                                      |
+| `otel`         | `@moostjs/otel`       | OpenTelemetry tracing                                            |
+| `arbac`        | `@moostjs/arbac`      | RBAC/ABAC access control                                         |
+| `vite`         | `@moostjs/vite`       | Vite dev plugin                                                  |
+| `create-moost` | `create-moost`        | CLI scaffolding tool                                             |
 
 ## Architecture
 
@@ -80,6 +80,7 @@ Priority levels: `BEFORE_ALL`, `BEFORE_GUARD`, `GUARD`, `AFTER_GUARD`, `INTERCEP
 ## Build System
 
 Custom build script (`scripts/build.js`) using:
+
 - **Rolldown** (bundler) + **unplugin-swc** (decorator transpilation) + **@prostojs/dye/rolldown** (compile-time color replacement) for JS bundles
 - **tsc** (declaration emit to `.types/`) + **rollup-plugin-dts** (bundle declarations) for type definitions
 - Build config per package is read from the `build` field in each package's `package.json`

@@ -27,15 +27,15 @@ export default defineConfig({
 
 ## Options
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `entry` | `string` | — | Application entry file (required) |
-| `port` | `number` | `3000` | Dev server port |
-| `host` | `string` | `'localhost'` | Dev server host |
-| `outDir` | `string` | `'dist'` | Build output directory |
-| `format` | `'cjs' \| 'esm'` | `'esm'` | Output module format |
-| `sourcemap` | `boolean` | `true` | Generate source maps |
-| `externals` | `boolean \| object` | `true` | Configure external dependencies |
+| Option      | Type                | Default       | Description                       |
+| ----------- | ------------------- | ------------- | --------------------------------- |
+| `entry`     | `string`            | —             | Application entry file (required) |
+| `port`      | `number`            | `3000`        | Dev server port                   |
+| `host`      | `string`            | `'localhost'` | Dev server host                   |
+| `outDir`    | `string`            | `'dist'`      | Build output directory            |
+| `format`    | `'cjs' \| 'esm'`    | `'esm'`       | Output module format              |
+| `sourcemap` | `boolean`           | `true`        | Generate source maps              |
+| `externals` | `boolean \| object` | `true`        | Configure external dependencies   |
 
 ## License
 

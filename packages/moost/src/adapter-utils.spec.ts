@@ -1,9 +1,11 @@
-import { createAsyncEventContext } from '@wooksjs/event-core'
+import { createEventContext } from '@wooksjs/event-core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { defineMoostEventHandler } from './adapter-utils'
 import { InterceptorHandler } from './interceptor-handler'
 import { getMoostInfact } from './metadata/infact'
+
+const testLogger = { info() {}, warn() {}, error() {}, debug() {} }
 
 describe('defineMoostEventHandler', () => {
   const infact = getMoostInfact()
@@ -27,12 +29,9 @@ describe('defineMoostEventHandler', () => {
         },
       })
 
-      await expect(
-        createAsyncEventContext({
-          event: { type: 'test' },
-          options: {},
-        })(handler),
-      ).rejects.toThrow('controller instantiation failed')
+      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
+        'controller instantiation failed',
+      )
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
@@ -51,12 +50,9 @@ describe('defineMoostEventHandler', () => {
         getControllerInstance: () => ({}),
       })
 
-      await expect(
-        createAsyncEventContext({
-          event: { type: 'test' },
-          options: {},
-        })(handler),
-      ).rejects.toThrow('interceptor handler failed')
+      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
+        'interceptor handler failed',
+      )
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
@@ -78,12 +74,9 @@ describe('defineMoostEventHandler', () => {
         },
       })
 
-      await expect(
-        createAsyncEventContext({
-          event: { type: 'test' },
-          options: {},
-        })(handler),
-      ).rejects.toThrow('hook init failed')
+      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
+        'hook init failed',
+      )
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
@@ -103,12 +96,9 @@ describe('defineMoostEventHandler', () => {
         },
       })
 
-      await expect(
-        createAsyncEventContext({
-          event: { type: 'test' },
-          options: {},
-        })(handler),
-      ).rejects.toThrow('controller instantiation failed')
+      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
+        'controller instantiation failed',
+      )
 
       // with manualUnscope, the outer catch should not call unscope
       expect(unregisterSpy).not.toHaveBeenCalled()
@@ -132,10 +122,7 @@ describe('defineMoostEventHandler', () => {
         controllerMethod: 'myMethod' as keyof typeof instance,
       })
 
-      const result = await createAsyncEventContext({
-        event: { type: 'test' },
-        options: {},
-      })(handler)
+      const result = await createEventContext({ logger: testLogger }, handler)
 
       expect(result).toBe('ok')
       expect(unregisterSpy).toHaveBeenCalled()
@@ -162,10 +149,7 @@ describe('defineMoostEventHandler', () => {
         controllerMethod: 'myMethod' as never,
       })
 
-      const resultPromise = createAsyncEventContext({
-        event: { type: 'test' },
-        options: {},
-      })(handler)
+      const resultPromise = createEventContext({ logger: testLogger }, handler)
 
       await expect(resultPromise).rejects.toThrow('Invalid JWT token (CLASS)')
       await expect(resultPromise).rejects.toBe(guardError)
@@ -189,12 +173,7 @@ describe('defineMoostEventHandler', () => {
         controllerMethod: 'myMethod' as never,
       })
 
-      await expect(
-        createAsyncEventContext({
-          event: { type: 'test' },
-          options: {},
-        })(handler),
-      ).rejects.toThrow('Forbidden')
+      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow('Forbidden')
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
@@ -229,12 +208,9 @@ describe('defineMoostEventHandler', () => {
         controllerMethod: 'myMethod' as never,
       })
 
-      await expect(
-        createAsyncEventContext({
-          event: { type: 'test' },
-          options: {},
-        })(handler),
-      ).rejects.toThrow('Unauthorized')
+      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
+        'Unauthorized',
+      )
 
       // the onError handler from the first interceptor should have been called
       expect(onErrorSpy).toHaveBeenCalledWith(guardError, expect.any(Function))

@@ -1,4 +1,5 @@
-import { useSetCookies, useSetHeader, useStatus } from '@wooksjs/event-http'
+import type { TCookieAttributesInput } from '@wooksjs/event-http'
+import { useResponse } from '@wooksjs/event-http'
 import type { TInterceptorFn } from 'moost'
 import { defineInterceptorFn, Intercept, TInterceptorPriority } from 'moost'
 
@@ -8,11 +9,13 @@ const setHeaderInterceptor: (
   opts?: { force?: boolean; status?: number; when?: 'always' | 'error' | 'ok' },
 ) => TInterceptorFn = (name, value, opts) => {
   const fn: TInterceptorFn = (_before, after, onError) => {
-    const h = useSetHeader(name)
-    const status = useStatus()
+    const response = useResponse()
     const cb = () => {
-      if ((!h.value || opts?.force) && (!opts?.status || opts.status === status.value)) {
-        h.value = value
+      if (
+        (!response.getHeader(name) || opts?.force) &&
+        (!opts?.status || opts.status === response.status)
+      ) {
+        response.setHeader(name, value)
       }
     }
     if (opts?.when !== 'error') {
@@ -68,13 +71,15 @@ export function SetHeader(...args: Parameters<typeof setHeaderInterceptor>) {
 }
 
 const setCookieInterceptor: (
-  ...args: Parameters<ReturnType<typeof useSetCookies>['setCookie']>
+  name: string,
+  value: string,
+  attrs?: TCookieAttributesInput,
 ) => TInterceptorFn = (name, value, attrs) => {
-  const fn: TInterceptorFn = (before, after) => {
-    const { setCookie, getCookie } = useSetCookies()
+  const fn: TInterceptorFn = (_before, after) => {
+    const response = useResponse()
     after(() => {
-      if (!getCookie(name)) {
-        setCookie(name, value, attrs)
+      if (!response.getCookie(name)) {
+        response.setCookie(name, value, attrs)
       }
     })
   }
@@ -108,11 +113,11 @@ export function SetCookie(...args: Parameters<typeof setCookieInterceptor>) {
 }
 
 const setStatusInterceptor = (code: number, opts?: { force?: boolean }) =>
-  defineInterceptorFn((before, after) => {
-    const status = useStatus()
+  defineInterceptorFn((_before, after) => {
+    const response = useResponse()
     after(() => {
-      if (!status.isDefined || opts?.force) {
-        status.value = code
+      if (!response.status || opts?.force) {
+        response.status = code
       }
     })
   })

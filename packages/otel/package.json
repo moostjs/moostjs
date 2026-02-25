@@ -49,6 +49,7 @@
     "vitest": "3.2.4"
   },
   "peerDependencies": {
+    "@moostjs/event-http": "workspace:^",
     "moost": "workspace:^"
   }
 }

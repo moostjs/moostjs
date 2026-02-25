@@ -39,18 +39,17 @@
   },
   "scripts": {
     "pub": "pnpm publish --access public",
-    "test": "vitest",
-    "postinstall": "npx @wooksjs/event-cli setup-skills --postinstall"
+    "test": "vitest"
   },
   "dependencies": {
-    "@wooksjs/event-cli": "^0.6.5"
+    "@wooksjs/event-cli": "^0.7.1"
   },
   "devDependencies": {
     "vitest": "3.2.4"
   },
   "peerDependencies": {
-    "@wooksjs/event-core": "^0.6.5",
+    "@wooksjs/event-core": "^0.7.1",
     "moost": "workspace:^",
-    "wooks": "^0.6.5"
+    "wooks": "^0.7.1"
   }
 }

@@ -43,7 +43,8 @@
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s",
     "version": "pnpm changelog && git add CHANGELOG.md && git commit -m 'chore: update changelog'",
     "release": "pnpm build && pnpm test && node ./scripts/versions && pnpm -r run pub",
-    "sync": "node ./scripts/versions"
+    "sync": "node ./scripts/versions",
+    "postinstall": "packages/event-http/node_modules/@wooksjs/event-http/scripts/setup-skills.js --postinstall && packages/event-http/node_modules/@wooksjs/event-core/scripts/setup-skills.js --postinstall && packages/event-wf/node_modules/@wooksjs/event-wf/scripts/setup-skills.js --postinstall && packages/event-cli/node_modules/@wooksjs/event-cli/scripts/setup-skills.js --postinstall"
   },
   "devDependencies": {
     "@opentelemetry/api": "^1.9.0",

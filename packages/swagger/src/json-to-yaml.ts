@@ -1,7 +1,7 @@
-const YAML_SPECIAL = /^[\s#!&*|>'{}\[\],?:@`-]|[:#]\s|[\n\r]|\s$/
+const YAML_SPECIAL = /^[\s#!&*|>'{}[\],?:@`-]|[:#]\s|[\n\r]|\s$/
 
 function quoteString(str: string): string {
-  if (str === '') return "''"
+  if (str === '') { return "''" }
   if (YAML_SPECIAL.test(str) || str === 'true' || str === 'false' || str === 'null') {
     return JSON.stringify(str)
   }
@@ -13,16 +13,16 @@ function quoteString(str: string): string {
 }
 
 function serializeValue(value: unknown, indent: number): string {
-  if (value === null || value === undefined) return 'null'
-  if (typeof value === 'boolean') return value ? 'true' : 'false'
-  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'null'
-  if (typeof value === 'string') return quoteString(value)
+  if (value === null || value === undefined) { return 'null' }
+  if (typeof value === 'boolean') { return value ? 'true' : 'false' }
+  if (typeof value === 'number') { return Number.isFinite(value) ? String(value) : 'null' }
+  if (typeof value === 'string') { return quoteString(value) }
 
   const pad = '  '.repeat(indent)
   const childPad = '  '.repeat(indent + 1)
 
   if (Array.isArray(value)) {
-    if (value.length === 0) return '[]'
+    if (value.length === 0) { return '[]' }
     const lines: string[] = []
     for (const item of value) {
       if (isObject(item) || Array.isArray(item)) {
@@ -38,7 +38,7 @@ function serializeValue(value: unknown, indent: number): string {
 
   if (isObject(value)) {
     const entries = Object.entries(value)
-    if (entries.length === 0) return '{}'
+    if (entries.length === 0) { return '{}' }
     const lines: string[] = []
     for (const [key, val] of entries) {
       const yamlKey = quoteString(key)
@@ -64,5 +64,5 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 export function jsonToYaml(value: unknown): string {
-  return serializeValue(value, 0) + '\n'
+  return `${serializeValue(value, 0)}\n`
 }

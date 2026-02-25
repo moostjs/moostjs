@@ -18,10 +18,7 @@ import { SwaggerController } from '@moostjs/swagger'
 const app = new Moost()
 const http = new MoostHttp()
 
-app
-  .adapter(http)
-  .controllers(SwaggerController)
-  .init()
+app.adapter(http).controllers(SwaggerController).init()
 
 http.listen(3000)
 // Swagger UI available at http://localhost:3000/api-docs/

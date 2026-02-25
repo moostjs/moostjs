@@ -44,6 +44,7 @@ Moost App → MoostHttp (adapter) → WooksHttp (@wooksjs/event-http) → Node.j
 Declarative auth guards with automatic swagger security scheme discovery. Two APIs:
 
 **Functional** — `defineAuthGuard(transports, handler)` returns `TAuthGuardFn`:
+
 ```ts
 const jwtGuard = defineAuthGuard({ bearer: { format: 'JWT' } }, (transports) => {
   // transports.bearer is the raw token (no "Bearer " prefix)
@@ -51,14 +52,17 @@ const jwtGuard = defineAuthGuard({ bearer: { format: 'JWT' } }, (transports) => 
 ```
 
 **Class-based** — extend `AuthGuard<T>` with static `transports` and `handle()` method:
+
 ```ts
 @Injectable()
 class JwtGuard extends AuthGuard<{ bearer: { format: 'JWT' } }> {
   static transports = { bearer: { format: 'JWT' } } as const
-  handle(transports: { bearer: string }) { /* verify token */ }
+  handle(transports: { bearer: string }) {
+    /* verify token */
+  }
 }
 ```
 
 **`@Authenticate(guard)`** — registers guard as interceptor + stores `authTransports` in metadata (read by `@moostjs/swagger` for auto-discovery). Accepts both functional and class-based guards, properly typed via `TAuthGuardHandler`.
 
-**Transport types**: `bearer` (Authorization header), `basic` (username/password), `apiKey` (header/query/cookie), `cookie` (named cookie). `extractTransports()` uses `@wooksjs/event-http` composables (`useAuthorization`, `useCookies`, `useHeaders`, `useSearchParams`).
+**Transport types**: `bearer` (Authorization header), `basic` (username/password), `apiKey` (header/query/cookie), `cookie` (named cookie). `extractTransports()` uses `@wooksjs/event-http` composables (`useAuthorization`, `useCookies`, `useHeaders`, `useUrlParams`).

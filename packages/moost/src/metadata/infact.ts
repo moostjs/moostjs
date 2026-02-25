@@ -1,7 +1,7 @@
 import type { TInfactClassMeta } from '@prostojs/infact'
 import { Infact } from '@prostojs/infact'
 import { getConstructor } from '@prostojs/mate'
-import { useEventId, useEventLogger } from '@wooksjs/event-core'
+import { useEventId, useLogger } from '@wooksjs/event-core'
 
 import { getDefaultLogger } from '../logger'
 import type { TPipeData } from '../pipes'
@@ -166,7 +166,8 @@ export function getNewMoostInfact() {
       }
       let logger
       try {
-        logger = event === 'error' ? getDefaultLogger(INFACT_BANNER) : useEventLogger(INFACT_BANNER)
+        const ctxLogger = event === 'error' ? getDefaultLogger(INFACT_BANNER) : useLogger()
+        logger = typeof ctxLogger.topic === 'function' ? ctxLogger.topic(INFACT_BANNER) : ctxLogger
       } catch (error) {
         logger = getDefaultLogger(INFACT_BANNER)
       }

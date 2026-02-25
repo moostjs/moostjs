@@ -42,17 +42,17 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@prostojs/infact": "^0.3.6",
+    "@prostojs/infact": "^0.4.0",
     "@prostojs/logger": "^0.4.3",
     "@prostojs/mate": "^0.4.0",
-    "@wooksjs/event-core": "^0.6.5",
+    "@wooksjs/event-core": "^0.7.1",
     "hookable": "^5.5.3",
-    "wooks": "^0.6.5"
+    "wooks": "^0.7.1"
   },
   "devDependencies": {
     "@moostjs/event-http": "workspace:^",
-    "@wooksjs/event-http": "^0.6.5",
-    "@wooksjs/http-body": "^0.6.5",
+    "@wooksjs/event-http": "^0.7.1",
+    "@wooksjs/http-body": "^0.7.1",
     "vitest": "3.2.4"
   }
 }

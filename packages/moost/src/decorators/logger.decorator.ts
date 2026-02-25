@@ -1,4 +1,4 @@
-import { useEventLogger } from '@wooksjs/event-core'
+import { useLogger } from '@wooksjs/event-core'
 
 import { useControllerContext } from '../composables'
 import { getMoostMate } from '../metadata'
@@ -8,10 +8,13 @@ import { Resolve } from './resolve.decorator'
 /**
  * Resolves event logger from event context
  * @param topic
- * @returns Resolver to '@wooksjs/event-core' (EventLogger)
+ * @returns Resolver to '@wooksjs/event-core' (Logger)
  */
 export function InjectEventLogger(topic?: string) {
-  return Resolve(() => useEventLogger(topic))
+  return Resolve(() => {
+    const l = useLogger()
+    return topic && typeof l.topic === 'function' ? l.topic(topic) : l
+  })
 }
 
 /**

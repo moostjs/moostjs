@@ -16,10 +16,7 @@ describe('InterceptorHandler', () => {
       spyCi = Object.assign(new ContextInjector<string>(), {
         calls: [] as { name: string; attributes?: Record<string, string | number | boolean> }[],
       })
-      spyCi.with = function <T>(
-        name: string,
-        ...args: unknown[]
-      ): T {
+      spyCi.with = function <T>(name: string, ...args: unknown[]): T {
         if (typeof args[0] === 'function') {
           this.calls.push({ name })
           return (args[0] as () => T)()

@@ -1,4 +1,5 @@
-import { getConstructor, useAsyncEventContext, useControllerContext } from 'moost'
+import type { EventContext } from '@wooksjs/event-core'
+import { current, getConstructor, key, useControllerContext } from 'moost'
 
 import type { TArbacMeta } from './arbac.mate'
 import { MoostArbac } from './moost-arbac'
@@ -9,17 +10,16 @@ import { ArbacUserProvider } from './user.provider'
  *
  * @template TScope - Type representing the scope of access control.
  */
-export function useArbac<TScope extends object>() {
-  const store = useAsyncEventContext<{
-    arbac: {
-      scopes: TScope[] | undefined
-    }
-  }>().store('arbac')
+const arbacScopesKey = key<unknown[] | undefined>('arbac.scopes')
 
-  const cc = useControllerContext()
+export function useArbac<TScope extends object>(ctx?: EventContext) {
+  const _ctx = ctx || current()
 
-  const getScopes = () => store.get('scopes')
-  const setScopes = (scope: TScope[] | undefined) => store.set('scopes', scope)
+  const cc = useControllerContext(_ctx)
+
+  const getScopes = () =>
+    _ctx.has(arbacScopesKey) ? (_ctx.get(arbacScopesKey) as TScope[] | undefined) : undefined
+  const setScopes = (scope: TScope[] | undefined) => _ctx.set(arbacScopesKey, scope)
 
   const evaluate = async (opts: { resource: string; action: string }) => {
     const user = await cc.instantiate(ArbacUserProvider)

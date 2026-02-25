@@ -6,7 +6,7 @@ import {
   HttpError,
   useRequest,
   WooksHttp,
-  HttpErrorRenderer,
+  WooksHttpResponse,
 } from '@wooksjs/event-http'
 import { Server as HttpServer } from 'http'
 import { Server as HttpsServer } from 'https'
@@ -59,7 +59,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
   protected httpApp: WooksHttp
 
   constructor(httpApp?: WooksHttp | TWooksHttpOptions) {
-    HttpErrorRenderer.registerFramework({
+    WooksHttpResponse.registerFramework({
       image: 'https://moost.org/moost-full-logo.png',
       link: 'https://moost.org/',
       poweredBy: 'moostjs',
@@ -179,8 +179,8 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         manualUnscope: true,
         hooks: {
           init: ({ unscope }) => {
-            const { rawRequest } = useRequest()
-            rawRequest.on('end', unscope) // will unscope on request end
+            const { raw } = useRequest()
+            raw.on('end', unscope) // will unscope on request end
           },
         },
         targetPath,

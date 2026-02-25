@@ -4,7 +4,7 @@ import { createProvideRegistry, Infact } from '@prostojs/infact'
 import type { TConsoleBase } from '@prostojs/logger'
 import { ProstoLogger } from '@prostojs/logger'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
-import { createAsyncEventContext } from '@wooksjs/event-core'
+import { createEventContext } from '@wooksjs/event-core'
 import { Hookable } from 'hookable'
 
 import { bindControllerMethods } from './binding/bind-controller'
@@ -220,10 +220,7 @@ export class Moost extends Hookable {
       isControllerConsructor &&
       (classMeta?.injectable === 'SINGLETON' || classMeta?.injectable === true)
     ) {
-      await createAsyncEventContext({
-        event: { type: 'init' },
-        options: {},
-      })(async () => {
+      await createEventContext({ logger: this.logger }, async () => {
         setControllerContext(this, 'bindController' as keyof this, '')
         instance = (await infact.get(
           controller as TClassConstructor<TAny>,

@@ -208,14 +208,15 @@ export function SwaggerLink(
 ): MethodDecorator {
   const statusCode = typeof codeOrName === 'number' ? codeOrName : 0
   const name = typeof codeOrName === 'string' ? codeOrName : (nameOrOptions as string)
-  const options = typeof codeOrName === 'string'
-    ? (nameOrOptions as TSwaggerLinkOptions)
-    : maybeOptions!
+  const options =
+    typeof codeOrName === 'string' ? (nameOrOptions as TSwaggerLinkOptions) : maybeOptions!
 
   const config: TSwaggerLinkConfig = {
     statusCode,
     name,
-    ...('operationId' in options && options.operationId ? { operationId: options.operationId } : {}),
+    ...('operationId' in options && options.operationId
+      ? { operationId: options.operationId }
+      : {}),
     ...('operationRef' in options && options.operationRef
       ? { operationRef: options.operationRef }
       : {}),

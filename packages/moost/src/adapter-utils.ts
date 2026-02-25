@@ -1,6 +1,7 @@
 // oxlint-disable complexity
 import { getConstructor } from '@prostojs/mate'
-import { getContextInjector, useEventId, useEventLogger } from '@wooksjs/event-core'
+import type { Logger } from '@wooksjs/event-core'
+import { current, getContextInjector, useEventId, useLogger } from '@wooksjs/event-core'
 
 import { setControllerContext } from './composables'
 import type { InterceptorHandler } from './interceptor-handler'
@@ -9,7 +10,7 @@ import type { TContextInjectorHook } from './types'
 
 export interface TMoostEventHandlerHookOptions<T> {
   scopeId: string
-  logger: ReturnType<typeof useEventLogger>
+  logger: Logger
   unscope: () => void
   instance?: T
   method?: keyof T
@@ -46,8 +47,11 @@ export function registerEventScope(scopeId: string) {
 export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>) {
   const ci = getContextInjector<TContextInjectorHook>()
   return async () => {
-    const scopeId = useEventId().getId()
-    const logger = useEventLogger(options.loggerTitle)
+    const ctx = current()
+    const scopeId = useEventId(ctx).getId()
+    const ctxLogger = useLogger(ctx)
+    const logger =
+      typeof ctxLogger.topic === 'function' ? ctxLogger.topic(options.loggerTitle) : ctxLogger
     const unscope = registerEventScope(scopeId)
 
     let response: unknown
@@ -78,9 +82,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         ci.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
       }
 
-      interceptorHandler = (await options.getIterceptorHandler()) as
-        | InterceptorHandler
-        | undefined
+      interceptorHandler = (await options.getIterceptorHandler()) as InterceptorHandler | undefined
       if (interceptorHandler?.count) {
         try {
           response = await ci.with('Interceptors:init', () => interceptorHandler?.init())
@@ -89,7 +91,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           }
         } catch (error) {
           if (options.logErrors) {
-            logger.error(error)
+            logger.error(String(error))
           }
           response = error
           return endWithResponse(true)
@@ -105,7 +107,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           // logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
         } catch (error) {
           if (options.logErrors) {
-            logger.error(error)
+            logger.error(String(error))
           }
           response = error
           return endWithResponse(true)
@@ -170,7 +172,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           )
         } catch (error) {
           if (options.logErrors) {
-            logger.error(error)
+            logger.error(String(error))
           }
           if (!options.manualUnscope) {
             unscope()
@@ -187,7 +189,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       }
       if (raise) {
         // oxlint-disable-next-line no-throw-literal it is an Error instance
-        throw (response as Error)
+        throw response as Error
       }
       return response
     }

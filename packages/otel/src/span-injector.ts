@@ -1,11 +1,18 @@
 import type { Span } from '@opentelemetry/api'
 import { SpanKind, trace } from '@opentelemetry/api'
-import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from 'http'
+import type { OutgoingHttpHeaders, ServerResponse } from 'http'
 import type { TContextInjectorHook } from 'moost'
-import { ContextInjector, getConstructor, useAsyncEventContext, useControllerContext } from 'moost'
+import { ContextInjector, current, eventTypeKey, getConstructor, useControllerContext } from 'moost'
+import { httpKind } from '@moostjs/event-http'
 
-import type { TOtelContext } from './context'
-import { useOtelContext } from './context'
+import {
+  customMetricAttrsKey,
+  customSpanAttrsKey,
+  otelRouteKey,
+  otelSpanKey,
+  otelStartTimeKey,
+  useOtelContext,
+} from './context'
 import { getMoostMetrics } from './metrics'
 import type { TOtelMate } from './otel.mate'
 import { withSpan } from './utils'
@@ -85,7 +92,8 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
   }
 
   getEventType() {
-    return useAsyncEventContext().getCtx().event.type
+    const ctx = current()
+    return ctx.has(eventTypeKey) ? ctx.get(eventTypeKey) : undefined
   }
 
   getIgnoreSpan() {
@@ -131,7 +139,8 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       // it is a fake controller that handles 404 errors
       return
     }
-    const { getSpan } = useOtelContext()
+    const ctx = current()
+    const { getSpan } = useOtelContext(ctx)
     if (name === 'Handler:not_found') {
       const chm = this.getControllerHandlerMeta()
       const span = getSpan()
@@ -144,7 +153,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       }
       this.startEventMetrics(chm.attrs, route)
     } else if (name === 'Controller:registered') {
-      const _route = useAsyncEventContext<TOtelContext>().store('otel').get('route')
+      const _route = ctx.has(otelRouteKey) ? ctx.get(otelRouteKey) : undefined
       const chm = this.getControllerHandlerMeta()
       if (!chm.ignoreMeter) {
         this.startEventMetrics(chm.attrs, _route)
@@ -160,7 +169,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       }
     }
     if (name !== 'Controller:registered') {
-      useAsyncEventContext<TOtelContext>().store('otel').set('route', route)
+      ctx.set(otelRouteKey, route)
     }
   }
 
@@ -183,7 +192,8 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
         }
       }
       if (opts.endSpan) {
-        const customAttrs = useAsyncEventContext<TOtelContext>().store('customSpanAttrs').value
+        const ctx = current()
+        const customAttrs = ctx.has(customSpanAttrsKey) ? ctx.get(customSpanAttrsKey) : undefined
         if (customAttrs) {
           _span.setAttributes(customAttrs)
         }
@@ -194,15 +204,16 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
 
   // start event metrics
   startEventMetrics(a: Record<string, string | number | boolean | undefined>, route?: string) {
-    useAsyncEventContext<TOtelContext>().store('otel').set('startTime', Date.now())
+    current().set(otelStartTimeKey, Date.now())
   }
 
   // end event metrics
   endEventMetrics(a: Record<string, string | number | boolean | undefined>, error?: Error) {
-    const otelStore = useAsyncEventContext<TOtelContext>().store('otel')
-    const route = otelStore.get('route')
-    const duration = Date.now() - (otelStore.get('startTime') || Date.now() - 1)
-    const customAttrs = useAsyncEventContext<TOtelContext>().store('customMetricAttrs').value || {}
+    const ctx = current()
+    const route = ctx.has(otelRouteKey) ? ctx.get(otelRouteKey) : undefined
+    const startTime = ctx.has(otelStartTimeKey) ? ctx.get(otelStartTimeKey) : undefined
+    const duration = Date.now() - (startTime || Date.now() - 1)
+    const customAttrs = ctx.has(customMetricAttrsKey) ? ctx.get(customMetricAttrsKey) : {}
     const attrs = {
       ...customAttrs,
       route,
@@ -220,14 +231,21 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
   }
 
   getRequest() {
-    return useAsyncEventContext<{ event: { req: IncomingMessage } }>().store('event').get('req')
+    try {
+      return current().get(httpKind.keys.req)
+    } catch {
+      return undefined
+    }
   }
 
   getResponse() {
-    return useAsyncEventContext<{
-      event: { res: ServerResponse & { _statusCode?: number; _contentLength?: number } }
-    }>()
-      .store('event')
-      .get('res')
+    try {
+      const response = current().get(httpKind.keys.response)
+      return (response as unknown as { getRawRes: (p?: boolean) => ServerResponse })?.getRawRes(
+        true,
+      ) as ServerResponse & { _statusCode?: number; _contentLength?: number }
+    } catch {
+      return undefined
+    }
   }
 }

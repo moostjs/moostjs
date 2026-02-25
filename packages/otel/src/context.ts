@@ -1,17 +1,13 @@
 import type { Span, SpanOptions, TimeInput } from '@opentelemetry/api'
 import { context, trace } from '@opentelemetry/api'
-import { useAsyncEventContext } from 'moost'
+import type { EventContext } from '@wooksjs/event-core'
+import { current, key } from 'moost'
 
-/** Event context shape used by the OTEL integration to store span and metric data. */
-export interface TOtelContext {
-  otel?: {
-    span?: Span
-    route?: string
-    startTime?: number
-  }
-  customSpanAttrs?: Record<string, string>
-  customMetricAttrs?: Record<string, string>
-}
+export const otelSpanKey = key<Span | undefined>('otel.span')
+export const otelRouteKey = key<string | undefined>('otel.route')
+export const otelStartTimeKey = key<number | undefined>('otel.startTime')
+export const customSpanAttrsKey = key<Record<string, string | number>>('customSpanAttrs')
+export const customMetricAttrsKey = key<Record<string, string | number>>('customMetricAttrs')
 
 const spanStack = [] as Span[]
 
@@ -21,17 +17,21 @@ const spanStack = [] as Span[]
  *
  * @returns Tracing utilities including span access, propagation headers, and custom attributes.
  */
-export function useOtelContext() {
-  const eventContext = useAsyncEventContext<TOtelContext>()
-  const store = eventContext.store('otel')
+export function useOtelContext(ctx?: EventContext) {
+  const _ctx = ctx || current()
 
-  const csa = eventContext.store('customSpanAttrs')
-  const cma = eventContext.store('customMetricAttrs')
+  const customSpanAttr = (name: string, value: string | number) => {
+    const attrs = _ctx.has(customSpanAttrsKey) ? _ctx.get(customSpanAttrsKey) : {}
+    attrs[name] = value
+    _ctx.set(customSpanAttrsKey, attrs)
+  }
+  const customMetricAttr = (name: string, value: string | number) => {
+    const attrs = _ctx.has(customMetricAttrsKey) ? _ctx.get(customMetricAttrsKey) : {}
+    attrs[name] = value
+    _ctx.set(customMetricAttrsKey, attrs)
+  }
 
-  const customSpanAttr = (name: string, value: string | number) => csa.set(name, value)
-  const customMetricAttr = (name: string, value: string | number) => cma.set(name, value)
-
-  const getSpan = () => store.get('span')
+  const getSpan = () => (_ctx.has(otelSpanKey) ? _ctx.get(otelSpanKey) : undefined)
 
   const getSpanContext = () => {
     const span = getSpan()
@@ -86,7 +86,7 @@ export function useOtelContext() {
     getSpan,
     getSpanContext,
     getPropagationHeaders,
-    registerSpan: (span: Span) => store.set('span', span),
+    registerSpan: (span: Span) => _ctx.set(otelSpanKey, span),
     pushSpan,
     customSpanAttr,
     customMetricAttr,

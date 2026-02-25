@@ -1,9 +1,10 @@
+import { current } from '@wooksjs/event-core'
 import {
   HttpError,
   useAuthorization,
   useCookies,
   useHeaders,
-  useSearchParams,
+  useUrlParams,
 } from '@wooksjs/event-http'
 import type { TClassFunction, TInterceptorFn, TClassConstructor } from 'moost'
 import { getMoostMate, Injectable, TInterceptorPriority } from 'moost'
@@ -50,24 +51,25 @@ export type TAuthTransportValues<T extends TAuthTransportDeclaration> = {
 export function extractTransports<T extends TAuthTransportDeclaration>(
   declaration: T,
 ): TAuthTransportValues<T> {
+  const ctx = current()
   const result: Record<string, unknown> = {}
 
   if (declaration.bearer) {
-    const auth = useAuthorization()
-    if (auth.isBearer()) {
-      result.bearer = auth.authRawCredentials()
+    const auth = useAuthorization(ctx)
+    if (auth.is('bearer')) {
+      result.bearer = auth.credentials()
     }
   }
 
   if (declaration.basic) {
-    const auth = useAuthorization()
-    if (auth.isBasic()) {
+    const auth = useAuthorization(ctx)
+    if (auth.is('basic')) {
       result.basic = auth.basicCredentials()
     }
   }
 
   if (declaration.cookie) {
-    const { getCookie } = useCookies()
+    const { getCookie } = useCookies(ctx)
     const val = getCookie(declaration.cookie.name)
     if (val) {
       result.cookie = val
@@ -77,18 +79,18 @@ export function extractTransports<T extends TAuthTransportDeclaration>(
   if (declaration.apiKey) {
     const { name, in: location } = declaration.apiKey
     if (location === 'header') {
-      const headers = useHeaders()
+      const headers = useHeaders(ctx)
       if (headers[name.toLowerCase()]) {
         result.apiKey = headers[name.toLowerCase()]
       }
     } else if (location === 'query') {
-      const { urlSearchParams } = useSearchParams()
-      const val = urlSearchParams().get(name)
+      const { params } = useUrlParams(ctx)
+      const val = params().get(name)
       if (val) {
         result.apiKey = String(val)
       }
     } else if (location === 'cookie') {
-      const { getCookie } = useCookies()
+      const { getCookie } = useCookies(ctx)
       const val = getCookie(name)
       if (val) {
         result.apiKey = val
@@ -136,9 +138,9 @@ export function defineAuthGuard<T extends TAuthTransportDeclaration>(
 // --- Class-based API ---
 
 @Injectable()
-export abstract class AuthGuard<T extends TAuthTransportDeclaration = TAuthTransportDeclaration>
-  implements TClassFunction<TInterceptorFn>
-{
+export abstract class AuthGuard<
+  T extends TAuthTransportDeclaration = TAuthTransportDeclaration,
+> implements TClassFunction<TInterceptorFn> {
   static transports: TAuthTransportDeclaration
   static priority = TInterceptorPriority.GUARD
 

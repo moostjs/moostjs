@@ -907,7 +907,13 @@ describe('externalDocs', () => {
 
   it('must emit tag-level externalDocs from options', () => {
     const specWithTags = mapToSwaggerSpec(edApp.getControllersOverview(), {
-      tags: [{ name: 'Users', description: 'User ops', externalDocs: { url: 'https://example.com/users' } }],
+      tags: [
+        {
+          name: 'Users',
+          description: 'User ops',
+          externalDocs: { url: 'https://example.com/users' },
+        },
+      ],
     })
     const usersTag = specWithTags.tags.find((t: { name: string }) => t.name === 'Users')
     expect(usersTag).toBeDefined()
@@ -975,10 +981,7 @@ describe('discriminator ($defs hoisting)', () => {
     expect(schema.$defs).toBeUndefined()
     expect(schema.type).toBe('array')
     expect(schema.items).toEqual({
-      oneOf: [
-        { $ref: '#/components/schemas/Dog' },
-        { $ref: '#/components/schemas/Cat' },
-      ],
+      oneOf: [{ $ref: '#/components/schemas/Dog' }, { $ref: '#/components/schemas/Cat' }],
       discriminator: {
         propertyName: 'petType',
         mapping: {

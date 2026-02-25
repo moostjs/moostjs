@@ -21,7 +21,7 @@ mWooksComposables.useHeaders.mockImplementation(() => ({
 
 mWooksComposables.useCookies.mockImplementation(() => ({
   getCookie: (name: string) => ({ test: 'test cookie value' })[name] || null,
-  rawCookies: '',
+  raw: '',
 }))
 
 mEventCore.useRouteParams.mockImplementation(
@@ -32,12 +32,12 @@ mEventCore.useRouteParams.mockImplementation(
     }) as ReturnType<typeof mEventCore.useRouteParams>,
 )
 
-mWooksComposables.useSearchParams.mockImplementation(
+mWooksComposables.useUrlParams.mockImplementation(
   () =>
     ({
-      jsonSearchParams: () => ({ test: 'test query value' }),
-      urlSearchParams: () => ({ get: () => 'test query value' }),
-    }) as unknown as ReturnType<typeof wooksComposables.useSearchParams>,
+      toJson: () => ({ test: 'test query value' }),
+      params: () => ({ get: () => 'test query value' }),
+    }) as unknown as ReturnType<typeof wooksComposables.useUrlParams>,
 )
 
 mWooksComposables.useRequest.mockImplementation(
@@ -45,15 +45,14 @@ mWooksComposables.useRequest.mockImplementation(
     ({
       url: 'test url',
       method: 'PUT',
-      rawRequest: 'raw request',
-      rawResponse: () => 'raw response',
+      raw: 'raw request',
     }) as unknown as ReturnType<typeof wooksComposables.useRequest>,
 )
 
 mWooksComposables.useResponse.mockImplementation(
   () =>
     ({
-      rawResponse: () => 'raw response',
+      getRawRes: () => 'raw response',
     }) as unknown as ReturnType<typeof wooksComposables.useResponse>,
 )
 

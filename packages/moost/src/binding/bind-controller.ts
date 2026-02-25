@@ -50,11 +50,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
       ...(methodMeta.interceptors || []),
     ].toSorted((a, b) => a.priority - b.priority)
 
-    const getIterceptorHandler = getIterceptorHandlerFactory(
-      interceptors,
-      getInstance,
-      pipes,
-    )
+    const getIterceptorHandler = getIterceptorHandlerFactory(interceptors, getInstance, pipes)
 
     // preparing pipes
     const argsPipes: {
