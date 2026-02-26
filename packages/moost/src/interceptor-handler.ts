@@ -1,11 +1,11 @@
 import { getContextInjector } from '@wooksjs/event-core'
 
 import type {
-  TInterceptorAfter,
-  TInterceptorBefore,
-  TInterceptorFn,
-  TInterceptorOnError,
+  TInterceptorAfterFn,
+  TInterceptorDef,
+  TInterceptorErrorFn,
 } from './decorators'
+import type { TInterceptorDefFactory } from './decorators/interceptor.decorator'
 
 function isThenable(value: unknown): value is PromiseLike<unknown> {
   return (
@@ -15,14 +15,20 @@ function isThenable(value: unknown): value is PromiseLike<unknown> {
   )
 }
 
+export interface TInterceptorEntry {
+  handler: TInterceptorDef | TInterceptorDefFactory
+  name: string
+  /** Pre-computed span name for ci.with() — avoids per-request template literal. */
+  spanName?: string
+}
+
 export class InterceptorHandler {
-  constructor(protected handlers: { handler: TInterceptorFn; name: string }[]) {}
+  constructor(protected handlers: TInterceptorEntry[]) {}
 
-  protected before: { name: string; fn: TInterceptorBefore }[] = []
+  // Lazy — undefined until a def with after/error is registered
+  protected after: { name: string; fn: TInterceptorAfterFn }[] | undefined
 
-  protected after: { name: string; fn: TInterceptorAfter }[] = []
-
-  protected onError: { name: string; fn: TInterceptorOnError }[] = []
+  protected onError: { name: string; fn: TInterceptorErrorFn }[] | undefined
 
   public response?: unknown
 
@@ -41,108 +47,100 @@ export class InterceptorHandler {
     return this.handlers.length
   }
 
-  get countBefore() {
-    return this.before.length
-  }
-
   get countAfter() {
-    return this.after.length
+    return this.after?.length ?? 0
   }
 
   get countOnError() {
-    return this.onError.length
+    return this.onError?.length ?? 0
   }
 
-  // Sync-first init: returns synchronously when all interceptors are sync (common case for guards)
-  init(): unknown {
-    const ci = getContextInjector<string>()
-    for (let i = 0; i < this.handlers.length; i++) {
-      const { handler, name } = this.handlers[i]
-      const response = ci.with(
-        `Interceptor:${name}`,
-        {
-          'moost.interceptor.stage': 'init',
-        },
-        () =>
-          handler(
-            (fn) => {
-              this.before.push({ name, fn })
-            },
-            (fn) => {
-              this.after.unshift({ name, fn })
-            },
-            (fn) => {
-              this.onError.unshift({ name, fn })
-            },
-          ),
-      )
-      if (isThenable(response)) {
-        return this._initAsync(ci, response, i)
-      }
-      if (response !== undefined) {
-        return response
-      }
-    }
-  }
-
-  private async _initAsync(
+  /**
+   * Register hooks from a TInterceptorDef.
+   * Returns a pending PromiseLike if `before` went async, or undefined.
+   */
+  private registerDef(
+    def: TInterceptorDef,
+    entry: TInterceptorEntry,
     ci: ReturnType<typeof getContextInjector<string>>,
-    pending: PromiseLike<unknown>,
-    startIndex: number,
-  ) {
-    let response = await pending
-    if (response !== undefined) {
-      return response
+  ): PromiseLike<unknown> | undefined {
+    if (def.after) {
+      (this.after ??= []).unshift({ name: entry.name, fn: def.after })
     }
-    for (let i = startIndex + 1; i < this.handlers.length; i++) {
-      const { handler, name } = this.handlers[i]
-      response = await ci.with(
-        `Interceptor:${name}`,
-        {
-          'moost.interceptor.stage': 'init',
-        },
-        () =>
-          handler(
-            (fn) => {
-              this.before.push({ name, fn })
-            },
-            (fn) => {
-              this.after.unshift({ name, fn })
-            },
-            (fn) => {
-              this.onError.unshift({ name, fn })
-            },
-          ),
-      )
-      if (response !== undefined) {
-        return response
-      }
+    if (def.error) {
+      (this.onError ??= []).unshift({ name: entry.name, fn: def.error })
     }
-  }
-
-  fireBefore(response: unknown): unknown {
-    const ci = getContextInjector<string>()
-    this.response = response
-    for (let i = 0; i < this.before.length; i++) {
-      const { name, fn } = this.before[i]
+    if (def.before) {
+      const spanName = entry.spanName || `Interceptor:${entry.name}`
       const result = ci.with(
-        `Interceptor:${name}`,
-        {
-          'moost.interceptor.stage': 'before',
-        },
-        () => fn(this.getReplyFn()),
+        spanName,
+        { 'moost.interceptor.stage': 'before' },
+        () => def.before?.(this.getReplyFn()),
       )
       if (isThenable(result)) {
-        return this._fireBeforeAsync(ci, result, i)
-      }
-      if (this.responseOverwritten) {
-        break
+        return result
       }
     }
-    return this.response
+    return undefined
   }
 
-  private async _fireBeforeAsync(
+  // Sync-first before: returns synchronously when all interceptors are sync (common case for guards)
+  before(): unknown {
+    const ci = getContextInjector<string>()
+    for (let i = 0; i < this.handlers.length; i++) {
+      const entry = this.handlers[i]
+      const { handler } = entry
+
+      if (typeof handler === 'function') {
+        const spanName = entry.spanName || `Interceptor:${entry.name}`
+        // Factory: call to produce a TInterceptorDef
+        const factoryResult = ci.with(
+          spanName,
+          { 'moost.interceptor.stage': 'before' },
+          handler,
+        )
+        if (isThenable(factoryResult)) {
+          return this._beforeAsyncFactory(ci, factoryResult as PromiseLike<TInterceptorDef>, i)
+        }
+        // Sync factory returned a def
+        const pending = this.registerDef(factoryResult as TInterceptorDef, entry, ci)
+        if (pending) {
+          return this._beforeAsyncPending(ci, pending, i)
+        }
+        if (this.responseOverwritten) {
+          return this.response
+        }
+      } else {
+        // Static TInterceptorDef: register hooks directly
+        const pending = this.registerDef(handler, entry, ci)
+        if (pending) {
+          return this._beforeAsyncPending(ci, pending, i)
+        }
+        if (this.responseOverwritten) {
+          return this.response
+        }
+      }
+    }
+  }
+
+  private async _beforeAsyncFactory(
+    ci: ReturnType<typeof getContextInjector<string>>,
+    factoryPromise: PromiseLike<TInterceptorDef>,
+    startIndex: number,
+  ) {
+    const def = await factoryPromise
+    const entry = this.handlers[startIndex]
+    const pending = this.registerDef(def, entry, ci)
+    if (pending) {
+      await pending
+    }
+    if (this.responseOverwritten) {
+      return this.response
+    }
+    return this._beforeFrom(ci, startIndex + 1)
+  }
+
+  private async _beforeAsyncPending(
     ci: ReturnType<typeof getContextInjector<string>>,
     pending: PromiseLike<unknown>,
     startIndex: number,
@@ -151,92 +149,83 @@ export class InterceptorHandler {
     if (this.responseOverwritten) {
       return this.response
     }
-    for (let i = startIndex + 1; i < this.before.length; i++) {
-      const { name, fn } = this.before[i]
-      await ci.with(
-        `Interceptor:${name}`,
-        {
-          'moost.interceptor.stage': 'before',
-        },
-        () => fn(this.getReplyFn()),
-      )
+    return this._beforeFrom(ci, startIndex + 1)
+  }
+
+  private async _beforeFrom(
+    ci: ReturnType<typeof getContextInjector<string>>,
+    startIndex: number,
+  ) {
+    for (let i = startIndex; i < this.handlers.length; i++) {
+      const entry = this.handlers[i]
+      const { handler } = entry
+      const spanName = entry.spanName || `Interceptor:${entry.name}`
+
+      let def: TInterceptorDef
+      if (typeof handler === 'function') {
+        def = (await ci.with(
+          spanName,
+          { 'moost.interceptor.stage': 'before' },
+          handler,
+        )) as TInterceptorDef
+      } else {
+        def = handler
+      }
+
+      const pending = this.registerDef(def, entry, ci)
+      if (pending) {
+        await pending
+      }
       if (this.responseOverwritten) {
-        break
+        return this.response
       }
     }
-    return this.response
   }
 
   fireAfter(response: unknown): unknown {
-    const ci = getContextInjector<string>()
     this.response = response
-    if (response instanceof Error) {
-      for (let i = 0; i < this.onError.length; i++) {
-        const { name, fn } = this.onError[i]
-        const result = ci.with(
-          `Interceptor:${name}`,
-          {
-            'moost.interceptor.stage': 'onError',
-          },
-          () => fn(response, this.getReplyFn()),
-        )
-        if (isThenable(result)) {
-          return this._fireAfterErrorAsync(ci, response, result, i)
-        }
-      }
-    } else {
-      for (let i = 0; i < this.after.length; i++) {
-        const { name, fn } = this.after[i]
-        const result = ci.with(
-          `Interceptor:${name}`,
-          {
-            'moost.interceptor.stage': 'after',
-          },
-          () => fn(response, this.getReplyFn()),
-        )
-        if (isThenable(result)) {
-          return this._fireAfterSuccessAsync(ci, response, result, i)
-        }
-      }
+    const isError = response instanceof Error
+    const handlers = isError ? this.onError : this.after
+    if (!handlers) {
+      return this.response
     }
-    return this.response
-  }
-
-  private async _fireAfterErrorAsync(
-    ci: ReturnType<typeof getContextInjector<string>>,
-    error: Error,
-    pending: PromiseLike<unknown>,
-    startIndex: number,
-  ) {
-    await pending
-    for (let i = startIndex + 1; i < this.onError.length; i++) {
-      const { name, fn } = this.onError[i]
-      await ci.with(
+    const ci = getContextInjector<string>()
+    const stage = isError ? 'onError' : 'after'
+    for (let i = 0; i < handlers.length; i++) {
+      const { name, fn } = handlers[i]
+      const result = ci.with(
         `Interceptor:${name}`,
-        {
-          'moost.interceptor.stage': 'onError',
-        },
-        () => fn(error, this.getReplyFn()),
+        { 'moost.interceptor.stage': stage },
+        () => fn(response as Error & unknown, this.getReplyFn()),
       )
+      if (isThenable(result)) {
+        return this._fireAfterAsync(
+          { ci, handlers, stage, response },
+          result,
+          i,
+        )
+      }
     }
     return this.response
   }
 
-  private async _fireAfterSuccessAsync(
-    ci: ReturnType<typeof getContextInjector<string>>,
-    response: unknown,
+  private async _fireAfterAsync(
+    ctx: {
+      ci: ReturnType<typeof getContextInjector<string>>
+      handlers: { name: string; fn: TInterceptorAfterFn | TInterceptorErrorFn }[]
+      stage: string
+      response: unknown
+    },
     pending: PromiseLike<unknown>,
     startIndex: number,
   ) {
     await pending
-    for (let i = startIndex + 1; i < this.after.length; i++) {
-      const { name, fn } = this.after[i]
-      await ci.with(
+    for (let i = startIndex + 1; i < ctx.handlers.length; i++) {
+      const { name, fn } = ctx.handlers[i]
+      await ctx.ci.with(
         `Interceptor:${name}`,
-        {
-          'moost.interceptor.stage': 'after',
-        },
-        () => fn(response, this.getReplyFn()),
+        { 'moost.interceptor.stage': ctx.stage },
+        () => fn(ctx.response as Error & unknown, this.getReplyFn()),
       )
     }
     return this.response

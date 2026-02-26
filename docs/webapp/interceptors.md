@@ -6,85 +6,78 @@ Interceptors hook into the request lifecycle to run logic before and after your 
 
 Every request passes through interceptors in this order:
 
-1. **Init phase** — interceptor body runs (can short-circuit the request)
-2. **Before hooks** — run before the handler (can reply early)
-3. **Handler execution** — your route handler runs
-4. **After hooks** — run after the handler (can transform the response)
-5. **Error hooks** — run if an error is thrown at any point
+1. **Before hooks** — run before the handler (can reply early)
+2. **Handler execution** — your route handler runs
+3. **After hooks** — run after the handler (can transform the response)
+4. **Error hooks** — run if an error is thrown at any point
 
 ::: tip
 See the [Event Lifecycle Diagram](/moost/event-lifecycle#diagram) for the full picture of how interceptors fit into the request flow.
 :::
 
-## Writing a functional interceptor
+## Writing functional interceptors
 
-Use `defineInterceptorFn` to create an interceptor. It receives three hook registrars: `before`, `after`, and `onError`.
+### Before interceptor
+
+Use `defineBeforeInterceptor` to run logic before the handler. Call `reply(value)` to skip the handler and respond immediately:
 
 ```ts
-import { defineInterceptorFn } from 'moost'
+import { defineBeforeInterceptor, TInterceptorPriority } from 'moost'
 
-const timing = defineInterceptorFn((before, after, onError) => {
-    const start = Date.now()
-
-    after((response, reply) => {
-        const ms = Date.now() - start
-        console.log(`Request took ${ms}ms`)
-        // response is the handler's return value
-        // call reply(newValue) to override it
-    })
-
-    onError((error, reply) => {
-        const ms = Date.now() - start
-        console.log(`Request failed after ${ms}ms: ${error.message}`)
-        // call reply(value) to replace the error response
-    })
-})
+const cacheInterceptor = defineBeforeInterceptor((reply) => {
+    const cached = cache.get(currentUrl())
+    if (cached) {
+        reply(cached) // skip handler, respond with cached value
+    }
+}, TInterceptorPriority.INTERCEPTOR)
 ```
 
-### The `before` hook
+### After interceptor
 
-The `before` callback runs before the handler. Call `reply(value)` to skip the handler entirely and respond immediately:
+Use `defineAfterInterceptor` to run logic after the handler succeeds. Receives the handler's response; call `reply(newValue)` to replace it:
 
 ```ts
-const cacheInterceptor = defineInterceptorFn((before, after) => {
-    before((reply) => {
-        const cached = cache.get(currentUrl())
-        if (cached) {
-            reply(cached) // skip handler, respond with cached value
-        }
-    })
+import { defineAfterInterceptor, TInterceptorPriority } from 'moost'
 
-    after((response) => {
-        cache.set(currentUrl(), response)
-    })
-})
+const wrapper = defineAfterInterceptor((response, reply) => {
+    reply({ data: response, timestamp: Date.now() })
+}, TInterceptorPriority.AFTER_ALL)
 ```
 
-### The `after` hook
+### Error interceptor
 
-Receives the handler's response. Call `reply(newValue)` to replace it:
+Use `defineErrorInterceptor` to handle errors. Receives the thrown error; call `reply(value)` to send a custom error response:
 
 ```ts
-const wrapper = defineInterceptorFn((before, after) => {
-    after((response, reply) => {
-        reply({ data: response, timestamp: Date.now() })
+import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
+
+const errorFormatter = defineErrorInterceptor((error, reply) => {
+    reply({
+        error: error.message,
+        code: error.statusCode || 500,
     })
-})
+}, TInterceptorPriority.CATCH_ERROR)
 ```
 
-### The `onError` hook
+### Full interceptor
 
-Receives the thrown error. Call `reply(value)` to send a custom error response:
+Combine multiple hooks in a single definition with `defineInterceptor`:
 
 ```ts
-const errorFormatter = defineInterceptorFn((before, after, onError) => {
-    onError((error, reply) => {
-        reply({
-            error: error.message,
-            code: error.statusCode || 500,
-        })
-    })
-})
+import { defineInterceptor, TInterceptorPriority } from 'moost'
+import { useRequest } from '@wooksjs/event-http'
+import { useLogger } from '@wooksjs/event-core'
+
+const requestLogger = defineInterceptor({
+    after() {
+        const { url, method } = useRequest()
+        useLogger('http').log(`${method} ${url} OK`)
+    },
+    error(error) {
+        const { url, method } = useRequest()
+        useLogger('http').error(`${method} ${url} FAILED: ${error.message}`)
+    },
+}, TInterceptorPriority.BEFORE_ALL)
 ```
 
 ## Priority levels
@@ -101,15 +94,14 @@ Interceptors run in priority order, lowest first:
 | `CATCH_ERROR` | 5 | Error formatting |
 | `AFTER_ALL` | 6 | Cleanup, final headers |
 
-Set priority as the second argument:
+Each helper uses a sensible default:
 
-```ts
-import { defineInterceptorFn, TInterceptorPriority } from 'moost'
-
-const guard = defineInterceptorFn(() => {
-    // auth check logic
-}, TInterceptorPriority.GUARD)
-```
+| Helper | Default priority |
+|---|---|
+| `defineBeforeInterceptor` | `INTERCEPTOR` |
+| `defineAfterInterceptor` | `AFTER_ALL` |
+| `defineErrorInterceptor` | `CATCH_ERROR` |
+| `defineInterceptor` | `INTERCEPTOR` |
 
 ## Applying interceptors
 
@@ -125,7 +117,7 @@ export class ExampleController {
     secret() { /* protected */ }
 
     @Get('public')
-    public() { /* not protected */ }
+    publicRoute() { /* not protected */ }
 }
 ```
 
@@ -159,9 +151,9 @@ app.applyGlobalInterceptors(timing, errorFormatter)
 For cleaner syntax, wrap an interceptor with `Intercept` to create a reusable decorator:
 
 ```ts
-import { Intercept, defineInterceptorFn, TInterceptorPriority } from 'moost'
+import { Intercept, defineBeforeInterceptor, TInterceptorPriority } from 'moost'
 
-const guardFn = defineInterceptorFn(() => {
+const guardFn = defineBeforeInterceptor((reply) => {
     if (!isAuthorized()) {
         throw new HttpError(401)
     }
@@ -182,7 +174,7 @@ Create decorator factories for configurable interceptors:
 
 ```ts
 const RequireRole = (role: string) => {
-    const fn = defineInterceptorFn(() => {
+    const fn = defineBeforeInterceptor((reply) => {
         if (!hasRole(role)) {
             throw new HttpError(403, `Requires role: ${role}`)
         }
@@ -197,76 +189,89 @@ export class AdminController { /* ... */ }
 
 ## Class-based interceptors
 
-When you need dependency injection in your interceptor, use a class:
+When you need dependency injection in your interceptor, use a class with the `@Interceptor` decorator:
 
 ```ts
-import { Injectable, TInterceptorPriority } from 'moost'
-import type { TInterceptorClass, TInterceptorFn } from 'moost'
+import {
+    Interceptor, Before, After, OnError,
+    Overtake, Response, TInterceptorPriority,
+} from 'moost'
+import type { TOvertakeFn } from 'moost'
 
-@Injectable()
-export class AuthInterceptor implements TInterceptorClass {
-    static priority = TInterceptorPriority.GUARD
-
+@Interceptor(TInterceptorPriority.GUARD)
+export class AuthInterceptor {
     constructor(private authService: AuthService) {}
 
-    handler: TInterceptorFn = (before, after, onError) => {
-        before((reply) => {
-            if (!this.authService.isAuthenticated()) {
-                throw new HttpError(401)
-            }
-        })
+    @Before()
+    check() {
+        if (!this.authService.isAuthenticated()) {
+            throw new HttpError(401)
+        }
     }
 }
 ```
 
-Apply it the same way:
+Use `@Overtake()` and `@Response()` parameter decorators to access the reply function and handler result:
+
+```ts
+@Interceptor(TInterceptorPriority.CATCH_ERROR)
+export class ErrorHandler {
+    @OnError()
+    handle(@Response() error: Error, @Overtake() reply: TOvertakeFn) {
+        reply({ message: error.message })
+    }
+}
+```
+
+Apply class-based interceptors the same way:
 
 ```ts
 @Intercept(AuthInterceptor)
 @Controller()
 export class ProtectedController { /* ... */ }
+
+// or globally
+app.applyGlobalInterceptors(AuthInterceptor)
 ```
 
-Moost creates the interceptor class through DI, so `AuthService` is injected automatically.
+Moost creates the interceptor class through DI, so constructor dependencies are injected automatically.
 
 ## Practical example: request logger
 
 ```ts
-import { defineInterceptorFn, TInterceptorPriority } from 'moost'
+import { Interceptor, After, OnError, TInterceptorPriority } from 'moost'
 import { useRequest } from '@wooksjs/event-http'
 import { useLogger } from '@wooksjs/event-core'
 
-export const requestLogger = defineInterceptorFn((before, after, onError) => {
-    const { url, method, reqId } = useRequest()
-    const logger = useLogger('http')
-    const start = Date.now()
+@Interceptor(TInterceptorPriority.BEFORE_ALL)
+export class RequestLogger {
+    @After()
+    logSuccess() {
+        const { url, method } = useRequest()
+        useLogger('http').log(`${method} ${url} OK`)
+    }
 
-    after(() => {
-        logger.log(`${method} ${url} [${reqId()}] ${Date.now() - start}ms`)
-    })
-
-    onError((error) => {
-        logger.error(`${method} ${url} [${reqId()}] FAILED: ${error.message}`)
-    })
-}, TInterceptorPriority.BEFORE_ALL)
+    @OnError()
+    logError(@Response() error: Error) {
+        const { url, method } = useRequest()
+        useLogger('http').error(`${method} ${url} FAILED: ${error.message}`)
+    }
+}
 ```
 
 ## Practical example: error handler
 
 ```ts
-import { defineInterceptorFn, TInterceptorPriority } from 'moost'
+import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
 import { useResponse } from '@wooksjs/event-http'
 
-export const errorHandler = defineInterceptorFn((before, after, onError) => {
+export const errorHandler = defineErrorInterceptor((error, reply) => {
     const response = useResponse()
-
-    onError((error, reply) => {
-        const status = error.statusCode || 500
-        response.status = status
-        reply({
-            error: error.message,
-            statusCode: status,
-        })
+    const status = error.statusCode || 500
+    response.status = status
+    reply({
+        error: error.message,
+        statusCode: status,
     })
 }, TInterceptorPriority.CATCH_ERROR)
 ```

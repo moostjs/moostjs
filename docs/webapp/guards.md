@@ -8,13 +8,13 @@ For credential extraction (bearer tokens, basic auth, API keys), use the dedicat
 
 ## Basic guard
 
-A guard is an interceptor with `GUARD` priority that throws on unauthorized access:
+A guard is a before-interceptor with `GUARD` priority that throws on unauthorized access:
 
 ```ts
-import { defineInterceptorFn, TInterceptorPriority } from 'moost'
+import { defineBeforeInterceptor, TInterceptorPriority } from 'moost'
 import { HttpError } from '@moostjs/event-http'
 
-const adminGuard = defineInterceptorFn(() => {
+const adminGuard = defineBeforeInterceptor(() => {
     const user = getCurrentUser() // your auth logic
     if (!user?.isAdmin) {
         throw new HttpError(403, 'Admin access required')
@@ -55,11 +55,11 @@ export class AdminController { /* ... */ }
 Create a decorator factory that accepts a role:
 
 ```ts
-import { Intercept, defineInterceptorFn, TInterceptorPriority } from 'moost'
+import { Intercept, defineBeforeInterceptor, TInterceptorPriority } from 'moost'
 import { HttpError } from '@moostjs/event-http'
 
 const RequireRole = (role: string) => {
-    const fn = defineInterceptorFn(() => {
+    const fn = defineBeforeInterceptor(() => {
         const user = getCurrentUser()
         if (!user?.roles.includes(role)) {
             throw new HttpError(403, `Role "${role}" required`)
@@ -90,7 +90,7 @@ Check specific permissions instead of roles:
 
 ```ts
 const RequirePermission = (...permissions: string[]) => {
-    const fn = defineInterceptorFn(() => {
+    const fn = defineBeforeInterceptor(() => {
         const user = getCurrentUser()
         const missing = permissions.filter(p => !user?.permissions.includes(p))
         if (missing.length > 0) {
@@ -121,17 +121,15 @@ export class UserController {
 When your guard needs services from the DI container:
 
 ```ts
-import { Injectable, TInterceptorPriority } from 'moost'
-import type { TInterceptorClass, TInterceptorFn } from 'moost'
+import { Interceptor, Before, TInterceptorPriority } from 'moost'
 import { HttpError } from '@moostjs/event-http'
 
-@Injectable()
-export class PermissionGuard implements TInterceptorClass {
-    static priority = TInterceptorPriority.GUARD
-
+@Interceptor(TInterceptorPriority.GUARD)
+export class PermissionGuard {
     constructor(private permissionService: PermissionService) {}
 
-    handler: TInterceptorFn = () => {
+    @Before()
+    check() {
         if (!this.permissionService.check()) {
             throw new HttpError(403)
         }
@@ -139,24 +137,12 @@ export class PermissionGuard implements TInterceptorClass {
 }
 ```
 
-For a parameterized class-based guard, pair the class with a factory:
+Apply it the same way:
 
 ```ts
-@Injectable('FOR_EVENT')
-export class RoleGuard implements TInterceptorClass {
-    static priority = TInterceptorPriority.GUARD
-
-    constructor(private authService: AuthService) {}
-
-    // role is set externally via metadata or factory
-    role = ''
-
-    handler: TInterceptorFn = () => {
-        if (!this.authService.hasRole(this.role)) {
-            throw new HttpError(403, `Role "${this.role}" required`)
-        }
-    }
-}
+@Intercept(PermissionGuard)
+@Controller('admin')
+export class AdminController { /* ... */ }
 ```
 
 ## Combining authentication + authorization

@@ -1,34 +1,14 @@
 import type { TCookieAttributesInput } from '@wooksjs/event-http'
 import { useResponse } from '@wooksjs/event-http'
-import type { TInterceptorFn } from 'moost'
-import { defineInterceptorFn, Intercept, TInterceptorPriority } from 'moost'
+import type { TInterceptorDef } from 'moost'
+import { Intercept, TInterceptorPriority } from 'moost'
 
-const setHeaderInterceptor: (
+const setHeaderInterceptor = (
   name: string,
   value: string,
   opts?: { force?: boolean; status?: number; when?: 'always' | 'error' | 'ok' },
-) => TInterceptorFn = (name, value, opts) => {
-  const fn: TInterceptorFn = (_before, after, onError) => {
-    const response = useResponse()
-    const cb = () => {
-      if (
-        (!response.getHeader(name) || opts?.force) &&
-        (!opts?.status || opts.status === response.status)
-      ) {
-        response.setHeader(name, value)
-      }
-    }
-    if (opts?.when !== 'error') {
-      after(cb)
-    }
-    if (opts?.when === 'always' || opts?.when === 'error') {
-      onError(cb)
-    }
-  }
-  fn.priority = TInterceptorPriority.AFTER_ALL
-
-  // Fast-path: bypass InterceptorHandler for common cases
-  const modifier = () => {
+): TInterceptorDef => {
+  const cb = () => {
     const response = useResponse()
     if (
       (!response.getHeader(name) || opts?.force) &&
@@ -37,16 +17,14 @@ const setHeaderInterceptor: (
       response.setHeader(name, value)
     }
   }
-  if (!opts?.when || opts.when === 'ok') {
-    fn.__afterHandler = modifier
-  } else if (opts.when === 'error') {
-    fn.__errorHandler = modifier
-  } else {
-    fn.__afterHandler = modifier
-    fn.__errorHandler = modifier
+  const def: TInterceptorDef = { priority: TInterceptorPriority.AFTER_ALL }
+  if (opts?.when !== 'error') {
+    def.after = cb
   }
-
-  return fn
+  if (opts?.when === 'always' || opts?.when === 'error') {
+    def.error = cb
+  }
+  return def
 }
 
 /**
@@ -90,28 +68,19 @@ export function SetHeader(...args: Parameters<typeof setHeaderInterceptor>) {
   return Intercept(setHeaderInterceptor(...args))
 }
 
-const setCookieInterceptor: (
+const setCookieInterceptor = (
   name: string,
   value: string,
   attrs?: TCookieAttributesInput,
-) => TInterceptorFn = (name, value, attrs) => {
-  const fn: TInterceptorFn = (_before, after) => {
-    const response = useResponse()
-    after(() => {
-      if (!response.getCookie(name)) {
-        response.setCookie(name, value, attrs)
-      }
-    })
-  }
-  fn.priority = TInterceptorPriority.AFTER_ALL
-  fn.__afterHandler = () => {
+): TInterceptorDef => ({
+  after() {
     const response = useResponse()
     if (!response.getCookie(name)) {
       response.setCookie(name, value, attrs)
     }
-  }
-  return fn
-}
+  },
+  priority: TInterceptorPriority.AFTER_ALL,
+})
 
 /**
  * Set Cookie for Request Handler
@@ -138,23 +107,18 @@ export function SetCookie(...args: Parameters<typeof setCookieInterceptor>) {
   return Intercept(setCookieInterceptor(...args))
 }
 
-const setStatusInterceptor = (code: number, opts?: { force?: boolean }) => {
-  const fn = defineInterceptorFn((_before, after) => {
-    const response = useResponse()
-    after(() => {
-      if (!response.status || opts?.force) {
-        response.status = code
-      }
-    })
-  })
-  fn.__afterHandler = () => {
+const setStatusInterceptor = (
+  code: number,
+  opts?: { force?: boolean },
+): TInterceptorDef => ({
+  after() {
     const response = useResponse()
     if (!response.status || opts?.force) {
       response.status = code
     }
-  }
-  return fn
-}
+  },
+  priority: TInterceptorPriority.AFTER_ALL,
+})
 
 /**
  * Set Response Status for Request Handler

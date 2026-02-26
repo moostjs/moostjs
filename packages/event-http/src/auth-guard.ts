@@ -6,8 +6,15 @@ import {
   useHeaders,
   useUrlParams,
 } from '@wooksjs/event-http'
-import type { TClassFunction, TInterceptorFn, TClassConstructor } from 'moost'
-import { getMoostMate, Injectable, TInterceptorPriority } from 'moost'
+import type { TClassConstructor, TInterceptorDef, TOvertakeFn } from 'moost'
+import {
+  Before,
+  defineBeforeInterceptor,
+  getMoostMate,
+  Interceptor,
+  Overtake,
+  TInterceptorPriority,
+} from 'moost'
 
 // --- Transport declaration types ---
 
@@ -53,11 +60,13 @@ export function extractTransports<T extends TAuthTransportDeclaration>(
 ): TAuthTransportValues<T> {
   const ctx = current()
   const result: Record<string, unknown> = {}
+  let found = false
 
   if (declaration.bearer) {
     const auth = useAuthorization(ctx)
     if (auth.is('bearer')) {
       result.bearer = auth.credentials()
+      found = true
     }
   }
 
@@ -65,6 +74,7 @@ export function extractTransports<T extends TAuthTransportDeclaration>(
     const auth = useAuthorization(ctx)
     if (auth.is('basic')) {
       result.basic = auth.basicCredentials()
+      found = true
     }
   }
 
@@ -73,6 +83,7 @@ export function extractTransports<T extends TAuthTransportDeclaration>(
     const val = getCookie(declaration.cookie.name)
     if (val) {
       result.cookie = val
+      found = true
     }
   }
 
@@ -82,23 +93,26 @@ export function extractTransports<T extends TAuthTransportDeclaration>(
       const headers = useHeaders(ctx)
       if (headers[name.toLowerCase()]) {
         result.apiKey = headers[name.toLowerCase()]
+        found = true
       }
     } else if (location === 'query') {
       const { params } = useUrlParams(ctx)
       const val = params().get(name)
       if (val) {
         result.apiKey = String(val)
+        found = true
       }
     } else if (location === 'cookie') {
       const { getCookie } = useCookies(ctx)
       const val = getCookie(name)
       if (val) {
         result.apiKey = val
+        found = true
       }
     }
   }
 
-  if (Object.keys(result).length === 0) {
+  if (!found) {
     throw new HttpError(401, 'No authentication credentials provided')
   }
 
@@ -107,8 +121,8 @@ export function extractTransports<T extends TAuthTransportDeclaration>(
 
 // --- Functional API ---
 
-/** Auth guard function returned by defineAuthGuard — carries transport declarations. */
-export interface TAuthGuardFn extends TInterceptorFn {
+/** Auth guard def returned by defineAuthGuard — carries transport declarations. */
+export interface TAuthGuardDef extends TInterceptorDef {
   __authTransports: TAuthTransportDeclaration
 }
 
@@ -118,38 +132,66 @@ export type TAuthGuardClass = TClassConstructor<AuthGuard> & {
   priority: TInterceptorPriority
 }
 
-/** Accepted handler for UseAuthGuard — either a functional or class-based auth guard. */
-export type TAuthGuardHandler = TAuthGuardFn | TAuthGuardClass
+/** Accepted handler for Authenticate — either a functional or class-based auth guard. */
+export type TAuthGuardHandler = TAuthGuardDef | TAuthGuardClass
 
 export function defineAuthGuard<T extends TAuthTransportDeclaration>(
   transports: T,
   handler: (transports: TAuthTransportValues<T>) => unknown | Promise<unknown>,
-): TAuthGuardFn {
-  const guard: TInterceptorFn = () => {
+): TAuthGuardDef {
+  const def = defineBeforeInterceptor((reply) => {
     const extracted = extractTransports(transports)
-    return handler(extracted)
-  }
-  guard.priority = TInterceptorPriority.GUARD
-  const authGuard = guard as TAuthGuardFn
-  authGuard.__authTransports = transports
-  return authGuard
+    const result = handler(extracted)
+    if (
+      result !== null &&
+      result !== undefined &&
+      typeof (result as PromiseLike<unknown>).then === 'function'
+    ) {
+      return (result as Promise<unknown>).then((r) => {
+        if (r !== undefined) {
+          reply(r)
+        }
+        return undefined
+      })
+    }
+    if (result !== undefined) {
+      reply(result)
+    }
+  }, TInterceptorPriority.GUARD)
+  return Object.assign(def, { __authTransports: transports })
 }
 
 // --- Class-based API ---
 
-@Injectable()
+@Interceptor(TInterceptorPriority.GUARD)
 export abstract class AuthGuard<
   T extends TAuthTransportDeclaration = TAuthTransportDeclaration,
-> implements TClassFunction<TInterceptorFn> {
+> {
   static transports: TAuthTransportDeclaration
   static priority = TInterceptorPriority.GUARD
 
   abstract handle(transports: TAuthTransportValues<T>): unknown | Promise<unknown>
 
-  handler: TInterceptorFn = () => {
+  @Before()
+  __intercept(@Overtake() reply: TOvertakeFn) {
     const ctor = this.constructor as typeof AuthGuard
     const extracted = extractTransports(ctor.transports)
-    return this.handle(extracted as TAuthTransportValues<T>)
+    const result = this.handle(extracted as TAuthTransportValues<T>)
+    if (
+      result !== null &&
+      result !== undefined &&
+      typeof (result as PromiseLike<unknown>).then === 'function'
+    ) {
+      return (result as Promise<unknown>).then((r) => {
+        if (r !== undefined) {
+          reply(r)
+        }
+        return undefined
+      })
+    }
+    if (result !== undefined) {
+      reply(result)
+    }
   }
 }
 
@@ -164,14 +206,14 @@ export abstract class AuthGuard<
  */
 export function Authenticate(handler: TAuthGuardHandler): ClassDecorator & MethodDecorator {
   const mate = getMoostMate<{ authTransports: TAuthTransportDeclaration }>()
-  const isClass = typeof handler === 'function' && 'transports' in handler
+  const isClass = typeof handler === 'function'
   const transports: TAuthTransportDeclaration = isClass
     ? (handler as TAuthGuardClass).transports
-    : (handler as TAuthGuardFn).__authTransports
+    : (handler as TAuthGuardDef).__authTransports
   const priority = isClass
     ? (handler as TAuthGuardClass).priority
-    : (handler as TAuthGuardFn).priority || TInterceptorPriority.GUARD
-  const name = handler.name || 'AuthGuard'
+    : (handler as TAuthGuardDef).priority || TInterceptorPriority.GUARD
+  const name = isClass ? handler.name : 'AuthGuard'
   return mate.apply(
     mate.decorate('interceptors', { handler, priority, name }, true),
     mate.decorate('authTransports', transports),

@@ -1,38 +1,40 @@
 import { Delete, Get, Patch, Post, Query, Url } from '@moostjs/event-http'
 import { useRequest } from '@wooksjs/event-http'
 
-import type { TClassFunction } from '../class-function'
 import type { TFunction } from '../common-types'
-import type { TInterceptorFn } from '../decorators'
+import type { TOvertakeFn } from '../composables/interceptor.composable'
 import {
+  Before,
   Controller,
   ImportController,
   Inject,
   Injectable,
   Intercept,
+  Interceptor,
   Optional,
+  Overtake,
   Provide,
 } from '../decorators'
 import { Moost } from '../..'
 
-@Injectable()
-export class E2eInterceptor implements TClassFunction<TInterceptorFn> {
+@Interceptor()
+export class E2eInterceptor {
   constructor(private readonly trackableFn: TFunction) {}
 
-  handler() {
+  @Before()
+  track() {
     const { url } = useRequest()
     this.trackableFn(url)
   }
 }
 
-@Injectable('FOR_EVENT')
-class E2eInterceptorForRequest implements TClassFunction<TInterceptorFn> {
+@Interceptor(undefined, 'FOR_EVENT')
+class E2eInterceptorForRequest {
   constructor(@Url() private readonly url: string) {}
 
-  handler: TInterceptorFn = (before) => {
-    before((reply) => {
-      reply(`intercepted for url ${this.url}`)
-    })
+  @Before()
+  intercept(@Overtake() reply: TOvertakeFn) {
+    reply(`intercepted for url ${this.url}`)
   }
 }
 

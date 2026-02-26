@@ -1,158 +1,328 @@
 # Interceptors in Moost
 
-Interceptors in Moost act as flexible middleware that can modify the request flow before and after your handlers execute. They’re an essential tool for cross-cutting concerns such as logging, authentication, input validation, response transformation, and error handling, without cluttering your controller or handler logic.
+Interceptors hook into the event lifecycle to run logic before and after your handlers. They handle cross-cutting concerns — authentication, logging, error handling, response transformation — without cluttering controller code.
 
 ## Key Concepts
 
 - **Lifecycle Hooks:** Interceptors run at defined points:
-  - **Before Handler:** Modify requests, inject prerequisites, or halt execution.
-  - **After Handler:** Transform responses, log results, or finalize cleanup steps.
-  - **On Error:** Handle exceptions gracefully, transforming or logging errors.
+  - **Before:** Runs before the handler. Can short-circuit execution via `reply(value)`.
+  - **After:** Runs after successful handler execution. Can transform the response.
+  - **Error:** Runs when the handler throws. Can recover with a replacement response.
 
 ::: tip
-*You can check out [Event Lifecycle Diagram](/moost/event-lifecycle#diagram) to understand when and how interceptors are executed.*
+*Check the [Event Lifecycle Diagram](/moost/event-lifecycle#diagram) to see exactly when interceptors execute.*
 :::
 
-- **Priority Levels:**  
-  Interceptors execute in a defined order based on their priority (`TInterceptorPriority`). Some common priorities:
-  - `BEFORE_ALL` (0): Run setup logic before anything else.
-  - `GUARD` (2): Authorization checks.
-  - `INTERCEPTOR` (4): General-purpose interceptors.
-  - `CATCH_ERROR` (5): Error-handling interceptors.
-  - `AFTER_ALL` (6): Final cleanup logic at the end.
+- **Priority Levels:**
+  Interceptors execute in order based on their priority (`TInterceptorPriority`):
 
-These priorities ensure you can layer interceptors logically, ensuring authentication runs before business logic, and cleanup runs after everything else.
+  | Priority | Value | Use case |
+  |---|---|---|
+  | `BEFORE_ALL` | 0 | Setup, timing, context |
+  | `BEFORE_GUARD` | 1 | Pre-auth logic |
+  | `GUARD` | 2 | Authentication & authorization |
+  | `AFTER_GUARD` | 3 | Post-auth setup |
+  | `INTERCEPTOR` | 4 | General purpose (default) |
+  | `CATCH_ERROR` | 5 | Error formatting |
+  | `AFTER_ALL` | 6 | Cleanup, final headers |
 
-## Creating Interceptors
+## Functional Interceptors
 
-You can define interceptors as functions or classes. Both forms integrate with Moost’s DI and [event lifecycle](/moost/event-lifecycle).
+Use the `define*` helpers to create interceptors as plain objects.
 
-### Functional Interceptors
+### Before interceptor
 
-Use `defineInterceptorFn` to create a functional interceptor. This function receives three callback registrars: `before`, `after`, and `onError`. Each accepts a function defining what to do at that stage.
+Runs before the handler. Call `reply(value)` to skip the handler entirely:
 
-**Example:**
 ```ts
-import { defineInterceptorFn, TInterceptorPriority } from 'moost';
+import { defineBeforeInterceptor, TInterceptorPriority } from 'moost'
 
-export const myInterceptorFn = defineInterceptorFn((before, after, onError) => {
-  before((reply) => {
-    // Runs before handler
-    // For example, log request start time or validate inputs
-  });
-
-  after((response, reply) => {
-    // Runs after handler returns
-    // For example, modify response or log the result
-  });
-
-  onError((error, reply) => {
-    // Runs if the handler throws an error
-    // For example, transform the error into a user-friendly message
-  });
-}, TInterceptorPriority.INTERCEPTOR);
+const authGuard = defineBeforeInterceptor((reply) => {
+  if (!isAuthenticated()) {
+    reply(new HttpError(401))
+  }
+}, TInterceptorPriority.GUARD)
 ```
 
-In the above example:
-- `before` and `after` functions optionally call `reply(value)` to modify the final response or stop processing further.
-- `onError` can also call `reply(value)` to override the error response.
+### After interceptor
 
-### Class-Based Interceptors
+Runs after the handler succeeds. Receives the response; call `reply(newValue)` to replace it:
 
-Interceptors can be defined as classes, benefiting from Moost’s DI. This allows you to inject services or configuration into your interceptors. Class-based interceptors must implement a `handler` method that matches the interceptor function signature.
-
-**Example:**
 ```ts
-import { Injectable, TInterceptorClass, TInterceptorPriority } from 'moost';
+import { defineAfterInterceptor, TInterceptorPriority } from 'moost'
 
-@Injectable()
-class MyClassInterceptor implements TInterceptorClass {
-  static priority = TInterceptorPriority.BEFORE_ALL;
+const wrapper = defineAfterInterceptor((response, reply) => {
+  reply({ data: response, timestamp: Date.now() })
+}, TInterceptorPriority.AFTER_ALL)
+```
 
-  handler: TInterceptorFn = (before, after, onError) => {
-    before((reply) => {
-      // Set up or modify the request context before the handler
-    });
-    after((response, reply) => {
-      // Post-processing or logging after the handler executes
-    });
-    onError((error, reply) => {
-      // Centralized error handling logic
-    });
-  };
+### Error interceptor
+
+Runs when the handler throws. Receives the error; call `reply(value)` to recover:
+
+```ts
+import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
+
+const errorFormatter = defineErrorInterceptor((error, reply) => {
+  reply({
+    error: error.message,
+    code: error.statusCode || 500,
+  })
+}, TInterceptorPriority.CATCH_ERROR)
+```
+
+### Full interceptor
+
+Combine multiple hooks in a single definition:
+
+```ts
+import { defineInterceptor, TInterceptorPriority } from 'moost'
+
+const timing = defineInterceptor({
+  before() {
+    // record start time
+  },
+  after(response, reply) {
+    // log duration, transform response
+  },
+  error(error, reply) {
+    // handle errors
+  },
+}, TInterceptorPriority.INTERCEPTOR)
+```
+
+### Default priorities
+
+Each helper uses a sensible default priority:
+
+| Helper | Default priority |
+|---|---|
+| `defineBeforeInterceptor` | `INTERCEPTOR` |
+| `defineAfterInterceptor` | `AFTER_ALL` |
+| `defineErrorInterceptor` | `CATCH_ERROR` |
+| `defineInterceptor` | `INTERCEPTOR` |
+
+## Class-Based Interceptors
+
+When you need dependency injection, define interceptors as classes using the `@Interceptor` decorator with `@Before`, `@After`, and `@OnError` method decorators.
+
+### Basic example
+
+```ts
+import { Interceptor, Before, TInterceptorPriority } from 'moost'
+
+@Interceptor(TInterceptorPriority.GUARD)
+class AuthInterceptor {
+  constructor(private authService: AuthService) {}
+
+  @Before()
+  check() {
+    if (!this.authService.isAuthenticated()) {
+      throw new HttpError(401)
+    }
+  }
 }
 ```
 
-**Using the Interceptor:**
+Moost creates the interceptor through DI, so `AuthService` is injected automatically.
+
+### Using `@Overtake` and `@Response`
+
+Two parameter decorators let interceptor methods access the reply function and handler result:
+
+- **`@Overtake()`** — injects the reply function. Call it to short-circuit or replace the response.
+- **`@Response()`** — injects the handler result (in `@After`) or the error (in `@OnError`).
+
 ```ts
-import { Intercept } from 'moost';
+import {
+  Interceptor, Before, After, OnError,
+  Overtake, Response, TInterceptorPriority,
+} from 'moost'
+import type { TOvertakeFn } from 'moost'
 
-const MyClassInterceptorDecorator = Intercept(MyClassInterceptor);
+@Interceptor(TInterceptorPriority.INTERCEPTOR)
+class ResponseTransformer {
+  @After()
+  transform(@Response() response: unknown, @Overtake() reply: TOvertakeFn) {
+    reply({ data: response, timestamp: Date.now() })
+  }
+}
 
-@Controller()
-@MyClassInterceptorDecorator
-class ExampleController {
-  @Get('test')
-  testHandler() { /* ... */ }
+@Interceptor(TInterceptorPriority.CATCH_ERROR)
+class ErrorHandler {
+  @OnError()
+  handle(@Response() error: Error, @Overtake() reply: TOvertakeFn) {
+    reply({ message: error.message })
+  }
 }
 ```
 
-In this setup, Moost creates and injects dependencies into the interceptor class, letting you easily integrate services like logging, configuration, or authentication checks.
+### DI scopes
+
+By default, `@Interceptor` makes the class injectable as a singleton. Pass a scope to change this:
+
+```ts
+@Interceptor(TInterceptorPriority.INTERCEPTOR, 'FOR_EVENT')
+class RequestScopedInterceptor {
+  // New instance per event — can inject request-scoped dependencies
+}
+```
 
 ## Applying Interceptors
 
-Interceptors can be applied at different levels:
+### Per handler
 
-1. **Per-Handler:**
-   ```ts
-   @Get('test')
-   @Intercept(myInterceptorFn)
-   testHandler() { /* ... */ }
-   ```
+```ts
+import { Intercept, Controller } from 'moost'
 
-2. **Per-Controller:**
-   ```ts
-   @Intercept(myInterceptorFn)
-   @Controller()
-   class ExampleController {
-     @Get('test')
-     testHandler() { /* ... */ }
-   }
-   ```
+@Controller()
+export class ExampleController {
+  @Get('secret')
+  @Intercept(authGuard)
+  secret() { /* protected */ }
 
-3. **Globally:**
-   ```ts
-   const app = new Moost();
-   app.applyGlobalInterceptors(myInterceptorFn);
-   ```
-   
-Global interceptors affect all controllers and handlers, making them useful for tasks like global logging, authentication, or rate limiting.
+  @Get('public')
+  publicRoute() { /* not protected */ }
+}
+```
 
-## Practical Use Cases
+### Per controller
 
-- **Authentication/Authorization:**
-  Run guards at `BEFORE_GUARD` or `GUARD` priority to ensure only authenticated users can reach certain handlers.
-  
-- **Error Transformation:**
-  Use `CATCH_ERROR` priority interceptors to convert technical exceptions into readable error messages for clients.
-  
-- **Response Shaping:**
-  Post-process responses at `AFTER_ALL` to add common headers, wrap data in a standard envelope, or ensure consistent formatting across all endpoints.
-  
-- **Performance Logging:**
-  `BEFORE_ALL` or `AFTER_ALL` interceptors can record timestamps, measure handler execution time, and log metrics.
+All handlers in the controller are intercepted:
+
+```ts
+@Intercept(authGuard)
+@Controller('admin')
+export class AdminController {
+  @Get('dashboard')
+  dashboard() { /* protected */ }
+
+  @Get('settings')
+  settings() { /* also protected */ }
+}
+```
+
+### Globally
+
+Affects every handler in the application:
+
+```ts
+const app = new Moost()
+app.applyGlobalInterceptors(timing, errorFormatter)
+```
+
+Class-based interceptors work the same way:
+
+```ts
+app.applyGlobalInterceptors(AuthInterceptor)
+```
+
+## Turning Interceptors into Decorators
+
+Wrap an interceptor with `Intercept` to create a reusable decorator:
+
+```ts
+import { Intercept, defineBeforeInterceptor, TInterceptorPriority } from 'moost'
+
+const guardFn = defineBeforeInterceptor((reply) => {
+  if (!isAuthorized()) {
+    throw new HttpError(401)
+  }
+}, TInterceptorPriority.GUARD)
+
+// Create a decorator
+const RequireAuth = Intercept(guardFn)
+
+// Use it
+@RequireAuth
+@Controller('admin')
+export class AdminController { /* ... */ }
+```
+
+### Parameterized decorators
+
+Create decorator factories for configurable interceptors:
+
+```ts
+const RequireRole = (role: string) => {
+  const fn = defineBeforeInterceptor((reply) => {
+    if (!hasRole(role)) {
+      throw new HttpError(403, `Requires role: ${role}`)
+    }
+  }, TInterceptorPriority.GUARD)
+  return Intercept(fn)
+}
+
+@RequireRole('admin')
+@Controller('admin')
+export class AdminController { /* ... */ }
+```
+
+## Practical Examples
+
+### Request logger
+
+```ts
+import { defineInterceptor, TInterceptorPriority } from 'moost'
+import { useRequest } from '@wooksjs/event-http'
+import { useLogger } from '@wooksjs/event-core'
+
+export const requestLogger = defineInterceptor({
+  after() {
+    const { url, method } = useRequest()
+    const logger = useLogger('http')
+    logger.log(`${method} ${url} OK`)
+  },
+  error(error) {
+    const { url, method } = useRequest()
+    const logger = useLogger('http')
+    logger.error(`${method} ${url} FAILED: ${error.message}`)
+  },
+}, TInterceptorPriority.BEFORE_ALL)
+```
+
+### Error handler
+
+```ts
+import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
+import { useResponse } from '@wooksjs/event-http'
+
+export const errorHandler = defineErrorInterceptor((error, reply) => {
+  const response = useResponse()
+  const status = error.statusCode || 500
+  response.status = status
+  reply({
+    error: error.message,
+    statusCode: status,
+  })
+}, TInterceptorPriority.CATCH_ERROR)
+```
+
+### Timing interceptor (class-based)
+
+```ts
+import { Interceptor, Before, After, TInterceptorPriority } from 'moost'
+
+@Interceptor(TInterceptorPriority.BEFORE_ALL, 'FOR_EVENT')
+class TimingInterceptor {
+  private start = 0
+
+  @Before()
+  recordStart() {
+    this.start = performance.now()
+  }
+
+  @After()
+  logDuration() {
+    const ms = (performance.now() - this.start).toFixed(1)
+    console.log(`Request completed in ${ms}ms`)
+  }
+}
+```
 
 ## Best Practices
 
-- **Keep Interceptors Focused:**  
-  Each interceptor should handle a specific concern (e.g., logging, auth, formatting). This modularity improves maintainability.
-  
-- **Leverage Priorities:**  
-  Assign meaningful priorities so interceptors execute in a logical sequence. For example, run authorization checks before general logging.
-  
-- **Combine with DI:**  
-  Class-based interceptors can use DI to access services, configurations, or cached data, keeping the interceptor code minimal and testable.
-
----
-
-Interceptors bring flexibility and control to your Moost application’s event flow. By understanding their lifecycle, priorities, and integration with DI, you can implement sophisticated cross-cutting logic without polluting your business code.
+- **Keep interceptors focused:** Each interceptor should handle a single concern (auth, logging, formatting). This keeps them composable and testable.
+- **Use the right priority:** Assign meaningful priorities so interceptors execute in a logical order — auth before business logic, cleanup after everything else.
+- **Prefer functional for simple cases:** `defineBeforeInterceptor` / `defineAfterInterceptor` are lighter than class-based interceptors and easier to compose.
+- **Use class-based for DI:** When you need injected services, use `@Interceptor` with method decorators.

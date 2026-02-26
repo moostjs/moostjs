@@ -4,29 +4,45 @@ Interceptors wrap command execution with cross-cutting logic — guards, logging
 
 ## Quick recap
 
-An interceptor is a function with three hooks:
+Interceptors have three lifecycle hooks — `before`, `after`, and `error`. Use the `define*` helpers to create them:
 
 ```ts
-import { defineInterceptorFn, TInterceptorPriority } from 'moost'
+import { defineBeforeInterceptor, TInterceptorPriority } from 'moost'
 
-const myInterceptor = defineInterceptorFn((before, after, onError) => {
-  // init phase — runs first, can short-circuit by returning a value
+// Runs before the handler — call reply(value) to skip the handler
+const guard = defineBeforeInterceptor((reply) => {
+  // check something, throw or call reply() to short-circuit
+}, TInterceptorPriority.GUARD)
+```
 
-  before((reply) => {
-    // runs before the handler
-    // call reply(value) to skip the handler and respond early
-  })
+```ts
+import { defineAfterInterceptor } from 'moost'
 
-  after((response, reply) => {
-    // runs after the handler
-    // response is the handler's return value
-    // call reply(newValue) to override
-  })
+// Runs after the handler — receives the response
+const logger = defineAfterInterceptor((response) => {
+  console.log('Command returned:', response)
+})
+```
 
-  onError((error, reply) => {
-    // runs if the handler (or a prior interceptor) throws
-    // call reply(value) to recover
-  })
+```ts
+import { defineErrorInterceptor } from 'moost'
+
+// Runs on error — receives the error, call reply(value) to recover
+const errorHandler = defineErrorInterceptor((error, reply) => {
+  console.error(`Error: ${error.message}`)
+  reply('')
+})
+```
+
+Or combine all hooks with `defineInterceptor`:
+
+```ts
+import { defineInterceptor, TInterceptorPriority } from 'moost'
+
+const myInterceptor = defineInterceptor({
+  before(reply) { /* ... */ },
+  after(response, reply) { /* ... */ },
+  error(error, reply) { /* ... */ },
 }, TInterceptorPriority.INTERCEPTOR)
 ```
 
@@ -36,12 +52,12 @@ See the [Interceptors guide](/moost/interceptors) for the full lifecycle, priori
 
 ## CLI guard example
 
-A guard is just an interceptor at `GUARD` priority. If it returns a value during init, the handler is skipped entirely:
+A guard is a before-interceptor at `GUARD` priority. Throw or call `reply()` to stop execution:
 
 ```ts
-import { defineInterceptorFn, TInterceptorPriority } from 'moost'
+import { defineBeforeInterceptor, TInterceptorPriority } from 'moost'
 
-const requireEnvGuard = defineInterceptorFn(() => {
+const requireEnvGuard = defineBeforeInterceptor(() => {
   if (!process.env.CI_TOKEN) {
     console.error('Error: CI_TOKEN environment variable is required')
     process.exit(1)
@@ -83,11 +99,11 @@ export class DeployController {
 Catch errors and format them for the terminal:
 
 ```ts
-const cliErrorHandler = defineInterceptorFn((_before, _after, onError) => {
-  onError((error, reply) => {
-    console.error(`Error: ${error.message}`)
-    reply('')
-  })
+import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
+
+const cliErrorHandler = defineErrorInterceptor((error, reply) => {
+  console.error(`Error: ${error.message}`)
+  reply('')
 }, TInterceptorPriority.CATCH_ERROR)
 ```
 
@@ -97,12 +113,6 @@ Apply globally so every command benefits:
 import { CliApp } from '@moostjs/event-cli'
 
 const app = new CliApp()
-  .controllers(AppController)
-  .useHelp({ name: 'my-cli' })
-  .start()
-
-// Before .start(), add global interceptors via the Moost API:
-const app = new CliApp()
 app.applyGlobalInterceptors(cliErrorHandler)
 app.controllers(AppController)
 app.useHelp({ name: 'my-cli' })
@@ -111,20 +121,42 @@ app.start()
 
 ## Timing interceptor
 
-Measure how long a command takes:
+Measure how long a command takes using a class-based interceptor with `FOR_EVENT` scope:
 
 ```ts
-const timingInterceptor = defineInterceptorFn((before, after) => {
-  let start: number
+import { Interceptor, Before, After, TInterceptorPriority } from 'moost'
 
-  before(() => {
+@Interceptor(TInterceptorPriority.BEFORE_ALL, 'FOR_EVENT')
+class TimingInterceptor {
+  private start = 0
+
+  @Before()
+  recordStart() {
+    this.start = performance.now()
+  }
+
+  @After()
+  logDuration() {
+    const ms = (performance.now() - this.start).toFixed(1)
+    console.log(`Completed in ${ms}ms`)
+  }
+}
+```
+
+Or as a functional interceptor:
+
+```ts
+import { defineInterceptor, TInterceptorPriority } from 'moost'
+
+let start: number
+const timingInterceptor = defineInterceptor({
+  before() {
     start = performance.now()
-  })
-
-  after(() => {
+  },
+  after() {
     const ms = (performance.now() - start).toFixed(1)
     console.log(`Completed in ${ms}ms`)
-  })
+  },
 }, TInterceptorPriority.AFTER_ALL)
 ```
 

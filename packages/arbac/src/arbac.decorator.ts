@@ -1,7 +1,7 @@
 import { HttpError } from '@wooksjs/event-http'
 import {
   current,
-  defineInterceptorFn,
+  defineBeforeInterceptor,
   Intercept,
   Resolve,
   TInterceptorPriority,
@@ -12,12 +12,12 @@ import { useArbac } from './arbac.composables'
 import { getArbacMate } from './arbac.mate'
 
 /**
- * Interceptor function that enforces authorization checks based on ARBAC rules.
+ * Interceptor that enforces authorization checks based on ARBAC rules.
  * It evaluates the user's permissions against the requested resource and action.
  *
  * @constant
  */
-export const arbackAuthorizeInterceptor = defineInterceptorFn(async (before, after, onError) => {
+export const arbackAuthorizeInterceptor = defineBeforeInterceptor(async () => {
   const ctx = current()
   const l = useLogger(ctx)
   const logger = typeof l.topic === 'function' ? l.topic('arbac') : l

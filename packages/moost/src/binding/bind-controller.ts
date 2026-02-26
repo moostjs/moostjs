@@ -1,6 +1,5 @@
 import type { TEmpty, TObject, TClassConstructor } from '../common-types'
 import { useControllerContext } from '../composables'
-import type { TInterceptorFn } from '../decorators'
 import type { TMoostHandler, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { getMoostMate } from '../metadata'
 import type { TPipeData } from '../pipes'
@@ -44,35 +43,11 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
     const pipes = [...(opts.pipes || []), ...(methodMeta.pipes || [])].toSorted(
       (a, b) => a.priority - b.priority,
     )
-    // preparing interceptors — extract fast-path after/error handlers
-    const allInterceptors = [
+    const interceptors = [
       ...(opts.interceptors || []),
       ...(meta.interceptors || []),
       ...(methodMeta.interceptors || []),
     ].toSorted((a, b) => a.priority - b.priority)
-
-    let afterHandlers: (() => void)[] | undefined
-    let errorHandlers: (() => void)[] | undefined
-    let interceptors = allInterceptors
-
-    // Check for extractable fast-path interceptors (e.g. @SetHeader, @SetCookie, @SetStatus)
-    if (allInterceptors.length > 0) {
-      const lifecycle: typeof allInterceptors = []
-      for (const entry of allInterceptors) {
-        const handler = entry.handler as TInterceptorFn
-        if (handler.__afterHandler || handler.__errorHandler) {
-          if (handler.__afterHandler) {
-            ;(afterHandlers ??= []).push(handler.__afterHandler)
-          }
-          if (handler.__errorHandler) {
-            ;(errorHandlers ??= []).push(handler.__errorHandler)
-          }
-        } else {
-          lifecycle.push(entry)
-        }
-      }
-      interceptors = lifecycle
-    }
 
     const getIterceptorHandler = getIterceptorHandlerFactory(interceptors, getInstance, pipes)
 
@@ -148,8 +123,7 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
         handlers: methodMeta.handlers,
         getIterceptorHandler,
         resolveArgs,
-        afterHandlers,
-        errorHandlers,
+        controllerName: classConstructor.name,
         logHandler: (eventName: string) => {
           options.moostInstance.logMappedHandler(eventName, classConstructor, method as string)
         },

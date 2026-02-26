@@ -159,9 +159,8 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
       getIterceptorHandler: opts.getIterceptorHandler,
       getControllerInstance: opts.getInstance,
       controllerMethod: opts.method,
+      controllerName: opts.controllerName,
       resolveArgs: opts.resolveArgs,
-      afterHandlers: opts.afterHandlers,
-      errorHandlers: opts.errorHandlers,
       targetPath,
       handlerType: handler.type,
     })
@@ -180,8 +179,6 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
       getControllerInstance: opts.getInstance,
       controllerMethod: opts.method,
       resolveArgs: opts.resolveArgs,
-      afterHandlers: opts.afterHandlers,
-      errorHandlers: opts.errorHandlers,
       targetPath: '__ws_connect__',
       handlerType: 'WS_CONNECT',
     })
@@ -200,8 +197,6 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
       getControllerInstance: opts.getInstance,
       controllerMethod: opts.method,
       resolveArgs: opts.resolveArgs,
-      afterHandlers: opts.afterHandlers,
-      errorHandlers: opts.errorHandlers,
       targetPath: '__ws_disconnect__',
       handlerType: 'WS_DISCONNECT',
     })

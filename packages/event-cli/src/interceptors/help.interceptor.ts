@@ -1,5 +1,5 @@
 import { useAutoHelp, useCommandLookupHelp } from '@wooksjs/event-cli'
-import { defineInterceptorFn, Intercept, TInterceptorPriority, useControllerContext } from 'moost'
+import { defineBeforeInterceptor, Intercept, TInterceptorPriority, useControllerContext } from 'moost'
 
 /**
  * ### Interceptor Factory for CliHelpRenderer
@@ -11,7 +11,7 @@ import { defineInterceptorFn, Intercept, TInterceptorPriority, useControllerCont
  * new Moost().applyGlobalInterceptors(cliHelpInterceptor({ colors: true }))
  * ```
  * @param opts {} { helpOptions: ['help', 'h'], colors: true } cli options to invoke help renderer
- * @returns TInterceptorFn
+ * @returns TInterceptorDef
  */
 export const cliHelpInterceptor = (opts?: {
   /**
@@ -30,10 +30,11 @@ export const cliHelpInterceptor = (opts?: {
    */
   lookupLevel?: number
 }) =>
-  defineInterceptorFn(() => {
+  defineBeforeInterceptor((reply) => {
     try {
       if (useAutoHelp(opts?.helpOptions, opts?.colors)) {
-        return ''
+        reply('')
+        return
       }
     } catch (error) {
       //

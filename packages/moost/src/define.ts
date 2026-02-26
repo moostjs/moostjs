@@ -1,65 +1,93 @@
-import type { TClassFunction } from './class-function'
 import type { TEmpty, TObject } from './common-types'
-import type { TInterceptorFn } from './decorators'
+import type {
+  TInterceptorAfterFn,
+  TInterceptorBeforeFn,
+  TInterceptorDef,
+  TInterceptorErrorFn,
+} from './decorators'
 import { TInterceptorPriority } from './decorators'
 import type { TPipeFn } from './pipes'
 import { TPipePriority } from './pipes'
 
 /**
- * ### Define Interceptor Function
+ * Define a before-phase interceptor.
  *
+ * Runs before argument resolution and handler execution.
+ * Call `reply(value)` to short-circuit the handler and respond early.
+ *
+ * @example
  * ```ts
- * defineInterceptorFn((before, after, onError) => {
- *         //init
- *         before(() => {
- *              // before handler
- *         })
- *         after((response, reply) => {
- *              // after handler
- *         })
- *         onError((error, reply) => {
- *              // when error occured
- *         })
- *     },
- *     TInterceptorPriority.INTERCEPTOR,
- * )
+ * const authGuard = defineBeforeInterceptor((reply) => {
+ *   if (!isAuthenticated()) reply(new HttpError(401))
+ * }, TInterceptorPriority.GUARD)
  * ```
- *
- * @param fn interceptor function
- * @param priority priority of the interceptor where BEFORE_ALL = 0, BEFORE_GUARD = 1, GUARD = 2, AFTER_GUARD = 3, INTERCEPTOR = 4, CATCH_ERROR = 5, AFTER_ALL = 6
- * @returns
  */
-export function defineInterceptorFn(
-  fn: TInterceptorFn,
+export function defineBeforeInterceptor(
+  fn: TInterceptorBeforeFn,
   priority: TInterceptorPriority = TInterceptorPriority.INTERCEPTOR,
-) {
-  fn.priority = priority
-  return fn
+): TInterceptorDef {
+  return { before: fn, priority }
 }
 
 /**
- * Class based interceptor interface
+ * Define an after-phase interceptor.
  *
- * Use it to create class-based interceptors and don't forget to make it **@Injectable()**
+ * Runs after successful handler execution.
+ * Call `reply(value)` to transform/replace the response.
  *
  * @example
- * "@Injectable()
- * export class MyInterceptor implements TInterceptorClass {
- *     static priority = TInterceptorPriority.INTERCEPTOR
- *     handler: TInterceptorClass['handler'] = (before, after, onError) => {
- *         before((reply) => {
- *             console.log('before')
- *         })
- *         after((response, reply) => {
- *             console.log('after')
- *         })
- *         onError((error, reply) => {
- *             console.log('error')
- *         })
- *     }
- * }
+ * ```ts
+ * const setHeader = defineAfterInterceptor(() => {
+ *   useResponse().setHeader('x-server', 'my-server')
+ * }, TInterceptorPriority.AFTER_ALL)
+ * ```
  */
-export type TInterceptorClass = TClassFunction<TInterceptorFn>
+export function defineAfterInterceptor(
+  fn: TInterceptorAfterFn,
+  priority: TInterceptorPriority = TInterceptorPriority.AFTER_ALL,
+): TInterceptorDef {
+  return { after: fn, priority }
+}
+
+/**
+ * Define an error-phase interceptor.
+ *
+ * Runs when the handler throws or returns an Error.
+ * Call `reply(value)` to recover from the error with a replacement response.
+ *
+ * @example
+ * ```ts
+ * const errorFormatter = defineErrorInterceptor((error, reply) => {
+ *   reply({ message: error.message, status: 500 })
+ * }, TInterceptorPriority.CATCH_ERROR)
+ * ```
+ */
+export function defineErrorInterceptor(
+  fn: TInterceptorErrorFn,
+  priority: TInterceptorPriority = TInterceptorPriority.CATCH_ERROR,
+): TInterceptorDef {
+  return { error: fn, priority }
+}
+
+/**
+ * Define a full interceptor with multiple lifecycle hooks.
+ *
+ * @example
+ * ```ts
+ * const myInterceptor = defineInterceptor({
+ *   before(reply) { ... },
+ *   after(response, reply) { ... },
+ *   error(error, reply) { ... },
+ * }, TInterceptorPriority.INTERCEPTOR)
+ * ```
+ */
+export function defineInterceptor(
+  def: TInterceptorDef,
+  priority: TInterceptorPriority = TInterceptorPriority.INTERCEPTOR,
+): TInterceptorDef {
+  def.priority = priority
+  return def
+}
 
 /**
  * ### Define Pipe Function
@@ -73,8 +101,8 @@ export type TInterceptorClass = TClassFunction<TInterceptorFn>
  * )
  * ```
  *
- * @param fn interceptor function
- * @param priority priority of the pipe where BEFORE_RESOLVE = 0, RESOLVE = 1, AFTER_RESOLVE = 2, BEFORE_TRANSFORM = 3, TRANSFORM = 4, AFTER_TRANSFORM = 5, BEFORE_VALIDATE = 6, VALIDATE = 7, AFTER_VALIDATE = 8
+ * @param fn pipe function
+ * @param priority priority of the pipe
  * @returns
  */
 export function definePipeFn<T extends TObject = TEmpty>(

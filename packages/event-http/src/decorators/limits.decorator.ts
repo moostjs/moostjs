@@ -1,14 +1,14 @@
 import { useRequest } from '@wooksjs/event-http'
-import { defineInterceptorFn, Intercept, TInterceptorPriority } from 'moost'
+import { defineBeforeInterceptor, Intercept, TInterceptorPriority } from 'moost'
 
 /**
  * Creates an interceptor that sets the maximum allowed inflated body size in bytes.
  *
  * @param n - Maximum body size in bytes after decompression.
- * @returns Interceptor function to enforce the limit.
+ * @returns Interceptor def to enforce the limit.
  */
 export const globalBodySizeLimit = (n: number) =>
-  defineInterceptorFn(() => {
+  defineBeforeInterceptor(() => {
     useRequest().setMaxInflated(n)
   }, TInterceptorPriority.BEFORE_ALL)
 
@@ -16,10 +16,10 @@ export const globalBodySizeLimit = (n: number) =>
  * Creates an interceptor that sets the maximum allowed compressed body size in bytes.
  *
  * @param n - Maximum body size in bytes before decompression.
- * @returns Interceptor function to enforce the limit.
+ * @returns Interceptor def to enforce the limit.
  */
 export const globalCompressedBodySizeLimit = (n: number) =>
-  defineInterceptorFn(() => {
+  defineBeforeInterceptor(() => {
     useRequest().setMaxCompressed(n)
   }, TInterceptorPriority.BEFORE_ALL)
 
@@ -27,10 +27,10 @@ export const globalCompressedBodySizeLimit = (n: number) =>
  * Creates an interceptor that sets the timeout for reading the request body.
  *
  * @param n - Timeout in milliseconds.
- * @returns Interceptor function to enforce the timeout.
+ * @returns Interceptor def to enforce the timeout.
  */
 export const globalBodyReadTimeoutMs = (n: number) =>
-  defineInterceptorFn(() => {
+  defineBeforeInterceptor(() => {
     useRequest().setReadTimeoutMs(n)
   }, TInterceptorPriority.BEFORE_ALL)
 

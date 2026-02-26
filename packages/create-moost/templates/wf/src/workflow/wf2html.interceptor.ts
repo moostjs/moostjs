@@ -20,8 +20,8 @@
 
 import { Body } from "@moostjs/event-http";
 import type { TFlowOutput } from "@moostjs/event-wf";
-import type { TInterceptorClass, TInterceptorFn } from "moost";
-import { Injectable, Intercept } from "moost";
+import type { TOvertakeFn } from "moost";
+import { After, Before, Intercept, Interceptor, Overtake, Response } from "moost";
 
 import { decryptState, encryptState } from "./wf.encrypt";
 import type {
@@ -38,65 +38,45 @@ import type {
  * This interceptor handles the encryption and decryption of the workflow state to ensure
  * secure transmission between the backend and frontend.
  */
-@Injectable("FOR_EVENT")
-class Wf2HtmlPageInterceptor implements TInterceptorClass {
-  /**
-   * The input payload containing user inputs and the workflow state.
-   *
-   * @type {TWfExampleInput & { wfState: string | TWfState | undefined }}
-   */
+@Interceptor(undefined, "FOR_EVENT")
+class Wf2HtmlPageInterceptor {
   @Body()
   input?: TWfExampleInput & { wfState: string | TWfState | undefined };
 
   /**
-   * The interceptor handler function that processes workflow events.
-   *
-   * @type {TInterceptorFn}
+   * Pre-processing: decrypts the workflow state if it is a string,
+   * or clears it if it is not.
    */
-  handler: TInterceptorFn = (before, after) => {
-    /**
-     * Pre-processing step executed before the main workflow logic.
-     *
-     * - Decrypts the workflow state if it is a string.
-     * - Clears the workflow state if it is not a string.
-     *
-     * @function before
-     */
-    before(() => {
-      if (typeof this.input?.wfState === "string") {
-        this.input.wfState = decryptState(this.input.wfState);
-      } else if (this.input) {
-        this.input.wfState = undefined;
-      }
-    });
+  @Before()
+  decryptState() {
+    if (typeof this.input?.wfState === "string") {
+      this.input.wfState = decryptState(this.input.wfState);
+    } else if (this.input) {
+      this.input.wfState = undefined;
+    }
+  }
 
-    /**
-     * Post-processing step executed after the main workflow logic.
-     *
-     * - Renders an input form if additional inputs are required.
-     * - Renders the final output page if the workflow has finished.
-     *
-     * @function after
-     * @param {TFlowOutput<TWfExampleContext, TWfExampleInput, TWfExampleInputSchema>} response - The workflow response.
-     * @param {Function} reply - The function to send the HTTP response.
-     */
-    after((response, reply) => {
-      const wfOutput = response as TFlowOutput<
-        TWfExampleContext,
-        TWfExampleInput,
-        TWfExampleInputSchema
-      >;
+  /**
+   * Post-processing: renders an HTML input form or final output page
+   * based on the workflow response.
+   */
+  @After()
+  renderOutput(@Response() response: unknown, @Overtake() reply: TOvertakeFn) {
+    const wfOutput = response as TFlowOutput<
+      TWfExampleContext,
+      TWfExampleInput,
+      TWfExampleInputSchema
+    >;
 
-      if (wfOutput.inputRequired) {
-        reply(
-          renderInputPage(wfOutput.inputRequired, encryptState(wfOutput.state))
-        );
-      }
-      if (wfOutput.finished) {
-        reply(renderOutputPage(wfOutput.state.context));
-      }
-    });
-  };
+    if (wfOutput.inputRequired) {
+      reply(
+        renderInputPage(wfOutput.inputRequired, encryptState(wfOutput.state))
+      );
+    }
+    if (wfOutput.finished) {
+      reply(renderOutputPage(wfOutput.state.context));
+    }
+  }
 }
 
 /**

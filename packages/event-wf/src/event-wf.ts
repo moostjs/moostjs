@@ -1,9 +1,8 @@
 import type { TFlowOutput, TWorkflowSpy } from '@prostojs/wf'
-import { useEventId } from '@wooksjs/event-core'
 import type { TStepHandler, TWooksWfOptions } from '@wooksjs/event-wf'
 import { createWfApp, WooksWf } from '@wooksjs/event-wf'
 import type { Moost, TMoostAdapter, TMoostAdapterOptions } from 'moost'
-import { defineMoostEventHandler, getMoostInfact, setControllerContext } from 'moost'
+import { defineMoostEventHandler, getMoostInfact, setControllerContext, useScopeId } from 'moost'
 
 import { getWfMate } from './meta-types'
 
@@ -96,8 +95,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     return this.wfApp.start(schemaId, initialContext, {
       input,
       cleanup: () => {
-        const scopeId = useEventId().getId()
-        getMoostInfact().unregisterScope(scopeId)
+        getMoostInfact().unregisterScope(useScopeId())
       },
     })
   }
@@ -115,8 +113,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     return this.wfApp.resume(state, {
       input,
       cleanup: () => {
-        const scopeId = useEventId().getId()
-        getMoostInfact().unregisterScope(scopeId)
+        getMoostInfact().unregisterScope(useScopeId())
       },
     })
   }
@@ -140,9 +137,8 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
         getIterceptorHandler: opts.getIterceptorHandler,
         getControllerInstance: opts.getInstance,
         controllerMethod: opts.method,
+        controllerName: opts.controllerName,
         resolveArgs: opts.resolveArgs,
-        afterHandlers: opts.afterHandlers,
-        errorHandlers: opts.errorHandlers,
         manualUnscope: true,
         targetPath,
         handlerType: handler.type,

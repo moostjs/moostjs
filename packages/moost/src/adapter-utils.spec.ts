@@ -15,9 +15,8 @@ describe('defineMoostEventHandler', () => {
   })
 
   describe('scope cleanup', () => {
-    it('must call unscope when getControllerInstance throws', async () => {
+    it('must call unscope when getControllerInstance throws', () => {
       const unregisterSpy = vi.spyOn(infact, 'unregisterScope')
-      const error = new Error('controller instantiation failed')
 
       const handler = defineMoostEventHandler({
         loggerTitle: 'test',
@@ -25,41 +24,39 @@ describe('defineMoostEventHandler', () => {
         handlerType: 'HTTP',
         getIterceptorHandler: () => undefined,
         getControllerInstance: () => {
-          throw error
+          throw new Error('controller instantiation failed')
         },
       })
 
-      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
+      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow(
         'controller instantiation failed',
       )
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
 
-    it('must call unscope when getIterceptorHandler throws', async () => {
+    it('must call unscope when getIterceptorHandler throws', () => {
       const unregisterSpy = vi.spyOn(infact, 'unregisterScope')
-      const error = new Error('interceptor handler failed')
 
       const handler = defineMoostEventHandler({
         loggerTitle: 'test',
         targetPath: '/test',
         handlerType: 'HTTP',
         getIterceptorHandler: () => {
-          throw error
+          throw new Error('interceptor handler failed')
         },
         getControllerInstance: () => ({}),
       })
 
-      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
+      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow(
         'interceptor handler failed',
       )
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
 
-    it('must call unscope when hooks.init throws', async () => {
+    it('must call unscope when hooks.init throws', () => {
       const unregisterSpy = vi.spyOn(infact, 'unregisterScope')
-      const error = new Error('hook init failed')
 
       const handler = defineMoostEventHandler({
         loggerTitle: 'test',
@@ -69,21 +66,20 @@ describe('defineMoostEventHandler', () => {
         getControllerInstance: () => ({}),
         hooks: {
           init: () => {
-            throw error
+            throw new Error('hook init failed')
           },
         },
       })
 
-      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
+      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow(
         'hook init failed',
       )
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
 
-    it('must not call unscope when manualUnscope is true', async () => {
+    it('must not call unscope when manualUnscope is true', () => {
       const unregisterSpy = vi.spyOn(infact, 'unregisterScope')
-      const error = new Error('controller instantiation failed')
 
       const handler = defineMoostEventHandler({
         loggerTitle: 'test',
@@ -92,11 +88,11 @@ describe('defineMoostEventHandler', () => {
         manualUnscope: true,
         getIterceptorHandler: () => undefined,
         getControllerInstance: () => {
-          throw error
+          throw new Error('controller instantiation failed')
         },
       })
 
-      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
+      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow(
         'controller instantiation failed',
       )
 
@@ -130,11 +126,12 @@ describe('defineMoostEventHandler', () => {
   })
 
   describe('interceptor error propagation', () => {
-    it('must propagate error thrown during interceptor init (manualUnscope)', async () => {
+    it('must propagate error thrown during interceptor init (manualUnscope)', () => {
       const guardError = new Error('Invalid JWT token (CLASS)')
       ;(guardError as { statusCode?: number }).statusCode = 401
 
-      const throwingHandler = (_before: unknown, _after: unknown, _onError: unknown) => {
+      // Factory that throws during init
+      const throwingFactory = () => {
         throw guardError
       }
 
@@ -144,22 +141,20 @@ describe('defineMoostEventHandler', () => {
         handlerType: 'HTTP',
         manualUnscope: true,
         getIterceptorHandler: () =>
-          new InterceptorHandler([{ handler: throwingHandler, name: 'JwtGuard' }]),
+          new InterceptorHandler([{ handler: throwingFactory, name: 'JwtGuard' }]),
         getControllerInstance: () => ({ myMethod: () => 'ok' }),
         controllerMethod: 'myMethod' as never,
       })
 
-      const resultPromise = createEventContext({ logger: testLogger }, handler)
-
-      await expect(resultPromise).rejects.toThrow('Invalid JWT token (CLASS)')
-      await expect(resultPromise).rejects.toBe(guardError)
+      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow(guardError)
     })
 
-    it('must propagate error thrown during interceptor init (auto unscope)', async () => {
+    it('must propagate error thrown during interceptor init (auto unscope)', () => {
       const unregisterSpy = vi.spyOn(infact, 'unregisterScope')
       const guardError = new Error('Forbidden')
 
-      const throwingHandler = () => {
+      // Factory that throws during init
+      const throwingFactory = () => {
         throw guardError
       }
 
@@ -168,29 +163,25 @@ describe('defineMoostEventHandler', () => {
         targetPath: '/test',
         handlerType: 'HTTP',
         getIterceptorHandler: () =>
-          new InterceptorHandler([{ handler: throwingHandler, name: 'Guard' }]),
+          new InterceptorHandler([{ handler: throwingFactory, name: 'Guard' }]),
         getControllerInstance: () => ({ myMethod: () => 'ok' }),
         controllerMethod: 'myMethod' as never,
       })
 
-      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow('Forbidden')
+      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow('Forbidden')
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
 
-    it('must propagate interceptor init error with onError handlers registered', async () => {
+    it('must propagate interceptor init error with onError handlers registered', () => {
       const guardError = new Error('Unauthorized')
       const onErrorSpy = vi.fn()
 
-      const firstInterceptor = (
-        _before: unknown,
-        _after: unknown,
-        onError: (fn: (error: Error, reply: (r: unknown) => void) => void) => void,
-      ) => {
-        onError(onErrorSpy)
-      }
+      // First interceptor registers an onError handler via TInterceptorDef
+      const firstDef = { error: onErrorSpy }
 
-      const throwingGuard = () => {
+      // Second interceptor (factory) throws during init
+      const throwingFactory = () => {
         throw guardError
       }
 
@@ -201,16 +192,14 @@ describe('defineMoostEventHandler', () => {
         manualUnscope: true,
         getIterceptorHandler: () =>
           new InterceptorHandler([
-            { handler: firstInterceptor, name: 'LogInterceptor' },
-            { handler: throwingGuard, name: 'JwtGuard' },
+            { handler: firstDef, name: 'LogInterceptor' },
+            { handler: throwingFactory, name: 'JwtGuard' },
           ]),
         getControllerInstance: () => ({ myMethod: () => 'ok' }),
         controllerMethod: 'myMethod' as never,
       })
 
-      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
-        'Unauthorized',
-      )
+      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow('Unauthorized')
 
       // the onError handler from the first interceptor should have been called
       expect(onErrorSpy).toHaveBeenCalledWith(guardError, expect.any(Function))

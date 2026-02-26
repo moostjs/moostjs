@@ -1,8 +1,9 @@
 import type { TInfactClassMeta } from '@prostojs/infact'
 import { Infact } from '@prostojs/infact'
 import { getConstructor } from '@prostojs/mate'
-import { useEventId, useLogger } from '@wooksjs/event-core'
+import { useLogger } from '@wooksjs/event-core'
 
+import { useScopeId } from '../adapter-utils'
 import { getDefaultLogger } from '../logger'
 import type { TPipeData } from '../pipes'
 import { runPipes } from '../pipes/run-pipes'
@@ -74,7 +75,7 @@ export function getNewMoostInfact() {
         constructorParams: meta?.params || [],
         provide: meta?.provide,
         properties: meta?.properties || [],
-        scopeId: meta?.injectable === 'FOR_EVENT' ? useEventId().getId() : undefined,
+        scopeId: meta?.injectable === 'FOR_EVENT' ? useScopeId() : undefined,
       } as unknown as TInfactClassMeta<TMoostParamsMetadata> & TMoostMetadata
     },
 

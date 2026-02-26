@@ -10,7 +10,7 @@ import { Hookable } from 'hookable'
 import { bindControllerMethods } from './binding/bind-controller'
 import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from './common-types'
 import { setControllerContext } from './composables'
-import type { TInterceptorFn } from './decorators'
+import type { TInterceptorDef } from './decorators'
 import { TInterceptorPriority } from './decorators'
 import type { InterceptorHandler } from './interceptor-handler'
 import { getDefaultLogger, setDefaultLogger } from './logger'
@@ -328,26 +328,28 @@ export class Moost extends Hookable {
     return this.globalInterceptorHandler()
   }
 
-  applyGlobalInterceptors(...items: (TInterceptorData['handler'] | TInterceptorData)[]) {
+  applyGlobalInterceptors(
+    ...items: (TClassConstructor | TInterceptorDef | TInterceptorData)[]
+  ) {
+    const mate = getMoostMate()
     for (const item of items) {
       if (typeof item === 'function') {
+        // Class constructor with @Interceptor metadata
+        const meta = mate.read(item)
         this.interceptors.push({
           handler: item,
-          priority:
-            typeof (item as TInterceptorFn).priority === 'number'
-              ? (item as TInterceptorFn).priority!
-              : TInterceptorPriority.INTERCEPTOR,
-          name: (item as TInterceptorFn)._name || item.name || '<anonymous>',
+          priority: meta?.interceptor?.priority ?? TInterceptorPriority.INTERCEPTOR,
+          name: item.name || '<anonymous>',
         })
+      } else if ('handler' in item) {
+        // TInterceptorData (already wrapped)
+        this.interceptors.push(item as TInterceptorData)
       } else {
+        // TInterceptorDef (object with before/after/error)
         this.interceptors.push({
-          handler: item.handler,
-          priority: item.priority,
-          name:
-            item.name ||
-            (item.handler as TInterceptorFn)._name ||
-            item.handler.name ||
-            '<anonymous>',
+          handler: item,
+          priority: item.priority ?? TInterceptorPriority.INTERCEPTOR,
+          name: item._name || '<anonymous>',
         })
       }
     }
@@ -411,9 +413,8 @@ export interface TMoostAdapterOptions<H, T> {
   method: keyof T
   handlers: TMoostHandler<H>[]
   getIterceptorHandler: () => InterceptorHandler | undefined
-  resolveArgs: () => Promise<unknown[]> | unknown[]
-  afterHandlers?: (() => void)[]
-  errorHandlers?: (() => void)[]
+  resolveArgs?: () => Promise<unknown[]> | unknown[]
+  controllerName?: string
   logHandler: (eventName: string) => void
   register: (handler: TMoostHandler<TEmpty>, path: string, args: string[]) => void
 }

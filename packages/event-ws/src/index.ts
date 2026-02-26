@@ -29,4 +29,5 @@ export type {
   TTestWsMessageContext,
 } from '@wooksjs/event-ws'
 export { Param, Controller, Intercept, Description } from 'moost'
-export type { TInterceptorPriority, defineInterceptorFn } from 'moost'
+export type { TInterceptorPriority } from 'moost'
+export { defineBeforeInterceptor, defineAfterInterceptor, defineInterceptor } from 'moost'

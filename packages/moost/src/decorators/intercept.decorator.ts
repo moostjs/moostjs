@@ -1,34 +1,42 @@
-import type { TCallableClassFunction } from '../class-function/types'
-import type { TAny } from '../common-types'
+import type { TAny, TClassConstructor } from '../common-types'
 import { getMoostMate } from '../metadata/moost-metadata'
 
-export type TInterceptorBefore = (reply: (response: TAny) => void) => void | Promise<void>
-export type TInterceptorAfter = (
+export type TInterceptorBeforeFn = (reply: (response: TAny) => void) => void | Promise<void>
+export type TInterceptorAfterFn = (
   response: TAny,
   reply: (response: TAny) => void,
 ) => void | Promise<void>
-export type TInterceptorOnError = (
+export type TInterceptorErrorFn = (
   error: Error,
   reply: (response: TAny) => void,
 ) => void | Promise<void>
-export interface TInterceptorFn {
-  (
-    before: (fn: TInterceptorBefore) => void,
-    after: (fn: TInterceptorAfter) => void,
-    onError: (fn: TInterceptorOnError) => void,
-  ): unknown | Promise<unknown>
+
+/**
+ * Object-based interceptor definition.
+ *
+ * Declares lifecycle hooks directly instead of registering callbacks via init function.
+ *
+ * @example
+ * ```ts
+ * const myInterceptor: TInterceptorDef = {
+ *   before(reply) {
+ *     if (!isAuthenticated()) reply(new HttpError(401))
+ *   },
+ *   after(response, reply) {
+ *     reply(transform(response))
+ *   },
+ *   error(error, reply) {
+ *     reply(formatError(error))
+ *   },
+ * }
+ * ```
+ */
+export interface TInterceptorDef {
+  before?: TInterceptorBeforeFn
+  after?: TInterceptorAfterFn
+  error?: TInterceptorErrorFn
   priority?: TInterceptorPriority
   _name?: string
-  /**
-   * Fast-path handler that runs after handler success, bypassing InterceptorHandler.
-   * When set, this interceptor is extracted from the interceptor pipeline at bind time
-   * and called directly in the cleanup phase.
-   */
-  __afterHandler?: () => void
-  /**
-   * Fast-path handler that runs on handler error, bypassing InterceptorHandler.
-   */
-  __errorHandler?: () => void
 }
 
 export enum TInterceptorPriority {
@@ -48,23 +56,36 @@ export enum TInterceptorPriority {
 /**
  * ## Intercept
  * ### @Decorator
- * Set interceptor
- * @param handler interceptor fn (use defineInterceptorFn)
- * @param priority interceptor priority
- * @returns
+ * Attach an interceptor to a class or method.
+ * @param handler — @Interceptor class constructor or TInterceptorDef object
+ * @param priority — interceptor priority (overrides handler's own priority)
+ * @param name — interceptor name for tracing
  */
 export function Intercept(
-  handler: TCallableClassFunction<TInterceptorFn>,
+  handler: TClassConstructor | TInterceptorDef,
   priority?: TInterceptorPriority,
   name?: string,
 ): ClassDecorator & MethodDecorator {
-  return getMoostMate().decorate(
+  const mate = getMoostMate()
+  if (typeof handler === 'function') {
+    const interceptorMeta = mate.read(handler)
+    return mate.decorate(
+      'interceptors',
+      {
+        handler,
+        priority:
+          priority ?? interceptorMeta?.interceptor?.priority ?? TInterceptorPriority.INTERCEPTOR,
+        name: name || handler.name || '<anonymous>',
+      },
+      true,
+    )
+  }
+  return mate.decorate(
     'interceptors',
     {
       handler,
-      priority:
-        priority || (handler as TInterceptorFn).priority || TInterceptorPriority.INTERCEPTOR,
-      name: name || (handler as TInterceptorFn)._name || handler.name,
+      priority: priority ?? handler.priority ?? TInterceptorPriority.INTERCEPTOR,
+      name: name || handler._name || '<anonymous>',
     },
     true,
   )

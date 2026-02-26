@@ -3,13 +3,14 @@ import { createProvideRegistry } from '@prostojs/infact'
 import { describe, it, expect, beforeAll, vi, afterAll } from 'vitest'
 
 import type { Moost, TMoostAdapter } from '..'
+import { defineBeforeInterceptor } from '../define'
 import { E2eInterceptor, E2eTestMoost, SECRET } from './e2e.artifacts'
 import * as request from './request.artifacts'
 
 describe('moost', () => {
   let moost: Moost
   let moostHttp: MoostHttp
-  const globalInterceptor = vi.fn()
+  const globalInterceptorSpy = vi.fn()
   const e2eInterceptor = vi.fn()
 
   beforeAll(async () => {
@@ -17,7 +18,7 @@ describe('moost', () => {
     moostHttp = new MoostHttp()
     moost.adapter(moostHttp as unknown as TMoostAdapter<any>)
     moost
-      .applyGlobalInterceptors(globalInterceptor)
+      .applyGlobalInterceptors(defineBeforeInterceptor(() => globalInterceptorSpy()))
       .setProvideRegistry(
         createProvideRegistry([E2eInterceptor, () => new E2eInterceptor(e2eInterceptor)]),
       )
@@ -106,7 +107,7 @@ describe('moost', () => {
         await request.get('nestedControllerMethod?value=1') // nested controller
         await request.get('req/nestedControllerMethod?value=1') // nested (FOR_EVENT) controller
       }
-      expect(globalInterceptor).toHaveBeenCalledTimes(times * 3)
+      expect(globalInterceptorSpy).toHaveBeenCalledTimes(times * 3)
     })
     it('must call local interceptor', async () => {
       const response = await request.get('intercept/test')
