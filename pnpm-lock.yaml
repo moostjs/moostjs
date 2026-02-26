@@ -69,6 +69,15 @@ importers:
         specifier: ^8.8.5
         version: 8.8.5
 
+  explorations/minimal:
+    dependencies:
+      '@moostjs/event-http':
+        specifier: workspace:^
+        version: link:../../packages/event-http
+      moost:
+        specifier: workspace:^
+        version: link:../../packages/moost
+
   explorations/swagger-test:
     dependencies:
       '@moostjs/event-http':
@@ -119,7 +128,7 @@ importers:
         version: 0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2)(@wooksjs/event-core@0.7.1)(wooks@0.7.1)
       '@wooksjs/http-static':
         specifier: ^0.7.1
-        version: 0.7.1(@wooksjs/event-http@0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2))
+        version: 0.7.1(@wooksjs/event-http@0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2)(@wooksjs/event-core@0.7.1)(wooks@0.7.1))
       '@wooksjs/ws-client':
         specifier: ^0.7.1
         version: 0.7.1(ws@8.19.0)
@@ -273,9 +282,6 @@ importers:
       '@wooksjs/event-core':
         specifier: ^0.7.1
         version: 0.7.1
-      '@wooksjs/event-http':
-        specifier: ^0.7.1
-        version: 0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2)(@wooksjs/event-core@0.7.1)(wooks@0.7.1)
       '@wooksjs/event-ws':
         specifier: ^0.7.1
         version: 0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2)(@wooksjs/event-core@0.7.1)(wooks@0.7.1)(ws@8.19.0)
@@ -353,7 +359,7 @@ importers:
         version: 0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2)(@wooksjs/event-core@0.7.1)(wooks@0.7.1)
       '@wooksjs/http-static':
         specifier: ^0.7.1
-        version: 0.7.1(@wooksjs/event-http@0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2))
+        version: 0.7.1(@wooksjs/event-http@0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2)(@wooksjs/event-core@0.7.1)(wooks@0.7.1))
       moost:
         specifier: workspace:^
         version: link:../moost
@@ -4412,7 +4418,7 @@ snapshots:
       '@wooksjs/event-core': 0.7.1
       '@wooksjs/event-http': 0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2)(@wooksjs/event-core@0.7.1)(wooks@0.7.1)
 
-  '@wooksjs/http-static@0.7.1(@wooksjs/event-http@0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2))':
+  '@wooksjs/http-static@0.7.1(@wooksjs/event-http@0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2)(@wooksjs/event-core@0.7.1)(wooks@0.7.1))':
     dependencies:
       '@wooksjs/event-http': 0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.2)(@wooksjs/event-core@0.7.1)(wooks@0.7.1)
 

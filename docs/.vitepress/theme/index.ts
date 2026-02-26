@@ -1,15 +1,28 @@
 import DefaultTheme from 'vitepress/theme'
+import { nextTick } from 'vue'
 import HomeLayout from './HomeLayout.vue'
-// import {EventLifecycle} from '../../components/event-lifecycle-diagram.vue'
 import './custom.css'
+
+function colorizeAtscriptAnnotations() {
+    if (typeof window === 'undefined') return
+    const lines = window.document.querySelectorAll('.language-atscript code .line')
+    lines.forEach((line) => {
+        line.querySelectorAll('span').forEach((span) => {
+            if (span.textContent && span.textContent.trim().startsWith('@')) {
+                span.style.color = '#2baac4ff'
+                span.style.fontWeight = '600'
+            }
+        })
+    })
+}
 
 export default {
     extends: DefaultTheme,
-    // enhanceApp({ app }) {
-    //     // register your custom global components
-    //     app.component('EventLifecycle', EventLifecycle)
-    // },
-    // override the Layout with a wrapper component that
-    // injects the slots
     Layout: HomeLayout,
+    enhanceApp({ app }) {
+        app.mixin({
+            mounted() { nextTick(colorizeAtscriptAnnotations) },
+            updated() { nextTick(colorizeAtscriptAnnotations) },
+        })
+    },
 }

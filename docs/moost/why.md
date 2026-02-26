@@ -1,4 +1,8 @@
-# Why Moost?
+# Why Moost over NestJS?
+
+## The Short Version
+
+If you like NestJS's ideas — decorators, DI, structured code — but not its execution, Moost is what you've been looking for. Same principles, half the ceremony, and it works beyond HTTP.
 
 ## The Origin
 

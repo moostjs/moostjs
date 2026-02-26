@@ -1,6 +1,6 @@
 # What is Moost?
 
-Moost is a metadata-driven event processing framework for TypeScript. It wraps [Wooks](https://wooks.moost.org/wooks/what) with a decorator layer — controllers, dependency injection, interceptors, and pipes — so you can build HTTP servers, CLI tools, WebSocket apps, and workflow engines using a single, familiar pattern.
+Moost gives you NestJS-style structure — controllers, dependency injection, interceptors, pipes — without the module system, middleware, or boilerplate. Build HTTP servers, CLI tools, WebSocket apps, and workflow engines through a single decorator-driven pattern, powered by [Wooks](https://wooks.moost.org/wooks/what) composables under the hood.
 
 ## Decorators and Metadata
 

@@ -1,8 +1,9 @@
 import { defineConfig, DefaultTheme } from 'vitepress'
 import { llmstxtPlugin } from 'vitepress-plugin-llmstxt'
+import { atscriptGrammar } from './theme/atscript-grammar'
 // import { configRu } from './config.ru'
 
-const ogDescription = 'Moost is a Metadata Driven Event Processing Framework. Official Documentation Website.'
+const ogDescription = 'Moost — TypeScript framework with NestJS-style decorators and DI, without the modules or middleware. HTTP, WebSocket, CLI, Workflows.'
 const ogImage = 'https://moost.org/og-moost.png'
 const twitterImage = 'https://moost.org/moostjs-small.png'
 const ogTitle = 'Moost'
@@ -15,7 +16,7 @@ const ogUrl = 'https://moost.org'
 export default defineConfig({
     lang: 'en-US',
     title: ' ',
-    description: 'Metadata Driven Event Processing Framework',
+    description: 'TypeScript CHANGED Framework for Structured Apps — NestJS-style decorators and DI without the boilerplate',
 
     ignoreDeadLinks: 'localhostLinks',
 
@@ -53,6 +54,10 @@ export default defineConfig({
         ['meta', { name: 'twitter:image', content: twitterImage }],
         ['meta', { name: 'theme-color', content: '#3d61be' }],
     ],
+
+    markdown: {
+        languages: [atscriptGrammar as any],
+    },
 
     vue: {
         // reactivityTransform: true,
@@ -208,7 +213,7 @@ export default defineConfig({
                             link: '/moost/what',
                         },
                         {
-                            text: 'Why Moost',
+                            text: 'Why Moost over NestJS',
                             link: '/moost/why',
                         },
                         {

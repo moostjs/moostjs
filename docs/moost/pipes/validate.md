@@ -28,7 +28,7 @@ With this setup every request body, query param, or DI value whose type exposes 
 
 ## Example DTO
 
-```ts
+```atscript
 @label "Create User"
 export interface CreateUserDto {
   @label "Display name"

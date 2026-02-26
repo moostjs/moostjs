@@ -15,7 +15,7 @@ html.dark {
     --vp-c-bg-elv-up: #313136;
     --vp-c-bg-elv-down: #1e1e20;
     --vp-c-bg-elv-mute: #313136;
-    --vp-c-bg-soft: #1c3067;
+    --vp-c-bg-soft: #212e51;
     --vp-c-bg-soft-up: var(--vp-code-block-bg); /* feature hover */
     --vp-c-bg-soft-down: #0e1c41;
     --vp-c-bg-soft-mute: #313136;
@@ -27,7 +27,7 @@ html.dark {
     --vp-c-bg-elv: #274080; /* menu */
     --vp-c-bg-elv-mute: #182955; /* menu btn */
 
-    --vp-c-bg-alt: #1c2b59; /* search */
+    --vp-c-bg-alt: #273760; /* search */
 }
 
 img.VPImage.logo {
@@ -131,4 +131,20 @@ a[target="_blank"]:hover:after {
     100% {
         opacity: 1
     }
+}
+
+/* Atscript syntax highlighting */
+.shiki .variable.other.property.atscript {
+    color: #0969da !important;
+}
+html.dark .shiki .variable.other.property.atscript {
+    color: #79c0ff !important;
+}
+.shiki .support.type.primitive.extended.atscript {
+    color: #d73a49 !important;
+    font-style: italic;
+}
+html.dark .shiki .support.type.primitive.extended.atscript {
+    color: #ff79c6 !important;
+    font-style: italic;
 }
