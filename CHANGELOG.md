@@ -1,3 +1,24 @@
+# [0.6.0](https://github.com/moostjs/moostjs/compare/v0.5.33...v0.6.0) (2026-02-26)
+
+
+### Bug Fixes
+
+* fix tsconfig paths, moduleResolution, and missing type:module across workspace ([0e62eab](https://github.com/moostjs/moostjs/commit/0e62eab041d1d3f7caa18ccf85c2380e655ba7e5))
+* minor fixes in vite and swagger ([3e3fb34](https://github.com/moostjs/moostjs/commit/3e3fb34417da91d54dc6f47008c8dfec449c5e34))
+* resolve high severity dependabot alert for minimatch ReDoS (CVE-2026-26996) ([6b67dfe](https://github.com/moostjs/moostjs/commit/6b67dfea5552c707fec3931ea37fd03c11bbb8f8))
+* **swagger:** add 3.1.0 support ([2c2670b](https://github.com/moostjs/moostjs/commit/2c2670b7d39e546ac666213c24dc929b335df21a))
+* **swagger:** add security schemas ([c0d448b](https://github.com/moostjs/moostjs/commit/c0d448b38aa3854be801384c1ca2655301e0b1af))
+
+
+### Performance Improvements
+
+* optimization ([9d2c1a5](https://github.com/moostjs/moostjs/commit/9d2c1a5a3f5c24734f09e1bb18388286ee1f3046))
+* optimization ([942baa2](https://github.com/moostjs/moostjs/commit/942baa26eeb3d5aee02a4bd46d59adee6b06bf82))
+* optimize performance ([fc46478](https://github.com/moostjs/moostjs/commit/fc4647886fb0919dd83dddafe35e0c6ad6ea6a78))
+* optimized ([3e6f392](https://github.com/moostjs/moostjs/commit/3e6f3923ea1e45e3d5b6f801fff9ed8e01d4d534))
+
+
+
 ## [0.5.33](https://github.com/moostjs/moostjs/compare/v0.5.32...v0.5.33) (2025-09-18)
 
 ### Features
