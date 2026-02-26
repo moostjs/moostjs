@@ -82,31 +82,23 @@ export default defineConfig({
         },
 
         nav: [
-            { text: 'Moost', link: '/moost/', activeMatch: '/moost/' },
-            { text: 'Web App', link: '/webapp/', activeMatch: '/webapp/' },
-            { text: 'CLI App', link: '/cliapp/', activeMatch: '/cliapp/' },
-            { text: 'Modules', items: [
-                {
-                    text: '@moostjs/event-http',
-                    link: '/webapp/',
-                },
-                {
-                    text: '@moostjs/event-cli',
-                    link: '/cliapp/',
-                },
-                {
-                    text: '@moostjs/event-wf',
-                    link: '/wf/',
-                },
-                {
-                    text: '@moostjs/swagger',
-                    link: '/swagger/',
-                },
-                {
-                    text: '@atscript/moost-validator',
-                    link: '/validation/',
-                },
-            ] },
+            { text: 'About Moost', link: '/moost/what', activeMatch: '/moost/' },
+            {
+                text: 'Adapters',
+                items: [
+                    { text: 'Web App', link: '/webapp/' },
+                    { text: 'WebSocket', link: '/wsapp/' },
+                    { text: 'CLI App', link: '/cliapp/' },
+                    { text: 'Workflows', link: '/wf/' },
+                ],
+            },
+            {
+                text: 'Modules',
+                items: [
+                    { text: 'Swagger', link: '/swagger/' },
+                    { text: 'Validation', link: '/validation/' },
+                ],
+            },
             // { text: 'Config', link: '/config/', activeMatch: '/config/' },
             // { text: 'Plugins', link: '/plugins/', activeMatch: '/plugins/' },
             {
@@ -209,22 +201,21 @@ export default defineConfig({
             ],
             '/moost/': [
                 {
-                    text: 'Overview',
-                    collapsed: false,
+                    text: 'Moost',
                     items: [
+                        {
+                            text: 'What is Moost',
+                            link: '/moost/what',
+                        },
                         {
                             text: 'Why Moost',
                             link: '/moost/why',
                         },
                         {
-                            text: 'Introduction',
+                            text: 'Moost Flavors',
                             link: '/moost/',
                         },
                     ],
-                }, 
-                {
-                    text: 'Moost Adapters',
-                    link: '/moost/adapters/',
                 },
                 {
                     text: 'Dependency Injection',
@@ -418,6 +409,51 @@ export default defineConfig({
                                     link: '/webapp/adapters/fastify',
                                 },
                             ]
+                        },
+                    ],
+                }],
+            '/wsapp/': [{
+                    text: 'WebSocket Application',
+                    items: [
+                        {
+                            text: 'Quick Start',
+                            link: '/wsapp/',
+                        },
+                        {
+                            text: 'Handlers',
+                            link: '/wsapp/handlers',
+                        },
+                        {
+                            text: 'Routing',
+                            link: '/wsapp/routing',
+                        },
+                        {
+                            text: 'Request Data',
+                            link: '/wsapp/request',
+                        },
+                        {
+                            text: 'Rooms & Broadcasting',
+                            link: '/wsapp/rooms',
+                        },
+                        {
+                            text: 'HTTP Integration',
+                            link: '/wsapp/integration',
+                        },
+                        {
+                            text: 'Error Handling',
+                            link: '/wsapp/errors',
+                        },
+                        {
+                            text: 'Client',
+                            link: '/wsapp/client',
+                        },
+                        {
+                            text: 'Wire Protocol',
+                            link: '/wsapp/protocol',
+                        },
+                        {
+                            text: 'Testing',
+                            link: '/wsapp/testing',
                         },
                     ],
                 }],

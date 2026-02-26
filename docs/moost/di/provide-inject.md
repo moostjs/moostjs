@@ -1,82 +1,98 @@
-# Dependency Substitution and Injection in Moost
+# Dependency Substitution
 
-Moost’s dependency injection (DI) system is highly configurable. Beyond basic injection and providing dependencies via class types or string keys, Moost supports dynamic substitution of classes. This allows you to alter behavior at runtime — replacing certain classes with others — without forcing changes throughout your codebase or configuration.
+Beyond automatic constructor injection, Moost lets you control how dependencies are provided and replace one class with another — useful for testing, feature toggles, and runtime configuration.
 
-## Class and Key-Based Provides
+## @Provide
 
-- **Class-based Provide:**  
-  Use `@Provide(ClassType, factoryFn)` to bind a class type to a specific factory. Consumers only need to reference the class type in their constructor.
-  
-  ```ts
-  @Provide(AnotherDependency, () => new AnotherDependency())
-  class MyClass {
-    constructor(private dep: AnotherDependency) {}
-  }
-  ```
+`@Provide` binds a factory function to a class type or string key. The provided instance propagates down the dependency tree — the class itself and every dependency it creates (directly or transitively) will see this instance when they ask for it. A deeper `@Provide` for the same type overrides the parent one for that subtree.
 
-- **String Key Provide:**  
-  Use `@Provide('some-key', factoryFn)` and `@Inject('some-key')` for cases where multiple instances of the same class or non-class values must be differentiated by keys.
-  
-  ```ts
-  @Provide('instance-a', () => new MyDependency('A'))
-  @Provide('instance-b', () => new MyDependency('B'))
-  class MyClass {
-    constructor(
-      @Inject('instance-a') private depA: MyDependency,
-      @Inject('instance-b') private depB: MyDependency
-    ) {}
-  }
-  ```
+This is what makes `@Provide` different from just calling `new` in a constructor: you're configuring how a dependency resolves for an entire branch of the object graph, not just one consumer.
 
-## Global Provide Registry
-
-You can centralize dependency definitions using the global provide registry instead of placing `@Provide` decorators on classes. This keeps your dependency configuration in one location, making it easier to maintain and update:
+**Class-based** — provide a specific instance for the entire subtree:
 
 ```ts
-app.setProvideRegistry(createProvideRegistry(
-  [AnotherDependency, () => new AnotherDependency()],
-  ['instance-a', () => new MyDependency('A')],
-  ['instance-b', () => new MyDependency('B')]
-));
-```
+import { Provide, Controller } from 'moost'
 
-## Replacing Dependencies
-
-### Replace Registry
-
-A replace registry allows you to override one class with another globally. This is useful when you want to switch to a specialized subclass or a mock implementation without editing every injection point.
-
-```ts
-app.setReplaceRegistry(createReplaceRegistry([BaseClass, ExtendedClass]));
-```
-
-Any class expecting `BaseClass` will now receive an instance of `ExtendedClass`.
-
-### `@Replace` Decorator
-
-For scenarios where you want to declare replacements inline, Moost provides the `@Replace` decorator. Instead of configuring replacements at the application level, you can specify directly on a class which types to override.
-
-**Example:**
-```ts
-import { Replace } from 'moost';
-
-@Replace(BaseClass, ExtendedClass)
-class AnotherClass {
-  // Any injection of BaseClass is now replaced with ExtendedClass
+@Provide(Logger, () => new Logger('api'))
+@Controller('api')
+class ApiController {
+  // ApiController, its dependencies, and their dependencies
+  // all receive this Logger instance when they inject Logger
+  constructor(private userService: UserService) {}
 }
 ```
 
-This is especially helpful for applying localized substitutions in tests, feature toggles, or adjusting a third-party controller’s dependencies when you cannot modify their code directly.
+Here `UserService` and anything `UserService` depends on will all get the `Logger('api')` instance — without any of them knowing about the provide. A different controller could provide `Logger('admin')` and its subtree would get that one instead.
 
-## Practical Guidelines
+**String key** — differentiate multiple instances of the same type:
 
-1. **Choose `@Provide` and `@Inject` Strategies Wisely:**  
-   Use class-type provides whenever possible to simplify usage. Resort to string keys only when multiple variations or non-class values need to be clearly distinguished.
+```ts
+@Provide('primary-db', () => new Database(primaryConfig))
+@Provide('analytics-db', () => new Database(analyticsConfig))
+class ReportController {
+  constructor(
+    @Inject('primary-db') private primary: Database,
+    @Inject('analytics-db') private analytics: Database,
+  ) {}
+}
+```
 
-2. **Maintain a Global Provide Registry for Shared Configuration:**  
-   Keep frequently used dependencies centralized. This makes large-scale refactoring simpler.
+## @Inject
 
-3. **Use Replacements for Flexibility and Testing:**  
-   Whether setting replacements via `app.setReplaceRegistry()` or using `@Replace`, you can easily swap out classes. This approach improves testability, enabling quick injection of mock or specialized classes without modifying consumer logic.
+Explicitly specify which dependency to inject by class type or string key:
 
-By combining these features, Moost’s DI system remains flexible, maintainable, and adaptable. You can configure how dependencies are provided and replaced in a way that supports testing, modularization, and easy evolution as your application’s requirements change.
+```ts
+import { Inject } from 'moost'
+
+class MyController {
+  constructor(@Inject('cache-store') private cache: CacheStore) {}
+}
+```
+
+Use `@Inject` when the constructor parameter type alone isn't enough to identify the dependency — typically with string-keyed provides.
+
+## Global Provide Registry
+
+Instead of scattering `@Provide` across classes, centralize dependency definitions on the app instance:
+
+```ts
+import { createProvideRegistry } from 'moost'
+
+app.setProvideRegistry(createProvideRegistry(
+  [DatabaseConnection, () => new DatabaseConnection(config)],
+  ['cache-store', () => new RedisCache()],
+))
+```
+
+This keeps configuration in one place, making it easier to swap implementations across the whole app.
+
+## @Replace
+
+Override one class with another globally. Every injection point expecting the original class receives the replacement instead.
+
+**Via decorator:**
+
+```ts
+import { Replace } from 'moost'
+
+@Replace(EmailService, MockEmailService)
+class TestController {
+  // EmailService injections now resolve to MockEmailService
+}
+```
+
+**Via registry:**
+
+```ts
+import { createReplaceRegistry } from 'moost'
+
+app.setReplaceRegistry(createReplaceRegistry(
+  [EmailService, MockEmailService],
+  [PaymentGateway, TestPaymentGateway],
+))
+```
+
+This is especially useful for:
+- **Testing** — inject mocks without changing consumer code
+- **Feature toggles** — swap implementations at startup
+- **Third-party controllers** — override dependencies you can't modify directly

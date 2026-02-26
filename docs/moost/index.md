@@ -1,110 +1,169 @@
-# Introduction to Moost
+# Moost Flavors
 
-**Moost** is a next-generation, metadata-driven framework that simplifies building server-side applications for various event sources — HTTP requests, CLI commands, or custom triggers. Inspired by frameworks like [NestJS](https://nestjs.com), Moost adopts a similar decorator-based approach but with fewer layers of complexity, no mandatory modules, and a direct integration with [Wooks](https://wooks.moost.org/wooks/what.html) — a composable, event-driven ecosystem.
+Moost is event-agnostic by design. The core — controllers, DI, interceptors, pipes — works the same regardless of what triggered the event. On top of this core, Moost provides **adapters** for specific event domains, each wrapping the corresponding [Wooks](https://wooks.moost.org/wooks/what) adapter with a decorator layer.
 
-By embracing modern metadata tools, flexible dependency injection (DI), controllers, pipelines, and interceptors, Moost delivers a cleaner, more maintainable codebase with less boilerplate. If you’ve ever been intrigued by NestJS’s style but found it too heavy or wanted to handle more than just HTTP, Moost is designed for you.
+## HTTP
 
-**Not sure if Moost is right for you?** Check out the [Why Moost?](/moost/why) page for insights into its advantages.
+**Package:** `@moostjs/event-http`
 
-## Built on Wooks’ Event-Driven Core
+Build REST APIs and web servers with decorator-based routing, automatic parameter extraction, and the full Wooks HTTP composable set.
 
-At its heart, Moost leverages [Wooks](https://wooks.moost.org/wooks/what.html), an event-driven framework that treats every interaction as an event. This approach decouples the application’s logic from the transport layer and enables Moost to:
-
-- **Handle Various Event Types:** Although Moost fits naturally into an HTTP environment, it’s not restricted to it. Events could be CLI commands, workflow steps, or custom triggers.
-- **Integrate with Other Servers:** Moost can work on top of Wooks adapters for Express, Fastify, h3, or others, ensuring maximal flexibility.
-- **Maintain Consistent Context:** Each event gets its own asynchronous context, so you don’t have to worry about shared state across concurrent requests.
-
-## Metadata and Decorators
-
-Moost uses [`@prostojs/mate`](https://github.com/prostojs/mate) to simplify working with metadata and decorators, making it easy to define the behavior of controllers, handlers, and parameters:
-
-- **Declarative Configuration:** Apply decorators like `@Controller()`, `@Get()`, or `@Param()` directly to your classes and methods.
-- **Custom Decorators:** Create your own decorators to standardize patterns and keep your code DRY.
-
-**Example:**
 ```ts
-import { Get } from '@moostjs/event-http'
-import { Controller, Param } from 'moost'
+import { MoostHttp, Get, Post } from '@moostjs/event-http'
+import { Moost, Controller, Param } from 'moost'
+import { useBody } from '@wooksjs/event-http'
+
+@Controller('api')
+class ApiController {
+  @Get('hello/:name')
+  greet(@Param('name') name: string) {
+    return `Hello, ${name}!`
+  }
+
+  @Post('users')
+  async createUser() {
+    const { parseBody } = useBody()
+    const user = await parseBody<{ name: string }>()
+    return { created: user.name }
+  }
+}
+
+const app = new Moost()
+const http = new MoostHttp()
+app.adapter(http)
+app.registerControllers(ApiController).init()
+http.listen(3000)
+```
+
+Supports Express and Fastify adapters, Swagger generation, static file serving, and reverse proxy.
+
+[Get started with HTTP &rarr;](/webapp/)
+
+## WebSocket
+
+**Package:** `@moostjs/event-ws`
+
+Build real-time WebSocket servers with routed message handlers, rooms, broadcasting, and composable state. Integrates with HTTP for upgrade handling.
+
+```ts
+import { MoostHttp, Upgrade } from '@moostjs/event-http'
+import { MoostWs, Message, Connect, MessageData, ConnectionId } from '@moostjs/event-ws'
+import { Moost, Controller, Param } from 'moost'
+import { useWsRooms } from '@wooksjs/event-ws'
+
+@Controller('chat')
+class ChatController {
+  @Connect()
+  onConnect(@ConnectionId() id: string) {
+    console.log(`Connected: ${id}`)
+  }
+
+  @Message('message', ':room')
+  onMessage(@Param('room') room: string, @MessageData() data: { text: string }) {
+    const { broadcast } = useWsRooms()
+    broadcast('message', { from: room, text: data.text })
+  }
+}
+
+const app = new Moost()
+const http = new MoostHttp()
+const ws = new MoostWs({ httpApp: http.getHttpApp() })
+app.adapter(http).adapter(ws)
+app.registerControllers(ChatController).init()
+http.listen(3000)
+```
+
+Available composables: `useWsConnection()`, `useWsMessage()`, `useWsRooms()`, `useWsServer()`. HTTP composables work transparently via the upgrade request context.
+
+[Get started with WebSocket &rarr;](/wsapp/)
+
+## CLI
+
+**Package:** `@moostjs/event-cli`
+
+Build command-line applications with decorator-based command routing, typed options, and auto-generated help.
+
+```ts
+import { MoostCli, Cli, CliOption } from '@moostjs/event-cli'
+import { Moost, Controller, Param } from 'moost'
 
 @Controller()
-export class AppController {
-    @Get('hello/:name')
-    greet(@Param('name') name: string) {
-        return `Hello, ${name}!`
-    }
+class DeployController {
+  @Cli('deploy/:env')
+  deploy(
+    @Param('env') env: string,
+    @CliOption('verbose', 'v', { description: 'Verbose output' }) verbose: boolean,
+  ) {
+    return `Deploying to ${env}${verbose ? ' (verbose)' : ''}...`
+  }
+}
+
+const app = new Moost()
+app.adapter(new MoostCli())
+app.registerControllers(DeployController).init()
+```
+
+Commands use the same route-style patterns as HTTP. Options are parsed automatically. Help output is generated from decorator metadata.
+
+[Get started with CLI &rarr;](/cliapp/)
+
+## Workflows
+
+**Package:** `@moostjs/event-wf`
+
+Build multi-step pipelines with decorator-based step definitions, state management, pause/resume support, and conditional branching.
+
+```ts
+import { MoostWf, WfStep, WfFlow, WfInput } from '@moostjs/event-wf'
+import { Moost, Controller } from 'moost'
+import { useWfState } from '@wooksjs/event-wf'
+
+@Controller()
+class ApprovalWorkflow {
+  @WfStep('review')
+  @WfInput('approval')
+  review() {
+    const { ctx, input } = useWfState()
+    ctx<{ approved: boolean }>().approved = input<boolean>() ?? false
+  }
+
+  @WfFlow('approval-process', [
+    'validate',
+    'review',
+    { condition: 'approved', steps: ['notify-success'] },
+    { condition: '!approved', steps: ['notify-rejection'] },
+  ])
+  approvalFlow() {}
 }
 ```
-**Learn more:**  
-- [Metadata in Moost](/moost/meta/)
 
-## Dependency Injection Without Modules
+Workflows are **interruptible** — when a step needs input, the workflow pauses and returns serializable state. Resume it later with the input, minutes or days later.
 
-Instead of forcing a module-centric architecture, Moost leverages [`@prostojs/infact`](https://github.com/prostojs/infact) for dependency injection:
+[Get started with Workflows &rarr;](/wf/)
 
-- **`@Injectable()` Classes:** Mark classes as injectable to let Moost manage their lifecycle.
-- **Global and Scoped DI:** Choose between singletons, per-event instances, or other scopes.  
-- **Provide and Inject:** Use `@Provide()` and `@Inject()` decorators or global registries to easily supply and consume dependencies.
-- **Replace Registry:** Seamlessly swap implementations (e.g., mocks in testing, specialized subclasses in production) without changing consumer code.
+## Multiple Adapters
 
-**Learn more:**  
-- [Dependency Injection (DI)](/moost/di/index)
+Moost supports registering multiple adapters at once. Each adapter operates independently — controllers are registered once and each adapter picks up only the decorators it understands:
 
-## Controllers for Organized Event Handling
+```ts
+import { Moost, Controller, Param } from 'moost'
+import { MoostHttp, Get } from '@moostjs/event-http'
+import { MoostCli, Cli } from '@moostjs/event-cli'
 
-Controllers group and route events logically:
+@Controller()
+class AppController {
+  @Get('status')
+  httpStatus() { return { ok: true } }
 
-- **Route Prefixes:** `@Controller('api')` creates a namespace for related endpoints.
-- **Nested Controllers:** Import and chain controllers for complex applications.
-- **Event Scopes:** Use `@Injectable('FOR_EVENT')` to get fresh controller instances per event.
+  @Cli('status')
+  cliStatus() { return 'OK' }
+}
 
-**Learn more:**  
-- [Controllers](/moost/controllers)
+const app = new Moost()
+app.adapter(new MoostHttp()).adapter(new MoostCli())
+app.registerControllers(AppController).init()
+```
 
-## Pipelines and Resolvers
+## Custom Adapters
 
-Moost’s pipeline system processes data before it reaches your handlers:
-
-- **Resolve Pipeline:** Automatically extract route params, parse input, and inject dependencies as handler arguments.
-- **Validation Pipeline:** Validate data (for example, with Atscript-powered schemas) to ensure your handlers receive clean, type-safe input.
-- **Custom Resolvers:** Encapsulate logic that transforms or fetches data, simplifying repetitive tasks.
-
-**Learn more:**  
-- [Introduction to Pipelines](/moost/pipes/)
-- [Resolve Pipe](/moost/pipes/resolve)
-- [Validation Pipe](/moost/pipes/validate)
-- [Custom Pipes](/moost/pipes/custom)
-
-## Interceptors for Cross-Cutting Concerns
-
-Interceptors wrap your handlers with pre- and post-processing logic:
-
-- **Before/After/Error Hooks:** Modify requests, responses, or handle errors centrally.
-- **Priorities:** Control the order in which interceptors run (e.g., run auth checks before logging).
-- **Class or Functional:** Define interceptors as DI-integrated classes or simple functions.
-
-**Learn more:**  
-- [Interceptors](/moost/interceptors)
-
-## Advanced Logging and Observability
-
-Moost integrates smoothly with advanced logging and tracing tools:
-
-- **Event-Aware Logging:** Tag logs per event, improving debugging.
-- **Observability with Opentelemetry:** Insert spans and traces without custom boilerplate.
-
-**Learn more:**  
-- [Logging in Moost](/moost/logging)
-- [Opentelemetry Integration](/moost/otel)
-
-## Why Choose Moost?
-
-- **Less Complexity, More Clarity:** Moost reduces the layers found in some frameworks, making it easier to learn and maintain.
-- **Not Just HTTP:** Moost handles various events, adapting to multiple backends and scenarios.
-- **Declarative and Type-Safe:** Decorators, metadata, and DI patterns keep your code concise, explicit, and robust.
-- **Easy Testing and Mocking:** Replace dependencies without rewriting code, run handlers independently, and test with confidence.
-
-For a deeper look at why Moost might be the right choice, see [Why Moost?](/moost/why).
-
-## Putting It All Together
-
-Moost’s approach — metadata-driven, composable, and event-agnostic — offers you a powerful yet streamlined toolset. By understanding its key components (Wooks integration, DI, controllers, pipelines, interceptors, and logging), you can build scalable, maintainable, and testable applications that evolve with your requirements.
+You can build your own adapter for any event-driven scenario — job queues, message brokers, custom protocols. All adapters implement the `TMoostAdapter` interface and share the same controller, DI, interceptor, and pipe infrastructure.

@@ -1,7 +1,6 @@
 import { createProvideRegistry } from '@prostojs/infact'
 import type { TWooksWsOptions } from '@wooksjs/event-ws'
 import { createWsApp, WooksWs } from '@wooksjs/event-ws'
-import type { WooksHttp } from '@wooksjs/event-http'
 import type { Moost, TConsoleBase, TMoostAdapter, TMoostAdapterOptions } from 'moost'
 import { defineMoostEventHandler } from 'moost'
 
@@ -34,7 +33,7 @@ const LOGGER_TITLE = 'moost-ws'
  * ### HTTP-integrated mode (recommended)
  * ```ts
  * |  import { MoostHttp, Upgrade } from '@moostjs/event-http'
- * |  import { MoostWs, Message, WsData } from '@moostjs/event-ws'
+ * |  import { MoostWs, Message, MessageData } from '@moostjs/event-ws'
  * |  import { Moost, Param, Controller, Injectable } from 'moost'
  * |
  * |  @Controller()
@@ -48,7 +47,7 @@ const LOGGER_TITLE = 'moost-ws'
  * |  @Controller('chat')
  * |  class ChatController {
  * |      @Message('message', 'rooms/:roomId')
- * |      onMessage(@Param('roomId') roomId: string, @WsData() data: unknown) {
+ * |      onMessage(@Param('roomId') roomId: string, @MessageData() data: unknown) {
  * |          return { received: true, roomId }
  * |      }
  * |  }
@@ -75,7 +74,7 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
        * When provided, the WS adapter shares the HTTP server.
        * Use @Upgrade() decorator on a handler method to register the upgrade route.
        */
-      httpApp?: WooksHttp | { getHttpApp(): WooksHttp }
+      httpApp?: { getHttpApp(): unknown } | object
     },
   ) {
     const wsOpts = opts?.wooksWs
@@ -85,9 +84,9 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
       const httpApp =
         opts?.httpApp && 'getHttpApp' in opts.httpApp
           ? opts.httpApp.getHttpApp()
-          : (opts?.httpApp as WooksHttp | undefined)
+          : opts?.httpApp
       if (httpApp) {
-        this.wsApp = createWsApp(httpApp, wsOpts || {})
+        this.wsApp = createWsApp(httpApp as Parameters<typeof createWsApp>[0], wsOpts || {})
       } else {
         this.wsApp = createWsApp(wsOpts || {})
       }

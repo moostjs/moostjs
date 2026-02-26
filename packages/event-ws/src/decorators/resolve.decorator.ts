@@ -2,61 +2,61 @@ import { useWsConnection, useWsMessage } from '@wooksjs/event-ws'
 import { Resolve } from 'moost'
 
 /**
- * Get the parsed WebSocket message data.
- * Only available in message handlers (@OnMessage).
+ * Get the parsed WebSocket message payload.
+ * Only available in message handlers (@Message).
  * @decorator
  * @paramType T
  */
-export function WsData() {
+export function MessageData() {
   return Resolve(() => useWsMessage().data, 'ws_data')
 }
 
 /**
  * Get the raw WebSocket message (Buffer or string before parsing).
- * Only available in message handlers (@OnMessage).
+ * Only available in message handlers (@Message).
  * @decorator
  * @paramType Buffer | string
  */
-export function WsRawMessage() {
+export function RawMessage() {
   return Resolve(() => useWsMessage().raw, 'ws_raw')
 }
 
 /**
  * Get the WebSocket message correlation ID.
- * Only available in message handlers (@OnMessage).
+ * Only available in message handlers (@Message).
  * @decorator
  * @paramType string | number | undefined
  */
-export function WsMessageId() {
+export function MessageId() {
   return Resolve(() => useWsMessage().id, 'ws_message_id')
 }
 
 /**
  * Get the WebSocket message event type.
- * Only available in message handlers (@OnMessage).
+ * Only available in message handlers (@Message).
  * @decorator
  * @paramType string
  */
-export function WsEvent() {
+export function MessageType() {
   return Resolve(() => useWsMessage().event, 'ws_event')
 }
 
 /**
  * Get the WebSocket message path.
- * Only available in message handlers (@OnMessage).
+ * Only available in message handlers (@Message).
  * @decorator
  * @paramType string
  */
-export function WsPath() {
+export function MessagePath() {
   return Resolve(() => useWsMessage().path, 'ws_path')
 }
 
 /**
  * Get the WebSocket connection ID (UUID).
- * Available in all WS handlers (@OnMessage, @OnConnect, @OnDisconnect).
+ * Available in all WS handlers (@Message, @Connect, @Disconnect).
  * @decorator
  * @paramType string
  */
-export function WsConnectionId() {
+export function ConnectionId() {
   return Resolve(() => useWsConnection().id, 'ws_connection_id')
 }

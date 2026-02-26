@@ -51,7 +51,6 @@
   "peerDependencies": {
     "@prostojs/infact": "^0.4.0",
     "@wooksjs/event-core": "^0.7.1",
-    "@wooksjs/event-http": "^0.7.1",
     "moost": "workspace:^"
   }
 }

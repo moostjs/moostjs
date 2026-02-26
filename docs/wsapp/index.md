@@ -1,5 +1,9 @@
 # Quick Start
 
+::: warning Experimental
+This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
+:::
+
 This guide shows you how to build a WebSocket application with Moost.
 
 `@moostjs/event-ws` wraps [`@wooksjs/event-ws`](https://wooks.moost.org/wsapp/) and brings
@@ -23,18 +27,18 @@ npm install @moostjs/event-ws @moostjs/event-http
 The quickest way to get a WebSocket server running. All incoming connections are accepted automatically — no HTTP server or upgrade route is needed.
 
 ```ts
-import { WsApp, Message, WsData, WsConnectionId, Connect } from '@moostjs/event-ws'
+import { WsApp, Message, MessageData, ConnectionId, Connect } from '@moostjs/event-ws'
 import { Controller } from 'moost'
 
 @Controller()
 class ChatController {
   @Connect()
-  onConnect(@WsConnectionId() id: string) {
+  onConnect(@ConnectionId() id: string) {
     console.log(`Connected: ${id}`)
   }
 
   @Message('echo', '/echo')
-  echo(@WsData() data: unknown) {
+  echo(@MessageData() data: unknown) {
     return data // replies to the client
   }
 }
@@ -98,7 +102,7 @@ export class AppController {
 ### chat.controller.ts
 
 ```ts
-import { Message, WsData, WsConnectionId, useWsRooms } from '@moostjs/event-ws'
+import { Message, MessageData, ConnectionId, useWsRooms } from '@moostjs/event-ws'
 import { Controller, Param } from 'moost'
 
 @Controller('chat')
@@ -106,8 +110,8 @@ export class ChatController {
   @Message('join', ':room')
   join(
     @Param('room') room: string,
-    @WsConnectionId() id: string,
-    @WsData() data: { name: string },
+    @ConnectionId() id: string,
+    @MessageData() data: { name: string },
   ) {
     const { join, broadcast } = useWsRooms()
     join()
@@ -116,7 +120,7 @@ export class ChatController {
   }
 
   @Message('message', ':room')
-  onMessage(@WsData() data: { from: string; text: string }) {
+  onMessage(@MessageData() data: { from: string; text: string }) {
     const { broadcast } = useWsRooms()
     broadcast('message', data)
   }

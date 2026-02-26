@@ -1,28 +1,33 @@
 # Why Moost?
 
-Moost emerged from a desire to simplify server-side development — especially after experiencing the heaviness of frameworks like [NestJS](https://nestjs.com). While NestJS’s decorators and ecosystem are impressive, its mandatory modules, multi-layered architecture, and opaque metadata system can feel cumbersome, particularly for projects where agility and clarity are paramount.
+## The Origin
 
-**Key Motivations Behind Moost:**
+We liked what NestJS did for Node.js — decorators, dependency injection, a structured approach to building servers. But the execution felt heavy. Modules wrapping modules. Providers arrays that repeat the same class in three places. A metadata system that's hard to extend. And the whole thing locked to HTTP, with awkward workarounds for anything else.
 
-1. **Less Boilerplate, More Productivity:**  
-   In NestJS, defining even a simple endpoint can involve creating modules, providers, and controllers. Moost streamlines this process by eliminating unnecessary layers. Its design lets you focus on what matters most — your application’s logic — without the overhead of modules and extensive boilerplate.
+[Wooks](https://wooks.moost.org/wooks/what) solved the composable side — typed, per-event data without middleware. But it was still a functional framework: plain functions, no DI, no decorator-driven structure. The natural next step was: **what if you could have NestJS-style decorators and DI on top of Wooks, without the complexity?**
 
-2. **Intuitive Decorators and Metadata:**  
-   NestJS’s metadata model can be hard to customize. Moost leverages [`@prostojs/mate`](https://github.com/prostojs/mate) for a TypeScript-friendly approach, making it straightforward to create and extend decorators. You can implement new features quickly without diving deep into low-level metadata details.
+## The Design Decisions
 
-3. **A Leaner Dependency Injection Model:**  
-   Instead of forcing your code into a module-centric DI structure, Moost offers a global instance registry powered by [`@prostojs/infact`](https://github.com/prostojs/infact). This design reduces cognitive load: you register instances once, and Moost takes care of providing them when needed. No more juggling multiple files or mental overhead just to inject a service.
+### No modules
 
-4. **Composables Over Middleware:**  
-   Many frameworks rely on complex middleware chains that run behind the scenes. Moost, however, builds on [Wooks](https://wooks.moost.org) and its concept of [composables](https://wooks.moost.org/wooks/what.html#what-are-composables) — small, focused functions that interact with the event context. Composables let you tap into and manipulate request state on-demand. This makes it easier to:
-   - Inject logic exactly where it’s needed.
-   - Build custom decorators that read or modify event data without global side effects.
-   - Keep performance high by only enabling features when required.
+NestJS requires you to organize code into modules — each declaring its imports, exports, providers, and controllers. For large apps this adds structure, but for most projects it adds ceremony. Moost has no module concept. You register controllers directly and the DI container resolves dependencies globally. Less indirection, fewer files, faster onboarding.
 
-   By using composables rather than rigid middleware stacks, Moost empowers you to structure your application as a collection of lightweight, reusable, and easily testable functions.
+### Composables over middleware
 
-5. **SOLID Principles Without Extra Complexity:**  
-   Both NestJS and Moost encourage building applications that respect SOLID principles — clean boundaries, dependency injection, and separation of concerns. Moost allows you to apply these principles more directly, without wrestling with modules or layered configurations. By focusing on simplicity, Moost enables you to write code that’s cleaner, clearer, and easier to maintain.
+Traditional frameworks parse headers, cookies, and body in middleware — before your handler runs, whether it needs the data or not. Moost inherits Wooks' composable model: call `useRequest()`, `useCookies()`, or `useBody()` inside your handler and get typed data on demand. Nothing runs until you ask for it.
 
-**In Essence:**  
-Moost was created to keep the best parts of NestJS’s decorator-driven, type-safe approach — such as familiar syntax, strong typing, and a rich ecosystem — while discarding the complexities that can bog you down. If you’ve ever wanted the power of decorators, DI, and SOLID principles without the baggage of layered modules and hidden complexity, Moost provides a direct, composable, and flexible path forward.
+### Decorators that work
+
+Moost uses [`@prostojs/mate`](https://github.com/prostojs/mate) for metadata — a typed, extensible system where creating a custom decorator is a few lines of code. You don't need to understand `Reflect.metadata` internals or write boilerplate adapter layers. Decorators read and write typed metadata, and the framework consumes it at init time.
+
+### One framework, many event types
+
+HTTP, CLI, WebSocket, and workflows share the same core: controllers, DI, interceptors, pipes. Write an auth guard once and apply it to an HTTP endpoint, a WebSocket message handler, and a CLI command. Adapters handle the transport differences — your business logic stays the same.
+
+### SOLID without the weight
+
+Both Moost and NestJS encourage clean architecture — dependency injection, separation of concerns, single responsibility. The difference is how much scaffolding you need. Moost lets you apply these principles directly, without module hierarchies or provider registration rituals.
+
+## When to use Moost
+
+Moost fits when you want NestJS-style structure — decorators, DI, interceptors — without the module system and boilerplate. It's a good choice when your app handles multiple event types (HTTP + CLI, HTTP + WebSocket), when you want composable access to event data, or when you value TypeScript ergonomics and explicit code over framework magic.
