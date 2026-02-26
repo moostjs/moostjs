@@ -18,9 +18,8 @@ const rw = new ProstoRewrite({
     'Dockerfile',
     '*config',
     '.gitignore',
-    '.eslintrc.json',
-    '.prettierignore',
-    '.prettierrc',
+    '.oxlintrc.json',
+    '.oxfmtrc.json',
   ],
 })
 const root = process.cwd()
@@ -38,28 +37,32 @@ export async function scaffold(data: TPrompts) {
   } else {
     mkdirSync(projectDir)
   }
-  const templatePath = join(__dirname, '../templates', data.type)
+  const templatePath = join(__dirname, '../templates', data.type === 'ws' ? 'ws' : data.type)
   const commonPath = join(__dirname, '../templates/common')
   const wfPath = join(__dirname, '../templates/wf')
+  const wsAddonPath = join(__dirname, '../templates/ws-addon')
 
   const context: Record<string, unknown> = { ...data, version }
 
   const excludeCommon: string[] = []
 
-  if (!data.domelint) {
-    excludeCommon.push('.domelintrc.yml')
+  if (!data.oxc) {
+    excludeCommon.push('.oxlintrc.json')
+    excludeCommon.push('.oxfmtrc.json')
+  }
+
+  const renameFile = (filename: string) => {
+    if (filename.endsWith('.jsonc')) {
+      return filename.replace(/c$/, '')
+    }
+    return filename
   }
 
   await rw.rewriteDir(
     {
       baseDir: templatePath,
       output: projectDir,
-      renameFile(filename) {
-        if (filename.endsWith('.jsonc')) {
-          return filename.replace(/c$/, '')
-        }
-        return filename
-      },
+      renameFile,
     },
     context,
   )
@@ -68,26 +71,26 @@ export async function scaffold(data: TPrompts) {
       baseDir: commonPath,
       output: projectDir,
       exclude: excludeCommon,
-      renameFile(filename) {
-        if (filename.endsWith('.jsonc')) {
-          return filename.replace(/c$/, '')
-        }
-        return filename
-      },
+      renameFile,
     },
     context,
   )
-  if (data.wf) {
+  if (data.wf && data.type === 'http') {
     await rw.rewriteDir(
       {
         baseDir: wfPath,
         output: projectDir,
-        renameFile(filename) {
-          if (filename.endsWith('.jsonc')) {
-            return filename.replace(/c$/, '')
-          }
-          return filename
-        },
+        renameFile,
+      },
+      context,
+    )
+  }
+  if (data.ws && data.type === 'http') {
+    await rw.rewriteDir(
+      {
+        baseDir: wsAddonPath,
+        output: projectDir,
+        renameFile,
       },
       context,
     )

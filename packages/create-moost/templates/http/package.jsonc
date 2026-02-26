@@ -5,31 +5,38 @@
   "main": "dist/main.js",
   "type": "module",
   "scripts": {
-//=IF (domelint)
-    "postinstall": "npx do-me-lint",
-//=END IF
     "dev": "vite dev",
     "build": "vite build",
+//=IF (oxc)
+    "lint": "oxlint",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+//=END IF
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-//=IF (type === 'http')
     "@moostjs/event-http": "^{{ version }}",
+//=IF (ws)
+    "@moostjs/event-ws": "^{{ version }}",
 //=END IF
 //=IF (wf)
     "@moostjs/event-wf": "^{{ version }}",
-    "@wooksjs/http-static": "^0.6.0",
+    "@wooksjs/http-static": "^0.7.1",
 //=END IF
     "moost": "^{{ version }}"
   },
   "devDependencies": {
     "@moostjs/vite": "^{{ version }}",
     "@types/node": "^22.10.2",
+//=IF (oxc)
+    "oxlint": "^1.49.0",
+    "oxfmt": "^0.34.0",
+//=END IF
     "typescript": "^5.7.2",
-    "unplugin-swc": "^1.5.1",
-    "vite": "^6.1.0"
+    "unplugin-swc": "^1.5.9",
+    "vite": "^7.0.0"
   }
 }

@@ -1,0 +1,54 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["import", "typescript"],
+  "env": {
+    "es2021": true,
+    "node": true
+  },
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "ignorePatterns": ["node_modules", "dist"],
+  "rules": {
+    "no-unused-vars": "off",
+    "no-use-before-define": "off",
+    "no-inline-comments": "off",
+    "no-warning-comments": "off",
+    "no-negated-condition": "off",
+    "no-shadow": "off",
+
+    "eqeqeq": "error",
+    "prefer-const": "error",
+    "prefer-template": "error",
+    "no-var": "error",
+    "curly": "error",
+    "no-self-compare": "error",
+    "no-template-curly-in-string": "error",
+    "array-callback-return": "error",
+
+    "import/first": "error",
+    "import/no-duplicates": "error",
+    "import/no-self-import": "error",
+    "import/no-default-export": "error",
+    "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
+
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-extraneous-class": "off",
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-non-null-assertion": "warn",
+
+    "max-params": ["warn", { "max": 4 }],
+    "complexity": "off",
+    "max-lines-per-function": "off",
+    "max-statements": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.config.*"],
+      "rules": {
+        "import/no-default-export": "off"
+      }
+    }
+  ]
+}

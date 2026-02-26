@@ -60,7 +60,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
 
   constructor(httpApp?: WooksHttp | TWooksHttpOptions) {
     WooksHttpResponse.registerFramework({
-      image: 'https://moost.org/moost-full-logo.png',
+      image: 'https://moost.org/moost-full-logo.svg',
       link: 'https://moost.org/',
       poweredBy: 'moostjs',
       version: __VERSION__,

@@ -24,14 +24,16 @@ class Commands extends CliApp {
       name,
       http: !!useCliOption('http'),
       cli: !!useCliOption('cli'),
+      ws: !!useCliOption('ws'),
       wf: !!useCliOption('wf'),
-      domelint: !!useCliOption('domelint'),
+      oxc: !!useCliOption('oxc'),
       force: !!useCliOption('force'),
     })
 
     console.log('\nScaffolding a new project...')
     await scaffold(prompts)
     const cli = prompts.type === 'cli'
+    const ws = prompts.type === 'ws'
     return `
 ${__DYE_WHITE_BRIGHT__ + __DYE_BOLD__}Success! ${__DYE_BOLD_OFF__}Your new "${
       prompts.projectName
@@ -52,10 +54,10 @@ ${
 `
     : ''
 }
-${cli ? '4' : '3'}. Start the development server:
+${cli ? '4' : '3'}. ${ws ? 'Build and start' : 'Start the development server'}:
    ${__DYE_CYAN__}npm run dev${cli ? ' -- hello World' : ''}${__DYE_COLOR_OFF__}
 
-${__DYE_GREEN__}You're all set! The development server will help you in building your application.
+${__DYE_GREEN__}You're all set!${ws ? '' : ' The development server will help you in building your application.'}
 Enjoy coding, and build something amazing!${__DYE_COLOR_OFF__}
 `
   }
@@ -66,10 +68,11 @@ export function run() {
     .useOptions([
       { keys: ['http'], description: 'Use Moost HTTP', type: Boolean },
       { keys: ['cli'], description: 'Use Moost CLI', type: Boolean },
+      { keys: ['ws'], description: 'Use Moost WebSocket', type: Boolean },
       { keys: ['wf'], description: 'Add Workflow Adapter', type: Boolean },
       {
-        keys: ['domelint'],
-        description: 'Add do-me-lint (smart eslint installer)',
+        keys: ['oxc'],
+        description: 'Add OXC lint and formatter (oxlint + oxfmt)',
         type: Boolean,
       },
       { keys: ['force'], description: 'Force Overwrite', type: Boolean },

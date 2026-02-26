@@ -11,6 +11,7 @@ import SnippetCli from './snippets/domain-cli.md'
 import SnippetWf from './snippets/domain-wf.md'
 import SnippetDtoNestJS from './snippets/dto-nestjs.md'
 import SnippetDtoMoost from './snippets/dto-moost.md'
+import EventFlowBg from './EventFlowBg.vue'
 
 const { Layout } = DefaultTheme
 const { frontmatter } = useData()
@@ -103,14 +104,15 @@ const features = [
 <template>
     <Layout>
         <template #home-hero-before>
-            <div class="VPHero">
+            <div class="VPHero" style=" overflow: visible;">
                 <div
                     class="container"
-                    style="display: flex; flex-direction: column"
+                    style="display: flex; flex-direction: column; position: relative; overflow: visible;"
                 >
+                <EventFlowBg />
                     <div class="main">
                         <img
-                            src="/moost-full-logo.png"
+                            src="/moost-full-logo.svg"
                             alt="Moost"
                             style="width: 400px; margin-bottom: 32px"
                         />
@@ -248,6 +250,8 @@ const features = [
 
 <style scoped>
 .VPHero {
+    position: relative;
+    overflow: hidden;
     margin-top: calc(
         (var(--vp-nav-height) + var(--vp-layout-top-height, 0px)) * -1
     );
@@ -453,10 +457,10 @@ const features = [
     border-color: var(--vp-c-brand);
     box-shadow: 0 8px 24px rgba(87, 127, 230, 0.12);
 }
-:global(.dark) .feature-card:hover,
+/* :global(.dark) .feature-card:hover,
 html.dark .feature-card:hover {
     box-shadow: 0 8px 24px rgba(87, 127, 230, 0.2);
-}
+} */
 @keyframes feature-fade-in {
     from {
         opacity: 0;
@@ -669,11 +673,11 @@ html.dark .comparison-block :deep(.file-sep) {
     box-shadow: 0 0 40px rgba(87, 127, 230, 0.2), 0 0 80px rgba(87, 127, 230, 0.1);
     border-color: rgba(87, 127, 230, 0.3);
 }
-:global(.dark) .moost-block,
+/* :global(.dark) .moost-block,
 html.dark .moost-block {
     box-shadow: 0 0 40px rgba(255, 39, 155, 0.25), 0 0 80px rgba(255, 39, 155, 0.15);
     border-color: rgba(255, 39, 155, 0.4);
-}
+} */
 
 /* ---- Tabbed Domain Showcase ---- */
 .showcase-section {
@@ -731,10 +735,10 @@ html.dark .moost-block {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-:global(.dark) .tab-back-card,
+/* :global(.dark) .tab-back-card,
 html.dark .tab-back-card {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
+} */
 .tab-content {
     position: relative;
     border-radius: 12px;
@@ -744,10 +748,12 @@ html.dark .tab-back-card {
     background: var(--vp-c-bg);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
-:global(.dark) .tab-content,
+
+/* :global(.dark) .tab-content,
 html.dark .tab-content {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.2);
-}
+} */
+
 .tab-content :deep(div[class*="language-"]) {
     margin: 0;
     border-radius: 0;

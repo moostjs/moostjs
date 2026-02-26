@@ -46,11 +46,15 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
         {
           name: 'type',
           type: () => {
-            if (inputs.cli && !inputs.http) {
+            if (inputs.ws && !inputs.cli && !inputs.http) {
+              predefined.type = 'ws'
+              return null
+            }
+            if (inputs.cli && !inputs.http && !inputs.ws) {
               predefined.type = 'cli'
               return null
             }
-            if (!inputs.cli && inputs.http) {
+            if (inputs.http && !inputs.cli && !inputs.ws) {
               predefined.type = 'http'
               return null
             }
@@ -59,6 +63,7 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
           message: 'Moost Adapter:',
           choices: [
             { title: 'HTTP (Web) Application', value: 'http' },
+            { title: 'WebSocket Application', value: 'ws' },
             { title: 'CLI Application', value: 'cli' },
           ],
         },
@@ -70,18 +75,37 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
           validate: (dir: string) => isValidPackageName(dir) || 'Invalid package.json name',
         },
         {
+          name: 'ws',
+          type: (prev, values) => {
+            const type = values.type || predefined.type
+            if (type !== 'http' || inputs.ws) {
+              return null
+            }
+            return 'toggle'
+          },
+          message: 'Add WebSockets?',
+          initial: false,
+          active: 'Yes',
+          inactive: 'No',
+        },
+        {
           name: 'wf',
-          type: (prev, values) =>
-            inputs.wf || values.type === 'cli' || inputs.cli ? null : 'toggle',
+          type: (prev, values) => {
+            const type = values.type || predefined.type
+            if (inputs.wf || type === 'cli' || type === 'ws') {
+              return null
+            }
+            return 'toggle'
+          },
           message: 'Add Moost Workflows Example?',
           initial: false,
           active: 'Yes',
           inactive: 'No',
         },
         {
-          name: 'domelint',
-          type: () => (inputs.domelint ? null : 'toggle'),
-          message: 'Add do-me-lint (smart eslint installer)?',
+          name: 'oxc',
+          type: () => (inputs.oxc ? null : 'toggle'),
+          message: 'Add OXC lint and formatter (oxlint + oxfmt)?',
           initial: false,
           active: 'Yes',
           inactive: 'No',

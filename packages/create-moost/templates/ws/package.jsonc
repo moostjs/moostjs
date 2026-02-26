@@ -4,15 +4,8 @@
   "description": "",
   "main": "dist/main.js",
   "type": "module",
-  "bin": {
-    "{{ packageName }}": "./bin.js"
-  },
-  "files": [
-    "dist",
-    "bin.js"
-  ],
   "scripts": {
-    "dev": "pnpm build && node ./dist/main.js",
+    "dev": "npm run build && node ./dist/main.js",
     "build": "rolldown build -c rolldown.config.ts",
 //=IF (oxc)
     "lint": "oxlint",
@@ -25,7 +18,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@moostjs/event-cli": "^{{ version }}"
+    "@moostjs/event-ws": "^{{ version }}",
+    "moost": "^{{ version }}"
   },
   "devDependencies": {
 //=IF (oxc)
