@@ -187,7 +187,10 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         handlerType: handler.type,
       })
 
-      const routerBinding = this.httpApp.on(handler.method, targetPath, fn)
+      const routerBinding =
+        handler.method === 'UPGRADE'
+          ? this.httpApp.upgrade(targetPath, fn)
+          : this.httpApp.on(handler.method, targetPath, fn)
       const { getPath: pathBuilder } = routerBinding
       const methodMeta =
         getMoostMate().read(opts.fakeInstance, opts.method as string) || ({} as TMoostMetadata)

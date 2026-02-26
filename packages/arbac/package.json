@@ -48,6 +48,7 @@
     "vitest": "3.2.4"
   },
   "peerDependencies": {
+    "@wooksjs/event-core": "^0.7.1",
     "@wooksjs/event-http": "^0.7.1",
     "moost": "workspace:^"
   }

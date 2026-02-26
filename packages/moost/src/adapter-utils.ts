@@ -148,7 +148,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         )
       } catch (error) {
         if (options.logErrors) {
-          logger.error(error)
+          logger.error(error as string)
         }
         response = error
         return endWithResponse(true)
