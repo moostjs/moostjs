@@ -78,6 +78,28 @@ Supported transports: `bearer`, `basic`, `apiKey` (header/query/cookie), `cookie
 
 ## [Official Documentation](https://moost.org/webapp/)
 
+## AI Agent Skills
+
+This package ships skills for AI coding agents (Claude Code, Cursor, Windsurf, Codex, OpenCode). After installing `@moostjs/event-http`, set up the skills:
+
+```bash
+# Project-local (recommended — version-locked, commits with your repo)
+npx moostjs-event-http-skill
+
+# Global (available across all your projects)
+npx moostjs-event-http-skill --global
+```
+
+To auto-install skills on `npm install`, add to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "postinstall": "moostjs-event-http-skill --postinstall"
+  }
+}
+```
+
 ## Contributing
 
 We are excited to welcome contributors who are passionate about improving Moostjs. No matter your level of experience, your unique perspective and skills can make valuable contributions to our growing community.

@@ -1,4 +1,4 @@
-import { ContextInjector, replaceContextInjector } from '@wooksjs/event-core'
+import { ContextInjector, replaceContextInjector, resetContextInjector } from '@wooksjs/event-core'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { TInterceptorDef } from './decorators'
@@ -26,16 +26,14 @@ function createSpyCi() {
 describe('InterceptorHandler', () => {
   describe('fireAfter', () => {
     let spyCi: ReturnType<typeof createSpyCi>
-    let originalCi: ContextInjector<string>
 
     beforeEach(() => {
-      originalCi = new ContextInjector()
       spyCi = createSpyCi()
       replaceContextInjector(spyCi as unknown as ContextInjector<string>)
     })
 
     afterEach(() => {
-      replaceContextInjector(originalCi)
+      resetContextInjector()
     })
 
     it('must use stage "onError" when response is an Error', async () => {

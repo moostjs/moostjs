@@ -1,7 +1,5 @@
-import type { TMoostMetadata } from 'moost'
+import type { TEmpty, TMoostMetadata } from 'moost'
 import { getMoostMate } from 'moost'
-
-import type { TEmpty } from '../common-types'
 
 /**
  * ## Define WebSocket Message Handler

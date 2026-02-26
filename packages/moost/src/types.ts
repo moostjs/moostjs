@@ -1,6 +1,7 @@
 import type { TEmpty, TFunction } from './common-types'
 import type { TMoostHandler, TMoostMetadata } from './metadata'
 
+/** Summary of a registered controller, its metadata, prefix, and handlers. */
 export interface TControllerOverview {
   meta: TMoostMetadata
   computedPrefix: string
@@ -8,6 +9,7 @@ export interface TControllerOverview {
   handlers: THandlerOverview[]
 }
 
+/** Summary of a registered handler method within a controller. */
 export interface THandlerOverview {
   meta: TMoostMetadata
   path?: string
@@ -17,6 +19,7 @@ export interface THandlerOverview {
   registeredAs: { path: string; args: string[] }[]
 }
 
+/** Hook points in the event handler lifecycle where context injectors are invoked. */
 export type TContextInjectorHook =
   | 'Event:start'
   | 'Interceptors:init'

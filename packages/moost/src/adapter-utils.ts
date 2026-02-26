@@ -5,8 +5,10 @@ import { current, defineWook, getContextInjector, useLogger } from '@wooksjs/eve
 import { setControllerContext } from './composables'
 import type { InterceptorHandler } from './interceptor-handler'
 import { getMoostInfact } from './metadata'
+import { isThenable } from './shared-utils'
 import type { TContextInjectorHook } from './types'
 
+/** Options passed to init/end hooks during the event handler lifecycle. */
 export interface TMoostEventHandlerHookOptions<T> {
   scopeId: string
   logger: Logger
@@ -17,6 +19,7 @@ export interface TMoostEventHandlerHookOptions<T> {
   reply: (r: unknown) => void
 }
 
+/** Configuration for `defineMoostEventHandler`, describing how to resolve and invoke a handler. */
 export interface TMoostEventHandlerOptions<T> {
   contextType?: string | string[]
   loggerTitle: string
@@ -36,14 +39,6 @@ export interface TMoostEventHandlerOptions<T> {
   handlerType: string
 }
 
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    value !== null &&
-    value !== undefined &&
-    typeof (value as PromiseLike<unknown>).then === 'function'
-  )
-}
-
 // Monotonic scope ID counter — avoids randomUUID() crypto overhead.
 // On overflow, increment alphabetic prefix and reset counter.
 let _scopeChar = 'a'
@@ -60,6 +55,7 @@ function nextScopeId(): string {
 /** Composable returning the moost scope ID for the current event. Generates on first call, caches for subsequent calls. */
 export const useScopeId = defineWook(() => nextScopeId())
 
+/** Registers a DI scope for the given ID and returns an unscope function. */
 export function registerEventScope(scopeId: string) {
   const infact = getMoostInfact()
   infact.registerScope(scopeId)
@@ -68,6 +64,11 @@ export function registerEventScope(scopeId: string) {
   }
 }
 
+/**
+ * Creates the complete event handler lifecycle processor used by adapters.
+ * Handles scope registration, controller resolution, interceptors, argument resolution,
+ * handler invocation, and cleanup — optimised for sync-first execution.
+ */
 export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>) {
   const ci = getContextInjector<TContextInjectorHook>()
   // Pre-compute strings used in ci.with() to avoid per-request template literal creation
@@ -135,13 +136,15 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           options.controllerMethod || ('' as keyof T),
           options.targetPath,
         )
-        ci.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
+        ci?.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
       }
 
       interceptorHandler = options.getIterceptorHandler() as InterceptorHandler | undefined
       if (interceptorHandler?.count) {
         try {
-          const initResult = ci.with('Interceptors:before', () => interceptorHandler?.before())
+          const initResult = ci
+            ? ci.with('Interceptors:before', () => interceptorHandler?.before())
+            : interceptorHandler?.before()
           if (isThenable(initResult)) {
             return (initResult as PromiseLike<unknown>).then((r) => {
               response = r
@@ -172,7 +175,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       let args: unknown[] = []
       if (options.resolveArgs) {
         try {
-          const argsResult = ci.with('Arguments:resolve', () => options.resolveArgs?.())
+          const argsResult = ci
+            ? ci.with('Arguments:resolve', () => options.resolveArgs?.())
+            : options.resolveArgs?.()
           if (isThenable(argsResult)) {
             return (argsResult as PromiseLike<unknown>).then((a) => {
               args = a as unknown[]
@@ -200,7 +205,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           ? () => (instance[options.controllerMethod as keyof T] as unknown as (...a: unknown[]) => unknown)(...args)
           : undefined
       try {
-        const handlerResult = ci.with(handlerSpanName, handlerAttrs, () => invoke?.())
+        const handlerResult = ci
+          ? ci.with(handlerSpanName, handlerAttrs, () => invoke?.())
+          : invoke?.()
         if (isThenable(handlerResult)) {
           return (handlerResult as PromiseLike<unknown>).then(
             (r) => {
@@ -242,9 +249,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     function cleanup(): unknown {
       // fire after interceptors
       if (interceptorHandler?.countAfter || interceptorHandler?.countOnError) {
-        const afterResult = ci.with('Interceptors:after', () =>
-          interceptorHandler?.fireAfter(response),
-        )
+        const afterResult = ci
+          ? ci.with('Interceptors:after', () => interceptorHandler?.fireAfter(response))
+          : interceptorHandler?.fireAfter(response)
         if (isThenable(afterResult)) {
           return (afterResult as PromiseLike<unknown>).then(
             (r) => {

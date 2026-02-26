@@ -4,6 +4,7 @@ import type { TMoostMetadata, Mate, TMateParamMeta } from 'moost'
 import type { TFunction } from './common-types'
 import type { TSwaggerSchema } from './mapping'
 
+/** Returns the shared `Mate` instance extended with Swagger/OpenAPI metadata fields. */
 export function getSwaggerMate(): Mate<
   TMoostMetadata &
     TSwaggerMate & {
@@ -17,6 +18,7 @@ export function getSwaggerMate(): Mate<
   return getMoostMate<TSwaggerMate, TSwaggerMate>()
 }
 
+/** Swagger/OpenAPI metadata fields attached to classes and methods by swagger decorators. */
 export interface TSwaggerMate {
   swaggerTags: string[]
   swaggerExclude: boolean
@@ -47,12 +49,14 @@ export interface TSwaggerMate {
   swaggerExternalDocs?: TSwaggerExternalDocs
 }
 
+/** A type reference for OpenAPI schema generation — class, schema object, or array wrapper. */
 export type TSwaggerConfigType =
   | TFunction
   | { toJsonSchema?: () => unknown }
   | TSwaggerSchema
   | [TSwaggerConfigType]
 
+/** Describes a single response header in the OpenAPI spec. */
 export interface TSwaggerResponseHeader {
   description?: string
   required?: boolean
@@ -68,8 +72,10 @@ interface TSwaggerResponseConfig {
   headers?: Record<string, TSwaggerResponseHeader>
 }
 
+/** Options accepted by `@SwaggerResponse` — either a bare schema type or a full config. */
 export type TSwaggerResponseOpts = TSwaggerConfigType | TSwaggerResponseConfig
 
+/** External documentation link for an OpenAPI operation. */
 export interface TSwaggerExternalDocs {
   url: string
   description?: string
@@ -77,6 +83,7 @@ export interface TSwaggerExternalDocs {
 
 // --- Link types (OpenAPI 3.0 links) ---
 
+/** Configuration for an OpenAPI 3.0 link object on a response. */
 export interface TSwaggerLinkConfig {
   /** Status code this link applies to. 0 = use default for the HTTP method. */
   statusCode: number
@@ -100,6 +107,7 @@ export interface TSwaggerLinkConfig {
 
 // --- Callback types (OpenAPI 3.0 callbacks) ---
 
+/** Configuration for an OpenAPI 3.0 callback (webhook) on an operation. */
 export interface TSwaggerCallbackConfig {
   /** Callback name (key in the operation's `callbacks` object). */
   name: string
@@ -121,8 +129,10 @@ export interface TSwaggerCallbackConfig {
 
 // --- Security scheme types (OpenAPI 3.0) ---
 
+/** OpenAPI security requirement — maps scheme name to required scopes. */
 export type TSwaggerSecurityRequirement = Record<string, string[]>
 
+/** OpenAPI HTTP security scheme (e.g. bearer, basic). */
 export interface TSwaggerSecuritySchemeHttp {
   type: 'http'
   scheme: string
@@ -130,6 +140,7 @@ export interface TSwaggerSecuritySchemeHttp {
   description?: string
 }
 
+/** OpenAPI API key security scheme. */
 export interface TSwaggerSecuritySchemeApiKey {
   type: 'apiKey'
   in: 'header' | 'query' | 'cookie'
@@ -137,6 +148,7 @@ export interface TSwaggerSecuritySchemeApiKey {
   description?: string
 }
 
+/** Configuration for a single OAuth2 flow. */
 export interface TSwaggerSecuritySchemeOAuth2Flow {
   authorizationUrl?: string
   tokenUrl?: string
@@ -144,6 +156,7 @@ export interface TSwaggerSecuritySchemeOAuth2Flow {
   scopes: Record<string, string>
 }
 
+/** OpenAPI OAuth2 security scheme with one or more flows. */
 export interface TSwaggerSecuritySchemeOAuth2 {
   type: 'oauth2'
   flows: {
@@ -155,12 +168,14 @@ export interface TSwaggerSecuritySchemeOAuth2 {
   description?: string
 }
 
+/** OpenAPI OpenID Connect security scheme. */
 export interface TSwaggerSecuritySchemeOpenIdConnect {
   type: 'openIdConnect'
   openIdConnectUrl: string
   description?: string
 }
 
+/** Union of all supported OpenAPI security scheme types. */
 export type TSwaggerSecurityScheme =
   | TSwaggerSecuritySchemeHttp
   | TSwaggerSecuritySchemeApiKey

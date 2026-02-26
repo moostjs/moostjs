@@ -15,6 +15,15 @@ pnpm add @moostjs/event-wf
 ```
 :::
 
+### AI Agent Skills (Optional)
+
+Give your AI coding agent (Claude Code, Cursor, etc.) deep knowledge of the workflow API:
+
+```bash
+npx moostjs-event-wf-skill        # project-local
+npx moostjs-event-wf-skill --global # global
+```
+
 ## Define a Workflow Controller
 
 Create a controller with a workflow entry point and its steps:

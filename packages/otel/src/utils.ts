@@ -1,12 +1,14 @@
 import type { Span, SpanOptions } from '@opentelemetry/api'
 import { context, SpanStatusCode, trace } from '@opentelemetry/api'
 
+/** Callback invoked after span execution for enrichment. When provided, you must call `span.end()` yourself. */
 export type TPostSpanProcessFn<T> = (
   span: Span,
   exception: Error | undefined,
   result: Awaited<T> | undefined,
 ) => void
 
+/** Input for creating a new span with `withSpan()`. */
 export interface TSpanInput {
   name: string
   options?: SpanOptions

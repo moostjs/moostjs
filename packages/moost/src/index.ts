@@ -1,6 +1,7 @@
 export * from './adapter-utils'
 export { getInstanceOwnMethods, getInstanceOwnProps } from './binding/utils'
-export type { TClassConstructor } from './common-types'
+export type { TAny, TAnyFn, TClassConstructor, TEmpty, TFunction, TLogger, TObject, TPrimitives } from './common-types'
+export { isThenable, mergeSorted } from './shared-utils'
 
 export * from './moost'
 export * from './decorators'
@@ -22,6 +23,7 @@ export {
   ContextInjector,
   getContextInjector,
   replaceContextInjector,
+  resetContextInjector,
 } from '@wooksjs/event-core'
 export type { TProvideRegistry } from '@prostojs/infact'
 export { createProvideRegistry, createReplaceRegistry } from '@prostojs/infact'

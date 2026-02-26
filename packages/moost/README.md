@@ -28,6 +28,27 @@ Here's what sets Moost apart from NestJS:
 
 ## [Official Documentation](https://moost.org/)
 
+## AI Agent Skills
+
+This package ships with AI agent skills that provide context-aware documentation to AI coding assistants (Claude Code, Cursor, Windsurf, Codex, OpenCode).
+
+```bash
+# Project-local (recommended — version-locked, commits with your repo)
+npx moost-skill
+
+# Global (available across all your projects)
+npx moost-skill --global
+```
+
+To auto-install on `npm install`, add to your `package.json`:
+```json
+{
+  "scripts": {
+    "postinstall": "moost-skill --postinstall"
+  }
+}
+```
+
 ## Contributing
 
 We are excited to welcome contributors who are passionate about improving Moostjs. No matter your level of experience, your unique perspective and skills can make valuable contributions to our growing community.

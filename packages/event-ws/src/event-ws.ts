@@ -4,17 +4,21 @@ import { createWsApp, WooksWs } from '@wooksjs/event-ws'
 import type { Moost, TConsoleBase, TMoostAdapter, TMoostAdapterOptions } from 'moost'
 import { defineMoostEventHandler } from 'moost'
 
+/** Handler metadata for routed WebSocket message events. */
 export interface TWsMessageHandlerMeta {
   event: string
   path: string
 }
 
+/** Handler metadata for WebSocket connection events. */
 export interface TWsConnectHandlerMeta {
   // no extra fields
 }
 
+/** Union of all WebSocket handler metadata types. */
 export type TWsHandlerMeta = TWsMessageHandlerMeta | TWsConnectHandlerMeta
 
+/** Configuration options for the MoostWs adapter. */
 export interface TMoostWsOpts {
   /**
    * WooksWs options or instance

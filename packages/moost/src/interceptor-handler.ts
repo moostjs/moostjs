@@ -6,22 +6,20 @@ import type {
   TInterceptorErrorFn,
 } from './decorators'
 import type { TInterceptorDefFactory } from './decorators/interceptor.decorator'
+import { isThenable } from './shared-utils'
 
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    value !== null &&
-    value !== undefined &&
-    typeof (value as PromiseLike<unknown>).then === 'function'
-  )
-}
-
+/** Entry for a single interceptor in the handler chain. */
 export interface TInterceptorEntry {
   handler: TInterceptorDef | TInterceptorDefFactory
   name: string
-  /** Pre-computed span name for ci.with() — avoids per-request template literal. */
-  spanName?: string
+  /** Pre-computed span name for ci.with(). */
+  spanName: string
 }
 
+/**
+ * Manages the before/after/error interceptor lifecycle for a single event.
+ * Optimised for the common sync path — only allocates promises when an interceptor goes async.
+ */
 export class InterceptorHandler {
   constructor(protected handlers: TInterceptorEntry[]) {}
 
@@ -71,12 +69,14 @@ export class InterceptorHandler {
       (this.onError ??= []).unshift({ name: entry.name, fn: def.error })
     }
     if (def.before) {
-      const spanName = entry.spanName || `Interceptor:${entry.name}`
-      const result = ci.with(
-        spanName,
-        { 'moost.interceptor.stage': 'before' },
-        () => def.before?.(this.getReplyFn()),
-      )
+      const spanName = entry.spanName
+      const result = ci
+        ? ci.with(
+            spanName,
+            { 'moost.interceptor.stage': 'before' },
+            () => def.before?.(this.getReplyFn()),
+          )
+        : def.before(this.getReplyFn())
       if (isThenable(result)) {
         return result
       }
@@ -92,13 +92,8 @@ export class InterceptorHandler {
       const { handler } = entry
 
       if (typeof handler === 'function') {
-        const spanName = entry.spanName || `Interceptor:${entry.name}`
-        // Factory: call to produce a TInterceptorDef
-        const factoryResult = ci.with(
-          spanName,
-          { 'moost.interceptor.stage': 'before' },
-          handler,
-        )
+        // Factory: call to produce a TInterceptorDef (instantiation + arg resolution spans are inside)
+        const factoryResult = handler()
         if (isThenable(factoryResult)) {
           return this._beforeAsyncFactory(ci, factoryResult as PromiseLike<TInterceptorDef>, i)
         }
@@ -159,15 +154,10 @@ export class InterceptorHandler {
     for (let i = startIndex; i < this.handlers.length; i++) {
       const entry = this.handlers[i]
       const { handler } = entry
-      const spanName = entry.spanName || `Interceptor:${entry.name}`
 
       let def: TInterceptorDef
       if (typeof handler === 'function') {
-        def = (await ci.with(
-          spanName,
-          { 'moost.interceptor.stage': 'before' },
-          handler,
-        )) as TInterceptorDef
+        def = (await handler()) as TInterceptorDef
       } else {
         def = handler
       }
@@ -193,11 +183,13 @@ export class InterceptorHandler {
     const stage = isError ? 'onError' : 'after'
     for (let i = 0; i < handlers.length; i++) {
       const { name, fn } = handlers[i]
-      const result = ci.with(
-        `Interceptor:${name}`,
-        { 'moost.interceptor.stage': stage },
-        () => fn(response as Error & unknown, this.getReplyFn()),
-      )
+      const result = ci
+        ? ci.with(
+            `Interceptor:${name}`,
+            { 'moost.interceptor.stage': stage },
+            () => fn(response as Error & unknown, this.getReplyFn()),
+          )
+        : fn(response as Error & unknown, this.getReplyFn())
       if (isThenable(result)) {
         return this._fireAfterAsync(
           { ci, handlers, stage, response },
@@ -222,11 +214,15 @@ export class InterceptorHandler {
     await pending
     for (let i = startIndex + 1; i < ctx.handlers.length; i++) {
       const { name, fn } = ctx.handlers[i]
-      await ctx.ci.with(
-        `Interceptor:${name}`,
-        { 'moost.interceptor.stage': ctx.stage },
-        () => fn(ctx.response as Error & unknown, this.getReplyFn()),
-      )
+      if (ctx.ci) {
+        await ctx.ci.with(
+          `Interceptor:${name}`,
+          { 'moost.interceptor.stage': ctx.stage },
+          () => fn(ctx.response as Error & unknown, this.getReplyFn()),
+        )
+      } else {
+        await fn(ctx.response as Error & unknown, this.getReplyFn())
+      }
     }
     return this.response
   }

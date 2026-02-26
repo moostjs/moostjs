@@ -11,6 +11,7 @@ import { jsonToYaml } from './json-to-yaml'
 import { mapToSwaggerSpec } from './mapping'
 import type { TSwaggerOptions } from './mapping'
 
+/** Serves the Swagger UI, spec.json, and spec.yaml under the `/api-docs` route prefix. */
 @SwaggerExclude()
 @Controller('api-docs')
 export class SwaggerController {

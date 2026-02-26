@@ -8,9 +8,8 @@ import {
   useUrlParams,
 } from '@wooksjs/event-http'
 import { useBody } from '@wooksjs/http-body'
+import type { TObject } from 'moost'
 import { getMoostMate, Resolve } from 'moost'
-
-import type { TObject } from '../common-types'
 
 function createHook<T>(getter: () => T, setter: (v: T) => void): { value: T } {
   return new Proxy({} as { value: T }, {
@@ -298,13 +297,20 @@ export function RawBody() {
   return Resolve(() => useBody().rawBody(), 'body')
 }
 
+/** Reactive hook for reading/writing the response status code. */
 export interface TStatusHook {
   value: number
 }
+
+/** Reactive hook for reading/writing a response header value. */
 export interface THeaderHook {
   value: string | string[] | undefined
 }
+
+/** Partial cookie attributes (all optional). */
 export type TCookieAttributes = Partial<TCookieAttributesRequired>
+
+/** Reactive hook for reading/writing a response cookie. */
 export interface TCookieHook {
   value: string
   attrs?: TCookieAttributes

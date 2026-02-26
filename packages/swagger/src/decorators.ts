@@ -153,6 +153,7 @@ export function SwaggerSecurityAll(requirement: TSwaggerSecurityRequirement) {
 
 // --- Link types & decorator ---
 
+/** Options for the `@SwaggerLink` decorator — identifies the target operation and parameter mapping. */
 export interface TSwaggerLinkOptions {
   /** Target by explicit operationId string. */
   operationId?: string
@@ -232,6 +233,7 @@ export function SwaggerLink(
 
 // --- Callback types & decorator ---
 
+/** Options for the `@SwaggerCallback` decorator — describes a webhook your server sends. */
 export interface TSwaggerCallbackOptions {
   /** Runtime expression for the callback URL (e.g. `'{$request.body#/callbackUrl}'`). */
   expression: string

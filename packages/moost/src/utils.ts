@@ -1,25 +1,20 @@
+import { getContextInjector } from '@wooksjs/event-core'
+
 import { getInstanceOwnMethods } from './binding/utils'
 import type { TAny, TClassConstructor, TObject } from './common-types'
-import { setInterceptResult, setOvertake, useControllerContext } from './composables'
+import { setInterceptResult, setOvertake } from './composables'
 import type { TInterceptorDef, TInterceptorDefFactory } from './decorators'
 import { InterceptorHandler } from './interceptor-handler'
 import type { TInterceptorEntry } from './interceptor-handler'
 import type { TInterceptorData, TMoostMetadata, TMoostParamsMetadata } from './metadata'
 import { getMoostInfact, getMoostMate } from './metadata'
 import type { TPipeData } from './pipes'
-import { runPipes } from './pipes/run-pipes'
+import { resolveArguments } from './resolve-arguments'
+import { isThenable, mergeSorted } from './shared-utils'
 
 const mate = getMoostMate()
 
 const noInterceptors = () => undefined
-
-function isThenable(value: unknown): value is PromiseLike<unknown> {
-  return (
-    value !== null &&
-    value !== undefined &&
-    typeof (value as PromiseLike<unknown>).then === 'function'
-  )
-}
 
 interface TInterceptorMethods {
   before?: string
@@ -55,44 +50,23 @@ function buildMethodResolver(opts: {
   for (const p of methodMeta.params || ([] as TMoostParamsMetadata[])) {
     argsPipes.push({
       meta: p,
-      pipes: [...opts.pipes, ...(p.pipes || [])].toSorted((a, b) => a.priority - b.priority),
+      pipes: mergeSorted(opts.pipes, p.pipes),
     })
   }
   if (argsPipes.length === 0) {
     return undefined
   }
-  return () => {
-    const args: unknown[] = []
-    let hasAsync = false
-    for (let i = 0; i < argsPipes.length; i++) {
-      const { pipes: paramPipes, meta: paramMeta } = argsPipes[i]
-      const result = runPipes(
-        paramPipes,
-        undefined,
-        {
-          classMeta: opts.classMeta,
-          methodMeta,
-          paramMeta,
-          type: opts.handler,
-          key: opts.methodName,
-          index: i,
-          targetMeta: paramMeta,
-          instantiate: <T extends TObject>(t: TClassConstructor<T>) =>
-            useControllerContext().instantiate(t),
-        },
-        'PARAM',
-      )
-      if (!hasAsync && isThenable(result)) {
-        hasAsync = true
-      }
-      args[i] = result
-    }
-    return hasAsync ? Promise.all(args) : args
-  }
+  return resolveArguments(argsPipes, {
+    classMeta: opts.classMeta,
+    methodMeta,
+    type: opts.handler,
+    key: opts.methodName,
+  })
 }
 
 function callWithArgs(instance: TObject, methodName: string, resolveArgs: TArgsResolver) {
-  const args = resolveArgs()
+  const ci = getContextInjector<string>()
+  const args = ci ? ci.with('Arguments:resolve', resolveArgs) : resolveArgs()
   if (isThenable(args)) {
     return (args as Promise<unknown[]>).then((a) =>
       (instance[methodName as keyof TObject] as TAny)(...a),
@@ -201,9 +175,7 @@ export function getIterceptorHandlerFactory(
 
     const classMeta = interceptorMeta as TMoostMetadata
     const methods = findInterceptorMethods(handler as TClassConstructor)
-    const mergedPipes = [...(pipes || []), ...(classMeta.pipes || [])].toSorted(
-      (a, b) => a.priority - b.priority,
-    )
+    const mergedPipes = mergeSorted(pipes, classMeta.pipes)
 
     const resolvers: Record<string, TArgsResolver | undefined> = {}
     for (const hook of ['before', 'after', 'error'] as const) {

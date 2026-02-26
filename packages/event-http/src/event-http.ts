@@ -20,6 +20,7 @@ import type {
 import { defineMoostEventHandler, getMoostMate } from 'moost'
 import type { ListenOptions } from 'net'
 
+/** Handler metadata for HTTP events, carrying the HTTP method and route path. */
 export interface THttpHandlerMeta {
   method: string
   path: string

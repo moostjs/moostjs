@@ -102,6 +102,7 @@ export default defineConfig({
                 items: [
                     { text: 'Swagger', link: '/swagger/' },
                     { text: 'Validation', link: '/validation/' },
+                    { text: 'OpenTelemetry', link: '/otel/' },
                 ],
             },
             // { text: 'Config', link: '/config/', activeMatch: '/config/' },
@@ -180,6 +181,18 @@ export default defineConfig({
                         { text: 'Security', link: '/swagger/security' },
                         { text: 'Links & Callbacks', link: '/swagger/links-callbacks' },
                         { text: 'Serving the UI', link: '/swagger/serving-ui' },
+                    ],
+                },
+            ],
+            '/otel/': [
+                {
+                    text: '@moostjs/otel',
+                    items: [
+                        { text: 'Overview', link: '/otel/' },
+                        { text: 'Setup & Configuration', link: '/otel/setup' },
+                        { text: 'Automatic Spans', link: '/otel/spans' },
+                        { text: 'Composables', link: '/otel/composables' },
+                        { text: 'Metrics', link: '/otel/metrics' },
                     ],
                 },
             ],

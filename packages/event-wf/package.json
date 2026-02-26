@@ -21,8 +21,13 @@
     "url": "git+https://github.com/moostjs/moostjs.git",
     "directory": "packages/event-wf"
   },
+  "bin": {
+    "moostjs-event-wf-skill": "./scripts/setup-skills.js"
+  },
   "files": [
-    "dist"
+    "dist",
+    "skills",
+    "scripts/setup-skills.js"
   ],
   "type": "module",
   "sideEffects": false,
@@ -39,11 +44,12 @@
   },
   "scripts": {
     "pub": "pnpm publish --access public",
-    "test": "vitest"
+    "test": "vitest",
+    "setup-skills": "node ./scripts/setup-skills.js"
   },
   "dependencies": {
     "@prostojs/wf": "^0.0.18",
-    "@wooksjs/event-wf": "^0.7.1"
+    "@wooksjs/event-wf": "^0.7.3"
   },
   "devDependencies": {
     "vitest": "3.2.4"
@@ -51,8 +57,8 @@
   "peerDependencies": {
     "@prostojs/infact": "^0.4.1",
     "@prostojs/mate": "^0.4.0",
-    "@wooksjs/event-core": "^0.7.1",
+    "@wooksjs/event-core": "^0.7.3",
     "moost": "workspace:^",
-    "wooks": "^0.7.1"
+    "wooks": "^0.7.3"
   }
 }

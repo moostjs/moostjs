@@ -1,17 +1,17 @@
 import type { TWooksCliOptions } from '@wooksjs/event-cli'
 import { cliKind, createCliApp, WooksCli } from '@wooksjs/event-cli'
 import { current } from '@wooksjs/event-core'
-import type { Moost, TMoostAdapter, TMoostAdapterOptions, TMoostParamsMetadata } from 'moost'
+import type { Moost, TFunction, TMoostAdapter, TMoostAdapterOptions, TMoostParamsMetadata } from 'moost'
 import { defineMoostEventHandler, setInfactLoggingOptions } from 'moost'
-
-import type { TFunction } from './common-types'
 import type { TCliClassMeta } from './meta-types'
 import { getCliMate } from './meta-types'
 
+/** Handler metadata for CLI events, carrying the command path. */
 export interface TCliHandlerMeta {
   path: string
 }
 
+/** Configuration options for the MoostCli adapter. */
 export interface TMoostCliOpts {
   /**
    * WooksCli options or instance

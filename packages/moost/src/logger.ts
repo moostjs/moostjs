@@ -19,6 +19,7 @@ export function getDefaultLogger(topic: string) {
     : defaultLogger
 }
 
+/** Creates a new `ProstoLogger` instance with sensible defaults (level 4, colored console). */
 export function createLogger(opts?: Partial<TProstoLoggerOptions>): ProstoLogger {
   return new ProstoLogger({
     ...opts,
@@ -27,6 +28,7 @@ export function createLogger(opts?: Partial<TProstoLoggerOptions>): ProstoLogger
   })
 }
 
+/** Default colored console transport used by Moost loggers. */
 export const loggerConsoleTransport = createConsoleTransort({
   format: coloredConsole,
 })

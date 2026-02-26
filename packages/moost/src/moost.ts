@@ -20,6 +20,7 @@ import { getMoostInfact } from './metadata/infact'
 import { sharedPipes } from './pipes/shared-pipes'
 import type { TPipeData, TPipeFn } from './pipes/types'
 import { TPipePriority } from './pipes/types'
+import { mergeSorted } from './shared-utils'
 import type { TControllerOverview } from './types'
 import { getIterceptorHandlerFactory } from './utils'
 
@@ -211,9 +212,7 @@ export class Moost extends Hookable {
     const infact = getMoostInfact()
     const isControllerConsructor = isConstructor(controller)
 
-    const pipes = [...this.pipes, ...(classMeta?.pipes || [])].toSorted(
-      (a, b) => a.priority - b.priority,
-    )
+    const pipes = mergeSorted(this.pipes, classMeta?.pipes)
     let instance: TObject | undefined
     const infactOpts = { provide, replace, customData: { pipes } }
     if (
@@ -313,12 +312,8 @@ export class Moost extends Hookable {
     if (!this.globalInterceptorHandler) {
       const mate = getMoostMate()
       const thisMeta = mate.read(this)
-      const pipes = [...(this.pipes || []), ...(thisMeta?.pipes || [])].toSorted(
-        (a, b) => a.priority - b.priority,
-      )
-      const interceptors = [...this.interceptors, ...(thisMeta?.interceptors || [])].toSorted(
-        (a, b) => a.priority - b.priority,
-      )
+      const pipes = mergeSorted(this.pipes, thisMeta?.pipes)
+      const interceptors = mergeSorted(this.interceptors, thisMeta?.interceptors)
       this.globalInterceptorHandler = getIterceptorHandlerFactory(
         interceptors,
         () => this as unknown as TObject,

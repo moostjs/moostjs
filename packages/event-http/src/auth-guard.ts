@@ -18,26 +18,31 @@ import {
 
 // --- Transport declaration types ---
 
+/** Bearer token transport configuration for auth guards. */
 export interface TAuthTransportBearer {
   format?: string
   description?: string
 }
 
+/** Basic auth transport configuration for auth guards. */
 export interface TAuthTransportBasic {
   description?: string
 }
 
+/** API key transport configuration specifying location (header, query, or cookie). */
 export interface TAuthTransportApiKey {
   name: string
   in: 'header' | 'query' | 'cookie'
   description?: string
 }
 
+/** Cookie-based auth transport configuration. */
 export interface TAuthTransportCookie {
   name: string
   description?: string
 }
 
+/** Declares which auth credential transports a guard accepts. */
 export interface TAuthTransportDeclaration {
   bearer?: TAuthTransportBearer
   basic?: TAuthTransportBasic
@@ -47,6 +52,7 @@ export interface TAuthTransportDeclaration {
 
 // --- Extracted transport values (type-narrowed) ---
 
+/** Type-narrowed credential values extracted from declared transports. */
 export type TAuthTransportValues<T extends TAuthTransportDeclaration> = {
   [K in keyof T & keyof TAuthTransportDeclaration]: K extends 'basic'
     ? { username: string; password: string }
@@ -55,6 +61,7 @@ export type TAuthTransportValues<T extends TAuthTransportDeclaration> = {
 
 // --- Transport extraction ---
 
+/** Extracts auth credentials from the current request based on transport declarations. Throws 401 if none found. */
 export function extractTransports<T extends TAuthTransportDeclaration>(
   declaration: T,
 ): TAuthTransportValues<T> {
@@ -135,6 +142,11 @@ export type TAuthGuardClass = TClassConstructor<AuthGuard> & {
 /** Accepted handler for Authenticate — either a functional or class-based auth guard. */
 export type TAuthGuardHandler = TAuthGuardDef | TAuthGuardClass
 
+/**
+ * Creates a functional auth guard interceptor.
+ * Extracts credentials from declared transports and passes them to the handler.
+ * Return a value from the handler to short-circuit with that response.
+ */
 export function defineAuthGuard<T extends TAuthTransportDeclaration>(
   transports: T,
   handler: (transports: TAuthTransportValues<T>) => unknown | Promise<unknown>,
@@ -163,6 +175,10 @@ export function defineAuthGuard<T extends TAuthTransportDeclaration>(
 
 // --- Class-based API ---
 
+/**
+ * Abstract base class for class-based auth guards.
+ * Extend this class, set `static transports`, and implement `handle()`.
+ */
 @Interceptor(TInterceptorPriority.GUARD)
 export abstract class AuthGuard<
   T extends TAuthTransportDeclaration = TAuthTransportDeclaration,

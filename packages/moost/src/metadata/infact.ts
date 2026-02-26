@@ -24,6 +24,7 @@ let loggingOptions: TInfactLoggingOptions = {
   error: true,
 }
 
+/** Configures which Infact DI events are logged (instance creation, warnings, errors). */
 export function setInfactLoggingOptions(options: TInfactLoggingOptions) {
   loggingOptions = {
     ...loggingOptions,
@@ -31,6 +32,7 @@ export function setInfactLoggingOptions(options: TInfactLoggingOptions) {
   }
 }
 
+/** Returns the shared Infact DI container used by Moost for dependency injection. */
 export function getMoostInfact() {
   return sharedMoostInfact
 }

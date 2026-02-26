@@ -160,6 +160,28 @@ client.send('message', '/chat/general', { from: 'Alice', text: 'Hello!' })
 
 See the full [client documentation](./client) for details.
 
+## AI Agent Skills
+
+This package ships skills for AI coding agents (Claude Code, Cursor, Windsurf, Codex, OpenCode). After installing `@moostjs/event-ws`, set up the skills:
+
+```bash
+# Project-local (recommended — version-locked, commits with your repo)
+npx moostjs-event-ws-skill
+
+# Global (available across all your projects)
+npx moostjs-event-ws-skill --global
+```
+
+To auto-install skills on `npm install`, add to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "postinstall": "moostjs-event-ws-skill --postinstall"
+  }
+}
+```
+
 ## What's Next?
 
 - [Handlers](./handlers) — `@Message`, `@Connect`, `@Disconnect` decorators

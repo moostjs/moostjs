@@ -1,9 +1,8 @@
-import type { TEmpty, TObject, TClassConstructor } from '../common-types'
-import { useControllerContext } from '../composables'
+import type { TEmpty, TObject } from '../common-types'
 import type { TMoostHandler, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { getMoostMate } from '../metadata'
-import type { TPipeData } from '../pipes'
-import { runPipes } from '../pipes/run-pipes'
+import { resolveArguments } from '../resolve-arguments'
+import { mergeSorted } from '../shared-utils'
 import type { TControllerOverview, THandlerOverview } from '../types'
 import { getIterceptorHandlerFactory } from '../utils'
 import type { TBindControllerOptions } from './bind-types'
@@ -40,62 +39,29 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
       continue
     }
 
-    const pipes = [...(opts.pipes || []), ...(methodMeta.pipes || [])].toSorted(
-      (a, b) => a.priority - b.priority,
-    )
-    const interceptors = [
-      ...(opts.interceptors || []),
-      ...(meta.interceptors || []),
-      ...(methodMeta.interceptors || []),
-    ].toSorted((a, b) => a.priority - b.priority)
+    const pipes = mergeSorted(opts.pipes, methodMeta.pipes)
+    const interceptors = mergeSorted(opts.interceptors, meta.interceptors, methodMeta.interceptors)
 
     const getIterceptorHandler = getIterceptorHandlerFactory(interceptors, getInstance, pipes)
 
     // preparing pipes
     const argsPipes: {
       meta: TMoostParamsMetadata
-      pipes: TPipeData[]
+      pipes: typeof pipes
     }[] = []
     for (const p of methodMeta.params || ([] as TMoostParamsMetadata[])) {
       argsPipes.push({
         meta: p,
-        pipes: [...pipes, ...(p.pipes || [])].toSorted((a, b) => a.priority - b.priority),
+        pipes: mergeSorted(pipes, p.pipes),
       })
     }
 
-    const resolveArgs = argsPipes.length === 0
-      ? undefined
-      : () => {
-          const args: unknown[] = []
-          let hasAsync = false
-          for (let i = 0; i < argsPipes.length; i++) {
-            const { pipes, meta: paramMeta } = argsPipes[i]
-            const result = runPipes(
-              pipes,
-              undefined,
-              {
-                classMeta: meta,
-                methodMeta,
-                paramMeta,
-                type: classConstructor,
-                key: method,
-                index: i,
-                targetMeta: paramMeta,
-                instantiate: <T extends TObject>(t: TClassConstructor<T>) =>
-                  useControllerContext().instantiate(t),
-              },
-              'PARAM',
-            )
-            if (!hasAsync && result && typeof (result as PromiseLike<unknown>).then === 'function') {
-              hasAsync = true
-            }
-            args[i] = result
-          }
-          if (hasAsync) {
-            return Promise.all(args)
-          }
-          return args
-        }
+    const resolveArgs = resolveArguments(argsPipes, {
+      classMeta: meta,
+      methodMeta,
+      type: classConstructor,
+      key: method,
+    })
 
     const wm = new WeakMap<Required<typeof methodMeta>['handlers'][0], THandlerOverview>()
 

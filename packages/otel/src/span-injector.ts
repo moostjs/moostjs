@@ -21,6 +21,7 @@ const tracer = trace.getTracer('moost-tracer')
 
 type TAttributes = Record<string, string | number | boolean>
 
+/** Context injector that wraps Moost lifecycle hooks with OpenTelemetry spans and records metrics. */
 export class SpanInjector extends ContextInjector<TContextInjectorHook> {
   metrics = getMoostMetrics()
 

@@ -21,8 +21,13 @@
     "url": "git+https://github.com/moostjs/moostjs.git",
     "directory": "packages/event-http"
   },
+  "bin": {
+    "moostjs-event-http-skill": "./scripts/setup-skills.js"
+  },
   "files": [
-    "dist"
+    "dist",
+    "skills",
+    "scripts/setup-skills.js"
   ],
   "type": "module",
   "sideEffects": false,
@@ -39,11 +44,12 @@
   },
   "scripts": {
     "pub": "pnpm publish --access public",
-    "test": "vitest"
+    "test": "vitest",
+    "setup-skills": "node ./scripts/setup-skills.js"
   },
   "dependencies": {
-    "@wooksjs/event-http": "^0.7.1",
-    "@wooksjs/http-body": "^0.7.1"
+    "@wooksjs/event-http": "^0.7.3",
+    "@wooksjs/http-body": "^0.7.3"
   },
   "devDependencies": {
     "vitest": "3.2.4"
@@ -51,7 +57,7 @@
   "peerDependencies": {
     "@prostojs/infact": "^0.4.1",
     "@prostojs/router": "^0.3.2",
-    "@wooksjs/event-core": "^0.7.1",
+    "@wooksjs/event-core": "^0.7.3",
     "moost": "workspace:^"
   }
 }

@@ -36,6 +36,28 @@ This command will initiate a setup tool that will guide you through the project 
 
 ## [Official Documentation](https://moost.org/cliapp/)
 
+## AI Agent Skills
+
+This package ships with structured skill files for AI coding agents (Claude Code, Cursor, Windsurf, Codex, etc.).
+
+```bash
+# Project-local (recommended — version-locked, commits with your repo)
+npx moostjs-event-cli-skill
+
+# Global (available across all your projects)
+npx moostjs-event-cli-skill --global
+```
+
+To keep skills automatically up-to-date, add a postinstall script to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "postinstall": "moostjs-event-cli-skill --postinstall"
+  }
+}
+```
+
 ## Contributing
 
 We are excited to welcome contributors who are passionate about improving Moostjs. No matter your level of experience, your unique perspective and skills can make valuable contributions to our growing community.

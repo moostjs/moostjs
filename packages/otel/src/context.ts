@@ -3,10 +3,15 @@ import { context, trace } from '@opentelemetry/api'
 import type { EventContext } from '@wooksjs/event-core'
 import { current, key } from 'moost'
 
+/** Event context key storing the root OpenTelemetry span. */
 export const otelSpanKey = key<Span | undefined>('otel.span')
+/** Event context key storing the resolved route path for span naming. */
 export const otelRouteKey = key<string | undefined>('otel.route')
+/** Event context key storing the event start time (epoch ms) for duration metrics. */
 export const otelStartTimeKey = key<number | undefined>('otel.startTime')
+/** Event context key storing custom span attributes set via `useOtelContext().customSpanAttr()`. */
 export const customSpanAttrsKey = key<Record<string, string | number>>('customSpanAttrs')
+/** Event context key storing custom metric attributes set via `useOtelContext().customMetricAttr()`. */
 export const customMetricAttrsKey = key<Record<string, string | number>>('customMetricAttrs')
 
 const spanStack = [] as Span[]
