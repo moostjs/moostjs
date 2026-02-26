@@ -1,81 +1,159 @@
-# Defining and Using Workflow Context
+# Context & State
 
-The workflow context is a typed object that holds shared state between steps. By defining an interface and using it as a generic in `@WorkflowSchema` and other workflow-related decorators, Moost provides type safety and better developer experience when working with workflow data.
+The workflow context is a typed object that holds shared state across all steps. Every step in a workflow reads from and writes to the same context, making it the central place for data to flow through your pipeline.
 
-## Key Points
+## Defining a Context Type
 
-- **Typed Context:** Define an interface for your workflow's context. This interface represents the shared data accessible by all steps.
-- **Generic Schema Types:** Pass your context type to `@WorkflowSchema<T>()` so conditions and steps can be type-checked.
-- **Runtime Access:** Use `@WorkflowParam("context")` to access the current workflow context in your steps or controller properties.
-- **Scopes Matter:** If your controller is scoped per-event (`@Injectable("FOR_EVENT")`), you can store the context in a class property. Otherwise, use `@WorkflowParam("context")` as a step method parameter.
-
-## Example Context
+Start by defining a TypeScript interface for your workflow's data:
 
 ```ts
-export interface TQuadraticRootsContext {
-  a: number;
-  b: number;
-  c: number;
-  discriminant: number;
-  result: string;
+interface TOnboardingContext {
+  userId: string
+  email: string
+  emailVerified: boolean
+  profileComplete: boolean
+  welcomeEmailSent: boolean
 }
 ```
 
-By referencing this interface in your schema:
+## Type-Safe Schemas
+
+Pass your context type as a generic to `@WorkflowSchema<T>()`. This gives you type-checked conditions:
+
 ```ts
-@WorkflowSchema<TQuadraticRootsContext>([
-  "validateInputs",
-  "calculateDiscriminant",
-  { condition: (ctx) => ctx.discriminant < 0, id: "noSolutions" },
-  { condition: (ctx) => ctx.discriminant === 0, id: "calc/single" },
-  { condition: (ctx) => ctx.discriminant > 0, id: "calc/double" }
+@Workflow('onboarding')
+@WorkflowSchema<TOnboardingContext>([ // [!code focus]
+  'verify-email',
+  { condition: (ctx) => ctx.emailVerified, id: 'collect-profile' }, // [!code focus] ctx is typed
+  { condition: (ctx) => ctx.profileComplete, id: 'send-welcome' },
 ])
+onboarding() {}
 ```
-The condition callbacks receive `ctx` as `TQuadraticRootsContext`, ensuring type-safe logic.
 
-## Accessing Context
+The `ctx` parameter in condition functions is typed as `TOnboardingContext`, so you get autocompletion and compile-time checks.
 
-### Using a Controller Property (FOR_EVENT Scope)
+## Providing Initial Context
 
-If your controller is event-scoped:
+When you start a workflow, pass the initial context object:
+
 ```ts
-@Injectable("FOR_EVENT")
-@Controller('math')
-export class MathController {
-  @WorkflowParam("context")
-  ctx!: TQuadraticRootsContext;
+const result = await wf.start('onboarding', { // [!code focus]
+  userId: 'usr-42',
+  email: 'alice@example.com',
+  emailVerified: false,
+  profileComplete: false,
+  welcomeEmailSent: false,
+})
+```
 
-  @Step("calculateDiscriminant")
-  calcDisc() {
-    this.ctx.discriminant = this.ctx.b * this.ctx.b - 4 * this.ctx.a * this.ctx.c;
+This object is passed to the first step and persists across all subsequent steps.
+
+## Accessing Context in Steps
+
+### Option 1: Class Property (FOR_EVENT scope)
+
+When the controller is event-scoped, inject context as a class property. This is the cleanest approach when multiple steps in the same controller need context access:
+
+```ts
+@Injectable('FOR_EVENT') // [!code focus]
+@Controller()
+export class OnboardingController {
+  @WorkflowParam('context') // [!code focus]
+  ctx!: TOnboardingContext // [!code focus]
+
+  @Step('verify-email')
+  verifyEmail() {
+    // send verification email...
+    this.ctx.emailVerified = true // [!code focus]
+  }
+
+  @Step('collect-profile')
+  collectProfile() {
+    this.ctx.profileComplete = true // same ctx, different step
+  }
+
+  @Step('send-welcome')
+  sendWelcome() {
+    sendEmail(this.ctx.email, 'Welcome!')
+    this.ctx.welcomeEmailSent = true
   }
 }
 ```
 
-`this.ctx` is strongly typed and available in all steps of this controller instance.
+### Option 2: Method Parameter
 
-### Using a Step Parameter
+For singleton controllers (the default scope), inject context directly into step methods:
 
-For singleton-scoped controllers, inject context directly into the step method:
 ```ts
-@Step("calculateDiscriminant")
-calcDisc(@WorkflowParam("context") ctx: TQuadraticRootsContext) {
-  ctx.discriminant = ctx.b * ctx.b - 4 * ctx.a * ctx.c;
+@Controller()
+export class OnboardingSteps {
+  @Step('verify-email')
+  verifyEmail(@WorkflowParam('context') ctx: TOnboardingContext) { // [!code focus]
+    ctx.emailVerified = true
+  }
+
+  @Step('collect-profile')
+  collectProfile(@WorkflowParam('context') ctx: TOnboardingContext) {
+    ctx.profileComplete = true
+  }
 }
 ```
 
-## Output Context
+::: info
+Use method parameters when the controller is a singleton — class properties would be shared across concurrent workflow executions, causing data corruption. With `@Injectable('FOR_EVENT')`, each execution gets its own controller instance, making class properties safe.
+:::
 
-When the workflow finishes or interrupts:
-```ts
-const output = await this.wf.start("my/workflow", { a:1,b:5,c:-6 });
-console.log(output.state.context); // Typed as Partial<TQuadraticRootsContext>
-```
+## Mutating Context
 
-If you typed your `MoostWf` instance, the context in `output.state.context` will also be type-checked.
+Context mutations in one step are visible to all subsequent steps. The context object is passed by reference:
 
 ```ts
-constructor(private wf: MoostWf<Partial<TQuadraticRootsContext>>) {}
+@Step('step-a')
+stepA(@WorkflowParam('context') ctx: TMyContext) {
+  ctx.value = 42
+}
+
+@Step('step-b')
+stepB(@WorkflowParam('context') ctx: TMyContext) {
+  console.log(ctx.value) // 42 — set by step-a
+}
 ```
 
-This ensures all returned workflow outputs reflect the proper context shape.
+## Reading Context from Output
+
+After a workflow completes (or pauses), the context is available in the output:
+
+```ts
+const result = await wf.start('onboarding', initialContext)
+
+console.log(result.state.context) // [!code focus]
+// { userId: 'usr-42', email: 'alice@example.com', emailVerified: true, ... }
+```
+
+The `state.context` reflects all mutations made by the steps that executed.
+
+## Typing MoostWf for Output
+
+Type the `MoostWf` instance to get typed output:
+
+```ts
+@Controller()
+export class AppController {
+  constructor(
+    private wf: MoostWf<TOnboardingContext>, // [!code focus]
+  ) {}
+
+  async startOnboarding(userId: string, email: string) {
+    const result = await this.wf.start('onboarding', {
+      userId,
+      email,
+      emailVerified: false,
+      profileComplete: false,
+      welcomeEmailSent: false,
+    })
+    // result.state.context is typed as TOnboardingContext
+  }
+}
+```
+
+The generic parameter flows through to `TFlowOutput`, so `result.state.context` is properly typed.

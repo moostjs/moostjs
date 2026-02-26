@@ -1,370 +1,202 @@
-# Request
+# Reading Request Data
 
-Moost provides a variety of **resolver** decorators that allow you to extract and use different properties
-from the request object within your request handlers.
-These resolver decorators can be applied to class properties (only for [event-scoped](./controllers/#controller-scope) instances) and request handler arguments (for all the controllers).
+Moost provides **resolver decorators** that extract values from the incoming request and inject them into your handler parameters. Each decorator corresponds to a different part of the HTTP request.
 
-Additionally, you can use the composable functions from Wooks inside request handlers.
-For more details, refer to the [Wooks Request Composables](https://wooks.moost.org/webapp/composables/request.html) documentation.
+## Route parameters
 
-::: info
-To learn more about the foundation of **resolver** decorators please read the [Moost Resolvers Documentation](/moost/pipes/resolve).
-:::
-
-## Content
-
-[[toc]]
-
-## Route Parameters
-
-Route parameters are defined in the router using colons (`:`) or asterisks (`*`) and can be resolved using the `@Param` or `@Params` decorators.
-
-::: tip
-Moost utilizes Wooks under the hood, so you can find documentation on routing patterns at the [Wooks HTTP Routing Documentation](https://wooks.moost.org/webapp/routing.html) page.
-:::
-
-### Named Route Parameter
+Covered in detail on the [Routing & Handlers](./routing) page:
 
 ```ts
-import { Get } from '@moostjs/event-http'
-import { Controller, Param } from 'moost'
+@Get('users/:id')
+getUser(
+    @Param('id') id: string,       // single parameter
+    @Params() all: { id: string }, // all parameters as object
+) { /* ... */ }
+```
+
+## Query parameters
+
+```ts
+import { Get, Query } from '@moostjs/event-http'
+import { Controller } from 'moost'
 
 @Controller()
-export class ExampleController {
-    @Get('hello/:name')     // [!code focus]
-    hello(
-        @Param('name') name: string // [!code focus]
+export class SearchController {
+    @Get('search')
+    search(
+        @Query('q') query: string,               // single query param
+        @Query() params: Record<string, string>, // all query params
     ) {
-        return `Hello, ${name}!`
+        return { query, params }
     }
 }
 ```
-
-In the example above, the `name` parameter is defined in the route, and it is resolved to the `name` argument
-of the request handler using the `@Param('name')` decorator.
-
-### Multiple Route Parameters
-
-```ts
-import { Get } from '@moostjs/event-http'
-import { Controller, Param, Params } from 'moost'
-
-@Controller()
-export class ExampleController {
-    @Get('endpoint/:param1/:param2/:param3')     // [!code focus]
-    hello(
-        @Param('param1') param1: string, // [!code focus]
-        @Param('param2') param2: string, // [!code focus]
-        @Params() allParams: { param1: string, param2: string, param3: string}, // [!code focus]
-    ) {
-        return allParams
-    }
-}
-```
-In this example, the route defines three parameters. The `@Param('paramN')` decorator resolves the parameter values by name.
-The `@Params` decorator resolves all the parameters as an object, where the property names correspond to the parameter names.
-This can be useful when you want to retrieve all the parameters at once as an object.
-
-### Wildcard Route Parameters
-
-```ts
-import { Get } from '@moostjs/event-http'
-import { Controller, Param } from 'moost'
-
-@Controller()
-export class ExampleController {
-    @Get('endpoint/*')     // [!code focus]
-    hello(
-        @Param('*') param: string, // [!code focus]
-    ) {
-        return param
-    }
-}
-```
-In the example above, the route is defined with a wildcard (`*`). The `@Param('*')` decorator resolves the wildcard value to the `param` argument of the request handler.
-
-## Search (Query) Parameters
-
-In addition to route parameters, you can resolve search (query) parameters,
-which follow the question mark `?` in the URL and have the format `?name=John&age=25`.
-
-```ts
-import { Get } from '@moostjs/event-http';
-import { Controller, Query } from 'moost';
-
-@Controller()
-export class ExampleController {
-    @Get('hello')
-    hello(
-        @Query('name') name: string,    // [!code focus]
-        @Query('age') age: string,      // [!code focus]
-        @Query() queryParams: Record<string, string>,   // [!code focus]
-    ) {
-        return {
-            name,
-            age,
-            queryParams,
-        };
-    }
-}
-
-```
-When you send a request with the name and age parameters, as well as additional query parameters, you will receive a response with their values:
 
 ```bash
-curl "http://localhost:3000/hello?name=John&age=25&city=New%20York"
-# {
-#   "name": "John",
-#   "age": "25",
-#   "queryParams": {
-#     "name": "John",
-#     "age": "25",
-#     "city": "New York"
-#   }
-# }
+curl "http://localhost:3000/search?q=moost&limit=10"
+# { "query": "moost", "params": { "q": "moost", "limit": "10" } }
 ```
 
-The `@Query('param')` decorator resolves the value of the corresponding query
-parameter and assigns it to the specified argument in the request handler.
-When used without any arguments, the `@Query()` decorator resolves all the search
-parameters into an object, just like the `@Params()` decorator for route parameters.
-The `queryParams` argument in the example above contains all the query parameters as key-value pairs.
+`@Query('name')` returns `undefined` if the parameter is missing. `@Query()` returns `undefined` (not an empty object) when there are no query parameters at all.
 
-## Header
+## Headers
 
-The `@Header` decorator allows you to extract the value of a specific request header from the incoming request.
-
-Example:
 ```ts
-import { Get, Header } from '@moostjs/event-http';
-import { Controller } from 'moost';
+import { Get, Header } from '@moostjs/event-http'
+import { Controller } from 'moost'
 
 @Controller()
 export class ExampleController {
-  @Get('test')
-  testHandler(@Header('content-type') contentType: string) { // [!code focus]
-    // Access the value of the 'content-type' header
-  }
+    @Get('test')
+    test(@Header('content-type') contentType: string) {
+        return { contentType }
+    }
 }
 ```
 
-In this example, the `contentType` argument will contain the value of the `content-type` header from the incoming request.
+Header names are case-insensitive, matching standard HTTP behavior.
 
-## Url
+## Cookies
 
-The `@Url` decorator allows you to retrieve the requested URL from the incoming request.
-
-Example:
 ```ts
-import { Get, Url } from '@moostjs/event-http';
-import { Controller } from 'moost';
+import { Get, Cookie } from '@moostjs/event-http'
+import { Controller } from 'moost'
 
 @Controller()
 export class ExampleController {
-  @Get('test')
-  testHandler(@Url() url: string) { // [!code focus]
-    // Access the requested URL
-  }
+    @Get('profile')
+    profile(@Cookie('session') session: string) {
+        return { session }
+    }
 }
 ```
 
-The `url` argument will contain the requested URL, such as `/test`, in this example.
+## Request body
 
-## Method
+For `POST`, `PUT`, and `PATCH` requests, use `@Body()` to get the parsed body. Moost automatically detects JSON, form-encoded, and text content types.
 
-The `@Method` decorator allows you to retrieve the requested HTTP method from the incoming request.
-
-Example:
 ```ts
-import { Get, Method } from '@moostjs/event-http';
-import { Controller } from 'moost';
+import { Post, Body } from '@moostjs/event-http'
+import { Controller } from 'moost'
 
-@Controller()
-export class ExampleController {
-  @Get('test')
-  testHandler(@Method() method: string) { // [!code focus]
-    // Access the requested HTTP method (e.g., 'GET', 'POST')
-  }
+@Controller('users')
+export class UserController {
+    @Post('')
+    create(@Body() data: { name: string, email: string }) {
+        return { created: data }
+    }
 }
 ```
 
-The `method` argument will contain the requested HTTP method, such as `GET` or `POST`, in this example.
-
-## Request Security
-
-Moost HTTP provides three levels of control over request body limits — app-wide defaults, global interceptors, and per-handler decorators. Each level overrides the previous one.
-
-### App-Wide Defaults (Constructor)
-
-Pass `requestLimits` when creating the `MoostHttp` adapter to set defaults for every request:
+For the raw body as a `Buffer`, use `@RawBody()`:
 
 ```ts
-import { MoostHttp } from '@moostjs/event-http'
-import { Moost } from 'moost'
+import { Post, RawBody } from '@moostjs/event-http'
 
-const app = new Moost()
-
-void app.adapter(new MoostHttp({
-    requestLimits: {
-        maxCompressed: 5 * 1024 * 1024,   // 5 MB compressed body (default: 1 MB)
-        maxInflated: 50 * 1024 * 1024,     // 50 MB decompressed body (default: 10 MB)
-        maxRatio: 200,                     // max compression ratio (default: 100)
-        readTimeoutMs: 30_000,             // body read timeout (default: 10 000 ms)
-    },
-})).listen(3000)
-
-void app.init()
-```
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `maxCompressed` | 1 MB (1 048 576) | Max compressed body size in bytes |
-| `maxInflated` | 10 MB (10 485 760) | Max decompressed body size in bytes |
-| `maxRatio` | 100 | Max compression ratio (zip-bomb protection) |
-| `readTimeoutMs` | 10 000 | Body read timeout in milliseconds |
-
-### Per-Handler Decorators
-
-Use decorators to override limits on specific handlers or controllers:
-
-```ts
-import {
-  BodySizeLimit,
-  CompressedBodySizeLimit,
-  BodyReadTimeoutMs,
-} from '@moostjs/event-http'
-
-@Controller('upload')
-export class UploadController {
-  @Post()
-  @BodySizeLimit(5 * 1024 * 1024)          // 5 MB inflated body
-  @CompressedBodySizeLimit(1 * 1024 * 1024) // 1 MB compressed body
-  @BodyReadTimeoutMs(5_000)                 // 5 seconds to read the body
-  async receive(@Body() payload: UploadDto) {}
+@Post('upload')
+upload(@RawBody() raw: Buffer) {
+    // process raw bytes
 }
 ```
 
-- `BodySizeLimit(n)` limits the inflated (decompressed) body size in bytes.
-- `CompressedBodySizeLimit(n)` limits the compressed payload size.
-- `BodyReadTimeoutMs(ms)` aborts the request if body streaming exceeds the provided timeout.
+## Authorization header
 
-### Global Interceptors
+The `@Authorization` decorator extracts specific parts of the `Authorization` header:
 
-For organisation-wide policies, use the `globalBodySizeLimit`, `globalCompressedBodySizeLimit`, and `globalBodyReadTimeoutMs` helpers (also exported from `@moostjs/event-http`) with `app.applyGlobalInterceptors(...)`.
-
-## Request
-
-The `@Req` decorator allows you to retrieve the raw request instance (IncomingMessage) from the incoming request.
-
-Example:
 ```ts
-import { Get, Req } from '@moostjs/event-http';
-import { Controller } from 'moost';
+import { Get, Authorization } from '@moostjs/event-http'
 
-@Controller()
-export class ExampleController {
-  @Get('test')
-  testHandler(@Req() request: IncomingMessage) {  // [!code focus]
-    // Access the raw request instance
-  }
+@Get('profile')
+profile(
+    @Authorization('bearer') token: string,    // Bearer token (without "Bearer " prefix)
+    @Authorization('type') authType: string,   // "Bearer", "Basic", etc.
+) { /* ... */ }
+
+@Get('login')
+login(
+    @Authorization('username') user: string,   // from Basic auth
+    @Authorization('password') pass: string,   // from Basic auth
+    @Authorization('raw') credentials: string, // raw credentials string
+) { /* ... */ }
+```
+
+::: tip
+For production authentication, use the declarative [Authentication Guards](./auth) system instead of manually parsing the `Authorization` header.
+:::
+
+## URL and HTTP method
+
+```ts
+import { Get, Url, Method } from '@moostjs/event-http'
+
+@Get('info')
+info(
+    @Url() url: string,       // e.g. "/info?page=1"
+    @Method() method: string, // e.g. "GET"
+) {
+    return { url, method }
 }
 ```
-The `request` argument will contain the raw request instance, which gives you access to various properties and methods of the incoming request.
 
-## Request Id (Event Id)
+## Request ID
 
-The `@ReqId` decorator allows you to retrieve the request's unique identifier (UUID) (generated by Wooks) from the incoming request.
+Every request gets a unique UUID, useful for logging and tracing:
 
-Example:
 ```ts
-import { Get, ReqId } from '@moostjs/event-http';
-import { Controller } from 'moost';
+import { Get, ReqId } from '@moostjs/event-http'
 
-@Controller()
-export class ExampleController {
-  @Get('test')
-  testHandler(@ReqId() reqId: string) {  // [!code focus]
-    // Access the request's unique identifier
-  }
+@Get('test')
+test(@ReqId() requestId: string) {
+    return { requestId } // e.g. "a1b2c3d4-..."
 }
 ```
-The `reqId` argument will contain the unique identifier associated with the incoming request.
 
 ## IP address
 
-The `@Ip` decorator allows you to retrieve the IP address of the client from the incoming request.
-
-`@Ip({ trustProxy: true })` will take into consideration `x-forwarded-for` header.
-
-Example:
 ```ts
-import { Get, Ip } from '@moostjs/event-http';
-import { Controller } from 'moost';
+import { Get, Ip, IpList } from '@moostjs/event-http'
 
-@Controller()
-export class ExampleController {
-  @Get('test')
-  testHandler(@Ip() ip: string) {     // [!code focus]
-    // Access the client's IP address
-  }
+@Get('client')
+client(
+    @Ip() ip: string,                          // direct client IP
+    @Ip({ trustProxy: true }) realIp: string,  // considers x-forwarded-for
+    @IpList() allIps: string[],                // full IP chain
+) {
+    return { ip, realIp, allIps }
 }
 ```
 
-## IP List
+## Raw Node.js request
 
-The `@IpList` decorator allows you to retrieve a list of IP addresses from the incoming request.
+When you need direct access to the underlying `IncomingMessage`:
 
-Example:
 ```ts
-import { Get, IpList } from '@moostjs/event-http';
-import { Controller } from 'moost';
+import { Get, Req } from '@moostjs/event-http'
+import type { IncomingMessage } from 'http'
 
-@Controller()
-export class ExampleController {
-  @Get('test')
-  testHandler(@IpList() ipList: string[]) {   // [!code focus]
-    // Access the list of IP addresses
-  }
-}
-```
-The `ipList` argument will contain an array of IP addresses associated with the client who made the request.
-
-## Body
-
-The `@Body` decorator allows you to retrieve the parsed request body from the incoming request.
-
-Example:
-```ts
-import { Get, Body } from '@moostjs/event-http';
-import { Controller } from 'moost';
-
-@Controller()
-export class ExampleController {
-  @Get('test')
-  testHandler(@Body() body: object | string | unknown) {   // [!code focus]
-    // Access the parsed request body
-  }
-}
-```
-The `body` argument will contain the parsed request body, which can be an object, string, or an unknown data type, depending on the content of the request body.
-To learn more about body parsing please refer to [Wooks Http Body Documentation](https://wooks.moost.org/webapp/body.html) page.
-
-## Raw Body
-
-The `@RawBody` decorator allows you to retrieve the raw request body buffer from the incoming request.
-
-Example:
-```ts
-import { Get, RawBody } from '@moostjs/event-http';
-import { Controller } from 'moost';
-
-@Controller()
-export class ExampleController {
-  @Get('test')
-  testHandler(@RawBody() rawBody: Buffer) {   // [!code focus]
-    // Access the raw request body buffer
-  }
+@Get('raw')
+raw(@Req() request: IncomingMessage) {
+    return { httpVersion: request.httpVersion }
 }
 ```
 
-The `rawBody` argument will contain a raw request body buffer. You can use this buffer to process the raw body data as needed.
+## Resolver decorators summary
+
+| Decorator | Returns | Import from |
+|---|---|---|
+| `@Param(name)` | Route parameter value | `moost` |
+| `@Params()` | All route params as object | `moost` |
+| `@Query(name?)` | Query parameter(s) | `@moostjs/event-http` |
+| `@Header(name)` | Request header value | `@moostjs/event-http` |
+| `@Cookie(name)` | Cookie value | `@moostjs/event-http` |
+| `@Body()` | Parsed request body | `@moostjs/event-http` |
+| `@RawBody()` | Raw body as `Buffer` | `@moostjs/event-http` |
+| `@Authorization(field)` | Auth header field | `@moostjs/event-http` |
+| `@Url()` | Requested URL | `@moostjs/event-http` |
+| `@Method()` | HTTP method string | `@moostjs/event-http` |
+| `@ReqId()` | Request UUID | `@moostjs/event-http` |
+| `@Ip(opts?)` | Client IP address | `@moostjs/event-http` |
+| `@IpList()` | All IP addresses | `@moostjs/event-http` |
+| `@Req()` | Raw `IncomingMessage` | `@moostjs/event-http` |
+
+All resolver decorators can also be used as **property decorators** on `FOR_EVENT`-scoped controllers. See [Dependency Injection](./di) for details.

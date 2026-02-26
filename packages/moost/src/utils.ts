@@ -7,11 +7,17 @@ import type { TPipeData } from './pipes'
 
 const mate = getMoostMate()
 
+const noInterceptors = () => undefined
+
 export function getIterceptorHandlerFactory(
   interceptors: TInterceptorData[],
-  getTargetInstance: () => Promise<TObject>,
+  getTargetInstance: () => Promise<TObject> | TObject,
   pipes: TPipeData[],
-) {
+): () => InterceptorHandler | undefined {
+  if (interceptors.length === 0) {
+    return noInterceptors
+  }
+
   // Precompute handler wrappers at bind time (once per method)
   // instead of rebuilding them on every request
   const precomputedHandlers = interceptors.map<{ handler: TInterceptorFn; name: string }>(

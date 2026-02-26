@@ -82,9 +82,7 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
       this.wsApp = wsOpts
     } else {
       const httpApp =
-        opts?.httpApp && 'getHttpApp' in opts.httpApp
-          ? opts.httpApp.getHttpApp()
-          : opts?.httpApp
+        opts?.httpApp && 'getHttpApp' in opts.httpApp ? opts.httpApp.getHttpApp() : opts?.httpApp
       if (httpApp) {
         this.wsApp = createWsApp(httpApp as Parameters<typeof createWsApp>[0], wsOpts || {})
       } else {

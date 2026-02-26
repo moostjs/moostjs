@@ -21,7 +21,7 @@ export interface TMoostEventHandlerHookOptions<T> {
 export interface TMoostEventHandlerOptions<T> {
   contextType?: string | string[]
   loggerTitle: string
-  getIterceptorHandler: () => Promise<InterceptorHandler> | InterceptorHandler | undefined
+  getIterceptorHandler: () => InterceptorHandler | undefined
   getControllerInstance: () => Promise<T> | T | undefined
   controllerMethod?: keyof T
   callControllerMethod?: (args: unknown[]) => unknown
@@ -34,6 +34,14 @@ export interface TMoostEventHandlerOptions<T> {
   }
   targetPath: string
   handlerType: string
+}
+
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    value !== null &&
+    value !== undefined &&
+    typeof (value as PromiseLike<unknown>).then === 'function'
+  )
 }
 
 const infact = getMoostInfact()
@@ -65,13 +73,18 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     }
 
     let interceptorHandler: InterceptorHandler | undefined
+    let raise = false
 
     try {
       if (options.hooks?.init) {
-        await options.hooks.init(hookOptions)
+        const hookResult = options.hooks.init(hookOptions)
+        if (isThenable(hookResult)) {
+          await hookResult
+        }
       }
 
-      const instance = await options.getControllerInstance()
+      const instanceResult = options.getControllerInstance()
+      const instance = isThenable(instanceResult) ? await instanceResult : instanceResult
 
       if (instance) {
         setControllerContext(
@@ -82,19 +95,21 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         ci.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
       }
 
-      interceptorHandler = (await options.getIterceptorHandler()) as InterceptorHandler | undefined
+      interceptorHandler = options.getIterceptorHandler() as InterceptorHandler | undefined
       if (interceptorHandler?.count) {
         try {
-          response = await ci.with('Interceptors:init', () => interceptorHandler?.init())
+          const initResult = ci.with('Interceptors:init', () => interceptorHandler?.init())
+          response = isThenable(initResult) ? await initResult : initResult
           if (response !== undefined) {
-            return await endWithResponse()
+            return cleanup()
           }
         } catch (error) {
           if (options.logErrors) {
             logger.error(String(error))
           }
           response = error
-          return endWithResponse(true)
+          raise = true
+          return cleanup()
         }
       }
 
@@ -102,24 +117,25 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       if (options.resolveArgs) {
         // params
         try {
-          // logger.trace(`resolving method args for "${ opts.method as string }"`)
-          args = await ci.with('Arguments:resolve', () => options.resolveArgs?.())
-          // logger.trace(`args for method "${ opts.method as string }" resolved (count ${String(args.length)})`)
+          const argsResult = ci.with('Arguments:resolve', () => options.resolveArgs?.())
+          args = (isThenable(argsResult) ? await argsResult : argsResult) as unknown[]
         } catch (error) {
           if (options.logErrors) {
             logger.error(String(error))
           }
           response = error
-          return endWithResponse(true)
+          raise = true
+          return cleanup()
         }
       }
 
       if (interceptorHandler?.countBefore) {
-        response = await ci.with('Interceptors:before', () =>
+        const beforeResult = ci.with('Interceptors:before', () =>
           interceptorHandler?.fireBefore(response),
         )
+        response = isThenable(beforeResult) ? await beforeResult : beforeResult
         if (response !== undefined) {
-          return endWithResponse()
+          return cleanup()
         }
       }
 
@@ -138,7 +154,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         }
       }
       try {
-        response = await ci.with(
+        const handlerResult = ci.with(
           `Handler:${options.targetPath}` as 'Handler',
           {
             'moost.handler': (options.controllerMethod as string) || '',
@@ -146,15 +162,16 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           },
           () => callControllerMethod(),
         )
+        response = isThenable(handlerResult) ? await handlerResult : handlerResult
       } catch (error) {
         if (options.logErrors) {
           logger.error(error as string)
         }
         response = error
-        return endWithResponse(true)
+        raise = true
       }
 
-      return endWithResponse()
+      return cleanup()
     } catch (error) {
       if (!options.manualUnscope) {
         unscope()
@@ -162,34 +179,55 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
       throw error
     }
 
-    async function endWithResponse(raise = false) {
+    // cleanup runs after interceptors, unscopes, runs hooks, then returns or throws.
+    // It NEVER throws synchronously — uses Promise rejection for async raise.
+    function cleanup(): unknown {
       // fire after interceptors
       if (interceptorHandler?.countAfter || interceptorHandler?.countOnError) {
-        try {
-          // logger.trace('firing after interceptors')
-          response = await ci.with('Interceptors:after', () =>
-            interceptorHandler?.fireAfter(response),
+        const afterResult = ci.with('Interceptors:after', () =>
+          interceptorHandler?.fireAfter(response),
+        )
+        if (isThenable(afterResult)) {
+          return (afterResult as PromiseLike<unknown>).then(
+            (r) => {
+              response = r
+              return finalize()
+            },
+            (error: unknown) => {
+              if (options.logErrors) {
+                logger.error(String(error))
+              }
+              if (!options.manualUnscope) {
+                unscope()
+              }
+              throw error
+            },
           )
-        } catch (error) {
-          if (options.logErrors) {
-            logger.error(String(error))
-          }
-          if (!options.manualUnscope) {
-            unscope()
-          }
-          throw error
         }
+        response = afterResult
       }
 
+      return finalize()
+    }
+
+    function finalize(): unknown {
       if (!options.manualUnscope) {
         unscope()
       }
       if (options.hooks?.end) {
-        await options.hooks.end(hookOptions)
+        const endResult = options.hooks.end(hookOptions)
+        if (isThenable(endResult)) {
+          return (endResult as PromiseLike<unknown>).then(() => {
+            if (raise) {
+              // oxlint-disable-next-line no-throw-literal it is an Error instance
+              throw response as Error
+            }
+            return response
+          })
+        }
       }
       if (raise) {
-        // oxlint-disable-next-line no-throw-literal it is an Error instance
-        throw response as Error
+        return Promise.reject(response)
       }
       return response
     }

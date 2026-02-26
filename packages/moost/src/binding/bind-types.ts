@@ -6,7 +6,7 @@ import type { Moost, TMoostAdapter } from '../moost'
 import type { TPipeData } from '../pipes'
 
 export interface TBindControllerOptions {
-  getInstance: () => Promise<TObject>
+  getInstance: () => Promise<TObject> | TObject
   classConstructor: TClassConstructor
   adapters: TMoostAdapter<TAny>[]
   globalPrefix?: string

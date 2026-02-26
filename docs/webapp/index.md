@@ -1,33 +1,25 @@
-# Quick Start Guide
+# Getting Started
 
-This guide will show you how to make a web application using Moost HTTP.
+Build an HTTP server with Moost in under a minute.
 
 ## Prerequisites
-Before you begin, make sure you have these things installed:
 
--   Node.js (version 14 or higher)
--   npm (this is the Node Package Manager)
+- Node.js 18 or higher
+- npm, pnpm, or yarn
 
-## Step 1: Set Up Your Project
-
-To start a new Moost HTTP project, type this command:
+## Scaffold a project
 
 ```bash
 npm create moost -- --http
 ```
 
-Or you can add a name for your project in the command:
+Or with a project name:
 
 ```bash
 npm create moost my-web-app -- --http
 ```
 
-This command will start a helpful tool that will ask you questions like:
-
-- Do you want eslint and prettier?
-- Which bundler do you want to use: esbuild or rollup?
-
-After you answer these questions, app initializer will scaffold a project that looks like this:
+The scaffolder creates:
 
 ```
 my-web-app/
@@ -35,22 +27,13 @@ my-web-app/
 │   ├── controllers/
 │   │   └── app.controller.ts
 │   └── main.ts
-├── .gitignore
 ├── package.json
-├── tsconfig.json
-└── [optional files...]
+└── tsconfig.json
 ```
 
-**Optional files** are created based on your answers:
+## What you get
 
-- If you picked eslint and prettier: `.eslintrc.json`, `.prettierrc`, `.prettierignore`
-- If you picked rollup as your bundler: `rollup.config.js`
-
-## Step 2: Let's see what we've got
-
-Two important parts of your application are created in the `src` directory: `main.ts` (the starting point for your app) and `app.controller.ts` (a basic "Hello, World!" controller).
-
-`main.ts`:
+**main.ts** — the entry point:
 ```ts
 import { MoostHttp } from '@moostjs/event-http'
 import { Moost } from 'moost'
@@ -63,14 +46,11 @@ void app.adapter(new MoostHttp()).listen(3000, () => {
 })
 
 void app
-    .registerControllers(
-        AppController
-        // Add more controllers here...
-    )
+    .registerControllers(AppController)
     .init()
 ```
 
-`app.controller.ts`:
+**app.controller.ts** — your first handler:
 ```ts
 import { Get } from '@moostjs/event-http'
 import { Controller, Param } from 'moost'
@@ -84,30 +64,25 @@ export class AppController {
 }
 ```
 
-## Step 3: Install and dev
-
-After your project is set up, go into your project directory and run this command to get the dependencies:
+## Run it
 
 ```bash
-npm install
+npm install && npm run dev
 ```
 
-Once that's done, start your application in development mode with this command:
+Open [http://localhost:3000/hello/World](http://localhost:3000/hello/World) — you'll see `Hello, World!`.
 
-```bash
-npm run dev
-```
+## How it works
 
-Your application will be live at http://localhost:3000.
-You can go to http://localhost:3000/hello/John and see the message "Hello, John!".
+1. `new Moost()` creates the application instance
+2. `new MoostHttp()` creates the HTTP adapter — the bridge between Moost and Node's HTTP server
+3. `registerControllers()` tells Moost which classes contain route handlers
+4. `init()` wires everything together — resolves dependencies, binds routes, prepares interceptors
 
-## What's Next?
+The `@Get('hello/:name')` decorator registers the method as a `GET` handler. The `:name` segment becomes a route parameter, extracted by `@Param('name')`.
 
-Now that your application is running, you can add more features to your project.
-Here are some steps you can follow:
+## What's next
 
-- Add more [controllers](./controllers/) in the `src/controllers` directory. Don't forget to register them in your `main.ts` file with the `registerControllers` method.
-- Use different types of [request handling](/webapp/handlers) by using other HTTP decorators like `@Post`, `@Put`, `@Delete`, etc.
-- Use Moost's cool features like [dependency injection](/moost/di/), [interceptors](/moost/interceptors), validators, and more to build a strong, scalable application.
-
-👏👏👏 Happy coding!
+- [Routing & Handlers](./routing) — HTTP methods, route patterns, and handler basics
+- [Reading Request Data](./request) — extract query params, headers, cookies, and body
+- [Controllers](./controllers) — organize handlers into logical groups

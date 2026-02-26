@@ -1,136 +1,309 @@
-# Moost Workflow API Reference
+# API Reference
 
-This page details the core decorators and classes for working with workflows in Moost.
+Complete reference for all exports from `@moostjs/event-wf`.
 
 [[toc]]
 
 ## Decorators
 
-### `@Workflow(path?: string)`
+### `@Workflow(path?)`
 
-**Usage:** Marks a controller method as a workflow entry point.
+Marks a controller method as a workflow entry point. Must be paired with `@WorkflowSchema`.
 
-- **Parameters:**  
-  `path`: Optional. The workflow path (string), can be static or parametric.
-  
-**Example:**
+- **`path`** *(string, optional)* — Workflow identifier. Defaults to the method name. Can include route parameters (e.g., `'process/:type'`).
+
 ```ts
-@Workflow('my-workflow')
-entryPoint() {}
+import { Workflow, WorkflowSchema } from '@moostjs/event-wf'
+
+@Workflow('order-processing')
+@WorkflowSchema<TOrderContext>(['validate', 'charge', 'ship'])
+processOrder() {}
 ```
 
-### `@WorkflowSchema<T>(schema: TWorkflowSchema<T>)`
+The effective schema ID combines the controller prefix and the workflow path. For `@Controller('admin')` + `@Workflow('order')`, the schema ID is `admin/order`.
 
-**Usage:** Assigns the workflow schema (array of steps, conditions, loops, breaks) to the entry point.
+### `@WorkflowSchema<T>(schema)`
 
-- **Generic:** `T` is the workflow context type.
-- **Parameters:**  
-  `schema`: A `TWorkflowSchema<T>` array defining steps and control flow.
+Attaches a workflow schema (step sequence) to a `@Workflow` method.
 
-**Example:**
+- **`T`** *(generic)* — Workflow context type. Provides type checking in condition functions.
+- **`schema`** *(`TWorkflowSchema<T>`)* — Array of step definitions.
+
 ```ts
 @WorkflowSchema<TMyContext>([
-  "step1",
-  { condition: (ctx) => ctx.flag, id: "conditionalStep" },
-  { while: 'items.length > 0', steps: ["processItem"] }
+  'step-a',
+  { condition: (ctx) => ctx.ready, id: 'step-b' },
+  { while: 'retries < 3', steps: ['attempt', 'increment'] },
 ])
 ```
 
-### `@Step(path?: string)`
+See [Schemas & Flow Control](/wf/schemas) for full schema syntax.
 
-**Usage:** Marks a controller method as a workflow step.
+### `@Step(path?)`
 
-- **Parameters:**  
-  `path`: Optional step path (string), can be static or parametric.
+Marks a controller method as a workflow step handler.
 
-**Example:**
-```ts
-@Step('calculateValue')
-calculateValue() { ... }
-```
+- **`path`** *(string, optional)* — Step identifier used in schemas. Defaults to the method name. Can include route parameters (e.g., `'notify/:channel'`).
 
-### `WorkflowParam(name: 'resume' | 'indexes' | 'schemaId' | 'stepId' | 'context' | 'input' | 'state')`
-
-**Usage:** Injects workflow runtime parameters into a step method or controller property.
-
-- **Parameters:**  
-  `name` one of:  
-  - `'resume'`: A function `(input: I) => Promise<TFlowOutput<T,I,IR>>` to resume workflow after input or retriable error.  
-  - `'indexes'`: Current step indexes array.  
-  - `'schemaId'`: Current workflow schemaId (string).  
-  - `'stepId'`: Current stepId (string).  
-  - `'context'`: Current workflow context (typed by generics).  
-  - `'input'`: Input passed to workflow step.  
-  - `'state'`: Workflow state object (with schemaId, context, indexes).
-
-**Example:**
 ```ts
 @Step('validate')
-validate(@WorkflowParam('context') ctx: MyContext) {
-  if (!ctx.valid) return { inputRequired: true };
+validate(@WorkflowParam('context') ctx: TOrderContext) {
+  ctx.validated = true
 }
 ```
+
+### `WorkflowParam(name)`
+
+Parameter and property decorator that injects workflow runtime values.
+
+- **`name`** — One of the following:
+
+| Name | Type | Description |
+|------|------|-------------|
+| `'context'` | `T` | Shared workflow context object |
+| `'input'` | `I \| undefined` | Input passed to `start()` or `resume()` |
+| `'stepId'` | `string \| null` | Current step ID (`null` in entry point) |
+| `'schemaId'` | `string` | Active workflow schema identifier |
+| `'indexes'` | `number[] \| undefined` | Current position in nested schemas |
+| `'resume'` | `boolean` | `true` when resuming, `false` on first run |
+| `'state'` | `object` | Full state object from `useWfState()` |
+
+```ts
+// As method parameter:
+@Step('process')
+process(@WorkflowParam('context') ctx: TCtx, @WorkflowParam('input') input?: TInput) {}
+
+// As class property (requires @Injectable('FOR_EVENT')):
+@WorkflowParam('context')
+ctx!: TMyContext
+```
+
+::: info
+`WorkflowParam('resume')` returns a **boolean**, not a function. It indicates whether the current execution is a resume (`true`) or a fresh start (`false`). The resume *function* is available on the `TFlowOutput` object returned by `start()` or `resume()`.
+:::
 
 ## MoostWf Class
 
-`MoostWf<T, IR>` represents a workflow adapter instance. It allows you to start and resume workflows programmatically.
+`MoostWf<T, IR>` is the workflow adapter. Register it with `app.adapter(new MoostWf())`.
 
-### `start<I>(schemaId: string, initialContext: T, input?: I): Promise<TFlowOutput<T,I,IR>>`
+- **`T`** — Workflow context type
+- **`IR`** — Input-required type (the type of `inputRequired` values)
 
-**Usage:** Starts a workflow identified by `schemaId` with `initialContext`. Optionally provide `input` if the first step requires it.
+### Constructor
 
-- **Returns:** A promise that resolves to `TFlowOutput<T,I,IR>`.
-
-**Example:**
 ```ts
-const output = await wf.start('my-workflow', { a:1,b:2,c:3 });
+new MoostWf<T, IR>(opts?: WooksWf<T, IR> | TWooksWfOptions, debug?: boolean)
 ```
 
-If `inputRequired` or a `StepRetriableError` occurs, the workflow `interrupt` will be `true`, and `output.resume` can be used to continue later.
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `opts` | `WooksWf \| TWooksWfOptions \| undefined` | Pre-existing WooksWf instance, configuration options, or `undefined` for defaults |
+| `debug` | `boolean` | Enable error logging |
 
-### `resume<I>(state: { schemaId: string; context: T; indexes: number[] }, input?: I): Promise<TFlowOutput<T,I,IR>>`
+**`TWooksWfOptions` fields:**
 
-**Usage:** Resumes an interrupted workflow from the given state with the provided input.
+| Field | Type | Description |
+|-------|------|-------------|
+| `onError` | `(e: Error) => void` | Global error handler |
+| `onNotFound` | `TWooksHandler` | Handler for unregistered steps |
+| `onUnknownFlow` | `(schemaId: string, raiseError: () => void) => unknown` | Handler for unknown workflow schemas |
+| `logger` | `TConsoleBase` | Custom logger instance |
+| `eventOptions` | `EventContextOptions` | Event context configuration |
+| `router` | `TWooksOptions['router']` | Router configuration |
 
-- **Parameters:**  
-  `state`: The `state` returned in a previous interrupted `TFlowOutput`.
-  `input`: Data required to continue.
+### `start<I>(schemaId, initialContext, input?)`
 
-**Example:**
+Starts a new workflow execution.
+
 ```ts
-if (output.interrupt && output.state) {
-  const resumed = await wf.resume(output.state, { a:10,b:20,c:30 });
-}
+start<I>(
+  schemaId: string,
+  initialContext: T,
+  input?: I,
+): Promise<TFlowOutput<T, I, IR>>
 ```
 
-## TFlowOutput Structure
+| Parameter | Description |
+|-----------|-------------|
+| `schemaId` | Workflow identifier (matching `@Workflow` path, including controller prefix) |
+| `initialContext` | Initial context object passed to steps |
+| `input` | Optional input for the first step |
 
-When `start` or `resume` completes:
+```ts
+const result = await wf.start('process-order', { orderId: '123', status: 'new' })
+```
+
+### `resume<I>(state, input?)`
+
+Resumes a paused workflow from a saved state.
+
+```ts
+resume<I>(
+  state: { schemaId: string, context: T, indexes: number[] },
+  input?: I,
+): Promise<TFlowOutput<T, I, IR>>
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `state` | State object from a previous `TFlowOutput.state` |
+| `input` | Input for the paused step |
+
+```ts
+const resumed = await wf.resume(previousResult.state, { answer: 'yes' })
+```
+
+### `attachSpy<I>(fn)`
+
+Attaches a spy function to observe workflow execution. Returns a detach function.
+
+```ts
+attachSpy<I>(fn: TWorkflowSpy<T, I, IR>): () => void
+```
+
+```ts
+const detach = wf.attachSpy((event, eventOutput, flowOutput, ms) => {
+  console.log(event, flowOutput.stepId, ms)
+})
+detach() // stop observing
+```
+
+See [Spies & Observability](/wf/spies) for event types and usage patterns.
+
+### `detachSpy<I>(fn)`
+
+Removes a previously attached spy function.
+
+```ts
+detachSpy<I>(fn: TWorkflowSpy<T, I, IR>): void
+```
+
+### `getWfApp()`
+
+Returns the underlying `WooksWf` instance for advanced low-level access.
+
+```ts
+getWfApp(): WooksWf<T, IR>
+```
+
+## Types
+
+### `TFlowOutput<T, I, IR>`
+
+Returned by `start()` and `resume()`. Describes the workflow's current state.
 
 ```ts
 interface TFlowOutput<T, I, IR> {
   state: {
-    schemaId: string;
-    context: T;
-    indexes: number[];
-  };
-  finished: boolean;
-  inputRequired?: IR;
-  interrupt?: boolean;
-  break?: boolean;
-  stepId: string;
-  resume?: (input: I) => Promise<TFlowOutput<T, unknown, IR>>;
-  retry?: (input?: I) => Promise<TFlowOutput<T, unknown, IR>>;
-  error?: Error;
-  expires?: number;
-  errorList?: unknown;
+    schemaId: string      // workflow identifier
+    context: T            // current context (with all mutations)
+    indexes: number[]     // position in schema (for resume)
+  }
+  finished: boolean       // true if workflow completed all steps
+  stepId: string          // last executed step ID
+  inputRequired?: IR      // present when a step needs input
+  interrupt?: boolean     // true when paused (input or retriable error)
+  break?: boolean         // true if a break condition ended the flow
+  resume?: (input: I) => Promise<TFlowOutput<T, unknown, IR>>   // resume convenience function
+  retry?: (input?: I) => Promise<TFlowOutput<T, unknown, IR>>   // retry convenience function
+  error?: Error           // error if step threw (retriable or regular)
+  errorList?: unknown     // structured error details from StepRetriableError
+  expires?: number        // TTL in ms (if set by the step)
 }
 ```
 
-- `finished`: `true` if workflow ended normally, otherwise `false`.
-- `inputRequired`: If present, more input is needed.
-- `interrupt`: `true` if workflow paused due to input or retriable error.
-- `resume`: A function to continue the workflow after interruption.
-- `error`: Any error thrown (e.g., `StepRetriableError`).
-- `errorList`: Additional error details if provided.
+### `TWorkflowSchema<T>`
 
+Schema definition — an array of workflow items:
+
+```ts
+type TWorkflowSchema<T> = TWorkflowItem<T>[]
+
+type TWorkflowItem<T> =
+  | string                              // simple step ID
+  | TWorkflowStepSchemaObj<T, any>      // step with condition/input
+  | TSubWorkflowSchemaObj<T>            // nested steps (with optional while)
+  | TWorkflowControl<T>                 // break or continue
+
+interface TWorkflowStepSchemaObj<T, I> {
+  id: string
+  condition?: string | ((ctx: T) => boolean | Promise<boolean>)
+  input?: I
+}
+
+interface TSubWorkflowSchemaObj<T> {
+  steps: TWorkflowSchema<T>
+  condition?: string | ((ctx: T) => boolean | Promise<boolean>)
+  while?: string | ((ctx: T) => boolean | Promise<boolean>)
+}
+
+type TWorkflowControl<T> =
+  | { continue: string | ((ctx: T) => boolean | Promise<boolean>) }
+  | { break: string | ((ctx: T) => boolean | Promise<boolean>) }
+```
+
+### `TWorkflowSpy<T, I, IR>`
+
+Spy callback type for observing workflow execution:
+
+```ts
+type TWorkflowSpy<T, I, IR> = (
+  event: string,
+  eventOutput: string | undefined | {
+    fn: string | ((ctx: T) => boolean | Promise<boolean>)
+    result: boolean
+  },
+  flowOutput: TFlowOutput<T, I, IR>,
+  ms?: number,
+) => void
+```
+
+### `StepRetriableError<IR>`
+
+Error class for recoverable step failures:
+
+```ts
+class StepRetriableError<IR> extends Error {
+  constructor(
+    originalError: Error,
+    errorList?: unknown,
+    inputRequired?: IR,
+    expires?: number,
+  )
+
+  readonly originalError: Error
+  errorList?: unknown
+  readonly inputRequired?: IR
+  expires?: number
+}
+```
+
+## Composables
+
+### `useWfState()`
+
+Returns the current workflow execution state. Available inside step and entry point handlers.
+
+```ts
+import { useWfState } from '@moostjs/event-wf'
+
+const state = useWfState()
+state.ctx<TMyContext>()      // workflow context
+state.input<TMyInput>()     // step input (or undefined)
+state.schemaId              // workflow schema ID
+state.stepId()              // current step ID (or null)
+state.indexes               // position in nested schemas
+state.resume                // boolean: is this a resume?
+```
+
+::: info
+In most cases, use `@WorkflowParam` decorators instead of calling `useWfState()` directly. The composable is useful for advanced scenarios like custom interceptors or utilities that need workflow context.
+:::
+
+### `wfKind`
+
+Event kind marker for workflow events. Used internally by the adapter and useful for building custom event-type-aware logic.
+
+```ts
+import { wfKind } from '@moostjs/event-wf'
+```

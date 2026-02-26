@@ -234,7 +234,7 @@ export class Moost extends Hookable {
 
     // getInstance - instance factory for resolving SINGLETON and FOR_EVENT instance
     const getInstance = instance
-      ? () => Promise.resolve(instance!)
+      ? () => instance!
       : async (): Promise<TObject> =>
           (await infact.get(controller as TClassConstructor<TAny>, {
             ...infactOpts,
@@ -301,7 +301,7 @@ export class Moost extends Hookable {
     return this
   }
 
-  protected globalInterceptorHandler?: () => Promise<InterceptorHandler>
+  protected globalInterceptorHandler?: () => InterceptorHandler | undefined
 
   /**
    * Provides InterceptorHandler with global interceptors and pipes.
@@ -321,7 +321,7 @@ export class Moost extends Hookable {
       )
       this.globalInterceptorHandler = getIterceptorHandlerFactory(
         interceptors,
-        () => Promise.resolve(this as unknown as TObject),
+        () => this as unknown as TObject,
         pipes,
       )
     }
@@ -407,11 +407,11 @@ export class Moost extends Hookable {
 export interface TMoostAdapterOptions<H, T> {
   prefix: string
   fakeInstance: T
-  getInstance: () => Promise<T>
+  getInstance: () => Promise<T> | T
   method: keyof T
   handlers: TMoostHandler<H>[]
-  getIterceptorHandler: () => Promise<InterceptorHandler>
-  resolveArgs: () => Promise<unknown[]>
+  getIterceptorHandler: () => InterceptorHandler | undefined
+  resolveArgs: () => Promise<unknown[]> | unknown[]
   logHandler: (eventName: string) => void
   register: (handler: TMoostHandler<TEmpty>, path: string, args: string[]) => void
 }

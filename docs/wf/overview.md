@@ -1,52 +1,54 @@
-# Moost Workflows Overview
+# Workflows Overview
 
-Moost’s workflow system integrates seamlessly with its event-driven architecture and metadata-driven approach, allowing you to orchestrate complex sequences of operations as workflows. These workflows are flexible and minimally opinionated, providing a core set of tools to define steps, conditions, input handling, and error management — but leaving the specifics of how you want to implement them entirely up to you.
+Moost Workflows let you model multi-step processes as composable, typed sequences of operations. Instead of tangling business logic into deeply nested functions, you define discrete **steps**, arrange them into a **schema**, and let the workflow engine handle execution order, branching, pausing, and resumption.
 
-## Why Use Moost Workflows?
+## When to Use Workflows
 
-- **Modularity:** Break down complex processes into discrete steps, making large tasks easier to maintain and reason about.
-- **Flexibility:** Define conditions, loops, and branching logic at a high level without rigid constraints.
-- **Typed Context and Input:** Strong typing through TypeScript generics ensures safe access to workflow state and input.
-- **Resilience:** Pause workflows for input or retry failed steps without losing global context, streamlining user-interactive or error-prone operations.
-- **Minimal Opinionation:** Moost provides core workflow primitives. You decide how to interpret `inputRequired`, how to store schemas, and how to present input forms, adapt contexts, or handle retriable errors.
+Workflows are a good fit when your process:
 
-## Key Components
+- **Has multiple stages** that must execute in a specific order
+- **Needs branching** based on runtime data (approve/reject, retry/abort)
+- **Can be interrupted** to wait for user input, external approval, or async events
+- **Requires auditability** — you need to trace what ran, when, and with what data
+- **Spans time** — the process may take minutes, hours, or days to complete
 
-### Workflow Entry Point
-A workflow starts at an entry point method, defined by the `@Workflow` decorator and associated with a schema. This method typically contains no logic — just the path and schema definition. Parameters can be injected directly from the route, providing initial data to the workflow.
+Common examples: user onboarding, order fulfillment, document approval, data import pipelines, multi-step forms.
 
-**Learn more:** [Workflow Entry Point](/wf/entry)
+## Core Concepts
 
-### Workflow Steps
-Each step represents a single unit of logic. Steps are methods in a controller, marked with `@Step("path")`. Steps can be atomic and reusable, parametric, and can request additional input if they can’t proceed.
+| Concept | What it does |
+|---------|-------------|
+| [**Steps**](/wf/steps) | Individual units of work — controller methods decorated with `@Step` |
+| [**Schemas**](/wf/schemas) | Declarative arrays defining execution order, conditions, and loops |
+| [**Context**](/wf/context) | Typed shared state that persists across all steps in a workflow |
+| [**Pause & Resume**](/wf/pause-resume) | Interrupt a workflow to collect input, then continue from where it stopped |
+| [**Error Handling**](/wf/errors) | Retriable errors that pause instead of fail, enabling graceful recovery |
+| [**Spies**](/wf/spies) | Observers that monitor step execution for logging, timing, or auditing |
 
-**Learn more:** [Workflow Steps](/wf/steps)
+## How It Works
 
-### Workflow Schema
-The schema dictates the workflow’s flow: an array of steps, conditions, loops (`while`), and breaks. Conditions can be defined as functions or strings, allowing easy serialization for storage in a database. This approach supports dynamic, data-driven workflows with minimal boilerplate.
+A typical workflow lifecycle:
 
-**Learn more:** [Workflow Schema](/wf/schema)
+1. **Define steps** as controller methods, each handling one piece of logic
+2. **Compose a schema** that arranges steps with conditions and loops
+3. **Start the workflow** with an initial context object
+4. **Steps execute** in sequence, reading and mutating the shared context
+5. **Workflow completes** — or **pauses** if a step needs input, then resumes later
 
-### Workflow Context
-The workflow context holds state shared across all steps. Define an interface for your context and apply it as a generic type to `@WorkflowSchema`. Steps can access context via `@WorkflowParam("context")`, providing strongly typed, secure state management throughout the workflow’s lifetime.
+```
+start(schemaId, context)
+    |
+    v
+[ step 1 ] --> [ step 2 ] --> { condition? } --yes--> [ step 3a ]
+                                    |
+                                    no
+                                    |
+                                    v
+                              [ step 3b ] --> done
+```
 
-**Learn more:** [Workflow Context](/wf/context)
+The workflow output tells you whether it finished, paused for input, or encountered an error — along with the full serializable state you can store and resume from later.
 
-### Retriable Errors
-Not all errors must terminate the workflow. By throwing a `StepRetriableError`, you can pause the workflow. The output will indicate the error and that the workflow is interrupted, not finished. Input can be requested or errors explained, and you can resume later after resolving the issue.
+## What's Next?
 
-**Learn more:** [Retriable Error](/wf/retriable-error)
-
-## Putting It All Together
-
-A typical Moost workflow:
-
-1. **Define the context** for your workflow’s data model.
-2. **Create an entry point** decorated with `@Workflow` and `@WorkflowSchema`.
-3. **Implement steps**, each handling a small piece of logic.
-4. **Add conditions, loops, and breaks** in the schema to control the workflow’s execution path.
-5. **Access and modify context** in steps as needed.
-6. **Handle input requirements or transient errors** by returning `inputRequired` or using `StepRetriableError`, allowing the workflow to pause and resume gracefully.
-
-This modular design encourages you to adapt these primitives to your application’s unique needs. Whether you want to store workflow schemas in a database, dynamically generate conditions, or provide complex UI forms for required input, Moost workflows provide a solid foundation without forcing a single pattern.
-
+Ready to try it? Head to the [Getting Started](/wf/) guide to build your first workflow.

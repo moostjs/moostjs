@@ -1,70 +1,116 @@
-# Static Files
+# Static Files & Proxy
 
-You can use the `serveFile` function from the `@wooksjs/http-static` package to serve static files.
-This function returns a readable stream of the file content and takes care of preparing the necessary response headers, handling caching, and supporting range requests.
+Moost works with Wooks composables for serving static files and proxying requests.
 
-## Installation
+## Static files
 
-To use the static file serving functionality, you need to install the `@wooksjs/http-static` package:
+### Installation
 
 ```bash
 npm install @wooksjs/http-static
 ```
 
-## Usage
+### Basic usage
 
-Once installed, you can import the `serveFile` function and use it in your Moost HTTP application.
-
-Example:
+Use `serveFile()` to serve a file. It returns a readable stream and sets appropriate response headers, including caching and range request support.
 
 ```ts
-import { serveFile } from '@wooksjs/http-static';
-import { Controller, Get } from '@moostjs/event-http';
+import { serveFile } from '@wooksjs/http-static'
+import { Get } from '@moostjs/event-http'
+import { Controller, Param } from 'moost'
 
 @Controller()
-class MyController {
-  @Get('static/file.txt')
-  serveStaticFile() {
-    return serveFile('file.txt', options);
-  }
+export class StaticController {
+    @Get('static/*')
+    serve(@Param('*') filePath: string) {
+        return serveFile(filePath, {
+            baseDir: './public',
+            cacheControl: { maxAge: '10m' },
+        })
+    }
 }
 ```
 
-The `serveFile` function takes the file path as the first argument and accepts an optional options object as the second argument.
-It returns a readable stream of the file content that will be sent as the response.
+### Options
 
-## Options
+| Option | Type | Description |
+|---|---|---|
+| `baseDir` | `string` | Base directory for resolving file paths |
+| `cacheControl` | `string \| object` | Cache-Control header value |
+| `expires` | `string` | Expires header value |
+| `pragmaNoCache` | `boolean` | Add `Pragma: no-cache` header |
+| `headers` | `object` | Additional response headers |
+| `defaultExt` | `string` | Default extension when none is provided |
+| `index` | `string` | Index file to serve from directories |
+| `listDirectory` | `boolean` | List files if path is a directory |
 
-The `options` object allows you to customize the behavior of the file serving. It provides the following properties:
+## Proxy
 
--   `headers`: An object containing additional headers to add to the response.
--   `cacheControl`: The Cache-Control header value for caching control. You can provide a string or an object with cache control directives.
--   `expires`: The Expires header value to specify the expiration date/time of the file.
--   `pragmaNoCache`: A boolean value indicating whether to add the Pragma: no-cache header.
--   `baseDir`: The base directory path for resolving the file path.
--   `defaultExt`: The default file extension to be added to the file path if no file extension is provided.
--   `listDirectory`: A boolean value indicating whether to list files in a directory if the file path corresponds to a directory.
--   `index`: The filename of the index file to automatically serve from the folder if present.
+### Installation
 
-## Built-in file server example:
+```bash
+npm install @wooksjs/http-proxy
+```
 
-Here's an example of using the `serveFile` function to create a built-in file server in a Moost HTTP controller:
+### Basic usage
+
+Use `useProxy()` to create a proxy function that forwards requests to a target URL:
 
 ```ts
-import { serveFile } from '@wooksjs/http-static';
-import { Get, Controller } from '@moostjs/event-http';
-import { Param } from 'moost';
+import { useProxy } from '@wooksjs/http-proxy'
+import { Get } from '@moostjs/event-http'
+import { Controller } from 'moost'
 
 @Controller()
-class MyController {
-  @Get('static/*')
-  serveStaticFile(@Param('*') filePath: string) {
-    return serveFile(filePath, { cacheControl: { maxAge: '10m' } });
-  }
+export class ProxyController {
+    @Get('api/*')
+    proxy() {
+        const proxy = useProxy()
+        return proxy('https://api.example.com/v1')
+    }
 }
 ```
 
-In the example above, any request to the `/static/*` route will serve the corresponding file from the file system.
-The file path is extracted from the wildcard route parameter, and the `cacheControl` option is used to set the caching behavior of the response.
+The proxy function forwards the request and returns a fetch `Response`.
 
-You can refer to the [Cache Control documentation](https://wooks.moost.org/webapp/composables/response.html#cache-control) in Wooks for more details on how to configure the cache control directives.
+### Filtering headers and cookies
+
+Control what gets forwarded:
+
+```ts
+@Get('api/*')
+proxy() {
+    const proxy = useProxy()
+    return proxy('https://api.example.com', {
+        reqHeaders: { block: ['referer', 'cookie'] },
+        reqCookies: { block: '*' },
+    })
+}
+```
+
+### Modifying responses
+
+The proxy returns a standard fetch `Response`, so you can modify it before returning:
+
+```ts
+@Get('api/data')
+async proxyData() {
+    const proxy = useProxy()
+    const response = await proxy('https://api.example.com/data')
+    const data = await response.json()
+    return { ...data, proxied: true }
+}
+```
+
+### Advanced options
+
+```ts
+proxy('https://target.com/path', {
+    method: 'GET',                              // override HTTP method
+    reqHeaders: { block: ['referer'] },         // block request headers
+    reqCookies: { allow: ['session'] },         // allow specific cookies
+    resHeaders: { overwrite: { 'x-proxy': 'moost' } }, // add response headers
+    resCookies: { allow: ['session'] },         // filter response cookies
+    debug: true,                                // log proxy details
+})
+```

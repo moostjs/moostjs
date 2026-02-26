@@ -1,98 +1,153 @@
-# Defining Workflow Steps
+# Steps
 
-Workflow steps define the logical units of work within a workflow. Each step is a method in a controller, decorated with `@Step("path")`. Steps can be parametric, request additional input, and are completely reusable across workflows.
+Steps are the building blocks of a workflow. Each step is a controller method decorated with `@Step` that handles one unit of work. Steps read and write to the shared context, can receive input, and can signal that the workflow should pause.
 
-## Key Points
+## Defining a Step
 
-- **Atomic Units:** Each step handles a small part of the workflow.
-- **Method-Based:** Steps are controller methods decorated with `@Step("stepPath")`.
-- **Parametric Paths:** Steps can use route parameters in their paths.
-- **Requesting Input:** A step can return an object with `inputRequired` to pause the workflow and request input. `inputRequired` can be `true`, or any object (like a form schema) that your application understands and uses to gather input from users.
-- **Resuming Workflow:** If a step requests input, the workflow interrupts. Later, you can resume the workflow by providing the required input. You can resume using:
-  - The `resume` function returned in the workflow output.
-  - `this.wf.resume(output.state, input)` from your application logic.
-
-## Example
+Decorate a controller method with `@Step('id')`. The string is the step ID used in workflow schemas:
 
 ```ts
-import { Step, WorkflowParam, Param } from '@moostjs/event-fw';
-import { Controller, Injectable } from 'moost';
+import { Step, WorkflowParam } from '@moostjs/event-wf'
+import { Controller } from 'moost'
 
-interface TQuadraticRootsContext {
-  a: number; b: number; c: number;
-  discriminant?: number; result?: string;
-}
-
-@Injectable("FOR_EVENT")
-@Controller('math')
-export class MathController {
-  @WorkflowParam("context")
-  ctx!: TQuadraticRootsContext;
-
-  @Step("validateInputs")
-  validate(@WorkflowParam("input") input?: Partial<TQuadraticRootsContext>) {
-    if (input?.a === undefined || input?.b === undefined || input?.c === undefined) {
-      // Request input. You could return just { inputRequired: true }
-      // or a complex object describing what input is needed.
-      return { inputRequired: { fields: ["a","b","c"] } };
-    }
-    this.ctx.a = +input.a; this.ctx.b = +input.b; this.ctx.c = +input.c;
-    if (this.ctx.a === 0) throw new Error("a cannot be zero");
-  }
-
-  @Step("calculateDiscriminant")
-  calcDisc() {
-    this.ctx.discriminant = this.ctx.b * this.ctx.b - 4 * this.ctx.a * this.ctx.c;
-  }
-
-  @Step("noSolutions")
-  noSol() { this.ctx.result = "No real solutions"; }
-
-  @Step("calc/:type(single|double)")
-  calcRoots(@Param("type") type: "single"|"double") {
-    const { a,b,discriminant:d } = this.ctx;
-    if (type === "single") {
-      this.ctx.result = `x = ${b/(2*a)}`;
-    } else {
-      this.ctx.result = `x1=${(-b+Math.sqrt(d!))/(2*a)}, x2=${(-b-Math.sqrt(d!))/(2*a)}`;
-    }
+@Controller()
+export class ApprovalController {
+  @Step('review') // [!code focus]
+  review(@WorkflowParam('context') ctx: TApprovalContext) {
+    ctx.reviewedAt = new Date().toISOString()
+    ctx.status = 'reviewed'
   }
 }
 ```
 
-## Handling Input Requirements
+If you omit the path, the method name is used as the step ID.
 
-When a step returns `inputRequired`, the workflow output might look like:
+## Accessing Workflow Data
 
-```json
-{
-  "state": { "schemaId": "...", "context": { ... }, "indexes": [0] },
-  "finished": false,
-  "stepId": "validateInputs",
-  "interrupt": true,
-  "inputRequired": { "fields": ["a","b","c"] },
-  "resume": [Function]
+Use `@WorkflowParam` to inject workflow data into step methods:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `'context'` | `T` | Shared workflow context — read and mutate it freely |
+| `'input'` | `I \| undefined` | Input passed to `start()` or `resume()` |
+| `'stepId'` | `string \| null` | Current step identifier |
+| `'schemaId'` | `string` | Workflow schema identifier |
+| `'indexes'` | `number[]` | Position in nested schema (for sub-workflows) |
+| `'resume'` | `boolean` | `true` when the workflow is being resumed, `false` on first run |
+| `'state'` | `object` | Full workflow state (context, indexes, schemaId) |
+
+```ts
+@Step('process')
+process(
+  @WorkflowParam('context') ctx: TMyContext,
+  @WorkflowParam('input') input: TMyInput | undefined,
+  @WorkflowParam('resume') isResume: boolean,
+) {
+  if (isResume) {
+    console.log('Resuming with new input:', input)
+  }
+  ctx.processed = true
 }
 ```
 
-Your application can interpret `inputRequired` however it likes. It could be a simple `true`, or a structured object representing a form schema.
+## Class Property Injection
 
-Once you've collected the input:
+When using `@Injectable('FOR_EVENT')`, the controller is instantiated fresh for each step execution. This lets you inject context as a class property instead of a method parameter:
 
-- Use the `resume` function:
-  ```ts
-  const resumed = await output.resume({ a:1, b:5, c:-6 });
-  ```
-- Or use `this.wf.resume(output.state, { a:1, b:5, c:-6 })`:
-  ```ts
-  const resumed = await this.wf.resume(output.state, { a:1, b:5, c:-6 });
-  ```
+```ts
+@Injectable('FOR_EVENT') // [!code focus]
+@Controller()
+export class ApprovalController {
+  @WorkflowParam('context') // [!code focus]
+  ctx!: TApprovalContext // [!code focus]
 
-## Best Practices
+  @Step('review')
+  review() {
+    this.ctx.status = 'reviewed' // access via this.ctx
+  }
 
-- **Keep Steps Atomic:** Focus each step on a single task.
-- **Parametric Paths Sparingly:** Use parametric paths only when they add clarity.
-- **Document Input Requirements:** Clearly specify what input a step might need.
-- **Make `inputRequired` Flexible:** Return simple flags or complex objects as needed.
-- **Reuse Steps:** Steps can be reused in multiple workflows.
+  @Step('approve')
+  approve() {
+    this.ctx.status = 'approved' // same property, different step
+  }
+}
+```
 
+::: info
+Without `@Injectable('FOR_EVENT')`, the controller is a singleton shared across events. In that case, use method parameters instead of class properties to avoid state leaking between concurrent workflows.
+:::
+
+## Parametric Steps
+
+Steps can have parametric paths, just like HTTP routes. Use `@Param` from `moost` to extract values:
+
+```ts
+import { Param } from 'moost'
+
+@Step('notify/:channel(email|sms)') // [!code focus]
+notify(
+  @Param('channel') channel: 'email' | 'sms', // [!code focus]
+  @WorkflowParam('context') ctx: TApprovalContext,
+) {
+  if (channel === 'email') {
+    sendEmail(ctx.userId, 'Your document was approved')
+  } else {
+    sendSms(ctx.userId, 'Your document was approved')
+  }
+}
+```
+
+Reference parametric steps in schemas with concrete values:
+
+```ts
+@WorkflowSchema<TApprovalContext>([
+  'review',
+  'approve',
+  { id: 'notify/email' },
+])
+```
+
+## What Steps Can Return
+
+A step method can:
+
+- **Return nothing** (`void`) — execution continues to the next step
+- **Return `{ inputRequired }`** — pauses the workflow until input is provided (see [Pause & Resume](/wf/pause-resume))
+- **Throw `StepRetriableError`** — pauses with an error that can be retried (see [Error Handling](/wf/errors))
+- **Throw a regular error** — fails the workflow immediately
+
+```ts
+@Step('collect-data')
+collectData(@WorkflowParam('input') input?: TFormData) {
+  if (!input) {
+    return { inputRequired: { fields: ['name', 'email'] } } // [!code focus]
+  }
+  // process input...
+}
+```
+
+The `inputRequired` value can be anything your application understands — a boolean, a form schema object, or a string. Moost passes it through without interpretation.
+
+## Reusing Steps Across Workflows
+
+Steps are just methods on a controller. Multiple workflows can reference the same step by its ID:
+
+```ts
+@Controller()
+export class SharedSteps {
+  @Step('send-notification')
+  sendNotification(@WorkflowParam('context') ctx: { email: string, message: string }) {
+    sendEmail(ctx.email, ctx.message)
+  }
+}
+
+// In another controller:
+@WorkflowSchema(['validate', 'process', 'send-notification'])
+
+// In yet another controller:
+@WorkflowSchema(['review', 'approve', 'send-notification'])
+```
+
+::: info
+Steps are resolved by their path (ID) through the Wooks router. As long as the step is registered (its controller is imported), any workflow schema can reference it.
+:::

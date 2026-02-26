@@ -1,116 +1,233 @@
-# Routing
+# Routing & Handlers
 
-Routing in Moost HTTP is an integral part of handling event contexts.
-It helps direct requests to the appropriate handlers. The routing can be either static or parametric,
-and is powered by Wooks's routing system.
-Routes, which are essentially instructions for handling specific types of requests, can be defined using `@Get`, `@Post`, or other request handler decorators.
+Every endpoint in Moost starts with an HTTP method decorator and a route path. This page covers how to define routes, use parameters, and control which methods your handlers respond to.
 
-## Parametric Routes
+## HTTP method decorators
 
-A parametric route includes parameters, signified by a colon (`:`).
-These parameters are dynamic parts of the route, allowing us to handle a range of different request URLs.
-The colon is followed by the parameter name, which you can use to reference the actual value in the URL. 
+Moost provides a decorator for each HTTP method:
 
-If you need to use a colon in the path without defining a parameter, it can be escaped with a backslash.
-Parameters can also be separated using a hyphen. Regular expressions are another powerful tool you can use to restrict or format the shape of your parameters.
+| Decorator | HTTP Method |
+|-----------|-------------|
+| `@Get(path?)` | GET |
+| `@Post(path?)` | POST |
+| `@Put(path?)` | PUT |
+| `@Delete(path?)` | DELETE |
+| `@Patch(path?)` | PATCH |
+| `@All(path?)` | All methods |
 
-Here's how you might set up various parametric routes in Moost:
+All decorators are imported from `@moostjs/event-http`.
 
 ```ts
-@Controller('api')
-export class ParametricRouteController {
-    // A single parameter named 'key'.
-    @Get('vars/:key')
-    getKey(@Param('key') key: string) {
-        /* handler logic */
+import { Get, Post, Put, Delete, Patch } from '@moostjs/event-http'
+import { Controller, Param } from 'moost'
+
+@Controller('users')
+export class UserController {
+    @Get('')
+    list() {
+        return [] // GET /users
     }
 
-    // Two parameters named 'key1' and 'key2', separated by a hyphen.
-    @Get('vars/:key1-:key2')
-    getKeys(
-        @Param('key1') key1: string,
-        @Param('key2') key2: string,
-    ) {
-        /* handler logic */
+    @Get(':id')
+    find(@Param('id') id: string) {
+        return { id } // GET /users/123
     }
 
-    // Two parameters with specific numeric format.
-    @Get('time/:hours(\\d{2})h:minutes(\\d{2})m')
-    getTime(
-        @Param('hours') hours: string,
-        @Param('minutes') minutes: string,
-    ) {
-        /* handler logic */
+    @Post('')
+    create() {
+        return { created: true } // POST /users
     }
 
-    // Two parameters separated by a slash.
-    @Get('user/:name1/:name2')
-    getUser(
-        @Param('name1') name1: string,
-        @Param('name2') name2: string,
-    ) {
-        /* handler logic */
-    }
-
-    // Three parameters with the same name. This creates an array as the parameter value.
-    @Get('array/:name/:name/:name')
-    getArray(@Param('name') name: string[]) {
-        /* handler logic */
+    @Delete(':id')
+    remove(@Param('id') id: string) {
+        return { deleted: id } // DELETE /users/123
     }
 }
 ```
 
-## Wildcards in Routes
+### Path defaults
 
-Wildcards, denoted by an asterisk (`*`), represent zero or more characters in a path segment. They can be placed at the beginning, middle, or end of a path. You can also use multiple wildcards in one route, combine them with parameters, or apply regular expressions to them.
+The `path` argument is optional. When omitted, the method name becomes the path:
 
-In Moost, you can access wildcard values by using the `@Param('*')` decorator.
+```ts
+@Get()
+getUsers() { /* GET /getUsers */ }
+
+@Get('')
+root() { /* GET / (root of controller) */ }
+
+@Get('list')
+getUsers() { /* GET /list */ }
+```
+
+::: tip
+Use `@Get('')` (empty string) to handle the controller's root path. Omitting the argument entirely uses the method name as the path segment.
+:::
+
+### HEAD, OPTIONS, and custom methods
+
+For HTTP methods without a convenience decorator, use `@HttpMethod`:
+
+```ts
+import { HttpMethod } from '@moostjs/event-http'
+
+@HttpMethod('HEAD', 'health')
+healthCheck() { /* HEAD /health */ }
+
+@HttpMethod('OPTIONS', '')
+cors() { /* OPTIONS / */ }
+```
+
+## Route parameters
+
+Dynamic segments in a route are prefixed with `:`. Use `@Param('name')` to extract them.
+
+```ts
+@Get('users/:id')
+getUser(@Param('id') id: string) {
+    return { id }
+}
+```
+
+### Multiple parameters
+
+Parameters can be separated by slashes or hyphens:
+
+```ts
+// Slash-separated: /flights/SFO/LAX
+@Get('flights/:from/:to')
+getFlight(
+    @Param('from') from: string,
+    @Param('to') to: string,
+) { /* ... */ }
+
+// Hyphen-separated: /dates/2024-01-15
+@Get('dates/:year-:month-:day')
+getDate(
+    @Param('year') year: string,
+    @Param('month') month: string,
+    @Param('day') day: string,
+) { /* ... */ }
+```
+
+### Regex-constrained parameters
+
+Restrict a parameter's shape with a regex pattern in parentheses:
+
+```ts
+// Only matches two-digit hours and minutes: /time/09h30m
+@Get('time/:hours(\\d{2})h:minutes(\\d{2})m')
+getTime(
+    @Param('hours') hours: string,
+    @Param('minutes') minutes: string,
+) { /* ... */ }
+```
+
+### Repeated parameters (arrays)
+
+When the same parameter name appears multiple times, the value becomes an array:
+
+```ts
+// /rgb/255/128/0 → color = ['255', '128', '0']
+@Get('rgb/:color/:color/:color')
+getRgb(@Param('color') color: string[]) { /* ... */ }
+```
+
+### All parameters at once
+
+Use `@Params()` to get every route parameter as an object:
+
+```ts
+@Get('asset/:type/:type/:id')
+getAsset(@Params() params: { type: string[], id: string }) {
+    return params
+}
+```
+
+## Wildcards
+
+An asterisk (`*`) matches zero or more characters within a path segment.
 
 ```ts
 @Controller('static')
-export class WildcardRouteController {
-    // Matches all paths starting with `/static/`
+export class StaticController {
+    // Matches /static/anything/here
     @Get('*')
-    handleAll(@Param('*') path: string) {
-        /* handler logic */
-    }
+    handleAll(@Param('*') path: string) { /* ... */ }
 
-    // Matches all paths that start with `/static/` and end with `.js`
+    // Matches /static/bundle.js, /static/vendor.js
     @Get('*.js')
-    handleJS(@Param('*') path: string) {
-        /* handler logic */
-    }
+    handleJS(@Param('*') path: string) { /* ... */ }
 
-    // Matches all paths that start with `/static/` and have `/test/` in the middle
+    // Multiple wildcards → array
     @Get('*/test/*')
-    handleTest(@Param('*') paths: string[]) {
-        /* handler logic */
-    }
+    handleTest(@Param('*') paths: string[]) { /* ... */ }
 
-    // Matches all paths that start with `/static/` followed by numbers
+    // Regex on wildcard: only digits
     @Get('*(\\d+)')
-    handleNumbers(@Param('*') path: string) {
-        /* handler logic */
-    }
+    handleNumbers(@Param('*') path: string) { /* ... */ }
 }
 ```
 
-## Accessing Multiple URI Parameters
+## Query parameters
 
-When you have a route
-
- with multiple parameters, you can access all of them as an object using the `@Params()` decorator. This can be especially useful when you have multiple parameters in your route and want to access them in an organized manner.
+Query strings (`?key=value`) are not part of the route path. Use `@Query` to extract them:
 
 ```ts
-@Controller('api')
-export class MultiParamController {
-    @Get('asset/:type/:type/:id')
-    getAsset(@Params() params: {type: string[], id: string}) {
-        /* handler logic */
-    }
+import { Get, Query } from '@moostjs/event-http'
+
+@Get('search')
+search(
+    @Query('q') query: string,
+    @Query('page') page: string,
+) {
+    return { query, page }
+}
+// GET /search?q=moost&page=2 → { query: 'moost', page: '2' }
+```
+
+Use `@Query()` without arguments to get all query parameters as an object:
+
+```ts
+@Get('search')
+search(@Query() params: Record<string, string>) {
+    return params
 }
 ```
 
-## Query Parameters
+::: info
+Query values are always strings. Use [pipes](./resolvers) to transform them to numbers or other types.
+:::
 
-Query parameters, also known as URL Search Parameters, aren't part of the URI path processed by the router. To access query parameters in Moost, you can use the `@Query` decorator. For more information, refer to the section on [Query Parameters](/webapp/request#search-query-parameters).
+## Handler return values
+
+Whatever your handler returns becomes the response body. Moost automatically sets `content-type` and `content-length`:
+
+| Return type | Content-Type |
+|---|---|
+| `string` | `text/plain` |
+| object / array | `application/json` |
+| `ReadableStream` | streamed |
+| `Response` (fetch) | forwarded as-is |
+
+```ts
+@Get('text')
+getText() {
+    return 'Hello!' // → text/plain
+}
+
+@Get('json')
+getJson() {
+    return { message: 'Hello!' } // → application/json
+}
+```
+
+Async handlers work the same way — return a promise:
+
+```ts
+@Get('data')
+async getData() {
+    const data = await fetchFromDb()
+    return data
+}
+```

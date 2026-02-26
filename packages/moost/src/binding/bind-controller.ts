@@ -64,28 +64,39 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
       })
     }
 
-    const resolveArgs = async () => {
-      const args: unknown[] = []
-      for (const [i, { pipes, meta: paramMeta }] of argsPipes.entries()) {
-        args[i] = await runPipes(
-          pipes,
-          undefined,
-          {
-            classMeta: meta,
-            methodMeta,
-            paramMeta,
-            type: classConstructor,
-            key: method,
-            index: i,
-            targetMeta: paramMeta,
-            instantiate: <T extends TObject>(t: TClassConstructor<T>) =>
-              useControllerContext().instantiate(t),
-          },
-          'PARAM',
-        )
-      }
-      return args
-    }
+    const resolveArgs = argsPipes.length === 0
+      ? undefined
+      : () => {
+          const args: unknown[] = []
+          let hasAsync = false
+          for (let i = 0; i < argsPipes.length; i++) {
+            const { pipes, meta: paramMeta } = argsPipes[i]
+            const result = runPipes(
+              pipes,
+              undefined,
+              {
+                classMeta: meta,
+                methodMeta,
+                paramMeta,
+                type: classConstructor,
+                key: method,
+                index: i,
+                targetMeta: paramMeta,
+                instantiate: <T extends TObject>(t: TClassConstructor<T>) =>
+                  useControllerContext().instantiate(t),
+              },
+              'PARAM',
+            )
+            if (!hasAsync && result && typeof (result as PromiseLike<unknown>).then === 'function') {
+              hasAsync = true
+            }
+            args[i] = result
+          }
+          if (hasAsync) {
+            return Promise.all(args)
+          }
+          return args
+        }
 
     const wm = new WeakMap<Required<typeof methodMeta>['handlers'][0], THandlerOverview>()
 

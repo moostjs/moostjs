@@ -141,40 +141,19 @@ export default defineConfig({
         sidebar: {
             '/wf/': [
                 {
-                    text: 'Overview',
-                    link: '/wf/overview'
-                },
-                {
-                    text: 'Quick Start',
-                    link: '/wf/'
-                },
-                {
-                    text: 'Workflow Entry Point',
-                    link: '/wf/entry',
-                },
-                {
-                    text: 'Workflow Steps',
-                    link: '/wf/steps',
-                },
-                {
-                    text: 'Workflow Schema',
-                    link: '/wf/schema',
-                },
-                {
-                    text: 'Workflow Context',
-                    link: '/wf/context',
-                },
-                {
-                    text: 'Retriable Error',
-                    link: '/wf/retriable-error',
-                },
-                {
-                    text: 'Interceptors and Pipes',
-                    link: '/wf/interceptors-pipes',
-                },
-                {
-                    text: 'API Reference',
-                    link: '/wf/api'
+                    text: 'Workflows',
+                    items: [
+                        { text: 'Overview', link: '/wf/overview' },
+                        { text: 'Getting Started', link: '/wf/' },
+                        { text: 'Steps', link: '/wf/steps' },
+                        { text: 'Schemas & Flow Control', link: '/wf/schemas' },
+                        { text: 'Context & State', link: '/wf/context' },
+                        { text: 'Pause & Resume', link: '/wf/pause-resume' },
+                        { text: 'Error Handling', link: '/wf/errors' },
+                        { text: 'Spies & Observability', link: '/wf/spies' },
+                        { text: 'Integration', link: '/wf/integration' },
+                        { text: 'API Reference', link: '/wf/api' },
+                    ],
                 },
             ],
             '/validation/': [
@@ -315,105 +294,56 @@ export default defineConfig({
                     text: 'Web Application',
                     items: [
                         {
-                            text: 'Quick Start',
+                            text: 'Getting Started',
                             link: '/webapp/',
                         },
                         {
-                            text: 'Controllers',
-                            collapsed: true,
-                            items: [
-                                {
-                                    text: 'Controllers Overview',
-                                    link: '/webapp/controllers/',
-                                }, {
-                                    text: 'Using Controllers',
-                                    link: '/webapp/controllers/usage',
-                                }, {
-                                    text: 'Controller Reusability',
-                                    link: '/webapp/controllers/reuse',
-                                }, {
-                                    text: 'Scope of Controller',
-                                    link: '/webapp/controllers/scope',
-                                },
-                            ],
-                        },
-                        {
-                            text: 'Routing',
+                            text: 'Routing & Handlers',
                             link: '/webapp/routing',
                         },
                         {
-                            text: 'Request Handlers',
-                            link: '/webapp/handlers',
+                            text: 'Reading Request Data',
+                            link: '/webapp/request',
                         },
                         {
-                            text: 'Request',
-                            link: '/webapp/request',
+                            text: 'Responses & Errors',
+                            link: '/webapp/response',
+                        },
+                        {
+                            text: 'Controllers',
+                            link: '/webapp/controllers',
+                        },
+                        {
+                            text: 'Dependency Injection',
+                            link: '/webapp/di',
+                        },
+                        {
+                            text: 'Interceptors',
+                            link: '/webapp/interceptors',
                         },
                         {
                             text: 'Authentication',
                             link: '/webapp/auth',
                         },
                         {
+                            text: 'Guards & Authorization',
+                            link: '/webapp/guards',
+                        },
+                        {
+                            text: 'Custom Resolvers & Pipes',
+                            link: '/webapp/resolvers',
+                        },
+                        {
+                            text: 'Body Limits & Security',
+                            link: '/webapp/security',
+                        },
+                        {
+                            text: 'Static Files & Proxy',
+                            link: '/webapp/static',
+                        },
+                        {
                             text: 'Swagger Integration',
                             link: '/webapp/swagger',
-                        },
-                        {
-                            text: 'Response',
-                            collapsed: true,
-                            items: [
-                                {
-                                    text: 'General Response',
-                                    link: '/webapp/response',
-                                },
-                                {
-                                    text: 'Handling Errors',
-                                    link: '/webapp/errors',
-                                },
-                                {
-                                    text: 'Static Files',
-                                    link: '/webapp/static',
-                                },
-                                {
-                                    text: 'Proxy',
-                                    link: '/webapp/proxy',
-                                },
-                            ]
-                        },
-                        {
-                            text: 'Interceptors',
-                            collapsed: true,
-                            items: [
-                                {
-                                    text: 'Introduction to Interceptors',
-                                    link: '/webapp/interceptors/',
-                                },
-                                {
-                                    text: 'Guard Example',
-                                    link: '/webapp/interceptors/guards',
-                                },
-                                {
-                                    text: 'Logger Example',
-                                    link: '/webapp/interceptors/logger',
-                                },
-                                {
-                                    text: 'Error Handler',
-                                    link: '/webapp/interceptors/errors',
-                                },
-                            ]
-                        },
-                        {
-                            text: 'Adapters',
-                            collapsed: true,
-                            items: [
-                                {
-                                    text: 'Express',
-                                    link: '/webapp/adapters/express',
-                                },
-                                {
-                                    text: 'Fastify',
-                                    link: '/webapp/adapters/fastify',
-                                },
-                            ]
                         },
                     ],
                 }],
