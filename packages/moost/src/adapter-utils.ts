@@ -26,6 +26,8 @@ export interface TMoostEventHandlerOptions<T> {
   controllerMethod?: keyof T
   callControllerMethod?: (args: unknown[]) => unknown
   resolveArgs?: () => Promise<unknown[]> | unknown[]
+  afterHandlers?: (() => void)[]
+  errorHandlers?: (() => void)[]
   logErrors?: boolean
   manualUnscope?: boolean
   hooks?: {
@@ -54,6 +56,7 @@ export function registerEventScope(scopeId: string) {
 
 export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>) {
   const ci = getContextInjector<TContextInjectorHook>()
+  const { afterHandlers, errorHandlers } = options
   return async () => {
     const ctx = current()
     const scopeId = useEventId(ctx).getId()
@@ -191,6 +194,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           return (afterResult as PromiseLike<unknown>).then(
             (r) => {
               response = r
+              applyHandlers()
               return finalize()
             },
             (error: unknown) => {
@@ -207,7 +211,18 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         response = afterResult
       }
 
+      applyHandlers()
       return finalize()
+    }
+
+    // Apply extracted fast-path after/error handlers (e.g. @SetHeader, @SetCookie, @SetStatus)
+    function applyHandlers() {
+      const handlers = raise ? errorHandlers : afterHandlers
+      if (handlers) {
+        for (const h of handlers) {
+          h()
+        }
+      }
     }
 
     function finalize(): unknown {

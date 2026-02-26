@@ -141,6 +141,8 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
         getControllerInstance: opts.getInstance,
         controllerMethod: opts.method,
         resolveArgs: opts.resolveArgs,
+        afterHandlers: opts.afterHandlers,
+        errorHandlers: opts.errorHandlers,
         manualUnscope: true,
         targetPath,
         handlerType: handler.type,

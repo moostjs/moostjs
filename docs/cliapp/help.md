@@ -1,83 +1,77 @@
-# Command Usage
+# Help System
 
-<span class="cli-header"><span class="cli-path">/cliapp</span><span class="cli-invite">$</span> moost cli --help<span class="cli-blink">|</span></span>
+A well-built CLI is self-documenting. Moost provides decorators that generate rich `--help` output automatically — descriptions, usage patterns, argument docs, option lists, and examples.
 
-::: info
-Creating a great command-line interface (CLI) is not just about functionality but also about usability.
-Moost CLI provides a set of decorators to help you define rich command metadata and examples.
-This makes your CLI self-descriptive and user-friendly, especially when someone uses the `--help` option.
-:::
+## Describing commands
 
-## Defining Command Metadata
-
-To define command metadata, Moost provides several decorators:
-
-- `@Cli`: To define a command.
-- `@CliAlias`: To define an alias for a command.
-- `@CliOption`: To define a command option.
-- `@Description`: To provide a description for a command, argument or option.
-- `@CliExample`: To provide a usage example for a command.
-- `@Value`: To provide a sample value for an option.
-
-Here's an example of how you might use these decorators to define a CLI controller:
+Use `@Description()` on a method to explain what a command does:
 
 ```ts
-import { Controller, Description, Param, Value } from 'moost'
-import { Cli, CliOption, CliAlias, CliExample } from '@moostjs/event-cli'
+import { Cli, Controller, Description } from '@moostjs/event-cli'
 
 @Controller()
-export class CliController {
-    @Cli('start')
-    @CliAlias('begin') // Command alias
-    start() {
-        return 'Starting application...'
-    }
-
-    @Description('Deploy application to a target environment')
-    @Cli('deploy :env')
-    @CliExample('dev -p my-app', 'Deploy the "my-app" to the development environment')
-    deploy(
-        @Description('Environment')
-        @Param('env')
-        env: string,
-
-        @Description('Target cluster')
-        @CliOption('target', 't')
-        target: string,
-
-        @Description('Project name')
-        @CliOption('project', 'p')
-        project: string,
-    ) {
-        return `Deploying ${project} to ${target} | env = ${ env }`
-    }
-
-    @Description('Test application with specific configuration')
-    @Cli('test :config')
-    test(
-        @Description('Configuration file')
-        @Param('config')
-        config: string,
-
-        @Description('Target environment')
-        @Value('<staging>')
-        @CliOption('target', 't')
-        target: string,
-
-        @Description('Project name')
-        @CliOption('project', 'p')
-        @Value('<my-app>')
-        project: string,
-    ) {
-        return `Testing ${config}: ${project} in ${target}`
-    }
+export class AppController {
+  @Description('Deploy the application to a target environment')
+  @Cli('deploy/:env')
+  deploy(@Param('env') env: string) {
+    return `Deploying to ${env}...`
+  }
 }
 ```
 
-In the above example, we define a `CliController` with three commands: `start`, `deploy`, and `test`.
-Each command has its metadata defined using the decorators.
+The description appears at the top of `--help` output for that command.
 
-If you run command `deploy --help`, you'll see this nice command usage:
+## Describing arguments and options
+
+Apply `@Description()` to parameters as well:
+
+```ts
+@Description('Deploy the application to a target environment')
+@Cli('deploy/:env')
+deploy(
+  @Description('Target environment (production, staging, dev)')
+  @Param('env')
+  env: string,
+
+  @Description('Project name to deploy')
+  @CliOption('project', 'p')
+  project: string,
+) {
+  return `Deploying ${project} to ${env}`
+}
+```
+
+Each parameter's description appears under the **ARGUMENTS** or **OPTIONS** section in help.
+
+## Usage examples
+
+Add `@CliExample()` to show real usage patterns. Stack multiple decorators for multiple examples:
+
+```ts
+import { Cli, CliExample, CliOption, Controller, Description, Param } from '@moostjs/event-cli'
+
+@Controller()
+export class DeployController {
+  @Description('Deploy application to a target environment')
+  @Cli('deploy/:env')
+  @CliExample('deploy dev -p my-app', 'Deploy "my-app" to development')
+  @CliExample('deploy prod -p my-app --verbose', 'Deploy with verbose logging')
+  deploy(
+    @Description('Environment')
+    @Param('env')
+    env: string,
+
+    @Description('Project name')
+    @CliOption('project', 'p')
+    project: string,
+  ) {
+    return `Deploying ${project} to ${env}`
+  }
+}
+```
+
+Running `my-cli deploy --help` produces:
+
 <div class="language-terminal">
 <span class="lang">terminal</span>
 <pre>
@@ -85,71 +79,141 @@ If you run command `deploy --help`, you'll see this nice command usage:
 <span>  Deploy application to a target environment </span>
 <span></span>
 <span class="bright">USAGE </span>
-<span>  $ my-cli deploy <span class="info">&#60;env&#62; &#60;name&#62;</span></span>
+<span>  $ my-cli deploy <span class="info">&#60;env&#62;</span></span>
 <span></span>
 <span class="bright">ARGUMENTS </span>
 <span>  <span class="info">&#60;env&#62;</span>                   • Environment </span>
-<span>  <span class="info">&#60;name&#62;</span>                  • App Name </span>
 <span></span>
 <span class="bright">OPTIONS </span>
 <span>  <span class="warn">--help</span>                  • Display instructions for the command.</span>
 <span>  <span class="warn">-p</span>, <span class="warn">--project</span>           • Project name </span>
-<span>  <span class="warn">-t</span>, <span class="warn">--target</span>            • Target environment </span>
 <span></span>
 <span class="bright">EXAMPLES </span>
-<span style="opacity: 0.5">  # Deploy the "my-app" to the development environment </span>
+<span style="opacity: 0.5">  # Deploy "my-app" to development </span>
 <span>  $ my-cli deploy dev -p my-app </span>
-</pre>   
-</div>               
+<span style="opacity: 0.5">  # Deploy with verbose logging </span>
+<span>  $ my-cli deploy prod -p my-app --verbose </span>
+</pre>
+</div>
 
-## Global Options
+## Sample values
 
-You can use the `cliHelpInterceptor` to automatically display command usage information when the `--help` option is used.
-This interceptor also allows you to provide global command options that are available for all commands. 
-
-Here's how to initialize Moost CLI with `cliHelpInterceptor` and define a default `--help` option:
+Use `@Value()` to display a placeholder next to options in help. This is purely cosmetic — it doesn't set a default:
 
 ```ts
-import { MoostCli, cliHelpInterceptor } from '@moostjs/event-cli'
-import { Moost } from 'moost'
-import { CliController } from './cli.controller'
+import { Value } from 'moost'
 
-export function cli() {
-    const app = new Moost()
-
-    app.applyGlobalInterceptors(
-        cliHelpInterceptor({  
-            colors: true,
-            lookupLevel: 3,
-        })
-    )
-    app.registerControllers(CliController)
-    app.adapter(new MoostCli({
-        debug: true,
-        wooksCli: {
-            cliHelp: { name: 'moost-cli' },
-        },
-        globalCliOptions: [
-            { keys: ['help'], description: 'Display instructions for the command.' }
-        ]
-    }))
-
-    app.init()
+@Cli('test/:config')
+test(
+  @Description('Target environment')
+  @CliOption('target', 't')
+  @Value('<staging>')
+  target: string,
+) {
+  return `Testing in ${target}`
 }
 ```
 
-In the example above, the `cliHelpInterceptor` is set up with `colors` and `lookupLevel` options,
-the `CliController` is registered, and `MoostCli` adapter is initialized with the `debug` option,
-a CLI name, and a global `--help` option.
-This configuration helps improve the user experience of your CLI.
+In help output, the option renders as `--target <staging>`.
 
-The `cliHelp: { name: 'moost-cli' },` line is used to specify the name of your CLI application.
-This name is utilized when rendering CLI usage examples.
-For instance, if you set the name to 'moost-cli', the command examples in your `--help` output will start with this name,
-as in `$ moost-cli command path`.
-By doing this, you can customize your CLI help messages and provide a more intuitive user experience that aligns with your application's identity.
+## Global options
 
-These options provide an elegant way to build and maintain self-descriptive
-command-line interfaces with Moost.
-Whether you are building a small tool or a complex system,
-a well-designed CLI is essential to create a seamless user experience.
+Some options (like `--help` or `--verbose`) should appear in every command's help. There are two ways to define them.
+
+### Via CliApp setup
+
+Pass global options when initializing the app:
+
+```ts
+new CliApp()
+  .controllers(AppController)
+  .useHelp({ name: 'my-cli' })
+  .useOptions([
+    { keys: ['help'], description: 'Display instructions for the command.' },
+    { keys: ['verbose', 'v'], description: 'Enable verbose output.' },
+  ])
+  .start()
+```
+
+### Via @CliGlobalOption decorator
+
+Apply `@CliGlobalOption()` to a controller class. The option appears in help for every command in that controller:
+
+```ts
+import { Cli, CliGlobalOption, Controller } from '@moostjs/event-cli'
+
+@Controller('build')
+@CliGlobalOption({
+  keys: ['verbose', 'v'],
+  description: 'Enable verbose logging',
+})
+export class BuildController {
+  @Cli('dev')
+  buildDev() { return 'Building for dev...' }
+
+  @Cli('prod')
+  buildProd() { return 'Building for prod...' }
+}
+```
+
+Both `build dev --help` and `build prod --help` will show the `--verbose` option.
+
+## Enabling the help interceptor
+
+The help system is powered by `cliHelpInterceptor`. With `CliApp`, calling `.useHelp()` sets it up automatically:
+
+```ts
+new CliApp()
+  .controllers(AppController)
+  .useHelp({
+    name: 'my-cli',       // shown in usage examples: "$ my-cli ..."
+    colors: true,          // colored output (default: true)
+    lookupLevel: 3,        // fuzzy command lookup depth (default: 3)
+  })
+  .start()
+```
+
+### Help options reference
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `name` | — | CLI app name shown in usage examples |
+| `title` | — | Title displayed at the top of help |
+| `colors` | `true` | Enable colored terminal output |
+| `lookupLevel` | `3` | Depth for fuzzy "did you mean?" suggestions |
+| `maxWidth` | — | Maximum width of help output |
+| `maxLeft` | — | Maximum width of the left column |
+| `mark` | — | Prefix marker for help sections |
+
+## Unknown command handling
+
+When `lookupLevel` is set, typing a wrong command triggers a "did you mean?" suggestion:
+
+```bash
+$ my-cli depoly
+Did you mean "deploy"?
+```
+
+The lookup searches through registered commands up to the specified depth.
+
+## Decorator form
+
+You can also apply the help interceptor as a decorator on a controller or method using `@CliHelpInterceptor()`:
+
+```ts
+import { CliHelpInterceptor } from '@moostjs/event-cli'
+
+@CliHelpInterceptor({ colors: true, lookupLevel: 3 })
+@Controller()
+export class AppController {
+  @Cli('deploy')
+  deploy() { return 'Deploying...' }
+}
+```
+
+This is useful when you want help behavior scoped to specific controllers rather than applied globally.
+
+## What's next
+
+- [Interceptors](./interceptors) — add guards, error handling, and cross-cutting logic
+- [Advanced](./advanced) — manual adapter setup, composables, and DI

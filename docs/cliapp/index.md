@@ -1,150 +1,82 @@
-# Quick Start of CLI Application
+# Getting Started
 
-This guide will walk you through the process of setting up a command-line interface (CLI) application using Moost CLI.
+Build a CLI application with Moost in under a minute.
 
 ## Prerequisites
-Before getting started, make sure you have the following installed:
 
--   Node.js (version 14 or above)
--   npm (Node Package Manager)
+- Node.js 18 or higher
+- npm, pnpm, or yarn
 
-## Step 1: Project Setup with `create-moost`
-
-To create a new Moost CLI project, run the following command:
+## Scaffold a project
 
 ```bash
 npm create moost -- --cli
 ```
 
-Or you can provide a project name in the command:
+Or with a project name:
 
 ```bash
-npm create moost my-cli-app -- --cli
+npm create moost my-cli -- --cli
 ```
 
-This command will initiate a CLI wizard which will ask you several questions, such as:
-
-- If you need eslint and prettier
-- Which bundler to use: esbuild or rollup
-
-Once you have provided your preferences, `create-moost` will generate a project with the following structure:
+The scaffolder creates:
 
 ```
-my-cli-app/
+my-cli/
 ├── src/
 │   ├── controllers/
 │   │   └── app.controller.ts
-│   └── main.ts
-├── bin.js
-├── .gitignore
+│   ├── main.ts
+│   └── bin.ts
 ├── package.json
-├── tsconfig.json
-└── [optional files...]
+└── tsconfig.json
 ```
 
-**Optional files** are generated based on your choices in the CLI wizard:
+## What you get
 
-- If you opted for eslint and prettier: `.eslintrc.json`, `.prettierrc`, `.prettierignore`
-- If you chose rollup as your bundler: `rollup.config.js`
-
-## Step 2: Inspect Your Generated Code
-
-Three crucial parts of your application are scaffolded in your project: `bin.js` (your CLI app entry point), `main.ts` (your app core) and `app.controller.ts` (your basic "Hello, World!" controller).
-
-`bin.js`:
-```js
-#!/usr/bin/env node
-require('./dist/main.js');
-```
-
-`main.ts`:
+**main.ts** — the entry point:
 ```ts
-import { MoostCli, cliHelpInterceptor } from '@moostjs/event-cli'
-import { Moost } from 'moost'
+import { CliApp } from '@moostjs/event-cli'
 import { AppController } from './controllers/app.controller'
 
-function cli() {
-    const app = new Moost()
-
-    app.applyGlobalInterceptors(
-        cliHelpInterceptor({
-            colors: true,
-            lookupLevel: 3,
-        })
-    )
-
-    app.registerControllers(AppController)
-    app.adapter(new MoostCli({
-        debug: false,
-        wooksCli: {
-            cliHelp: { name: 'moost-app' },
-        },
-        globalCliOptions: [
-            { keys: ['help'], description: 'Display instructions for the command.' },
-        ],
-    }))
-
-    void app.init()
-}
-
-cli()
+new CliApp()
+  .controllers(AppController)
+  .useHelp({ name: 'my-cli' })
+  .start()
 ```
 
-`app.controller.ts`:
+**app.controller.ts** — your first command:
 ```ts
-import { Cli } from '@moostjs/event-cli'
-import { Controller, Param } from 'moost'
+import { Cli, Param, Controller } from '@moostjs/event-cli'
 
 @Controller()
 export class AppController {
-    @Cli('hello/:name')
-    greet(@Param('name') name: string) {
-        return `Hello, ${name}!`
-    }
+  @Cli('greet/:name')
+  greet(@Param('name') name: string) {
+    return `Hello, ${name}!`
+  }
 }
 ```
 
-The entry point for CLI `bin.js` needs to be executable. You can use the `chmod` command to
-
- change the permissions of this file:
+## Run it
 
 ```bash
-chmod +x ./bin.js
+npm install && npx tsx src/bin.ts greet World
 ```
 
-## Step 3: Running Your CLI App
+You'll see `Hello, World!` in the terminal.
 
-In your project directory, first install the required dependencies:
+## How it works
 
-```bash
-npm install
-```
+1. `new CliApp()` creates a Moost instance pre-configured for CLI
+2. `.controllers()` registers classes that contain command handlers
+3. `.useHelp()` enables the built-in help system (try `--help`)
+4. `.start()` wires everything together and runs the command from `process.argv`
 
-Then, run the build command:
+The `@Cli('greet/:name')` decorator registers the method as a CLI command. The `:name` segment becomes a positional argument, extracted by `@Param('name')`.
 
-```bash
-npm run build
-```
+## What's next
 
-After building the project successfully, you can run your CLI app:
-
-```bash
-./bin.js hello World
-```
-
-The output should be:
-
-```bash
-Hello, World!
-```
-
-## Step 4: Extend Your Project
-
-Once you have the basic CLI application up and running, you can extend your project with additional features:
-
-- Add more [controllers](./controllers) in the `src/controllers` directory. Remember to register them in your `main.ts` file with the `registerControllers` method.
-- Adjust your application configurations based on your needs. If you chose eslint, prettier, or a specific bundler, make sure to update the respective configuration files.
-- Implement different types of command handling by using other CLI decorators.
-- Leverage Moost's advanced features such as [dependency injection](/moost/di/), [interceptors](/moost/interceptors), validators, and more to build a robust, scalable application.
-
-👏👏👏 Enjoy your coding!
+- [Commands](./commands) — command paths, aliases, and routing patterns
+- [Options & Arguments](./options) — flags, positional args, and boolean options
+- [Controllers](./controllers) — organize commands into logical groups

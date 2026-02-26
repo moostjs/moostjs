@@ -176,6 +176,8 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         getControllerInstance: opts.getInstance,
         controllerMethod: opts.method,
         resolveArgs: opts.resolveArgs,
+        afterHandlers: opts.afterHandlers,
+        errorHandlers: opts.errorHandlers,
         manualUnscope: true,
         hooks: {
           init: ({ unscope }) => {

@@ -400,16 +400,28 @@ export default defineConfig({
                             link: '/cliapp/',
                         },
                         {
-                            text: 'Routing',
-                            link: '/cliapp/routing',
+                            text: 'Commands',
+                            link: '/cliapp/commands',
+                        },
+                        {
+                            text: 'Options & Arguments',
+                            link: '/cliapp/options',
                         },
                         {
                             text: 'Controllers',
                             link: '/cliapp/controllers',
                         },
                         {
-                            text: 'Command Usage',
+                            text: 'Help System',
                             link: '/cliapp/help',
+                        },
+                        {
+                            text: 'Interceptors',
+                            link: '/cliapp/interceptors',
+                        },
+                        {
+                            text: 'Advanced',
+                            link: '/cliapp/advanced',
                         },
                     ],
                 },

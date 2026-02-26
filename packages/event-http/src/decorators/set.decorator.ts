@@ -26,6 +26,26 @@ const setHeaderInterceptor: (
     }
   }
   fn.priority = TInterceptorPriority.AFTER_ALL
+
+  // Fast-path: bypass InterceptorHandler for common cases
+  const modifier = () => {
+    const response = useResponse()
+    if (
+      (!response.getHeader(name) || opts?.force) &&
+      (!opts?.status || opts.status === response.status)
+    ) {
+      response.setHeader(name, value)
+    }
+  }
+  if (!opts?.when || opts.when === 'ok') {
+    fn.__afterHandler = modifier
+  } else if (opts.when === 'error') {
+    fn.__errorHandler = modifier
+  } else {
+    fn.__afterHandler = modifier
+    fn.__errorHandler = modifier
+  }
+
   return fn
 }
 
@@ -84,6 +104,12 @@ const setCookieInterceptor: (
     })
   }
   fn.priority = TInterceptorPriority.AFTER_ALL
+  fn.__afterHandler = () => {
+    const response = useResponse()
+    if (!response.getCookie(name)) {
+      response.setCookie(name, value, attrs)
+    }
+  }
   return fn
 }
 
@@ -112,8 +138,8 @@ export function SetCookie(...args: Parameters<typeof setCookieInterceptor>) {
   return Intercept(setCookieInterceptor(...args))
 }
 
-const setStatusInterceptor = (code: number, opts?: { force?: boolean }) =>
-  defineInterceptorFn((_before, after) => {
+const setStatusInterceptor = (code: number, opts?: { force?: boolean }) => {
+  const fn = defineInterceptorFn((_before, after) => {
     const response = useResponse()
     after(() => {
       if (!response.status || opts?.force) {
@@ -121,6 +147,14 @@ const setStatusInterceptor = (code: number, opts?: { force?: boolean }) =>
       }
     })
   })
+  fn.__afterHandler = () => {
+    const response = useResponse()
+    if (!response.status || opts?.force) {
+      response.status = code
+    }
+  }
+  return fn
+}
 
 /**
  * Set Response Status for Request Handler

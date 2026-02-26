@@ -19,6 +19,16 @@ export interface TInterceptorFn {
   ): unknown | Promise<unknown>
   priority?: TInterceptorPriority
   _name?: string
+  /**
+   * Fast-path handler that runs after handler success, bypassing InterceptorHandler.
+   * When set, this interceptor is extracted from the interceptor pipeline at bind time
+   * and called directly in the cleanup phase.
+   */
+  __afterHandler?: () => void
+  /**
+   * Fast-path handler that runs on handler error, bypassing InterceptorHandler.
+   */
+  __errorHandler?: () => void
 }
 
 export enum TInterceptorPriority {

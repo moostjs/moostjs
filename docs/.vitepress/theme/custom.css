@@ -75,24 +75,26 @@ a[target="_blank"]:hover:after {
 }
 
 /* console log visualisation */
-.language-terminal {
-    color: rgb(200, 200, 200);
+.language-terminal,
+.language-terminal pre {
+    color: rgb(200, 200, 200) !important;
+    background-color: #1e1e1e !important;
+    border-radius: 8px;
     font-size: 14px;
     padding: 0 24px;
     line-height: 20px;
 }
 .language-terminal .info {
-    color: #199364;
+    color: #199364 !important;
 }
 .language-terminal .warn {
-    color: #e0dc02;
+    color: #e0dc02 !important;
 }
 .language-terminal .bright {
-    color: white;
-    /* font-weight: bolder; */
+    color: white !important;
 }
 .language-terminal .cyan {
-    color: #1b839b;
+    color: #1b839b !important;
 }
 
 .cli-invite {

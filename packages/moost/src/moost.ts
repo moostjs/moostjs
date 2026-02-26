@@ -412,6 +412,8 @@ export interface TMoostAdapterOptions<H, T> {
   handlers: TMoostHandler<H>[]
   getIterceptorHandler: () => InterceptorHandler | undefined
   resolveArgs: () => Promise<unknown[]> | unknown[]
+  afterHandlers?: (() => void)[]
+  errorHandlers?: (() => void)[]
   logHandler: (eventName: string) => void
   register: (handler: TMoostHandler<TEmpty>, path: string, args: string[]) => void
 }

@@ -1,128 +1,152 @@
 # Controllers
 
-<span class="cli-header"><span class="cli-path">/cliapp</span><span class="cli-invite">$</span> moost cli --controllers<span class="cli-blink">|</span></span>
+Controllers group related commands under a shared prefix. This keeps your code organized and creates natural command hierarchies — like `git remote add` or `docker compose up`.
 
-Just like HTTP controllers in Moost, Moost CLI provides a powerful way to organize command handlers using controllers. A CLI Controller is a class that contains several methods, each of which corresponds to a specific command that can be issued to your CLI application.
+## Basic controller
 
-## Controller
-
-Defining a CLI controller is very similar to defining an HTTP controller. The class needs to be decorated with the `@Controller()` decorator and methods representing CLI commands are decorated with the `@Cli()` decorator. Let's go over an example to understand this better.
+A controller is a class decorated with `@Controller()`. The optional argument sets a command prefix:
 
 ```ts
-// ./src/example.controller.ts
-import { Controller, Param } from 'moost';
-import { Cli } from '@moostjs/event-cli';
-
-@Controller()
-export class ExampleController {
-    @Cli('greet/:name')
-    greet(@Param('name') name: string) {
-        return `Hello, ${name}!`;
-    }
-
-    @Cli('add/:num1/:num2')
-    add(@Param('num1') num1: string, @Param('num2') num2: string) {
-        return Number.parseFloat(num1) + Number.parseFloat(num2);
-    }
-}
-```
-
-In the above example, we defined a `ExampleController` with two commands: `greet` and `add`. The `greet` command expects a single parameter `name`, while the `add` command expects two parameters `num1` and `num2`.
-
-## Register Controller
-
-Similar to how HTTP controllers are registered in Moost, CLI controllers also need to be registered before they can be used. We register the CLI controller when setting up the Moost CLI application.
-
-```ts
-// ./src/index.ts
-import { MoostCli } from '@moostjs/event-cli';
-import { Moost } from 'moost';
-import { ExampleController } from './src/example.controller';
-
-export function cli() {
-    const app = new Moost();
-
-    app.registerControllers(ExampleController);
-    app.adapter(new MoostCli());
-
-    app.init();
-}
-```
-
-In the above example, we registered the `ExampleController` with our Moost CLI application. After registering the controller, the CLI application is ready to handle the `greet` and `add` commands.
-
-## Nested Controllers and Prefixes
-
-In Moost, controllers can be nested to better structure your CLI application.
-A controller can be attached or nested within another controller using the `@ImportController(SomeControllerClass)` decorator.
-The nested controller will automatically inherit any prefix from the parent controller.
-
-Let's demonstrate this with a simple example:
-
-```ts
-// ./src/user.controller.ts
-import { Controller, Param } from 'moost';
-import { Cli } from '@moostjs/event-cli';
+import { Cli, Controller, Param } from '@moostjs/event-cli'
 
 @Controller('user')
 export class UserController {
-    @Cli('view/:id')
-    view(@Param('id') id: string) {
-        return `Viewing user with id: ${id}`;
-    }
+  @Cli('create/:name')
+  create(@Param('name') name: string) {
+    return `Created user: ${name}`
+  }
+
+  @Cli('delete/:name')
+  delete(@Param('name') name: string) {
+    return `Deleted user: ${name}`
+  }
 }
 ```
 
-In this example, we define a `UserController` with the prefix `user`. It has a single command `view` that takes an `id` parameter.
+The prefix `user` is prepended to each command:
 
-Now, let's create a `ProfileController` that we'll nest within `UserController`:
+```bash
+my-cli user create Alice
+my-cli user delete Bob
+```
+
+Without a prefix (`@Controller()`), commands are registered at the root level.
+
+## Registering controllers
+
+With `CliApp`, use the `.controllers()` method:
 
 ```ts
-// ./src/profile.controller.ts
-import { Controller, Param } from 'moost';
-import { Cli, ImportController } from '@moostjs/event-cli';
-import { UserController } from './user.controller';
+import { CliApp } from '@moostjs/event-cli'
+import { UserController } from './user.controller'
+import { ConfigController } from './config.controller'
+
+new CliApp()
+  .controllers(UserController, ConfigController)
+  .useHelp({ name: 'my-cli' })
+  .start()
+```
+
+Or with the standard Moost setup:
+
+```ts
+const app = new Moost()
+app.registerControllers(UserController, ConfigController)
+```
+
+## Nesting controllers
+
+Use `@ImportController()` to nest one controller inside another. The child's prefix is appended to the parent's:
+
+```ts
+import { Cli, Controller, Param } from '@moostjs/event-cli'
+import { ImportController } from 'moost'
+
+@Controller('view')
+export class ViewCommand {
+  @Cli(':id')
+  view(@Param('id') id: string) {
+    return `Viewing profile ${id}`
+  }
+}
 
 @Controller('profile')
-@ImportController(UserController)
+@ImportController(ViewCommand)
 export class ProfileController {
-    @Cli('view/:id')
-    view(@Param('id') id: string) {
-        return `Viewing profile with id: ${id}`;
-    }
+  @Cli('list')
+  list() {
+    return 'Listing profiles...'
+  }
 }
 ```
 
-In this `ProfileController`, we use the `@ImportController(UserController)` decorator to nest `UserController` within `ProfileController`.
-This way, `UserController` becomes a child of `ProfileController`.
-
-This also means that any command executed within the `UserController` will automatically inherit the prefix from the `ProfileController`.
-For example, the `view` command within `UserController` can be accessed using the command `profile user view`.
-
-Let's register our `ProfileController` in our Moost CLI application:
+Register only the top-level controller — imported children are registered automatically:
 
 ```ts
-// ./src/index.ts
-import { MoostCli } from '@moostjs/event-cli';
-import { Moost } from 'moost';
-import { ProfileController } from './src/profile.controller';
+new CliApp()
+  .controllers(ProfileController)
+  .start()
+```
 
-export function cli() {
-    const app = new Moost();
+This produces:
 
-    app.registerControllers(ProfileController);
-    app.adapter(new MoostCli());
+```bash
+my-cli profile list          # ProfileController.list()
+my-cli profile view 42       # ViewCommand.view("42")
+```
 
-    app.init();
+## Multi-level nesting
+
+You can nest as deep as needed. Here's a `git`-like command structure:
+
+```ts
+@Controller('add')
+class RemoteAddController {
+  @Cli(':name/:url')
+  add(
+    @Param('name') name: string,
+    @Param('url') url: string,
+  ) {
+    return `Adding remote ${name} → ${url}`
+  }
+}
+
+@Controller('remote')
+@ImportController(RemoteAddController)
+class RemoteController {
+  @Cli('list')
+  list() {
+    return 'Listing remotes...'
+  }
+}
+
+@Controller()
+@ImportController(RemoteController)
+class GitController {
+  @Cli('status')
+  status() {
+    return 'On branch main'
+  }
 }
 ```
 
-We now have a `ProfileController` that contains the `UserController`.
-This creates a hierarchical structure where `UserController` is nested within `ProfileController`.
-The commands within `UserController` will all begin with `profile user`, thanks to the prefixes defined in `ProfileController` and `UserController`.
+```bash
+my-cli status                           # GitController
+my-cli remote list                      # RemoteController
+my-cli remote add origin git@...        # RemoteAddController
+```
 
-For instance, if you wanted to view a user with the ID of `123`, you'd use the command `profile user view 123`.
-The Moost CLI framework automatically concatenates the prefixes from parent and child controllers, along with the command defined in the `@Cli` decorator.
+## Path composition
 
-This ability to nest controllers and define prefixes allows you to create complex and well-structured CLI applications.
-By utilizing nested controllers and command prefixes, you can build CLI applications that are organized, maintainable, and user-friendly.
+The final command path is built by joining: **controller prefix** + **child prefix** + **command path**.
+
+| Parent prefix | Child prefix | `@Cli()` path | Final command |
+|--------------|-------------|---------------|---------------|
+| `''` (root) | — | `status` | `status` |
+| `remote` | — | `list` | `remote list` |
+| `remote` | `add` | `:name/:url` | `remote add :name :url` |
+
+## What's next
+
+- [Help System](./help) — document commands with descriptions, examples, and auto-help
+- [Interceptors](./interceptors) — add guards, logging, and error handling
