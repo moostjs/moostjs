@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/event-ws",
-  "version": "0.5.33",
+  "version": "0.6.0",
   "description": "@moostjs/event-ws",
   "keywords": [
     "composables",

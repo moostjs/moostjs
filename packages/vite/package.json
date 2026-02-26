@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/vite",
-  "version": "0.5.33",
+  "version": "0.6.0",
   "description": "Vite Dev plugin for moostjs",
   "keywords": [
     "composables",

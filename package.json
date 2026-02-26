@@ -1,6 +1,6 @@
 {
   "name": "moostjs",
-  "version": "0.5.33",
+  "version": "0.6.0",
   "description": "Metadata driven Event Framework inspired by nestjs and powered by wooksjs",
   "keywords": [
     "api",
