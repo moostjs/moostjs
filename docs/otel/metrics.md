@@ -130,7 +130,7 @@ The `moost-meter` meter is created lazily on the first event, using OpenTelemetr
 
 With metrics exported to Prometheus (via OTLP), you can query event durations:
 
-```promql
+```txt
 # Average request duration by route
 histogram_quantile(0.95,
   sum(rate(moost_event_duration_bucket{moost_event_type="HTTP"}[5m])) by (le, route)
