@@ -29,7 +29,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "docs": "vitepress dev docs --host \"0.0.0.0\"",
+    "docs": "vitepress dev docs",
     "docs-build": "vitepress build docs",
     "docs-serve": "vitepress serve docs --host \"0.0.0.0\"",
     "lint": "oxlint",

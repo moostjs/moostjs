@@ -5,7 +5,7 @@ import { useData } from 'vitepress'
 const { isDark } = useData()
 
 const SVG_W = 1200
-const SVG_H = 500
+const SVG_H = 1500
 
 // Base paths drawn once (no overlap on trunk)
 const trunkPath = 'M -24 250 H 700'
@@ -105,7 +105,7 @@ onMounted(() => {
 <template>
     <div class="event-flow-bg" :class="{ dark: isDark }" aria-hidden="true">
         <svg
-            :viewBox="`0 0 ${SVG_W} ${SVG_H}`"
+            :viewBox="`0 -500 ${SVG_W} ${SVG_H}`"
             preserveAspectRatio="xMidYMid slice"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -179,6 +179,25 @@ onMounted(() => {
         rgba(0, 0, 0, 0.3) 35%,
         rgba(0, 0, 0, 1) 60%
     );
+}
+
+
+@media (max-width: 1220px) {
+    .event-flow-bg svg {
+        transform: perspective(400px) rotateY(-20deg) rotateX(0deg) rotateZ(4deg) scale(1.25) translateX(-100px);
+    }
+}
+
+@media (max-width: 820px) {
+    .event-flow-bg svg {
+        transform: perspective(300px) rotateY(-15deg) rotateX(0deg) rotateZ(4deg) scale(2) translateX(-100px);
+    }
+}
+
+@media (max-width: 600px) {
+    .event-flow-bg svg {
+        transform: perspective(300px) rotateY(-15deg) rotateX(0deg) rotateZ(4deg) scale(3) translateX(-100px);
+    }
 }
 
 .dark svg {
