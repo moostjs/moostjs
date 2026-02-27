@@ -9,7 +9,7 @@ HTTP adapter for Moost. Bridges Moost's decorator-driven controller system with 
 - `src/event-http.ts` — `MoostHttp` class implementing `TMoostAdapter<THttpHandlerMeta>`
 - `src/auth-guard.ts` — Auth guard system: `defineAuthGuard()`, `AuthGuard` base class, `Authenticate` decorator, transport extraction
 - `src/decorators/http-method.decorator.ts` — `Get`, `Post`, `Put`, `Delete`, `Patch`, `All`, `HttpMethod`
-- `src/decorators/resolve.decorator.ts` — `Body`, `Query`, `Header`, `Cookie`, `Url`, `Method`, `Req`, `Res`, `Authorization`, `StatusHook`, `HeaderHook`, `CookieHook`, etc.
+- `src/decorators/resolve.decorator.ts` — `Body`, `Query`, `Header`, `Cookie`, `Url`, `Method`, `Req`, `Res`, `Authorization`, `StatusRef`, `HeaderRef`, `CookieRef`, etc.
 - `src/decorators/set.decorator.ts` — `SetHeader`, `SetCookie`, `SetStatus` (interceptor-based)
 - `src/decorators/limits.decorator.ts` — `BodySizeLimit`, `CompressedBodySizeLimit`, `BodyReadTimeoutMs`
 
@@ -27,7 +27,7 @@ Moost App → MoostHttp (adapter) → WooksHttp (@wooksjs/event-http) → Node.j
 
 **Double-slash trailing-slash convention.** A route ending with `//` (e.g., `@Get('api//')`) forces a trailing `/` in the URL pattern.
 
-**Hook decorators work as both param and prop decorators.** `StatusHook`, `HeaderHook`, `CookieHook` check the `level` argument. As param decorators, they return the hook object. As property decorators, they use `attachHook` to proxy the class property to the response state (e.g., `this.status = 201` sets the HTTP status).
+**Ref decorators work as both param and prop decorators.** `StatusRef`, `HeaderRef`, `CookieRef` check the `level` argument. As param decorators, they return the ref object. As property decorators, they use `defineProperty` to proxy the class property to the response state (e.g., `this.status = 201` sets the HTTP status).
 
 **`onNotFound` runs through the interceptor chain.** The 404 handler uses `defineMoostEventHandler` with global interceptors, so CORS, logging, etc. still execute for unmatched routes.
 

@@ -1,5 +1,5 @@
-import type { THeaderHook, TStatusHook } from '@moostjs/event-http'
-import { Get, HeaderHook, SetHeader, StatusHook, Url } from '@moostjs/event-http'
+import type { THeaderRef, TStatusRef } from '@moostjs/event-http'
+import { Get, HeaderRef, SetHeader, StatusRef, Url } from '@moostjs/event-http'
 import { useResponse } from '@wooksjs/event-http'
 import { serveFile } from '@wooksjs/http-static'
 import { Const, Controller, current, Moost, useControllerContext, useLogger } from 'moost'
@@ -33,8 +33,8 @@ export class SwaggerController {
   @SetHeader('content-type', 'text/html')
   serveIndex(
     @Url() url: string,
-    @HeaderHook('location') location: THeaderHook,
-    @StatusHook() status: TStatusHook,
+    @HeaderRef('location') location: THeaderRef,
+    @StatusRef() status: TStatusRef,
   ) {
     this.processCors()
     if (!url.endsWith('index.html') && !url.endsWith('/')) {

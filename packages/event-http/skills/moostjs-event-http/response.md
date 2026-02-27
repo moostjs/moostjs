@@ -7,9 +7,9 @@
 Moost provides two styles for response control:
 
 1. **Static decorators** (`@SetStatus`, `@SetHeader`, `@SetCookie`) — applied via interceptors at `AFTER_ALL` priority, declarative and fixed
-2. **Dynamic hooks** (`@StatusHook`, `@HeaderHook`, `@CookieHook`, `@CookieAttrsHook`) — Proxy-based reactive bindings, set values programmatically at runtime
+2. **Dynamic refs** (`@StatusRef`, `@HeaderRef`, `@CookieRef`, `@CookieAttrsRef`) — Proxy-based reactive bindings, set values programmatically at runtime
 
-Both work as method decorators. Hook decorators also work as parameter decorators and property decorators (on `FOR_EVENT`-scoped controllers).
+Both work as method decorators. Ref decorators also work as parameter decorators and property decorators (on `FOR_EVENT`-scoped controllers).
 
 ## API Reference
 
@@ -28,16 +28,16 @@ create() { return { created: true } }
 @SetStatus(200, { force: true })
 ```
 
-### `@StatusHook()`
+### `@StatusRef()`
 
 Dynamic status code control via a `{ value: number }` proxy object.
 
 ```ts
-import { Get, StatusHook } from '@moostjs/event-http'
-import type { TStatusHook } from '@moostjs/event-http'
+import { Get, StatusRef } from '@moostjs/event-http'
+import type { TStatusRef } from '@moostjs/event-http'
 
 @Get('process')
-process(@StatusHook() status: TStatusHook) {
+process(@StatusRef() status: TStatusRef) {
   if (someCondition) {
     status.value = 202
     return { status: 'processing' }
@@ -52,7 +52,7 @@ Works as a property decorator too:
 @Injectable('FOR_EVENT')
 @Controller()
 class MyController {
-  @StatusHook()
+  @StatusRef()
   status = 200  // initial value
 
   @Get('test')
@@ -90,16 +90,16 @@ Options:
 @SetHeader('x-error', 'true', { when: 'error' })
 ```
 
-### `@HeaderHook(name)`
+### `@HeaderRef(name)`
 
 Dynamic header control via a `{ value: string | string[] | undefined }` proxy.
 
 ```ts
-import { Get, HeaderHook } from '@moostjs/event-http'
-import type { THeaderHook } from '@moostjs/event-http'
+import { Get, HeaderRef } from '@moostjs/event-http'
+import type { THeaderRef } from '@moostjs/event-http'
 
 @Get('test')
-test(@HeaderHook('x-custom') header: THeaderHook) {
+test(@HeaderRef('x-custom') header: THeaderRef) {
   header.value = `generated-${Date.now()}`
   return 'ok'
 }
@@ -119,31 +119,31 @@ login() { return { ok: true } }
 
 Cookie attributes (`TCookieAttributesInput`): `maxAge`, `expires`, `domain`, `path`, `secure`, `httpOnly`, `sameSite`, etc.
 
-### `@CookieHook(name)`
+### `@CookieRef(name)`
 
 Dynamic cookie value control.
 
 ```ts
-import { Post, CookieHook } from '@moostjs/event-http'
-import type { TCookieHook } from '@moostjs/event-http'
+import { Post, CookieRef } from '@moostjs/event-http'
+import type { TCookieRef } from '@moostjs/event-http'
 
 @Post('login')
-login(@CookieHook('session') cookie: TCookieHook) {
+login(@CookieRef('session') cookie: TCookieRef) {
   cookie.value = generateToken()
   return { ok: true }
 }
 ```
 
-### `@CookieAttrsHook(name)`
+### `@CookieAttrsRef(name)`
 
 Dynamic cookie attributes control.
 
 ```ts
-import { Post, CookieAttrsHook } from '@moostjs/event-http'
+import { Post, CookieAttrsRef } from '@moostjs/event-http'
 import type { TCookieAttributes } from '@moostjs/event-http'
 
 @Post('login')
-login(@CookieAttrsHook('session') attrs: { value: TCookieAttributes }) {
+login(@CookieAttrsRef('session') attrs: { value: TCookieAttributes }) {
   attrs.value = { maxAge: '1h', httpOnly: true, secure: true }
   return { ok: true }
 }
@@ -252,7 +252,7 @@ class ItemController {
 ```ts
 @Get('data')
 @SetHeader('x-cache', 'miss', { when: 'always' })
-getData(@HeaderHook('x-cache') cache: THeaderHook) {
+getData(@HeaderRef('x-cache') cache: THeaderRef) {
   const cached = getFromCache()
   if (cached) {
     cache.value = 'hit'
@@ -265,17 +265,17 @@ getData(@HeaderHook('x-cache') cache: THeaderHook) {
 ## Types
 
 ```ts
-export interface TStatusHook { value: number }
-export interface THeaderHook { value: string | string[] | undefined }
-export interface TCookieHook { value: string; attrs?: TCookieAttributes }
+export interface TStatusRef { value: number }
+export interface THeaderRef { value: string | string[] | undefined }
+export interface TCookieRef { value: string; attrs?: TCookieAttributes }
 export type TCookieAttributes = Partial<TCookieAttributesRequired>
 ```
 
 ## Best Practices
 
 - Use `@SetStatus` for fixed status codes (201 for creation, 204 for deletion)
-- Use `@StatusHook` when the status depends on runtime logic
-- Use `@SetHeader` for static headers, `@HeaderHook` for dynamic ones
+- Use `@StatusRef` when the status depends on runtime logic
+- Use `@SetHeader` for static headers, `@HeaderRef` for dynamic ones
 - Apply body limits on upload endpoints to prevent abuse
 - Use global limit interceptors for application-wide defaults
 
@@ -284,4 +284,4 @@ export type TCookieAttributes = Partial<TCookieAttributesRequired>
 - `@SetStatus` won't override a status already set (e.g., by an error) unless `{ force: true }` is passed
 - `@SetCookie` won't overwrite a cookie already set in the response — this prevents accidental overwrites
 - `@SetHeader` defaults to success-only (`after` interceptor); use `{ when: 'always' }` to include error responses
-- Hook decorators use Proxy objects — the `.value` property is reactive, not a plain field
+- Ref decorators use Proxy objects — the `.value` property is reactive, not a plain field

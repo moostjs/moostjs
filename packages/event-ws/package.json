@@ -49,14 +49,14 @@
     "setup-skills": "node ./scripts/setup-skills.js"
   },
   "dependencies": {
-    "@wooksjs/event-ws": "^0.7.3"
+    "@wooksjs/event-ws": "^0.7.4"
   },
   "devDependencies": {
     "vitest": "3.2.4"
   },
   "peerDependencies": {
     "@prostojs/infact": "^0.4.1",
-    "@wooksjs/event-core": "^0.7.3",
+    "@wooksjs/event-core": "^0.7.4",
     "moost": "workspace:^"
   }
 }

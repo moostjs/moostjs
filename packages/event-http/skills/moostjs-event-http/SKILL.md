@@ -1,6 +1,6 @@
 ---
 name: moostjs-event-http
-description: Use this skill when working with @moostjs/event-http — to create an HTTP server with MoostHttp adapter, register route handlers with @Get()/@Post()/@Put()/@Delete()/@Patch()/@All(), extract request data with @Query(), @Header(), @Cookie(), @Body(), @RawBody(), @Authorization(), @Url(), @Method(), @Req(), @Res(), @ReqId(), @Ip(), @IpList(), control responses with @SetHeader(), @SetCookie(), @SetStatus(), @StatusHook(), @HeaderHook(), @CookieHook(), @CookieAttrsHook(), throw HTTP errors with HttpError, enforce body limits with @BodySizeLimit()/@CompressedBodySizeLimit()/@BodyReadTimeoutMs(), define auth guards with defineAuthGuard()/AuthGuard/Authenticate, or handle WebSocket upgrades with @Upgrade().
+description: Use this skill when working with @moostjs/event-http — to create an HTTP server with MoostHttp adapter, register route handlers with @Get()/@Post()/@Put()/@Delete()/@Patch()/@All(), extract request data with @Query(), @Header(), @Cookie(), @Body(), @RawBody(), @Authorization(), @Url(), @Method(), @Req(), @Res(), @ReqId(), @Ip(), @IpList(), control responses with @SetHeader(), @SetCookie(), @SetStatus(), @StatusRef(), @HeaderRef(), @CookieRef(), @CookieAttrsRef(), throw HTTP errors with HttpError, enforce body limits with @BodySizeLimit()/@CompressedBodySizeLimit()/@BodyReadTimeoutMs(), define auth guards with defineAuthGuard()/AuthGuard/Authenticate, or handle WebSocket upgrades with @Upgrade().
 ---
 
 # @moostjs/event-http
@@ -25,7 +25,7 @@ Read the domain file that matches the task. Do not load all files — only what 
 // Imports
 import { MoostHttp, Get, Post, Put, Delete, Patch, All, HttpMethod, Upgrade } from '@moostjs/event-http'
 import { Query, Header, Cookie, Body, RawBody, Authorization, Url, Method, Req, Res, ReqId, Ip, IpList } from '@moostjs/event-http'
-import { SetHeader, SetCookie, SetStatus, StatusHook, HeaderHook, CookieHook, CookieAttrsHook } from '@moostjs/event-http'
+import { SetHeader, SetCookie, SetStatus, StatusRef, HeaderRef, CookieRef, CookieAttrsRef } from '@moostjs/event-http'
 import { BodySizeLimit, CompressedBodySizeLimit, BodyReadTimeoutMs } from '@moostjs/event-http'
 import { Authenticate, AuthGuard, defineAuthGuard, HttpError } from '@moostjs/event-http'
 import { Controller, Param, Params } from 'moost'

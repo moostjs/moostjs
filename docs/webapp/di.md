@@ -76,28 +76,28 @@ export class ApiController {
 }
 ```
 
-## Response hooks as properties
+## Response refs as properties
 
-`FOR_EVENT` scope makes response hooks especially elegant. Instead of using hook objects in handler parameters, bind them to properties:
+`FOR_EVENT` scope makes response refs especially elegant. Instead of using ref objects in handler parameters, bind them to properties:
 
 ```ts
-import { Get, StatusHook, HeaderHook, CookieHook, CookieAttrsHook } from '@moostjs/event-http'
+import { Get, StatusRef, HeaderRef, CookieRef, CookieAttrsRef } from '@moostjs/event-http'
 import type { TCookieAttributes } from '@moostjs/event-http'
 import { Controller, Injectable } from 'moost'
 
 @Injectable('FOR_EVENT')
 @Controller()
 export class ResponseController {
-    @StatusHook()
+    @StatusRef()
     status = 200
 
-    @HeaderHook('x-custom')
+    @HeaderRef('x-custom')
     customHeader = ''
 
-    @CookieHook('session')
+    @CookieRef('session')
     sessionCookie = ''
 
-    @CookieAttrsHook('session')
+    @CookieAttrsRef('session')
     sessionAttrs: TCookieAttributes = { httpOnly: true }
 
     @Get('example')

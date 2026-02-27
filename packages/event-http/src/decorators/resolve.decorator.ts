@@ -11,7 +11,7 @@ import { useBody } from '@wooksjs/http-body'
 import type { TObject } from 'moost'
 import { getMoostMate, Resolve } from 'moost'
 
-function createHook<T>(getter: () => T, setter: (v: T) => void): { value: T } {
+function createRef<T>(getter: () => T, setter: (v: T) => void): { value: T } {
   return new Proxy({} as { value: T }, {
     get: (_target, prop) => (prop === 'value' ? getter() : undefined),
     set: (_target, prop, v) => {
@@ -24,15 +24,15 @@ function createHook<T>(getter: () => T, setter: (v: T) => void): { value: T } {
 }
 
 /**
- * Hook to the Response Status
+ * Ref to the Response Status
  * @decorator
- * @paramType TStatusHook
+ * @paramType TStatusRef
  */
-export const StatusHook = () =>
+export const StatusRef = () =>
   Resolve((metas, level) => {
     const response = useResponse()
     if (level === 'PARAM') {
-      return createHook(
+      return createRef(
         () => response.status,
         (v) => {
           response.status = v
@@ -53,16 +53,16 @@ export const StatusHook = () =>
   }, 'statusCode')
 
 /**
- * Hook to the Response Header
+ * Ref to the Response Header
  * @decorator
  * @param name - header name
- * @paramType THeaderHook
+ * @paramType THeaderRef
  */
-export const HeaderHook = (name: string) =>
+export const HeaderRef = (name: string) =>
   Resolve((metas, level) => {
     const response = useResponse()
     if (level === 'PARAM') {
-      return createHook(
+      return createRef(
         () => response.getHeader(name),
         (v) => response.setHeader(name, v as string | number | string[]),
       )
@@ -79,16 +79,16 @@ export const HeaderHook = (name: string) =>
   }, name)
 
 /**
- * Hook to the Response Cookie
+ * Ref to the Response Cookie
  * @decorator
  * @param name - cookie name
- * @paramType TCookieHook
+ * @paramType TCookieRef
  */
-export const CookieHook = (name: string) =>
+export const CookieRef = (name: string) =>
   Resolve((metas, level) => {
     const response = useResponse()
     if (level === 'PARAM') {
-      return createHook(
+      return createRef(
         () => response.getCookie(name)?.value,
         (v) => response.setCookie(name, v ?? ''),
       )
@@ -105,12 +105,12 @@ export const CookieHook = (name: string) =>
   }, name)
 
 /**
- * Hook to the Response Cookie Attributes
+ * Ref to the Response Cookie Attributes
  * @decorator
  * @param name - cookie name
  * @paramType TCookieAttributes
  */
-export const CookieAttrsHook = (name: string) =>
+export const CookieAttrsRef = (name: string) =>
   Resolve((metas, level) => {
     const response = useResponse()
     const getAttrs = () => response.getCookie(name)?.attrs
@@ -119,7 +119,7 @@ export const CookieAttrsHook = (name: string) =>
       response.setCookie(name, existing?.value ?? '', v)
     }
     if (level === 'PARAM') {
-      return createHook(getAttrs, setAttrs)
+      return createRef(getAttrs, setAttrs)
     }
     if (level === 'PROP' && metas.instance && metas.key) {
       const initialValue = metas.instance[metas.key as keyof typeof metas.instance]
@@ -297,21 +297,21 @@ export function RawBody() {
   return Resolve(() => useBody().rawBody(), 'body')
 }
 
-/** Reactive hook for reading/writing the response status code. */
-export interface TStatusHook {
+/** Reactive ref for reading/writing the response status code. */
+export interface TStatusRef {
   value: number
 }
 
-/** Reactive hook for reading/writing a response header value. */
-export interface THeaderHook {
+/** Reactive ref for reading/writing a response header value. */
+export interface THeaderRef {
   value: string | string[] | undefined
 }
 
 /** Partial cookie attributes (all optional). */
 export type TCookieAttributes = Partial<TCookieAttributesRequired>
 
-/** Reactive hook for reading/writing a response cookie. */
-export interface TCookieHook {
+/** Reactive ref for reading/writing a response cookie. */
+export interface TCookieRef {
   value: string
   attrs?: TCookieAttributes
 }

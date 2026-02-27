@@ -48,14 +48,14 @@
     "setup-skills": "node ./scripts/setup-skills.js"
   },
   "dependencies": {
-    "@wooksjs/event-cli": "^0.7.3"
+    "@wooksjs/event-cli": "^0.7.4"
   },
   "devDependencies": {
     "vitest": "3.2.4"
   },
   "peerDependencies": {
-    "@wooksjs/event-core": "^0.7.3",
+    "@wooksjs/event-core": "^0.7.4",
     "moost": "workspace:^",
-    "wooks": "^0.7.3"
+    "wooks": "^0.7.4"
   }
 }

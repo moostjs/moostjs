@@ -42,16 +42,16 @@ By default, `@SetStatus` won't override a status code that was already set (e.g.
 @SetStatus(200, { force: true })
 ```
 
-### Dynamic — `@StatusHook`
+### Dynamic — `@StatusRef`
 
 When the status code depends on runtime logic:
 
 ```ts
-import { Get, StatusHook } from '@moostjs/event-http'
-import type { TStatusHook } from '@moostjs/event-http'
+import { Get, StatusRef } from '@moostjs/event-http'
+import type { TStatusRef } from '@moostjs/event-http'
 
 @Get('process')
-process(@StatusHook() status: TStatusHook) {
+process(@StatusRef() status: TStatusRef) {
     if (someCondition) {
         status.value = 202 // Accepted
         return { status: 'processing' }
@@ -91,14 +91,14 @@ test() {
 @SetHeader('x-error', 'true', { when: 'error' })
 ```
 
-### Dynamic — `@HeaderHook`
+### Dynamic — `@HeaderRef`
 
 ```ts
-import { Get, HeaderHook } from '@moostjs/event-http'
-import type { THeaderHook } from '@moostjs/event-http'
+import { Get, HeaderRef } from '@moostjs/event-http'
+import type { THeaderRef } from '@moostjs/event-http'
 
 @Get('test')
-test(@HeaderHook('x-custom') header: THeaderHook) {
+test(@HeaderRef('x-custom') header: THeaderRef) {
     header.value = `generated-${Date.now()}`
     return 'ok'
 }
@@ -122,14 +122,14 @@ login() {
 `@SetCookie` won't overwrite a cookie that was already set in the response. This prevents accidental overwrites when multiple decorators or interceptors set the same cookie.
 :::
 
-### Dynamic — `@CookieHook`
+### Dynamic — `@CookieRef`
 
 ```ts
-import { Post, CookieHook } from '@moostjs/event-http'
-import type { TCookieHook } from '@moostjs/event-http'
+import { Post, CookieRef } from '@moostjs/event-http'
+import type { TCookieRef } from '@moostjs/event-http'
 
 @Post('login')
-login(@CookieHook('session') cookie: TCookieHook) {
+login(@CookieRef('session') cookie: TCookieRef) {
     const token = generateToken()
     cookie.value = token
     cookie.attrs = { maxAge: '1h', httpOnly: true, secure: true }

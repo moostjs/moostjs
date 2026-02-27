@@ -51,8 +51,8 @@
   },
   "peerDependencies": {
     "@moostjs/event-http": "workspace:^",
-    "@wooksjs/event-http": "^0.7.3",
-    "@wooksjs/http-static": "^0.7.3",
+    "@wooksjs/event-http": "^0.7.4",
+    "@wooksjs/http-static": "^0.7.4",
     "moost": "workspace:^"
   }
 }
