@@ -141,15 +141,22 @@ export default defineConfig({
 
         sidebar: {
             '/wf/': [
+                { text: 'Overview', link: '/wf/overview' },
+                { text: 'Getting Started', link: '/wf/' },
                 {
-                    text: 'Workflows',
+                    text: 'Building Workflows',
+                    collapsed: false,
                     items: [
-                        { text: 'Overview', link: '/wf/overview' },
-                        { text: 'Getting Started', link: '/wf/' },
                         { text: 'Steps', link: '/wf/steps' },
                         { text: 'Schemas & Flow Control', link: '/wf/schemas' },
                         { text: 'Context & State', link: '/wf/context' },
                         { text: 'Pause & Resume', link: '/wf/pause-resume' },
+                    ],
+                },
+                {
+                    text: 'Operations',
+                    collapsed: false,
+                    items: [
                         { text: 'Error Handling', link: '/wf/errors' },
                         { text: 'Spies & Observability', link: '/wf/spies' },
                         { text: 'Integration', link: '/wf/integration' },
@@ -168,16 +175,23 @@ export default defineConfig({
                 },
             ],
             '/swagger/': [
+                { text: 'Overview', link: '/swagger/' },
+                { text: 'Configuration', link: '/swagger/configuration' },
                 {
-                    text: '@moostjs/swagger',
+                    text: 'Describing Your API',
+                    collapsed: false,
                     items: [
-                        { text: 'Overview', link: '/swagger/' },
-                        { text: 'Configuration', link: '/swagger/configuration' },
                         { text: 'Operations', link: '/swagger/operations' },
                         { text: 'Responses', link: '/swagger/responses' },
                         { text: 'Request Body', link: '/swagger/request-body' },
                         { text: 'Parameters', link: '/swagger/parameters' },
                         { text: 'Schemas & Types', link: '/swagger/schemas' },
+                    ],
+                },
+                {
+                    text: 'Extras',
+                    collapsed: false,
+                    items: [
                         { text: 'Security', link: '/swagger/security' },
                         { text: 'Links & Callbacks', link: '/swagger/links-callbacks' },
                         { text: 'Serving the UI', link: '/swagger/serving-ui' },
@@ -303,13 +317,15 @@ export default defineConfig({
                                 
                             ]
                         },],
-            '/webapp/': [{
-                    text: 'Web Application',
+            '/webapp/': [
+                {
+                    text: 'Getting Started',
+                    link: '/webapp/',
+                },
+                {
+                    text: 'Routing & Data',
+                    collapsed: false,
                     items: [
-                        {
-                            text: 'Getting Started',
-                            link: '/webapp/',
-                        },
                         {
                             text: 'Routing & Handlers',
                             link: '/webapp/routing',
@@ -326,6 +342,12 @@ export default defineConfig({
                             text: 'Controllers',
                             link: '/webapp/controllers',
                         },
+                    ],
+                },
+                {
+                    text: 'Architecture',
+                    collapsed: false,
+                    items: [
                         {
                             text: 'Dependency Injection',
                             link: '/webapp/di',
@@ -335,6 +357,20 @@ export default defineConfig({
                             link: '/webapp/interceptors',
                         },
                         {
+                            text: 'Custom Resolvers & Pipes',
+                            link: '/webapp/resolvers',
+                        },
+                        {
+                            text: 'Validation',
+                            link: '/webapp/validation',
+                        },
+                    ],
+                },
+                {
+                    text: 'Security',
+                    collapsed: false,
+                    items: [
+                        {
                             text: 'Authentication',
                             link: '/webapp/auth',
                         },
@@ -343,13 +379,15 @@ export default defineConfig({
                             link: '/webapp/guards',
                         },
                         {
-                            text: 'Custom Resolvers & Pipes',
-                            link: '/webapp/resolvers',
-                        },
-                        {
                             text: 'Body Limits & Security',
                             link: '/webapp/security',
                         },
+                    ],
+                },
+                {
+                    text: 'Extras',
+                    collapsed: false,
+                    items: [
                         {
                             text: 'Static Files & Proxy',
                             link: '/webapp/static',
@@ -358,84 +396,60 @@ export default defineConfig({
                             text: 'Swagger Integration',
                             link: '/webapp/swagger',
                         },
-                    ],
-                }],
-            '/wsapp/': [{
-                    text: 'WebSocket Application',
-                    items: [
                         {
-                            text: 'Quick Start',
-                            link: '/wsapp/',
-                        },
-                        {
-                            text: 'Handlers',
-                            link: '/wsapp/handlers',
-                        },
-                        {
-                            text: 'Routing',
-                            link: '/wsapp/routing',
-                        },
-                        {
-                            text: 'Request Data',
-                            link: '/wsapp/request',
-                        },
-                        {
-                            text: 'Rooms & Broadcasting',
-                            link: '/wsapp/rooms',
-                        },
-                        {
-                            text: 'HTTP Integration',
-                            link: '/wsapp/integration',
-                        },
-                        {
-                            text: 'Error Handling',
-                            link: '/wsapp/errors',
-                        },
-                        {
-                            text: 'Client',
-                            link: '/wsapp/client',
-                        },
-                        {
-                            text: 'Wire Protocol',
-                            link: '/wsapp/protocol',
-                        },
-                        {
-                            text: 'Testing',
-                            link: '/wsapp/testing',
+                            text: 'Benchmarks',
+                            link: '/webapp/benchmarks',
                         },
                     ],
                 }],
-            '/cliapp/': [{
-                    text: 'CLI Application',
+            '/wsapp/': [
+                {
+                    text: 'Quick Start',
+                    link: '/wsapp/',
+                },
+                {
+                    text: 'Core',
+                    collapsed: false,
                     items: [
-                        {
-                            text: 'Quick Start',
-                            link: '/cliapp/',
-                        },
-                        {
-                            text: 'Commands',
-                            link: '/cliapp/commands',
-                        },
-                        {
-                            text: 'Options & Arguments',
-                            link: '/cliapp/options',
-                        },
-                        {
-                            text: 'Controllers',
-                            link: '/cliapp/controllers',
-                        },
-                        {
-                            text: 'Help System',
-                            link: '/cliapp/help',
-                        },
-                        {
-                            text: 'Interceptors',
-                            link: '/cliapp/interceptors',
-                        },
-                        {
-                            text: 'Advanced',
-                            link: '/cliapp/advanced',
-                        },
+                        { text: 'Handlers', link: '/wsapp/handlers' },
+                        { text: 'Routing', link: '/wsapp/routing' },
+                        { text: 'Request Data', link: '/wsapp/request' },
+                        { text: 'Rooms & Broadcasting', link: '/wsapp/rooms' },
+                    ],
+                },
+                {
+                    text: 'Advanced',
+                    collapsed: false,
+                    items: [
+                        { text: 'HTTP Integration', link: '/wsapp/integration' },
+                        { text: 'Error Handling', link: '/wsapp/errors' },
+                        { text: 'Client', link: '/wsapp/client' },
+                        { text: 'Wire Protocol', link: '/wsapp/protocol' },
+                        { text: 'Testing', link: '/wsapp/testing' },
+                    ],
+                },
+            ],
+            '/cliapp/': [
+                {
+                    text: 'Quick Start',
+                    link: '/cliapp/',
+                },
+                {
+                    text: 'Core',
+                    collapsed: false,
+                    items: [
+                        { text: 'Commands', link: '/cliapp/commands' },
+                        { text: 'Options & Arguments', link: '/cliapp/options' },
+                        { text: 'Controllers', link: '/cliapp/controllers' },
+                        { text: 'Help System', link: '/cliapp/help' },
+                    ],
+                },
+                {
+                    text: 'Advanced',
+                    collapsed: false,
+                    items: [
+                        { text: 'Interceptors', link: '/cliapp/interceptors' },
+                        { text: 'Advanced', link: '/cliapp/advanced' },
                     ],
                 },
             ],

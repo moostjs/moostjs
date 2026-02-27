@@ -4,6 +4,10 @@ Moost’s validation story is now powered by [Atscript](https://atscript.moost.o
 
 By combining the Moost pipeline system with these runtime hooks you get type-safe validation without writing imperative checks or maintaining parallel schemas.
 
+::: tip Full Atscript + Moost docs
+For the complete guide — installation, configuration, and all available options — see the [`@atscript/moost-validator` documentation](https://atscript.moost.org/packages/moost-validator/).
+:::
+
 ## How it works
 
 1. **Generate annotated DTOs** with Atscript (`*.as` source files) and consume them from your application code.
@@ -45,7 +49,7 @@ export interface CreateUserDto {
 }
 ```
 
-Atscript emits the metadata at build time. Check the [Atscript reference](https://atscript.moost.org/llms-full.txt) for the full authoring experience, including decorators, CLI options, and IDE integration.
+Atscript emits the metadata at build time. Check the [Atscript documentation](https://atscript.moost.org/) for the full authoring experience, including decorators, CLI options, and IDE integration.
 
 ## Applying the pipe locally
 

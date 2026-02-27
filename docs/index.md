@@ -18,6 +18,9 @@ actions:
     text: Why Not NestJS?
     link: /moost/why
   - theme: alt
+    text: Benchmarks
+    link: /webapp/benchmarks
+  - theme: alt
     text: View on GitHub
     link: https://github.com/moostjs/moostjs
 ---

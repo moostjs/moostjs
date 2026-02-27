@@ -1,8 +1,7 @@
 import type { TControllerOverview } from 'moost'
 
-import type { TFunction, TLogger } from './common-types'
+import type { TFunction } from './common-types'
 import type {
-  TSwaggerCallbackConfig,
   TSwaggerConfigType,
   TSwaggerExternalDocs,
   TSwaggerLinkConfig,
@@ -134,10 +133,8 @@ const nameToType = new Map<string, object>()
 export function mapToSwaggerSpec(
   metadata: TControllerOverview[],
   options?: TSwaggerOptions,
-  logger?: TLogger,
 ) {
   resetSchemaRegistry()
-  void logger
 
   const is31 = options?.openapiVersion === '3.1'
 

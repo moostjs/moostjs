@@ -19,6 +19,35 @@ const route = useRoute()
 
 const activeTab = ref('http')
 const tiltDeg = ref(2)
+const perfTarget = 66049
+const perfDisplay = ref('0')
+const perfStripRef = ref(null)
+const perfIconRef = ref(null)
+const perfLinkRef = ref(null)
+
+function animateNumber(target, duration = 1000) {
+    const start = performance.now()
+    function update(now) {
+        const elapsed = now - start
+        const progress = Math.min(elapsed / duration, 1)
+        // ease-out cubic: decelerates toward the end
+        const eased = 1 - Math.pow(1 - progress, 3)
+        const current = Math.round(eased * target)
+        const str = String(current).padStart(5, '0')
+        perfDisplay.value = str.slice(0, 2) + ',' + str.slice(2)
+        if (progress < 1) {
+            requestAnimationFrame(update)
+        } else {
+            if (perfIconRef.value) {
+                perfIconRef.value.classList.add('pop')
+            }
+            if (perfLinkRef.value) {
+                perfLinkRef.value.classList.add('shine')
+            }
+        }
+    }
+    requestAnimationFrame(update)
+}
 
 const tabs = [
     { id: 'http', label: 'HTTP', link: '/webapp/' },
@@ -59,18 +88,50 @@ function setupScrollAnimations() {
     })
 }
 
-onMounted(setupScrollAnimations)
-watch(() => route.path, setupScrollAnimations)
+function setupPerfObserver() {
+    nextTick(() => {
+        if (perfStripRef.value) {
+            perfDisplay.value = '0'
+            if (perfIconRef.value) {
+                perfIconRef.value.classList.remove('pop')
+            }
+            if (perfLinkRef.value) {
+                perfLinkRef.value.classList.remove('shine')
+            }
+            const perfObserver = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((e) => {
+                        if (e.isIntersecting) {
+                            animateNumber(perfTarget)
+                            perfObserver.unobserve(e.target)
+                        }
+                    })
+                },
+                { threshold: 0.3 }
+            )
+            perfObserver.observe(perfStripRef.value)
+        }
+    })
+}
+
+onMounted(() => {
+    setupScrollAnimations()
+    setupPerfObserver()
+})
+watch(() => route.path, () => {
+    setupScrollAnimations()
+    setupPerfObserver()
+})
 
 const features = [
     {
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>`,
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M13.065 8.272a1.866 1.866 0 0 0-1.867-1.865c-.327 0-.48.087-.763.25l-.17-2.172a.933.933 0 0 0-.932-.933L7.42 3.347c.165-.284.254-.4.255-.728a1.866 1.866 0 1 0-3.732 0c0 .328.084.444.249.728l-2.324.205a.933.933 0 0 0-.933.933l.03 1.065c.012.468.472.801.928.912c.33.08.639.246.883.49a1.866 1.866 0 0 1 0 2.64a1.87 1.87 0 0 1-.883.49c-.456.11-.916.442-.93.911l-.027.957c0 .247.098.484.273.66c1.36.899 7.607.807 8.784 0a.93.93 0 0 0 .273-.66l.17-2.064c.283.164.435.25.762.25a1.866 1.866 0 0 0 1.867-1.864" stroke-width="1"/></svg>`,
         title: 'No modules. No middleware.',
         details: 'Register controllers directly — no providers arrays, no forRoot(), no import/export ceremonies. DI resolves dependencies globally.',
         link: '/moost/why',
     },
     {
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M19.254 2.292a.75.75 0 0 1 .954.461A28.1 28.1 0 0 1 21.75 12a28.1 28.1 0 0 1-1.542 9.247a.75.75 0 1 1-1.416-.494c.94-2.7 1.458-5.654 1.458-8.753s-.519-6.054-1.458-8.754a.75.75 0 0 1 .461-.954m-14.228.013a.75.75 0 0 1 .414.976A23.2 23.2 0 0 0 3.75 12c0 3.085.6 6.027 1.69 8.718a.75.75 0 0 1-1.39.563c-1.161-2.867-1.8-6-1.8-9.281c0-3.28.639-6.414 1.8-9.281a.75.75 0 0 1 .976-.414m4.275 5.052a1.5 1.5 0 0 1 2.21.803l.716 2.148L13.6 8.246a2.44 2.44 0 0 1 2.978-.892l.213.09a.75.75 0 1 1-.584 1.381l-.214-.09a.94.94 0 0 0-1.145.343l-2.021 3.033l1.084 3.255l1.445-.89a.75.75 0 1 1 .786 1.278l-1.444.889a1.5 1.5 0 0 1-2.21-.803l-.716-2.148l-1.374 2.062a2.44 2.44 0 0 1-2.978.892l-.213-.09a.75.75 0 0 1 .584-1.381l.214.09a.94.94 0 0 0 1.145-.344l2.021-3.032l-1.084-3.255l-1.445.89a.75.75 0 1 1-.786-1.278z" clip-rule="evenodd"/></svg>`,
         title: 'Resolvers decouple your logic',
         details: 'Decorator-based resolvers inject params, headers, body — your handlers stay pure and testable. Swap real data for mocks with zero changes to business logic.',
         link: '/moost/pipes/resolve',
@@ -88,15 +149,16 @@ const features = [
         link: '/moost/di/',
     },
     {
-        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>`,
-        title: 'Build your own decorators',
-        details: 'Create custom decorators in a few lines with a typed metadata store. No Reflect.metadata boilerplate — just typed reads and writes.',
-        link: '/moost/meta/custom#creating-custom-decorators',
+        icon: `<svg width="85" height="85" viewBox="0 0 85 85" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M26.1071 8.5L29.1421 8.5C40.5427 8.5 49.7857 17.7419 49.7857 29.1429V63.1429C49.7857 69.1785 44.8928 74.0714 38.8571 74.0714H37.6428C32.8845 74.0714 28.8364 71.0303 27.3361 66.7857H17C12.3056 66.7857 8.49997 62.9801 8.49997 58.2857V36.4286C8.49997 31.7342 12.3056 27.9286 17 27.9286H34V63.1429C34 65.1548 35.6309 66.7857 37.6428 66.7857H38.8571C40.869 66.7857 42.5 65.1548 42.5 63.1429V29.1429C42.5 21.7661 36.5193 15.7857 29.1421 15.7857L26.1071 15.7857C22.8221 15.7857 19.216 16.8174 16.2752 17.965C14.8377 18.526 13.627 19.0876 12.7814 19.506C12.3597 19.7147 12.0319 19.8862 11.8156 20.0022C11.7075 20.0601 11.6274 20.104 11.5776 20.1316L11.526 20.1604L11.5205 20.1635C11.521 20.1632 11.5216 20.1629 9.71426 17C7.9069 13.8371 7.90755 13.8367 7.90823 13.8364L7.91342 13.8334L7.92308 13.8279L7.95173 13.8117L8.04564 13.7593C8.12423 13.7157 8.23451 13.6553 8.37425 13.5804C8.65356 13.4307 9.05152 13.2228 9.55005 12.9761C10.5448 12.4839 11.9524 11.8311 13.6265 11.1778C16.9089 9.89689 21.4993 8.5 26.1071 8.5ZM26.7143 59.5V35.2143H17C16.3293 35.2143 15.7857 35.7579 15.7857 36.4286V58.2857C15.7857 58.9564 16.3293 59.5 17 59.5H26.7143ZM11.5182 20.1648C11.5176 20.1652 11.5178 20.165 11.5182 20.1648V20.1648Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M78.6466 38.2898L72.0219 40.3866L71.641 39.2576C71.4074 38.5653 71.0587 37.88 70.5854 37.2012L70.5705 37.18C70.1683 36.5762 69.6077 36.0601 68.8555 35.6395C68.1879 35.2661 67.2545 35.0369 65.9817 35.0369C64.2705 35.0369 62.9392 35.4739 61.9043 36.2742L61.9021 36.276C60.9082 37.0409 60.4682 37.9412 60.4682 39.0529C60.4682 40.1091 60.7974 40.8207 61.3745 41.335C62.0496 41.9366 63.2117 42.5229 64.9932 43.0212L64.9959 43.022L69.6637 44.3042C72.6215 45.1074 74.9649 46.3721 76.5537 48.1831C78.1648 50.004 78.9286 52.3183 78.9286 55.0191C78.9286 57.2569 78.3491 59.2941 77.174 61.0939C76.0197 62.8829 74.4111 64.277 72.3885 65.2824C70.3458 66.2977 68.0077 66.7857 65.4073 66.7857C61.9936 66.7857 59.0641 65.9544 56.7056 64.2073C54.3135 62.4354 52.8421 59.8648 52.235 56.6187L52.0305 55.5255L58.9205 53.5991L59.2064 54.8378C59.5977 56.5336 60.3054 57.6816 61.2488 58.4178C62.2143 59.1606 63.5373 59.5856 65.3253 59.5856C67.3938 59.5856 68.8866 59.0964 69.9359 58.2498C71.0353 57.3586 71.4952 56.388 71.4952 55.2944C71.4952 54.3483 71.2092 53.6271 70.6704 53.046L70.6629 53.0379C70.111 52.4318 69.1808 51.8929 67.7269 51.5145L62.4708 50.1367C59.4422 49.3341 57.0641 48.0513 55.4949 46.1899L55.4873 46.181C53.9398 44.3089 53.1988 41.9958 53.1988 39.3282C53.1988 37.1261 53.7552 35.1325 54.8936 33.3883L54.8978 33.3819C56.0338 31.6651 57.5741 30.3262 59.4886 29.3652L59.492 29.3635C61.4316 28.3975 63.6037 27.9286 65.9817 27.9286C69.2923 27.9286 72.0535 28.7422 74.1151 30.5149C76.1025 32.2122 77.4919 34.4392 78.3031 37.1442L78.6466 38.2898Z" fill="currentColor"/></svg>`,
+        title: 'DTOs powered by Atscript',
+        details: 'Type-safe validation from your TypeScript types — no class-validator, no duplicate schemas. One source of truth for types, docs, and runtime checks.',
+        link: 'https://atscript.moost.org/packages/moost-validator/',
     },
     {
-        icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6.49999H7.5M12 6.49999H7.5M7.5 6.49999V18M21 7.49999C16.5 3 10.3027 10.8181 17 12C25 13.4118 20.5 20.5 14 17" stroke-width="1.5" stroke-linecap="round" stroke="currentColor"/></svg>`,
-        title: 'TypeScript-first',
-        details: 'Fully typed composables, route params, and DI resolution. Strict mode throughout. Not a JS framework with .d.ts files bolted on.',
+        icon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5" d="M11 14H6L9.5 2H16l-3 8h5l-8 12z"/></svg>`,
+        title: 'Faster than NestJS',
+        details: '10% ahead of NestJS+Fastify on real-world benchmarks. Lazy cookie parsing, short-circuit auth failures, and half the DI overhead.',
+        link: '/webapp/benchmarks',
     },
 ]
 </script>
@@ -210,6 +272,20 @@ const features = [
                             </div>
                         </div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Performance Strip -->
+            <section ref="perfStripRef" class="perf-strip animate-in">
+                <div class="perf-strip-inner">
+                    <div ref="perfIconRef" class="perf-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.5" d="M11 14H6L9.5 2H16l-3 8h5l-8 12z"/></svg>
+                    </div>
+                    <div class="perf-content">
+                        <div class="perf-number"><span class="perf-value">{{ perfDisplay }}</span> <span class="perf-unit">req/s</span></div>
+                        <div class="perf-text">21-route SaaS benchmark — fastest DI framework, 10% ahead of NestJS.</div>
+                    </div>
+                    <a ref="perfLinkRef" href="/webapp/benchmarks" class="perf-link">See benchmarks &rarr;</a>
                 </div>
             </section>
 
@@ -882,6 +958,117 @@ html.dark .tab-content {
 @media (min-width: 960px) {
     :deep(.image-src) {
         max-width: 320px;
+    }
+}
+
+/* ---- Performance Strip ---- */
+.perf-strip {
+    padding: 8px 24px 40px;
+}
+.perf-strip-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 28px 32px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(87, 127, 230, 0.08) 0%, rgba(87, 127, 230, 0.03) 100%);
+    border: 1px solid rgba(87, 127, 230, 0.2);
+}
+:global(.dark) .perf-strip-inner {
+    background: linear-gradient(135deg, rgba(87, 127, 230, 0.15) 0%, rgba(87, 127, 230, 0.05) 100%);
+    border-color: rgba(87, 127, 230, 0.25);
+}
+.perf-icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(87, 127, 230, 0.12);
+    color: var(--vp-c-brand);
+}
+:global(.dark) .perf-icon {
+    background: rgba(87, 127, 230, 0.2);
+}
+.perf-icon svg {
+    width: 100%;
+    height: 100%;
+}
+.perf-icon.pop {
+    animation: icon-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes icon-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.5); }
+    100% { transform: scale(1); }
+}
+.perf-content {
+    flex: 1;
+    min-width: 0;
+}
+.perf-number {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--vp-c-brand);
+    letter-spacing: -1px;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+.perf-value {
+    font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+.perf-unit {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+.perf-text {
+    font-size: 14px;
+    color: var(--vp-c-text-2);
+    line-height: 1.5;
+    margin-top: 4px;
+}
+.perf-link {
+    flex-shrink: 0;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vp-c-brand);
+    text-decoration: none;
+    white-space: nowrap;
+    border: 1px solid rgba(87, 127, 230, 0.3);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+.perf-link:hover {
+    background: rgba(87, 127, 230, 0.08);
+    border-color: var(--vp-c-brand);
+}
+.perf-link.shine {
+    animation: link-pulse 2s ease-in-out infinite;
+}
+@keyframes link-pulse {
+    0%, 100% { box-shadow: 0 0 6px 2px rgba(87, 127, 230, 0.25); }
+    50% { box-shadow: 0 0 12px 4px rgba(87, 127, 230, 0.5); }
+}
+@media (max-width: 639px) {
+    .perf-strip-inner {
+        flex-direction: column;
+        text-align: center;
+        padding: 24px 20px;
+    }
+    .perf-number {
+        font-size: 32px;
+    }
+}
+@media (min-width: 640px) {
+    .perf-strip {
+        padding: 8px 48px 48px;
+    }
+    .perf-number {
+        font-size: 40px;
     }
 }
 </style>

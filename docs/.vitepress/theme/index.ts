@@ -1,5 +1,5 @@
 import DefaultTheme from 'vitepress/theme'
-import { nextTick } from 'vue'
+import { defineAsyncComponent, nextTick } from 'vue'
 import HomeLayout from './HomeLayout.vue'
 import './custom.css'
 
@@ -20,6 +20,8 @@ export default {
     extends: DefaultTheme,
     Layout: HomeLayout,
     enhanceApp({ app }) {
+        app.component('BenchmarkBars', defineAsyncComponent(() => import('./BenchmarkBars.vue')))
+        app.component('BenchmarkChart', defineAsyncComponent(() => import('./BenchmarkChart.vue')))
         app.mixin({
             mounted() { nextTick(colorizeAtscriptAnnotations) },
             updated() { nextTick(colorizeAtscriptAnnotations) },

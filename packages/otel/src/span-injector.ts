@@ -9,7 +9,6 @@ import {
   customMetricAttrsKey,
   customSpanAttrsKey,
   otelRouteKey,
-  otelSpanKey,
   otelStartTimeKey,
   useOtelContext,
 } from './context'

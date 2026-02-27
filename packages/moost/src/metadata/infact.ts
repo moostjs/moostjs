@@ -170,7 +170,9 @@ export function getNewMoostInfact() {
       let logger
       try {
         const ctxLogger = event === 'error' ? getDefaultLogger(INFACT_BANNER) : useLogger()
-        logger = typeof ctxLogger.topic === 'function' ? ctxLogger.topic(INFACT_BANNER) : ctxLogger
+        const withTopic = ctxLogger as { topic?: (name?: string) => typeof ctxLogger }
+        logger =
+          typeof withTopic.topic === 'function' ? withTopic.topic(INFACT_BANNER) : ctxLogger
       } catch (error) {
         logger = getDefaultLogger(INFACT_BANNER)
       }

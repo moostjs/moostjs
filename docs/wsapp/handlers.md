@@ -120,10 +120,10 @@ Room membership is automatically cleaned up when a connection closes — you don
 All three handler types participate in the full Moost event lifecycle:
 
 1. **Scope registration** — `FOR_EVENT` scoped instances are created
-2. **Interceptor init** — Interceptors can short-circuit the handler
+2. **Interceptor before** — Runs before args are resolved; can short-circuit the handler
 3. **Argument resolution** — Pipes resolve, transform, and validate parameters
 4. **Handler execution** — Your method body runs
-5. **Interceptor after/onError** — Post-processing or error handling
+5. **Interceptor after/error** — Post-processing or error handling
 6. **Scope cleanup** — Event-scoped instances are released
 
 This means you can use all standard Moost features with WebSocket handlers:

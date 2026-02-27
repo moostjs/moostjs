@@ -1,10 +1,8 @@
 # What is Moost?
 
-Moost gives you NestJS-style structure — controllers, dependency injection, interceptors, pipes — without the module system, middleware, or boilerplate. Build HTTP servers, CLI tools, WebSocket apps, and workflow engines through a single decorator-driven pattern, powered by [Wooks](https://wooks.moost.org/wooks/what) composables under the hood.
+Moost is a TypeScript framework for building HTTP servers, CLI tools, WebSocket apps, and workflow engines. If you've used NestJS, the shape will feel familiar — controllers, dependency injection, interceptors, pipes — but without the module ceremony. Under the hood, it's powered by [Wooks](https://wooks.moost.org/wooks/what) composables.
 
-## Decorators and Metadata
-
-Moost uses TypeScript decorators to declare everything: routing, DI scope, validation, access control. Under the hood, all decorators write to a shared metadata store powered by [`@prostojs/mate`](https://github.com/prostojs/mate). This makes it easy to create custom decorators and read metadata at any point in the lifecycle.
+## A Quick Look
 
 ```ts
 import { Get } from '@moostjs/event-http'
@@ -19,14 +17,14 @@ export class AppController {
 }
 ```
 
-Decorators are the entry point — but they don't do magic. They store metadata that Moost reads at init time to wire up routes, resolve dependencies, and build interceptor chains.
+Decorators declare your routes, DI scopes, validation rules, and access control. They write to a shared metadata store ([`@prostojs/mate`](https://github.com/prostojs/mate)) that Moost reads at startup to wire everything together. Creating your own decorators is just a few lines of typed code.
 
 ## Dependency Injection
 
-Moost provides DI through [`@prostojs/infact`](https://github.com/prostojs/infact) — no modules, no providers arrays, no `forRoot()`. Mark a class `@Injectable()` and Moost manages its lifecycle:
+Mark a class `@Injectable()` and Moost handles the rest — no modules, no providers arrays, no `forRoot()`. Two scopes:
 
 - **Singleton** — one instance for the entire app
-- **For Event** — a fresh instance per event (HTTP request, CLI command, etc.)
+- **For Event** — a fresh instance per request, command, or message
 
 ```ts
 import { Injectable } from 'moost'
@@ -37,11 +35,11 @@ export class RequestLogger {
 }
 ```
 
-Dependencies are resolved automatically by constructor type. Use `@Provide()` / `@Inject()` to swap implementations without changing consumer code.
+Dependencies are resolved by constructor type. Use `@Provide()` / `@Inject()` when you need to swap implementations.
 
 ## Controllers
 
-Controllers group related handlers under a shared prefix. Nest them with `@ImportController()` to build hierarchical route trees:
+Controllers group handlers under a shared prefix. Nest them to build route hierarchies:
 
 ```ts
 import { Controller, ImportController } from 'moost'
@@ -52,17 +50,17 @@ import { Controller, ImportController } from 'moost'
 export class AdminController { }
 ```
 
-Each adapter reads controller metadata and registers only the handlers it understands — `@Get()` goes to HTTP, `@Cli()` goes to CLI, `@Message()` goes to WebSocket. A single controller can serve multiple adapters.
+A single controller can serve multiple event types at once — `@Get()` registers an HTTP route, `@Cli()` a CLI command, `@Message()` a WebSocket handler. Each adapter picks up only what it understands.
 
 ## Interceptors and Pipes
 
-**Interceptors** wrap handlers with lifecycle hooks: `init`, `before`, `after`, `onError`. Use them for auth guards, logging, error handling, or response transformation. Priority levels control execution order.
+**Interceptors** wrap your handlers with lifecycle hooks — `before`, `after`, `error`. Great for auth guards, logging, or response transformation. Priority levels let you control the order.
 
-**Pipes** process handler arguments in a defined sequence: resolve, transform, validate. The built-in resolve pipe extracts route params, query strings, and body data. Plug in validation (e.g., Atscript) to reject bad input before the handler runs.
+**Pipes** process handler arguments step by step: resolve, transform, validate. Route params, query strings, and body data are extracted automatically. Add a validation layer (e.g., Atscript) to reject bad input before your handler even runs.
 
-## Built on Wooks
+## Wooks Composables
 
-Moost doesn't replace Wooks — it builds on top of it. Every Wooks composable works inside a Moost handler:
+Every Wooks composable works inside a Moost handler, so you can reach for typed request data whenever you need it:
 
 ```ts
 import { Get } from '@moostjs/event-http'
@@ -80,16 +78,16 @@ export class AppController {
 }
 ```
 
-Moost adds structure (decorators, DI, interceptors) while Wooks provides the composable runtime. You choose how deep to go with each.
+Moost adds structure on top; Wooks provides the composable runtime underneath. You decide how much of each you want to use.
 
-## Package Structure
+## Packages
 
-| Package | Role |
+| Package | What it does |
 |---------|------|
-| `moost` | Core: Moost class, decorators, DI, pipes, interceptors |
-| `@moostjs/event-http` | HTTP adapter wrapping `@wooksjs/event-http` |
-| `@moostjs/event-ws` | WebSocket adapter wrapping `@wooksjs/event-ws` |
-| `@moostjs/event-cli` | CLI adapter wrapping `@wooksjs/event-cli` |
-| `@moostjs/event-wf` | Workflow adapter wrapping `@wooksjs/event-wf` |
-| `@moostjs/swagger` | Swagger/OpenAPI integration |
+| `moost` | Core framework — decorators, DI, pipes, interceptors |
+| `@moostjs/event-http` | HTTP adapter (wraps `@wooksjs/event-http`) |
+| `@moostjs/event-ws` | WebSocket adapter (wraps `@wooksjs/event-ws`) |
+| `@moostjs/event-cli` | CLI adapter (wraps `@wooksjs/event-cli`) |
+| `@moostjs/event-wf` | Workflow adapter (wraps `@wooksjs/event-wf`) |
+| `@moostjs/swagger` | Swagger / OpenAPI generation |
 | `@moostjs/otel` | OpenTelemetry tracing |

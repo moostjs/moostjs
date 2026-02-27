@@ -179,7 +179,7 @@ The swagger mapping auto-discovers both transports and emits OR security (separa
 
 ### AND — require all methods simultaneously
 
-Stacking multiple `@Authenticate()` decorators registers separate interceptors that **all** run during the init phase. Every guard must pass:
+Stacking multiple `@Authenticate()` decorators registers separate interceptors that **all** run during the before phase. Every guard must pass:
 
 ```ts
 const jwtGuard = defineAuthGuard(

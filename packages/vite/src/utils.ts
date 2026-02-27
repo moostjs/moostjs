@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { builtinModules } from 'node:module'
 
-import { EventLogger } from 'moost'
+import { createLogger } from 'moost'
 import type { EnvironmentModuleNode } from 'vite'
 
 export const PLUGIN_NAME = 'moost-vite'
@@ -33,10 +33,10 @@ export function gatherAllImporters(
   return visited
 }
 
-const logger = new EventLogger('', { level: 99 }).createTopic(
+const logger = createLogger({ level: 99 }).createTopic(
   __DYE_DIM__ + __DYE_CYAN__ + PLUGIN_NAME,
 )
-export function getLogger(): EventLogger {
+export function getLogger() {
   return logger
 }
 

@@ -2,7 +2,7 @@ import type { THeaderRef, TStatusRef } from '@moostjs/event-http'
 import { Get, HeaderRef, SetHeader, StatusRef, Url } from '@moostjs/event-http'
 import { useResponse } from '@wooksjs/event-http'
 import { serveFile } from '@wooksjs/http-static'
-import { Const, Controller, current, Moost, useControllerContext, useLogger } from 'moost'
+import { Const, Controller, current, Moost, useControllerContext } from 'moost'
 import Path from 'path'
 import { getAbsoluteFSPath } from 'swagger-ui-dist'
 
@@ -89,11 +89,9 @@ export class SwaggerController {
   protected async resolveSpec() {
     if (!this.spec) {
       const ctx = current()
-      const l = useLogger(ctx)
-      const logger = typeof l.topic === 'function' ? l.topic('@moostjs/swagger') : l
       const { instantiate } = useControllerContext(ctx)
       const moost = await instantiate(Moost)
-      this.spec = mapToSwaggerSpec(moost.getControllersOverview(), this.opts, logger)
+      this.spec = mapToSwaggerSpec(moost.getControllersOverview(), this.opts)
     }
     return this.spec
   }

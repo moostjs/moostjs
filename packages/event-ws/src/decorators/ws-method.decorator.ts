@@ -12,7 +12,7 @@ import { getMoostMate } from 'moost'
  * @param path - route path with optional params (e.g. "/chat/rooms/:roomId")
  */
 export function Message(event: string, path?: string): MethodDecorator {
-  return getMoostMate<TEmpty, TMoostMetadata<{ event: string; method: string }>>().decorate(
+  return getMoostMate<TEmpty, TMoostMetadata<{ event: string }>>().decorate(
     'handlers',
     { event, path, type: 'WS_MESSAGE' },
     true,

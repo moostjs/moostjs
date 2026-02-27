@@ -51,6 +51,7 @@
     "@opentelemetry/sdk-trace-base": "^2.5.1",
     "@prostojs/dye": "^0.4.9",
     "@types/node": "^22.19.11",
+    "chart.js": "^4.5.1",
     "conventional-changelog": "^5.1.0",
     "conventional-changelog-cli": "^4.1.0",
     "husky": "^9.1.7",
@@ -65,6 +66,7 @@
     "vitepress": "^1.6.4",
     "vitepress-plugin-llmstxt": "^0.4.2",
     "vitest": "3.2.4",
+    "vue-chartjs": "^5.3.3",
     "zx": "^8.8.5"
   },
   "pnpm": {

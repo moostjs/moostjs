@@ -1,37 +1,40 @@
-# Why Moost over NestJS?
+# Why Moost?
 
 ## The Short Version
 
-If you like NestJS's ideas — decorators, DI, structured code — but not its execution, Moost is what you've been looking for. Same principles, half the ceremony, and it works beyond HTTP.
+If you like what NestJS brought to Node.js — structure, decorators, dependency injection — but find yourself fighting the framework more than using it, Moost might be what you're after.
 
-## The Origin
+## How We Got Here
 
-We liked what NestJS did for Node.js — decorators, dependency injection, a structured approach to building servers. But the execution felt heavy. Modules wrapping modules. Providers arrays that repeat the same class in three places. A metadata system that's hard to extend. And the whole thing locked to HTTP, with awkward workarounds for anything else.
+NestJS showed that Node.js servers could be well-structured. But over time, the overhead adds up. Modules wrapping modules. The same class name repeated in three different arrays. A metadata system that's hard to extend. And when you need something beyond HTTP — a CLI tool, a workflow engine — the story gets complicated.
 
-[Wooks](https://wooks.moost.org/wooks/what) solved the composable side — typed, per-event data without middleware. But it was still a functional framework: plain functions, no DI, no decorator-driven structure. The natural next step was: **what if you could have NestJS-style decorators and DI on top of Wooks, without the complexity?**
+[Wooks](https://wooks.moost.org/wooks/what) took a different path: composable, typed access to event data without middleware chains. But it was purely functional — no DI, no decorator-driven structure. Moost bridges the gap: **NestJS-style architecture on top of Wooks, without the ceremony.**
 
-## The Design Decisions
+## What's Different
 
-### No modules
+### Just register your controllers
 
-NestJS requires you to organize code into modules — each declaring its imports, exports, providers, and controllers. For large apps this adds structure, but for most projects it adds ceremony. Moost has no module concept. You register controllers directly and the DI container resolves dependencies globally. Less indirection, fewer files, faster onboarding.
+NestJS asks you to wrap everything in modules — imports, exports, providers, controllers. For most projects, that's boilerplate. In Moost, you register controllers directly and the DI container figures out the rest. Fewer files, less indirection.
 
-### Composables over middleware
+### Data on demand
 
-Traditional frameworks parse headers, cookies, and body in middleware — before your handler runs, whether it needs the data or not. Moost inherits Wooks' composable model: call `useRequest()`, `useCookies()`, or `useBody()` inside your handler and get typed data on demand. Nothing runs until you ask for it.
+Traditional middleware parses headers, cookies, and request bodies upfront — whether your handler needs them or not. Moost inherits Wooks' composable model: call `useRequest()`, `useCookies()`, or `useBody()` inside your handler and get typed data only when you ask for it. This also means better performance — nothing is computed until it's needed.
 
-### Decorators that work
+### Easy custom decorators
 
-Moost uses [`@prostojs/mate`](https://github.com/prostojs/mate) for metadata — a typed, extensible system where creating a custom decorator is a few lines of code. You don't need to understand `Reflect.metadata` internals or write boilerplate adapter layers. Decorators read and write typed metadata, and the framework consumes it at init time.
+Moost's metadata layer ([`@prostojs/mate`](https://github.com/prostojs/mate)) makes creating custom decorators straightforward — a few lines of typed code. No `Reflect.metadata` internals, no adapter boilerplate.
 
-### One framework, many event types
+### Beyond HTTP
 
-HTTP, CLI, WebSocket, and workflows share the same core: controllers, DI, interceptors, pipes. Write an auth guard once and apply it to an HTTP endpoint, a WebSocket message handler, and a CLI command. Adapters handle the transport differences — your business logic stays the same.
+HTTP, CLI, WebSocket, and workflows all share the same core: controllers, DI, interceptors, pipes. Write an auth guard once, use it everywhere. Adapters handle the transport differences so your business logic doesn't have to.
 
-### SOLID without the weight
+### Fast by default
 
-Both Moost and NestJS encourage clean architecture — dependency injection, separation of concerns, single responsibility. The difference is how much scaffolding you need. Moost lets you apply these principles directly, without module hierarchies or provider registration rituals.
+Moost's DI layer adds roughly **half the overhead** of NestJS's. Combined with Wooks' lazy parsing, it's consistently faster across realistic workloads. Details in the [benchmark results](/webapp/benchmarks).
 
-## When to use Moost
+## When to Choose Moost
 
-Moost fits when you want NestJS-style structure — decorators, DI, interceptors — without the module system and boilerplate. It's a good choice when your app handles multiple event types (HTTP + CLI, HTTP + WebSocket), when you want composable access to event data, or when you value TypeScript ergonomics and explicit code over framework magic.
+- You want structured, decorator-driven code without the module boilerplate
+- Your app spans multiple event types (HTTP + CLI, HTTP + WebSocket)
+- You prefer explicit composable functions over implicit middleware
+- You value TypeScript ergonomics and want decorators that are easy to extend

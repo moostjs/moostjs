@@ -36,8 +36,8 @@ Below is a representative diagram illustrating the lifecycle of a Moost event.
 
 <div id="step5" style="transform: translateY(-70px)" />
 
-5. **Initialize Interceptors & Run ‘before’ Hooks**
-   Moost initializes all applicable [interceptors](/moost/interceptors) and runs their "before" hooks. Class-based interceptors are resolved through DI at this stage. Before hooks can perform authentication checks, request transformations, or short-circuit the request entirely by calling `reply(value)`. If an interceptor short-circuits, Moost skips to the after/error phase (Step 8). If an error occurs, Moost moves to error handling (Step 10).
+5. **Run Interceptors ‘before’ Hooks**
+   Moost resolves all applicable [interceptors](/moost/interceptors) and runs their "before" hooks. Class-based interceptors are resolved through DI at this stage. Before hooks run before handler arguments are resolved, and can perform authentication checks, request transformations, or short-circuit the request entirely by calling `reply(value)`. If an interceptor short-circuits, Moost skips to the after/error phase (Step 8). If an error occurs, Moost moves to error handling (Step 10).
 
 <div id="step6" style="transform: translateY(-70px)" />
 

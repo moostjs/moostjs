@@ -113,7 +113,7 @@ export const CookieRef = (name: string) =>
 export const CookieAttrsRef = (name: string) =>
   Resolve((metas, level) => {
     const response = useResponse()
-    const getAttrs = () => response.getCookie(name)?.attrs
+    const getAttrs = (): TCookieAttributes => response.getCookie(name)?.attrs ?? {}
     const setAttrs = (v: TCookieAttributes) => {
       const existing = response.getCookie(name)
       response.setCookie(name, existing?.value ?? '', v)
