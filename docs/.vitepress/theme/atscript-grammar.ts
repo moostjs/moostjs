@@ -1,5 +1,6 @@
 export const atscriptGrammar = {
   name: 'atscript',
+  aliases: ['as'],
   scopeName: 'source.atscript',
   fileTypes: ['as'],
   patterns: [
