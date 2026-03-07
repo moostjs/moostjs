@@ -40,19 +40,26 @@ export function getLogger() {
   return logger
 }
 
+function escapeRegex(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 export function getExternals({ node, workspace }: { node: boolean; workspace: boolean }) {
   const pkg = JSON.parse(readFileSync('package.json', 'utf8').toString()) as {
     dependencies?: Record<string, string>
   }
-  const externals = workspace
+  const packageNames = workspace
     ? Object.keys(pkg.dependencies || {})
     : Object.entries(pkg.dependencies || {})
         .filter(([key, ver]) => !ver.startsWith('workspace:'))
         .map((i) => i[0])
+  const externals: RegExp[] = packageNames.map(
+    (name) => new RegExp(`^${escapeRegex(name)}(/|$)`),
+  )
   if (node) {
     externals.push(
-      ...builtinModules, // e.g. 'fs'
-      ...builtinModules.map((m) => `node:${m}`), // e.g. 'node:fs'
+      ...builtinModules.map((m) => new RegExp(`^${escapeRegex(m)}(/|$)`)),
+      ...builtinModules.map((m) => new RegExp(`^node:${escapeRegex(m)}(/|$)`)),
     )
   }
   return externals
