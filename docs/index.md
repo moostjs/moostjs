@@ -5,8 +5,10 @@ title: Moost
 titleTemplate: Home | :title
 hero2:
   name: Moost
-  text: Enterprise Patterns. Startup Speed.
-  tl1:  Stop Fighting Your Framework.
+  text: A TypeScript framework for HTTP, WebSocket, CLI, and workflows.
+  tl1: NestJS-style structure.
+  tlhl: No modules.
+  tl2: No ceremony.
 # image:
 #   src: /Moost.png
 #   alt: MoostJS
@@ -15,12 +17,9 @@ actions:
     text: Get Started
     link: /moost/
   - theme: alt
-    text: Why Not NestJS?
+    text: Why Switch from NestJS
     link: /moost/why
   - theme: alt
     text: Benchmarks
     link: /webapp/benchmarks
-  - theme: alt
-    text: View on GitHub
-    link: https://github.com/moostjs/moostjs
 ---

@@ -1,6 +1,6 @@
 # What is Moost?
 
-Moost is a TypeScript framework for building HTTP servers, CLI tools, WebSocket apps, and workflow engines. If you've used NestJS, the shape will feel familiar — controllers, dependency injection, interceptors, pipes — but without the module ceremony. Under the hood, it's powered by [Wooks](https://wooks.moost.org/wooks/what) composables.
+Moost is a TypeScript framework with controllers, dependency injection, pipes, and interceptors for HTTP servers, WebSocket apps, CLI tools, and workflow engines. If you've used NestJS, the shape will feel familiar, but Moost drops the module ceremony and builds on [Wooks](https://wooks.moost.org/wooks/what) for lazy, composable event handling.
 
 ## A Quick Look
 

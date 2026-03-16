@@ -2,7 +2,7 @@
 
 ## The Short Version
 
-If you like what NestJS brought to Node.js — structure, decorators, dependency injection — but find yourself fighting the framework more than using it, Moost might be what you're after.
+Moost is for teams that like NestJS-style structure but do not want NestJS-style ceremony. You keep controllers, decorators, DI, pipes, and interceptors, but drop the module boilerplate and gain one consistent model across HTTP, WebSocket, CLI, and workflows.
 
 ## How We Got Here
 

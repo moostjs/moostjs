@@ -3,7 +3,7 @@ import { llmstxtPlugin } from 'vitepress-plugin-llmstxt'
 import { atscriptGrammar } from './theme/atscript-grammar'
 // import { configRu } from './config.ru'
 
-const ogDescription = 'Moost — TypeScript framework with NestJS-style decorators and DI, without the modules or middleware. HTTP, WebSocket, CLI, Workflows.'
+const ogDescription = 'Moost — TypeScript framework with NestJS-style controllers, DI, pipes, and interceptors, without module ceremony. HTTP, WebSocket, CLI, and workflows.'
 const ogImage = 'https://moost.org/og-moost.png'
 const twitterImage = 'https://moost.org/moostjs-small.png'
 const ogTitle = 'Moost'
@@ -16,7 +16,7 @@ const ogUrl = 'https://moost.org'
 export default defineConfig({
     lang: 'en-US',
     title: ' ',
-    description: 'TypeScript CHANGED Framework for Structured Apps — NestJS-style decorators and DI without the boilerplate',
+    description: 'TypeScript framework with NestJS-style controllers, DI, pipes, and interceptors, without module ceremony.',
 
     ignoreDeadLinks: 'localhostLinks',
 
@@ -53,6 +53,7 @@ export default defineConfig({
         ['meta', { name: 'twitter:site', content: '@MAVrik7' }],
         ['meta', { name: 'twitter:image', content: twitterImage }],
         ['meta', { name: 'theme-color', content: '#3d61be' }],
+        ['script', { async: '', src: 'https://scripts.simpleanalyticscdn.com/latest.js' }],
     ],
 
     markdown: {
