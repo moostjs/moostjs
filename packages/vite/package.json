@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/vite",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "Vite Dev plugin for moostjs",
   "keywords": [
     "composables",
@@ -44,7 +44,10 @@
     }
   },
   "build": {
-    "entries": ["src/index.ts", "src/prod-server.ts"]
+    "entries": [
+      "src/index.ts",
+      "src/prod-server.ts"
+    ]
   },
   "scripts": {
     "pub": "pnpm publish --access public",
