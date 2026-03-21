@@ -48,7 +48,7 @@
   },
   "dependencies": {
     "@moostjs/event-cli": "workspace:^",
-    "@prostojs/rewrite": "^0.2.1",
+    "@prostojs/rewrite": "^0.2.3",
     "@wooksjs/event-cli": "catalog:",
     "moost": "workspace:^",
     "prompts": "^2.4.2"

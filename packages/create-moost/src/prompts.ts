@@ -46,16 +46,10 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
         {
           name: 'type',
           type: () => {
-            if (inputs.ws && !inputs.cli && !inputs.http) {
-              predefined.type = 'ws'
-              return null
-            }
-            if (inputs.cli && !inputs.http && !inputs.ws) {
-              predefined.type = 'cli'
-              return null
-            }
-            if (inputs.http && !inputs.cli && !inputs.ws) {
-              predefined.type = 'http'
+            const typeFlags = ['http', 'cli', 'ws', 'ssr'] as const
+            const selected = typeFlags.filter((t) => inputs[t])
+            if (selected.length === 1) {
+              predefined.type = selected[0]
               return null
             }
             return 'select'
@@ -63,6 +57,7 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
           message: 'Moost Adapter:',
           choices: [
             { title: 'HTTP (Web) Application', value: 'http' },
+            { title: 'Vue + Moost (SSR/SPA)', value: 'ssr' },
             { title: 'WebSocket Application', value: 'ws' },
             { title: 'CLI Application', value: 'cli' },
           ],
@@ -73,6 +68,20 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
           message: 'Package name:',
           initial: () => toValidPackageName(predefined.targetDir!),
           validate: (dir: string) => isValidPackageName(dir) || 'Invalid package.json name',
+        },
+        {
+          name: 'ssr',
+          type: (prev, values) => {
+            const type = values.type || predefined.type
+            if (type !== 'ssr') {
+              return null
+            }
+            return 'toggle'
+          },
+          message: 'Enable SSR (Server-Side Rendering)?',
+          initial: true,
+          active: 'Yes',
+          inactive: 'No (SPA only)',
         },
         {
           name: 'ws',

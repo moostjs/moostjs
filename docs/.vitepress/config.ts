@@ -390,6 +390,10 @@ export default defineConfig({
                     collapsed: false,
                     items: [
                         {
+                            text: 'Vue + Moost (SSR)',
+                            link: '/webapp/ssr',
+                        },
+                        {
                             text: 'Vite Plugin',
                             link: '/webapp/vite',
                         },

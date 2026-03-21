@@ -26,6 +26,7 @@ class Commands extends CliApp {
       cli: !!useCliOption('cli'),
       ws: !!useCliOption('ws'),
       wf: !!useCliOption('wf'),
+      ssr: !!useCliOption('ssr'),
       oxc: !!useCliOption('oxc'),
       force: !!useCliOption('force'),
     })
@@ -34,6 +35,7 @@ class Commands extends CliApp {
     await scaffold(prompts)
     const cli = prompts.type === 'cli'
     const ws = prompts.type === 'ws'
+    const ssr = prompts.type === 'ssr'
     return `
 ${__DYE_WHITE_BRIGHT__ + __DYE_BOLD__}Success! ${__DYE_BOLD_OFF__}Your new "${
       prompts.projectName
@@ -59,7 +61,14 @@ ${cli ? '4' : '3'}. ${ws ? 'Build and start' : 'Start the development server'}:
 
 ${__DYE_GREEN__}You're all set!${ws ? '' : ' The development server will help you in building your application.'}
 Enjoy coding, and build something amazing!${__DYE_COLOR_OFF__}
+${
+  ssr
+    ? `
+${__DYE_DIM__}Vue app:     http://localhost:3000
+API routes:  http://localhost:3000/api/hello/World${__DYE_COLOR_OFF__}
 `
+    : ''
+}`
   }
 }
 
@@ -70,6 +79,7 @@ export function run() {
       { keys: ['cli'], description: 'Use Moost CLI', type: Boolean },
       { keys: ['ws'], description: 'Use Moost WebSocket', type: Boolean },
       { keys: ['wf'], description: 'Add Workflow Adapter', type: Boolean },
+      { keys: ['ssr'], description: 'Vue + Moost (SSR/SPA)', type: Boolean },
       {
         keys: ['oxc'],
         description: 'Add OXC lint and formatter (oxlint + oxfmt)',

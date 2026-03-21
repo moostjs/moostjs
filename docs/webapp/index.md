@@ -86,3 +86,4 @@ The `@Get('hello/:name')` decorator registers the method as a `GET` handler. The
 - [Routing & Handlers](./routing) — HTTP methods, route patterns, and handler basics
 - [Reading Request Data](./request) — extract query params, headers, cookies, and body
 - [Controllers](./controllers) — organize handlers into logical groups
+- [Vue + Moost (SSR)](./ssr) — fullstack Vue app with SSR, in-process API calls, and HMR

@@ -133,6 +133,9 @@ The plugin injects a `__VITE_ID` decorator on `@Injectable` and `@Controller` cl
 | `ssrFetch` | `boolean` | `true` | Enable [SSR local fetch](/webapp/fetch) interception |
 | `middleware` | `boolean` | `false` | Run Moost as Connect middleware |
 | `prefix` | `string` | — | URL prefix filter for middleware mode |
+| `ssrEntry` | `string` | — | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`) |
+| `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
+| `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |
 
 ::: tip
 Options `port`, `host`, `outDir`, `format`, `sourcemap`, and `externals` are only used in backend mode. In middleware mode, your `vite.config.ts` controls build and server configuration.

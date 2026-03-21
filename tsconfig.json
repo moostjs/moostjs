@@ -17,7 +17,7 @@
       "moost": ["packages/moost/src"],
       "@moostjs/*": ["packages/*/src"]
     },
-    "types": ["node"],
+    "types": ["node", "@prostojs/dye/global"],
     "declarationMap": false,
     "resolveJsonModule": true,
     "downlevelIteration": true,

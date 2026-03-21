@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "useDefineForClassFields": false
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue", "server.ts", "vite-env.d.ts"]
+}

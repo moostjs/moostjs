@@ -21,6 +21,8 @@ const rw = new ProstoRewrite({
     '.oxlintrc.json',
     '.oxfmtrc.json',
   ],
+  // Note: .vue files are intentionally excluded — Vue's {{ }} mustache syntax
+  // would conflict with ProstoRewrite's template variable replacement.
 })
 const root = process.cwd()
 
@@ -37,7 +39,7 @@ export async function scaffold(data: TPrompts) {
   } else {
     mkdirSync(projectDir)
   }
-  const templatePath = join(__dirname, '../templates', data.type === 'ws' ? 'ws' : data.type)
+  const templatePath = join(__dirname, '../templates', data.type)
   const commonPath = join(__dirname, '../templates/common')
   const wfPath = join(__dirname, '../templates/wf')
   const wsAddonPath = join(__dirname, '../templates/ws-addon')
@@ -50,6 +52,9 @@ export async function scaffold(data: TPrompts) {
     excludeCommon.push('.oxlintrc.json')
     excludeCommon.push('.oxfmtrc.json')
   }
+  if (data.type === 'ssr') {
+    excludeCommon.push('tsconfig.json')
+  }
 
   const renameFile = (filename: string) => {
     if (filename.endsWith('.jsonc')) {
@@ -58,10 +63,16 @@ export async function scaffold(data: TPrompts) {
     return filename
   }
 
+  const excludeTemplate: string[] = []
+  if (data.type === 'ssr' && !data.ssr) {
+    excludeTemplate.push('src/entry-server.ts')
+  }
+
   await rw.rewriteDir(
     {
       baseDir: templatePath,
       output: projectDir,
+      exclude: excludeTemplate,
       renameFile,
     },
     context,
