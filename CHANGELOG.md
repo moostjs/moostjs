@@ -1,3 +1,18 @@
+## [0.6.3](https://github.com/moostjs/moostjs/compare/v0.6.2...v0.6.3) (2026-03-21)
+
+
+### Bug Fixes
+
+* moost-vite externals fix ([cc41404](https://github.com/moostjs/moostjs/commit/cc41404380ddc82c86a8c43faad615e3ff41b027))
+
+
+### Features
+
+* add SSR local fetch, middleware mode, pnpm catalog, and vite 8 upgrade ([68e9fe3](https://github.com/moostjs/moostjs/commit/68e9fe36ec08fa407767ca015454ac7bded2a63e))
+* add Vue + Moost SSR template to create-moost, fix dye/rewrite build constants ([9098015](https://github.com/moostjs/moostjs/commit/9098015506c34131517bc08bafa4337ddb6cbcc1))
+
+
+
 ## [0.6.2](https://github.com/moostjs/moostjs/compare/v0.6.1...v0.6.2) (2026-02-27)
 
 
