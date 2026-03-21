@@ -84,8 +84,31 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     return this.httpApp
   }
 
-  public getServerCb() {
-    return this.httpApp.getServerCb()
+  public getServerCb(onNoMatch?: (req: import('http').IncomingMessage, res: import('http').ServerResponse) => void) {
+    return this.httpApp.getServerCb(onNoMatch)
+  }
+
+  /**
+   * Programmatic route invocation using the Web Standard fetch API.
+   * Goes through the full Moost pipeline: DI scoping, interceptors,
+   * argument resolution, pipes, validation, and handler execution.
+   *
+   * When called from within an existing HTTP context (e.g. during SSR),
+   * identity headers (authorization, cookie) are automatically forwarded.
+   */
+  public fetch(request: Request): Promise<Response | null> {
+    return this.httpApp.fetch(request)
+  }
+
+  /**
+   * Convenience wrapper for programmatic route invocation.
+   * Accepts a URL string (relative paths auto-prefixed with `http://localhost`),
+   * URL object, or Request, plus optional `RequestInit`.
+   *
+   * Returns `null` when no route matches the request.
+   */
+  public request(input: string | URL | Request, init?: RequestInit): Promise<Response | null> {
+    return this.httpApp.request(input, init)
   }
 
   public listen(

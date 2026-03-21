@@ -1,5 +1,4 @@
-import { defineConfig  } from "vite";
-import swc from 'unplugin-swc';
+import { defineConfig } from "vite";
 import { moostVite } from "@moostjs/vite";
 
 export default defineConfig({
@@ -7,7 +6,5 @@ export default defineConfig({
     moostVite({
       entry: "/src/main.ts",
     }),
-    swc.vite(), 
   ],
 });
-

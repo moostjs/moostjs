@@ -386,6 +386,20 @@ export default defineConfig({
                     ],
                 },
                 {
+                    text: 'Dev & SSR',
+                    collapsed: false,
+                    items: [
+                        {
+                            text: 'Vite Plugin',
+                            link: '/webapp/vite',
+                        },
+                        {
+                            text: 'Programmatic Fetch (SSR)',
+                            link: '/webapp/fetch',
+                        },
+                    ],
+                },
+                {
                     text: 'Extras',
                     collapsed: false,
                     items: [

@@ -48,15 +48,15 @@
     "setup-skills": "node ./scripts/setup-skills.js"
   },
   "dependencies": {
-    "@wooksjs/event-http": "^0.7.4",
-    "@wooksjs/http-body": "^0.7.4"
+    "@wooksjs/event-http": "catalog:",
+    "@wooksjs/http-body": "catalog:"
   },
   "devDependencies": {
     "vitest": "3.2.4"
   },
   "peerDependencies": {
     "@prostojs/infact": "^0.4.1",
-    "@wooksjs/event-core": "^0.7.4",
+    "@wooksjs/event-core": "catalog:",
     "moost": "workspace:^"
   }
 }

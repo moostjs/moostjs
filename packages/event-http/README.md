@@ -76,6 +76,49 @@ class UsersController { ... }
 
 Supported transports: `bearer`, `basic`, `apiKey` (header/query/cookie), `cookie`.
 
+## Programmatic Fetch (SSR)
+
+`MoostHttp` exposes `fetch()` and `request()` methods for in-process route invocation with the full Moost pipeline (DI, interceptors, pipes, validation) — no TCP round-trip.
+
+```ts
+const http = new MoostHttp()
+app.adapter(http)
+await app.init()
+
+// Web Standard fetch API
+const response = await http.fetch(new Request('http://localhost/api/hello/world'))
+
+// Convenience form
+const response = await http.request('/api/hello/world')
+const response = await http.request('/api/users', {
+  method: 'POST',
+  body: JSON.stringify({ name: 'Alice' }),
+  headers: { 'content-type': 'application/json' },
+})
+```
+
+Returns `Response | null` — `null` means no route matched.
+
+When called from within an existing HTTP context (e.g. during SSR), identity headers (`authorization`, `cookie`) are automatically forwarded.
+
+### `enableLocalFetch`
+
+Patches `globalThis.fetch` so that local paths are routed in-process through Moost. External URLs pass through to the original `fetch`. Falls back to original `fetch` if no route matches.
+
+```ts
+import { enableLocalFetch } from '@moostjs/event-http'
+
+const teardown = enableLocalFetch(http)
+
+// Now any fetch('/api/...') goes through Moost in-process
+const res = await fetch('/api/hello/world')
+
+// Restore original fetch
+teardown()
+```
+
+This is wired up automatically by `@moostjs/vite` (see `ssrFetch` option).
+
 ## [Official Documentation](https://moost.org/webapp/)
 
 ## AI Agent Skills

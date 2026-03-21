@@ -8,7 +8,10 @@ import { getLogger } from './utils'
  */
 export function createAdapterDetector(
   adapter: 'http' | 'wf' | 'cli',
-  onInit?: (constructor: new (...args: any[]) => unknown) => void,
+  onInit?: (
+    constructor: new (...args: any[]) => unknown,
+    moduleExports: Record<string, any>,
+  ) => void,
 ) {
   return {
     detected: false,
@@ -25,7 +28,7 @@ export function createAdapterDetector(
       getLogger().log(`🔍 ${__DYE_DIM__}Extracting Adapter "${constructorName}"`)
       this.constructor = module[constructorName]
       if (onInit && this.constructor) {
-        onInit(this.constructor!)
+        onInit(this.constructor!, module)
       }
     },
     compare(c: (new (...args: any[]) => unknown) | Function) {

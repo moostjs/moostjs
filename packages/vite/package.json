@@ -36,7 +36,15 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./server": {
+      "types": "./dist/prod-server.d.ts",
+      "import": "./dist/prod-server.mjs",
+      "require": "./dist/prod-server.cjs"
     }
+  },
+  "build": {
+    "entries": ["src/index.ts", "src/prod-server.ts"]
   },
   "scripts": {
     "pub": "pnpm publish --access public",
@@ -51,6 +59,12 @@
   "peerDependencies": {
     "@moostjs/event-http": "workspace:^",
     "moost": "workspace:^",
-    "vite": "^7.0.0"
+    "sirv": "^3.0.0",
+    "vite": "^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "sirv": {
+      "optional": true
+    }
   }
 }
