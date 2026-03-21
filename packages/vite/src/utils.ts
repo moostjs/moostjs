@@ -5,6 +5,12 @@ import { createLogger } from 'moost'
 import type { EnvironmentModuleNode } from 'vite'
 
 export const PLUGIN_NAME = 'moost-vite'
+export const DEFAULT_SSR_OUTLET = '<!--ssr-outlet-->'
+export const DEFAULT_SSR_STATE = '<!--ssr-state-->'
+
+export function entryBasename(entry: string): string {
+  return entry.split('/').pop()!.replace(/\.ts$/, '.js')
+}
 
 /**
  * Recursively gathers all importer modules upstream from a given module.

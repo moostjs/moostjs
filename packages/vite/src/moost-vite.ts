@@ -1,11 +1,20 @@
 import type { IncomingMessage, ServerResponse } from 'http'
 import type { PluginOption } from 'vite'
+import { createServerModuleRunner } from 'vite'
 import MagicString from 'magic-string'
 
 import { createAdapterDetector } from './adapter-detector'
 import { patchMoostHandlerLogging } from './moost-logging'
 import { moostRestartCleanup } from './restart-cleanup'
-import { gatherAllImporters, getExternals, getLogger, PLUGIN_NAME } from './utils'
+import {
+  DEFAULT_SSR_OUTLET,
+  DEFAULT_SSR_STATE,
+  entryBasename,
+  gatherAllImporters,
+  getExternals,
+  getLogger,
+  PLUGIN_NAME,
+} from './utils'
 
 /** A simple request-response middleware type for Node’s http module. */
 type TMiddleware = (req: IncomingMessage, res: ServerResponse) => any
@@ -86,6 +95,54 @@ export interface TMoostViteDevOptions {
       }
     | boolean
   onEject?: (instance: object, dependency: Function) => boolean
+  /**
+   * Whether to enable local fetch interception for SSR.
+   * When enabled, `fetch('/path')` calls are routed to the Moost HTTP adapter
+   * in-process instead of making a network request.
+   *
+   * Set to `false` when running behind Nitro or another framework that
+   * manages fetch routing itself.
+   *
+   * Default: `true`.
+   */
+  ssrFetch?: boolean
+  /**
+   * Run Moost as Connect middleware instead of taking over the server.
+   * When enabled, Moost handles only matching routes (guarded by `prefix`),
+   * and unmatched requests fall through to Vite's default handler
+   * (static assets, Vue/React pages, HMR client).
+   *
+   * Use this for fullstack apps where Vite serves the frontend (Vue, React, etc.)
+   * and Moost handles API routes.
+   *
+   * Default: `false`.
+   */
+  middleware?: boolean
+  /**
+   * URL prefix for Moost API routes in middleware mode.
+   * Only requests starting with this prefix are dispatched to Moost.
+   * Ignored when `middleware` is `false`.
+   *
+   * Example: `'/api'`
+   */
+  prefix?: string
+  /**
+   * Vue/React SSR entry module path. Used by the SSR server helper
+   * (`@moostjs/vite/server`) for server-side rendering.
+   *
+   * Example: `'/src/entry-server.ts'`
+   */
+  ssrEntry?: string
+  /**
+   * HTML placeholder for SSR-rendered content.
+   * Default: `'<!--ssr-outlet-->'`
+   */
+  ssrOutlet?: string
+  /**
+   * HTML placeholder for SSR state transfer script.
+   * Default: `'<!--ssr-state-->'`
+   */
+  ssrState?: string
 }
 
 /**
@@ -112,15 +169,39 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const isProd = process.env.NODE_ENV === 'production'
   const externals = options.externals ?? true
 
+  // Normalize prefix: ensure leading slash, strip trailing slash
+  let prefix = options.prefix
+  if (prefix) {
+    if (!prefix.startsWith('/')) prefix = `/${prefix}`
+    if (prefix.endsWith('/')) prefix = prefix.slice(0, -1)
+  }
+
+  const prefixSlash = prefix ? prefix + '/' : undefined
+  const prefixQuery = prefix ? prefix + '?' : undefined
+
   let moostMiddleware: TMiddleware | null = null
+  let localFetchTeardown: (() => void) | null = null
+  /** In middleware mode: maps req → next() for the onNoMatch callback */
+  const pendingNextMap = new WeakMap<IncomingMessage, () => void>()
 
   const adapters = isTest
     ? []
     : [
-        createAdapterDetector('http', (MoostHttp) => {
+        createAdapterDetector('http', (MoostHttp, moduleExports) => {
           MoostHttp.prototype.listen = function (...args: any[]) {
             logger.log(`🔌 ${__DYE_DIM__}Overtaking HTTP.listen`)
-            moostMiddleware = this.getServerCb()
+            if (options.middleware) {
+              moostMiddleware = this.getServerCb((req: IncomingMessage) => {
+                pendingNextMap.get(req)?.()
+              })
+            } else {
+              moostMiddleware = this.getServerCb()
+            }
+            if (options.ssrFetch !== false && moduleExports?.enableLocalFetch) {
+              if (localFetchTeardown) localFetchTeardown()
+              localFetchTeardown = moduleExports.enableLocalFetch(this)
+              logger.log(`🔀 ${__DYE_DIM__}Local fetch enabled for SSR`)
+            }
             setTimeout(() => {
               args.filter((a) => typeof a === 'function').forEach((a) => a())
             }, 1)
@@ -140,9 +221,75 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
     name: PLUGIN_NAME,
     enforce: 'pre',
     config(cfg) {
+      // Middleware mode: configure multi-environment build
+      if (options.middleware) {
+        const defaultExternals = getExternals({ node: true, workspace: true })
+        const serverDefines: Record<string, string> = {
+          'process.env.MOOST_DEFERRED_ENV': '"production"',
+          __MOOST_ENTRY__: JSON.stringify(options.entry),
+          __MOOST_PREFIX__: JSON.stringify(prefix || '/api'),
+        }
+
+        const environments: Record<string, any> = {
+          client: {
+            build: {
+              outDir: cfg.build?.outDir || 'dist/client',
+            },
+          },
+          server: {
+            build: {
+              outDir: 'dist',
+              emptyOutDir: false,
+              ssr: 'server.ts',
+              minify: false,
+              sourcemap: !!(options.sourcemap ?? true),
+              rollupOptions: {
+                external: (id: string) => {
+                  if (id === '@moostjs/vite/server') return false
+                  return defaultExternals.some((ext) => ext.test(id))
+                },
+                output: { format: 'esm' },
+              },
+            },
+            define: serverDefines,
+          },
+        }
+
+        if (options.ssrEntry) {
+          // With SSR: add ssr environment + SSR-specific defines
+          const ssrEntryBasename = entryBasename(options.ssrEntry)
+          environments.client.build.ssrManifest = true
+          environments.ssr = {
+            build: {
+              outDir: 'dist/ssr',
+              ssr: options.ssrEntry,
+            },
+          }
+          serverDefines.__MOOST_SSR_ENTRY__ = JSON.stringify(`./ssr/${ssrEntryBasename}`)
+          serverDefines.__MOOST_SSR_OUTLET__ = JSON.stringify(options.ssrOutlet || DEFAULT_SSR_OUTLET)
+          serverDefines.__MOOST_SSR_STATE__ = JSON.stringify(options.ssrState || DEFAULT_SSR_STATE)
+        }
+
+        // Custom buildApp to control which environments build (skip ssr when not configured)
+        const envNames = Object.keys(environments)
+        return {
+          builder: {
+            async buildApp(builder: any) {
+              for (const name of envNames) {
+                if (builder.environments[name]) {
+                  await builder.build(builder.environments[name])
+                }
+              }
+            },
+          },
+          environments,
+        }
+      }
+
+      // Moost-first mode: configure for backend SSR build.
       const entry = cfg.build?.rollupOptions?.input || options.entry
       const outfile =
-        typeof entry === 'string' ? entry.split('/').pop()!.replace(/\.ts$/, '.js') : undefined
+        typeof entry === 'string' ? entryBasename(entry) : undefined
 
       return {
         server: {
@@ -152,7 +299,6 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         optimizeDeps: {
           noDiscovery:
             cfg.optimizeDeps?.noDiscovery === undefined ? true : cfg.optimizeDeps.noDiscovery,
-          exclude: cfg.optimizeDeps?.exclude || ['@swc/core'],
         },
         build: {
           target: cfg.build?.target || 'node',
@@ -182,6 +328,21 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
     },
 
     /**
+     * Expose plugin options on the resolved config for the SSR server helper.
+     * In dev mode, createSSRServer() reads these after createViteServer() returns.
+     */
+    configResolved(config) {
+      ;(config as Record<string, unknown>).__moostViteOptions = {
+        entry: options.entry,
+        ssrEntry: options.ssrEntry,
+        prefix,
+        port: options.port,
+        ssrOutlet: options.ssrOutlet,
+        ssrState: options.ssrState,
+      }
+    },
+
+    /**
      * Transforms TypeScript source to:
      * - Detect `@moostjs/event-http` usage and patch `.listen()`.
      * - Inject `__VITE_ID(import.meta.filename)` for classes.
@@ -202,8 +363,6 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         const s = new MagicString(code)
         s.replace(REG_REPLACE_EXPORT_CLASS, '\n@__VITE_ID(import.meta.filename)\n$1')
         s.prepend(`import { __VITE_ID } from 'virtual:vite-id'\n\n`)
-        // code = code.replace(REG_REPLACE_EXPORT_CLASS, '\n@__VITE_ID(import.meta.filename)\n$1')
-        // code = `import { __VITE_ID } from 'virtual:vite-id'\n\n${code}`
         return {
           code: s.toString(),
           map: s.generateMap({ hires: true }),
@@ -247,17 +406,20 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
      * - Hooks into the server middlewares to use our Moost callback.
      */
     async configureServer(server) {
+      const runner = createServerModuleRunner(server.environments.ssr)
+      const ssrImport = (id: string) => runner.import(id)
+
       // Wire up SSR module loading so adapter detection patches
       // the same module instances that the SSR app will use.
       for (const adapter of adapters) {
-        adapter.ssrLoadModule = (id) => server.ssrLoadModule(id)
+        adapter.ssrLoadModule = ssrImport
       }
 
       moostRestartCleanup(adapters, options.onEject)
 
       // Import the SSR entry so the app initializes
       // (MoostHttp.listen is patched, so no actual server is spawned).
-      await server.ssrLoadModule(options.entry)
+      await ssrImport(options.entry)
 
       // Attach Moost as a middleware if present
       server.middlewares.use(async (req, res, next) => {
@@ -266,10 +428,24 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           console.log()
           logger.debug('🚀 Reloading Moost App...')
           console.log()
-          await server.ssrLoadModule(options.entry)
+          await ssrImport(options.entry)
           await new Promise((resolve) => setTimeout(resolve, 1))
         }
+
+        // In middleware mode with prefix: skip Moost for non-matching paths (fast path)
+        if (options.middleware && prefix) {
+          const url = req.url || ''
+          if (url !== prefix && !url.startsWith(prefixSlash!) && !url.startsWith(prefixQuery!)) {
+            return next()
+          }
+        }
+
         if (moostMiddleware) {
+          if (options.middleware) {
+            pendingNextMap.set(req, next)
+            moostMiddleware(req, res)
+            return
+          }
           return moostMiddleware(req, res)
         }
         next()
@@ -299,8 +475,12 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
             this.environment.moduleGraph.invalidateModule(mod)
           }
 
-          // Reset the Moost middleware instance
+          // Reset the Moost middleware and local fetch instances
           moostMiddleware = null
+          if (localFetchTeardown) {
+            localFetchTeardown()
+            localFetchTeardown = null
+          }
 
           // Clean up Moost container references
           moostRestartCleanup(adapters, options.onEject, cleanupInstances)
