@@ -6,7 +6,16 @@ outline: deep
 
 `@moostjs/vite` integrates Moost with Vite's dev server for hot module replacement, automatic adapter detection, and production build configuration.
 
-## Installation
+## Quick Start
+
+Scaffold a project with everything pre-configured:
+
+```bash
+npm create moost -- --http    # API server
+npm create moost -- --ssr     # Vue + Moost fullstack (SSR/SPA)
+```
+
+Or add to an existing project:
 
 ```bash
 npm install @moostjs/vite --save-dev
@@ -14,7 +23,7 @@ npm install @moostjs/vite --save-dev
 
 ## Backend Mode (default)
 
-For API servers where Moost handles all HTTP requests. Vite provides HMR and TypeScript/decorator transforms — no SWC needed (Vite 8 uses Oxc which supports `emitDecoratorMetadata` natively).
+For API servers where Moost handles all HTTP requests. Vite provides HMR and TypeScript/decorator transforms.
 
 ```ts
 // vite.config.ts
@@ -50,11 +59,11 @@ app.adapter(http).listen(3000)
 app.init()
 ```
 
-Run `vite dev` to start. The plugin patches `MoostHttp.listen()` so Moost doesn't bind a port — Vite's dev server handles HTTP instead. Build with `vite build` for production.
+Run `vite dev` to start, `vite build` for production.
 
 ## Middleware Mode
 
-For fullstack apps where Vite serves the frontend (Vue, React, Svelte) and Moost handles API routes. Set `middleware: true` and Moost runs as Connect middleware — unmatched requests fall through to Vite's default handler.
+For fullstack apps where Vite serves the frontend (Vue, React, Svelte) and Moost handles API routes. Set `middleware: true` — Moost handles matching routes, everything else falls through to Vite.
 
 ```ts
 // vite.config.ts
@@ -68,55 +77,71 @@ export default defineConfig({
     moostVite({
       entry: './src/api/main.ts',
       middleware: true,
+      prefix: '/api', // optional: skip Moost for non-API paths
     }),
   ],
 })
 ```
 
-```ts
-// src/api/main.ts
-import { Moost, Param } from 'moost'
-import { MoostHttp, Get } from '@moostjs/event-http'
+The entry file is a standard Moost app (same as backend mode). The `prefix` option is optional — it adds a fast-path filter so requests not matching the prefix skip Moost entirely.
 
-class ApiController extends Moost {
-  @Get('api/hello/:name')
-  hello(@Param('name') name: string) {
-    return { message: `Hello ${name}!` }
-  }
-}
+## SSR Mode
 
-const app = new ApiController()
-const http = new MoostHttp()
-app.adapter(http).listen(3000)
-app.init()
-```
-
-Requests matching Moost routes (e.g. `/api/hello/world`) go through the full Moost pipeline. Everything else (`/`, `/about`, static assets, HMR client) falls through to Vite automatically.
-
-### Prefix optimization
-
-The optional `prefix` option adds a fast-path filter — requests not matching the prefix skip Moost entirely without route lookup:
+Add `ssrEntry` to enable server-side rendering:
 
 ```ts
 moostVite({
-  entry: './src/api/main.ts',
+  entry: '/src/main.ts',
   middleware: true,
   prefix: '/api',
+  ssrEntry: '/src/entry-server.ts',
 })
 ```
 
-This is optional — without a prefix, Moost's router handles the no-match fallthrough. The prefix just avoids unnecessary route lookups for paths that are clearly not API routes.
+`vite build` produces three bundles in a single pass:
+
+- **client** — browser assets (`dist/client/`)
+- **ssr** — server-side render function (`dist/server/ssr/`)
+- **server** — production Node.js server (`dist/server/server.js`)
+
+Omit `ssrEntry` for SPA mode — the production build still generates a server for static files and API routes, just without server-side rendering.
+
+See [Vue + Moost (SSR)](/webapp/ssr) for the full guide.
+
+## Custom Server Entry
+
+By default, `vite build` auto-generates a minimal production server. If you need custom middleware (compression, auth, logging), provide your own server file:
+
+```ts
+moostVite({
+  entry: '/src/main.ts',
+  middleware: true,
+  prefix: '/api',
+  ssrEntry: '/src/entry-server.ts',
+  serverEntry: './server.ts',
+})
+```
+
+Your `server.ts` uses `createSSRServer` from `@moostjs/vite/server`:
+
+```ts
+// server.ts
+import { createSSRServer } from '@moostjs/vite/server'
+
+const app = await createSSRServer()
+// app.use(compression())
+await app.listen()
+```
+
+`createSSRServer` handles dev/prod automatically.
+
+::: tip
+`serverEntry` is only used during `vite build`. In dev, the plugin handles SSR/SPA fallback directly. If you need custom middleware in dev too, run `tsx server.ts` instead of `vite`.
+:::
 
 ## Hot Module Replacement
 
-Both modes support full HMR for controllers:
-
-1. **File change** — Vite detects the change and invalidates the module graph
-2. **DI cleanup** — stale controller instances are ejected from the DI container, dependants cascade
-3. **Re-initialization** — the entry module is re-imported, Moost re-initializes with updated code
-4. **Zero downtime** — the next request uses updated controllers, no restart needed
-
-The plugin injects a `__VITE_ID` decorator on `@Injectable` and `@Controller` classes to track which file each class belongs to, enabling precise instance cleanup.
+Both modes support full HMR for controllers. When a file changes, the plugin invalidates affected modules, cleans up stale DI instances (cascading to dependants), and re-initializes the app. The next request uses updated code — no restart needed.
 
 ## Options
 
@@ -136,6 +161,7 @@ The plugin injects a `__VITE_ID` decorator on `@Injectable` and `@Controller` cl
 | `ssrEntry` | `string` | — | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`) |
 | `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
 | `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |
+| `serverEntry` | `string` | — | Custom production server entry file (e.g. `'./server.ts'`) |
 
 ::: tip
 Options `port`, `host`, `outDir`, `format`, `sourcemap`, and `externals` are only used in backend mode. In middleware mode, your `vite.config.ts` controls build and server configuration.

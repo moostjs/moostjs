@@ -61,35 +61,32 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
     const ssrOutlet = (config.ssrOutlet as string) || DEFAULT_SSR_OUTLET
     const ssrState = (config.ssrState as string) || DEFAULT_SSR_STATE
 
-    if (!ssrEntry) {
-      throw new Error(
-        'createSSRServer: ssrEntry is required. Set it in moostVite() options or pass it directly.',
-      )
-    }
+    let ssrFallback: TMiddleware | null = null
+    if (ssrEntry) {
+      const fs = await import('node:fs/promises')
+      const path = await import('node:path')
 
-    const fs = await import('node:fs/promises')
-    const path = await import('node:path')
-
-    const ssrFallback: TMiddleware = async (req: any, res, next) => {
-      if (req.method !== 'GET') return next()
-      const url = req.originalUrl || req.url || '/'
-      try {
-        let template = await fs.readFile(path.resolve(process.cwd(), 'index.html'), 'utf-8')
-        template = await vite.transformIndexHtml(url, template)
-        const { render } = await vite.ssrLoadModule(ssrEntry)
-        const { html: appHtml, state } = await render(url)
-        res.statusCode = 200
-        res.setHeader('Content-Type', 'text/html')
-        res.end(
-          template
-            .replace(ssrOutlet, appHtml)
-            .replace(ssrState, state ? `<script>window.__SSR_STATE__=${state}</script>` : ''),
-        )
-      } catch (e: any) {
-        vite.ssrFixStacktrace(e)
-        console.error(e)
-        res.statusCode = 500
-        res.end(e.message)
+      ssrFallback = async (req: any, res, next) => {
+        if (req.method !== 'GET') return next()
+        const url = req.originalUrl || req.url || '/'
+        try {
+          let template = await fs.readFile(path.resolve(process.cwd(), 'index.html'), 'utf-8')
+          template = await vite.transformIndexHtml(url, template)
+          const { render } = await vite.ssrLoadModule(ssrEntry)
+          const { html: appHtml, state } = await render(url)
+          res.statusCode = 200
+          res.setHeader('Content-Type', 'text/html')
+          res.end(
+            template
+              .replace(ssrOutlet, appHtml)
+              .replace(ssrState, state ? `<script>window.__SSR_STATE__=${state}</script>` : ''),
+          )
+        } catch (e: any) {
+          vite.ssrFixStacktrace(e)
+          console.error(e)
+          res.statusCode = 500
+          res.end(e.message)
+        }
       }
     }
 
@@ -101,7 +98,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
         for (const mw of userMiddlewares) {
           vite.middlewares.use(mw as any)
         }
-        vite.middlewares.use(ssrFallback as any)
+        if (ssrFallback) vite.middlewares.use(ssrFallback as any)
         await vite.listen()
         vite.printUrls()
       },
@@ -115,7 +112,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const path = await import('node:path')
   const { createServer: createHttpServer } = await import('node:http')
 
-  const clientDir = (opts.clientDir as string) || 'dist/client'
+  const clientDir = (opts.clientDir as string) || path.resolve(import.meta.dirname, '../client')
   const ssrOutlet = (opts.ssrOutlet as string) || (typeof __MOOST_SSR_OUTLET__ !== 'undefined' ? __MOOST_SSR_OUTLET__ : '<!--ssr-outlet-->')
   const ssrState = (opts.ssrState as string) || (typeof __MOOST_SSR_STATE__ !== 'undefined' ? __MOOST_SSR_STATE__ : '<!--ssr-state-->')
   let prefix = (opts.prefix as string) || __MOOST_PREFIX__

@@ -36,11 +36,12 @@ my-app/
 │   ├── entry-server.ts          # SSR render function
 │   └── router.ts                # Vue Router config
 ├── public/                       # Static assets
-├── server.ts                     # Dev/prod server entry
 ├── index.html                    # HTML template
 ├── vite.config.ts                # Vite + Moost config
 └── tsconfig.json
 ```
+
+No `server.ts` needed — the plugin handles dev serving and auto-generates a production server during build.
 
 ## How it works
 
@@ -52,7 +53,6 @@ import vue from '@vitejs/plugin-vue'
 import { moostVite } from '@moostjs/vite'
 
 export default defineConfig({
-  appType: 'custom',
   server: { port: 3000 },
   plugins: [
     vue(),
@@ -66,20 +66,7 @@ export default defineConfig({
 })
 ```
 
-The [`moostVite`](/webapp/vite) plugin runs in **middleware mode** — Moost handles `/api/*` routes, everything else falls through to Vite (static assets, Vue pages, HMR).
-
-### server.ts
-
-```ts
-import { createSSRServer } from '@moostjs/vite/server'
-
-const app = await createSSRServer()
-await app.listen()
-```
-
-`createSSRServer` handles both dev and production:
-- **Dev** — creates a Vite dev server with HMR, SSR rendering, and Moost middleware
-- **Prod** — serves the built client assets with `sirv`, routes API requests to Moost, and renders pages with the SSR entry
+The [`moostVite`](/webapp/vite) plugin runs in **middleware mode** — Moost handles `/api/*` routes, everything else falls through to Vite.
 
 ### API routes
 
@@ -97,11 +84,9 @@ export class ApiController {
 }
 ```
 
-Standard Moost controllers with the full pipeline — DI, interceptors, pipes, validation.
-
 ### SSR data fetching
 
-Vue components can fetch data during server rendering using `onServerPrefetch`. With [local fetch](/webapp/fetch) enabled (default), `fetch('/api/...')` calls Moost handlers in-process — no HTTP round-trip:
+With [local fetch](/webapp/fetch) enabled (default), `fetch('/api/...')` calls Moost handlers in-process during SSR — no HTTP round-trip:
 
 ```vue
 <script setup lang="ts">
@@ -127,8 +112,6 @@ onMounted(async () => {
 </script>
 ```
 
-The same `fetch()` call works in both SSR and client — on the server it goes through Moost in-process, in the browser it makes a real HTTP request.
-
 ## SSR vs SPA
 
 The only difference between SSR and SPA mode is the `ssrEntry` option in `vite.config.ts`:
@@ -139,9 +122,8 @@ The only difference between SSR and SPA mode is the `ssrEntry` option in `vite.c
 | First paint | Server-rendered HTML | Empty shell, client renders |
 | SEO | Full content in initial HTML | Requires client-side hydration |
 | Data fetching | `onServerPrefetch` runs on server | `onMounted` runs on client |
-| `entry-server.ts` | Used by the server | Unused (can be kept for later) |
 
-To switch from SPA to SSR, add `ssrEntry: '/src/entry-server.ts'` to your `moostVite()` options.
+To switch, add or remove `ssrEntry` in your `moostVite()` options.
 
 ## Running
 
@@ -151,7 +133,7 @@ To switch from SPA to SSR, add `ssrEntry: '/src/entry-server.ts'` to your `moost
 npm run dev
 ```
 
-Opens at [http://localhost:3000](http://localhost:3000). Vue pages have HMR, Moost controllers hot-reload without restart.
+Runs `vite` — opens at [http://localhost:3000](http://localhost:3000). Vue pages have HMR, Moost controllers hot-reload without restart. The plugin handles SSR rendering in dev automatically.
 
 ### Production build
 
@@ -159,7 +141,7 @@ Opens at [http://localhost:3000](http://localhost:3000). Vue pages have HMR, Moo
 npm run build
 ```
 
-Builds client assets, SSR bundle, and server bundle to `dist/`.
+Produces client assets, SSR bundle, and server bundle to `dist/` in a single pass.
 
 ### Production start
 
@@ -167,13 +149,11 @@ Builds client assets, SSR bundle, and server bundle to `dist/`.
 npm run start
 ```
 
-Runs the production server with static file serving, API routes, and SSR rendering (or SPA fallback).
+Runs `node dist/server/server.js` — production server with static file serving, API routes, and SSR rendering (or SPA fallback).
 
-## Deployment target
+## Custom server entry
 
-`@moostjs/vite` builds for **Node.js** — the production server runs on `node dist/server.js`. This covers most deployment scenarios (VPS, Docker, cloud VMs, serverless Node runtimes).
-
-For **edge runtimes**, **Cloudflare Workers**, **Deno Deploy**, or other non-Node targets, use [Nitro](https://nitro.build) as your server framework and integrate Moost as middleware. Set `ssrFetch: false` in `moostVite()` when Nitro manages fetch routing.
+If you need custom middleware in production (compression, auth, logging), see the [Custom Server Entry](/webapp/vite#custom-server-entry) section in the Vite Plugin docs.
 
 ## Related
 

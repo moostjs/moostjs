@@ -4,10 +4,10 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev": "vite",
     "build": "vite build",
-    "start": "node dist/server.js",
-    "preview": "node dist/server.js",
+    "start": "node dist/server/server.js",
+    "preview": "node dist/server/server.js",
 //=IF (oxc)
     "lint": "oxlint",
     "format": "oxfmt .",
@@ -33,7 +33,6 @@
     "oxlint": "^1.49.0",
     "oxfmt": "^0.34.0",
 //=END IF
-    "tsx": "^4.19.0",
     "typescript": "^5.7.2",
     "vite": "^8.0.0"
   }

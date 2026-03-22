@@ -19,6 +19,11 @@ Or with a project name:
 npm create moost my-web-app -- --http
 ```
 
+::: tip Other templates
+`npm create moost -- --ssr` scaffolds a fullstack Vue + Moost app with SSR/SPA support. See [Vue + Moost (SSR)](./ssr).
+Other options: `--ws` (WebSocket), `--cli` (CLI app). Run `npm create moost` without flags for interactive mode.
+:::
+
 The scaffolder creates:
 
 ```

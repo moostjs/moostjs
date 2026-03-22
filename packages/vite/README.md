@@ -101,6 +101,54 @@ moostVite({
 })
 ```
 
+## SSR Mode
+
+Add `ssrEntry` to enable server-side rendering. The plugin handles everything automatically — SSR rendering in dev, multi-environment builds for production:
+
+```ts
+moostVite({
+  entry: '/src/main.ts',
+  middleware: true,
+  prefix: '/api',
+  ssrEntry: '/src/entry-server.ts',
+})
+```
+
+In dev, the plugin adds an SSR fallback middleware that renders pages on the server using your `entry-server.ts`. In production, `vite build` produces three bundles in a single pass:
+
+- **client** — optimized browser assets (`dist/client/`)
+- **ssr** — server-side render function (`dist/server/ssr/`)
+- **server** — production Node.js server (`dist/server/server.js`)
+
+### SPA Mode
+
+Omit `ssrEntry` and Vite serves the app as a standard SPA. The production build still generates a server that serves static files and API routes — it just skips server-side rendering.
+
+### Custom Server Entry
+
+By default, `vite build` auto-generates a minimal production server. If you need custom middleware (compression, auth, logging), provide your own server file:
+
+```ts
+moostVite({
+  entry: '/src/main.ts',
+  middleware: true,
+  prefix: '/api',
+  ssrEntry: '/src/entry-server.ts',
+  serverEntry: './server.ts',
+})
+```
+
+```ts
+// server.ts
+import { createSSRServer } from '@moostjs/vite/server'
+
+const app = await createSSRServer()
+// app.use(compression())
+await app.listen()
+```
+
+`createSSRServer` handles dev/prod branching — in dev it creates a Vite dev server, in prod it serves built assets with `sirv`.
+
 ## SSR Local Fetch
 
 When `ssrFetch` is enabled (default: `true`), the plugin patches `globalThis.fetch` so that local paths are routed in-process through Moost instead of making a real HTTP request. This is useful for SSR where server-side code fetches from its own API:
@@ -141,6 +189,10 @@ The plugin injects a `__VITE_ID` decorator on `@Injectable` and `@Controller` cl
 | `ssrFetch` | `boolean` | `true` | Enable local fetch interception for SSR |
 | `middleware` | `boolean` | `false` | Run Moost as Connect middleware (Vite serves frontend) |
 | `prefix` | `string` | — | URL prefix filter for middleware mode (e.g. `'/api'`) |
+| `ssrEntry` | `string` | — | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`) |
+| `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
+| `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |
+| `serverEntry` | `string` | — | Custom production server entry file (e.g. `'./server.ts'`) |
 
 Options marked "backend mode only" are ignored when `middleware: true` — the user's `vite.config.ts` controls build/server configuration in middleware mode.
 

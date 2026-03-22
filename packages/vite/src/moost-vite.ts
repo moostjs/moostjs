@@ -1,4 +1,6 @@
-import type { IncomingMessage, ServerResponse } from 'http'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import { resolve } from 'node:path'
 import type { PluginOption } from 'vite'
 import { createServerModuleRunner } from 'vite'
 import MagicString from 'magic-string'
@@ -143,6 +145,13 @@ export interface TMoostViteDevOptions {
    * Default: `'<!--ssr-state-->'`
    */
   ssrState?: string
+  /**
+   * Path to a custom server entry file (e.g., `'./server.ts'`).
+   * When provided, this file is used as the production server build entry.
+   * When omitted in middleware mode, the plugin auto-generates a minimal
+   * production server that serves static files + Moost API (+ SSR if configured).
+   */
+  serverEntry?: string
 }
 
 /**
@@ -164,6 +173,19 @@ export interface TMoostViteDevOptions {
  * @param {TMoostViteDevOptions} options - Configuration options for the Moost Vite plugin.
  * @returns {PluginOption} The configured Vite plugin.
  */
+const DEFAULT_SERVER_ENTRY_CODE = `import { createSSRServer } from '@moostjs/vite/server'
+const app = await createSSRServer()
+await app.listen()
+`
+
+function generatedServerEntry(root?: string): string {
+  const dir = resolve(root || process.cwd(), 'node_modules', '.moost-vite')
+  mkdirSync(dir, { recursive: true })
+  const entryPath = resolve(dir, 'server-entry.mjs')
+  writeFileSync(entryPath, DEFAULT_SERVER_ENTRY_CODE)
+  return entryPath
+}
+
 export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const isTest = process.env.NODE_ENV === 'test'
   const isProd = process.env.NODE_ENV === 'production'
@@ -230,59 +252,59 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           __MOOST_PREFIX__: JSON.stringify(prefix || '/api'),
         }
 
-        const environments: Record<string, any> = {
-          client: {
-            build: {
-              outDir: cfg.build?.outDir || 'dist/client',
-            },
-          },
-          server: {
-            build: {
-              outDir: 'dist',
-              emptyOutDir: false,
-              ssr: 'server.ts',
-              minify: false,
-              sourcemap: !!(options.sourcemap ?? true),
-              rollupOptions: {
-                external: (id: string) => {
-                  if (id === '@moostjs/vite/server') return false
-                  return defaultExternals.some((ext) => ext.test(id))
-                },
-                output: { format: 'esm' },
-              },
-            },
-            define: serverDefines,
-          },
+        // Build inputs: server entry is always included, SSR entry added when configured
+        const serverEntry = options.serverEntry || generatedServerEntry(cfg.root)
+        const ssrInput: Record<string, string> = {
+          server: serverEntry,
         }
 
         if (options.ssrEntry) {
-          // With SSR: add ssr environment + SSR-specific defines
-          const ssrEntryBasename = entryBasename(options.ssrEntry)
-          environments.client.build.ssrManifest = true
-          environments.ssr = {
-            build: {
-              outDir: 'dist/ssr',
-              ssr: options.ssrEntry,
-            },
-          }
-          serverDefines.__MOOST_SSR_ENTRY__ = JSON.stringify(`./ssr/${ssrEntryBasename}`)
+          const ssrBasename = entryBasename(options.ssrEntry)
+          ssrInput[`ssr/${ssrBasename.replace(/\.js$/, '')}`] = options.ssrEntry
+          serverDefines.__MOOST_SSR_ENTRY__ = JSON.stringify(`./ssr/${ssrBasename}`)
           serverDefines.__MOOST_SSR_OUTLET__ = JSON.stringify(options.ssrOutlet || DEFAULT_SSR_OUTLET)
           serverDefines.__MOOST_SSR_STATE__ = JSON.stringify(options.ssrState || DEFAULT_SSR_STATE)
         }
 
-        // Custom buildApp to control which environments build (skip ssr when not configured)
-        const envNames = Object.keys(environments)
+        // Nitro pattern: clean once upfront, emptyOutDir: false on all environments
+        const outDir = cfg.build?.outDir || 'dist'
         return {
+          // SSR needs 'custom' to disable Vite's default HTML serving; SPA keeps default
+          ...(options.ssrEntry && { appType: 'custom' as const }),
           builder: {
             async buildApp(builder: any) {
-              for (const name of envNames) {
-                if (builder.environments[name]) {
-                  await builder.build(builder.environments[name])
-                }
+              rmSync(resolve(cfg.root || process.cwd(), outDir), { recursive: true, force: true })
+              for (const env of Object.values(builder.environments) as any[]) {
+                await builder.build(env)
               }
             },
           },
-          environments,
+          environments: {
+            client: {
+              build: {
+                outDir: `${outDir}/client`,
+                emptyOutDir: false,
+                ...(options.ssrEntry && { ssrManifest: true }),
+              },
+            },
+            ssr: {
+              build: {
+                outDir: `${outDir}/server`,
+                emptyOutDir: false,
+                minify: false,
+                sourcemap: !!(options.sourcemap ?? true),
+                rollupOptions: {
+                  input: ssrInput,
+                  external: (id: string) => {
+                    if (id === '@moostjs/vite/server') return false
+                    return defaultExternals.some((ext) => ext.test(id))
+                  },
+                  output: { format: 'esm' },
+                },
+              },
+              define: serverDefines,
+            },
+          },
         }
       }
 
@@ -335,6 +357,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
       ;(config as Record<string, unknown>).__moostViteOptions = {
         entry: options.entry,
         ssrEntry: options.ssrEntry,
+        serverEntry: options.serverEntry,
         prefix,
         port: options.port,
         ssrOutlet: options.ssrOutlet,
@@ -375,9 +398,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
      * Resolves our "virtual:vite-id" module.
      */
     resolveId(id) {
-      if (id === 'virtual:vite-id') {
-        return '\0virtual:vite-id'
-      }
+      if (id === 'virtual:vite-id') return '\0virtual:vite-id'
     },
 
     /**
@@ -450,6 +471,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         }
         next()
       })
+
     },
 
     /**
@@ -501,5 +523,46 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
     delete pluginConfig.hotUpdate
   }
 
-  return pluginConfig
+  // SSR fallback plugin: runs after Vite's internal middleware
+  const ssrFallbackPlugin: PluginOption =
+    !isProd && !isTest && options.middleware && options.ssrEntry
+      ? {
+          name: `${PLUGIN_NAME}:ssr-fallback`,
+          async configureServer(server) {
+            const ssrOutlet = options.ssrOutlet || DEFAULT_SSR_OUTLET
+            const ssrState = options.ssrState || DEFAULT_SSR_STATE
+            const fs = await import('node:fs/promises')
+            // Return post-hook so this runs AFTER Vite's internal middleware
+            return () => {
+              server.middlewares.use(async (req: any, res: ServerResponse, next: () => void) => {
+                if (req.method !== 'GET') return next()
+                const url = req.originalUrl || req.url || '/'
+                try {
+                  let template = await fs.readFile(resolve(process.cwd(), 'index.html'), 'utf-8')
+                  template = await server.transformIndexHtml(url, template)
+                  const { render } = await server.ssrLoadModule(options.ssrEntry!)
+                  const { html: appHtml, state } = await render(url)
+                  res.statusCode = 200
+                  res.setHeader('Content-Type', 'text/html')
+                  res.end(
+                    template
+                      .replace(ssrOutlet, appHtml)
+                      .replace(
+                        ssrState,
+                        state ? `<script>window.__SSR_STATE__=${state}</script>` : '',
+                      ),
+                  )
+                } catch (e: any) {
+                  server.ssrFixStacktrace(e)
+                  console.error(e)
+                  res.statusCode = 500
+                  res.end(e.message)
+                }
+              })
+            }
+          },
+        }
+      : null
+
+  return [pluginConfig, ssrFallbackPlugin]
 }
