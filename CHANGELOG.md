@@ -1,3 +1,12 @@
+## [0.6.4](https://github.com/moostjs/moostjs/compare/v0.6.3...v0.6.4) (2026-03-22)
+
+
+### Features
+
+* add serverEntry option, simplify vite plugin code, and update docs ([9e1e889](https://github.com/moostjs/moostjs/commit/9e1e8896f17e778761a2aa7a5806be0397bb626f))
+
+
+
 ## [0.6.3](https://github.com/moostjs/moostjs/compare/v0.6.2...v0.6.3) (2026-03-21)
 
 
