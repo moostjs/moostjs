@@ -160,3 +160,7 @@ if (result.expires && Date.now() > result.expires) {
 ::: info
 The workflow engine does not enforce expiration automatically — it provides the value for your application to use. This gives you control over how to handle expired states (reject, extend, restart, etc.).
 :::
+
+## Next: Outlets
+
+For workflows that need **automated state persistence**, **token-based resumption**, and **delivery via HTTP responses or email**, see [Outlets](/wf/outlets). Outlets build on top of pause/resume to handle the full cycle — encrypting state into tokens, delivering them, and resuming when the token comes back — without manual serialization.

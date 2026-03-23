@@ -152,6 +152,7 @@ export default defineConfig({
                         { text: 'Schemas & Flow Control', link: '/wf/schemas' },
                         { text: 'Context & State', link: '/wf/context' },
                         { text: 'Pause & Resume', link: '/wf/pause-resume' },
+                        { text: 'Outlets', link: '/wf/outlets' },
                     ],
                 },
                 {

@@ -1,6 +1,6 @@
 import type { TFlowOutput, TWorkflowSpy } from '@prostojs/wf'
-import type { TStepHandler, TWooksWfOptions } from '@wooksjs/event-wf'
-import { createWfApp, WooksWf } from '@wooksjs/event-wf'
+import type { TStepHandler, TWooksWfOptions, WfOutletTriggerConfig } from '@wooksjs/event-wf'
+import { createWfApp, handleWfOutletRequest, WooksWf } from '@wooksjs/event-wf'
 import type { Moost, TMoostAdapter, TMoostAdapterOptions } from 'moost'
 import { defineMoostEventHandler, getMoostInfact, setControllerContext, useScopeId } from 'moost'
 
@@ -85,6 +85,29 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
   }
 
   /**
+   * Handles an outlet trigger request within an HTTP handler.
+   *
+   * Reads `wfid` (workflow ID) and `wfs` (state token) from the HTTP request,
+   * starts or resumes the workflow, and dispatches pauses to registered outlets.
+   *
+   * Must be called from within an HTTP event context (e.g. a `@Post` handler)
+   * so that wooks HTTP composables are available.
+   *
+   * @param config - Outlet trigger configuration (allowed workflows, state strategy, outlets, etc.)
+   * @returns The outlet result (form payload + token), finished response, or error.
+   */
+  public handleOutlet(config: WfOutletTriggerConfig): Promise<unknown> {
+    return handleWfOutletRequest(config, {
+      start: (schemaId: string, context: unknown, opts?: { input?: unknown }) =>
+        this.start(schemaId, context as T, opts?.input),
+      resume: (
+        state: { schemaId: string; context: unknown; indexes: number[] },
+        opts?: { input?: unknown },
+      ) => this.resume(state as { schemaId: string; context: T; indexes: number[] }, opts?.input),
+    })
+  }
+
+  /**
    * Starts a new workflow execution.
    *
    * @param schemaId - Identifier of the registered workflow schema.
@@ -145,9 +168,19 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
       })
 
       if (handler.type === 'WF_STEP') {
-        this.wfApp.step(targetPath, {
-          handler: fn as TStepHandler<any, any, any>,
-        })
+        const stepTTL = getWfMate().read(opts.fakeInstance, opts.method as string)?.wfStepTTL
+        let stepHandler = fn
+        if (stepTTL !== undefined) {
+          const wrapped = stepHandler
+          stepHandler = async () => {
+            const result = await wrapped()
+            if (result && typeof result === 'object' && 'inputRequired' in result) {
+              return { ...(result as Record<string, unknown>), expires: Date.now() + stepTTL }
+            }
+            return result
+          }
+        }
+        this.wfApp.step(targetPath, { handler: stepHandler as TStepHandler<any, any, any> })
         opts.logHandler(`${__DYE_CYAN__}(${handler.type})${__DYE_GREEN__}${targetPath}`)
       } else {
         const mate = getWfMate()

@@ -4,6 +4,10 @@ Workflow steps are regular Moost event handlers — the same interceptor, pipe, 
 
 ## Triggering Workflows from HTTP
 
+::: tip
+For multi-step HTTP flows with automatic state persistence and token-based resumption (login, registration, checkout), see [Outlets](/wf/outlets) — they handle the full pause/resume/delivery cycle for you.
+:::
+
 The most common pattern is starting a workflow from an HTTP handler and returning the result to the client:
 
 ```ts

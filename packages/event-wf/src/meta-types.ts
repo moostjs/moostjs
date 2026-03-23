@@ -4,6 +4,7 @@ import type { TMoostMetadata, Mate, TMateParamMeta } from 'moost'
 
 export interface TWfClassMeta {
   wfSchema: TWorkflowSchema<any>
+  wfStepTTL?: number
   params: TWfClassMeta[]
 }
 

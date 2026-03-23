@@ -48,7 +48,7 @@
     "setup-skills": "node ./scripts/setup-skills.js"
   },
   "dependencies": {
-    "@prostojs/wf": "^0.0.18",
+    "@prostojs/wf": "^0.1.1",
     "@wooksjs/event-wf": "catalog:"
   },
   "devDependencies": {

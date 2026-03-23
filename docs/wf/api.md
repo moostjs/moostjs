@@ -178,12 +178,55 @@ Removes a previously attached spy function.
 detachSpy<I>(fn: TWorkflowSpy<T, I, IR>): void
 ```
 
+### `handleOutlet(config)`
+
+Handles an outlet trigger request within an HTTP handler. Reads `wfid` and `wfs` from the request, starts or resumes a workflow, and dispatches pauses to registered outlets.
+
+```ts
+handleOutlet(config: WfOutletTriggerConfig): Promise<unknown>
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `config` | Outlet trigger configuration — see [Outlets](/wf/outlets) for full details |
+
+```ts
+@Post('flow')
+async flow() {
+  return this.wf.handleOutlet({
+    allow: ['auth/login'],
+    state: new EncapsulatedStateStrategy({ secret: process.env.WF_SECRET! }),
+    outlets: [createHttpOutlet()],
+  })
+}
+```
+
+::: info
+Must be called from within an HTTP event context so that wooks HTTP composables are available. Routes through `MoostWf.start()` and `resume()` internally to preserve DI scope cleanup.
+:::
+
 ### `getWfApp()`
 
 Returns the underlying `WooksWf` instance for advanced low-level access.
 
 ```ts
 getWfApp(): WooksWf<T, IR>
+```
+
+## Decorators (Outlets)
+
+### `@StepTTL(ttlMs)`
+
+Sets TTL (in ms) for the workflow state when this step pauses. The adapter wraps the step handler to set `expires` on the outlet signal.
+
+- **`ttlMs`** *(number)* — Time-to-live in milliseconds.
+
+```ts
+@Step('send-email')
+@StepTTL(30 * 60 * 1000) // 30 minutes
+async sendEmail(@WorkflowParam('context') ctx: any) {
+  return outletEmail(ctx.email, 'verify')
+}
 ```
 
 ## Types
@@ -278,6 +321,144 @@ class StepRetriableError<IR> extends Error {
 }
 ```
 
+## Outlet Types
+
+### `WfOutletTriggerConfig`
+
+Configuration for `handleOutlet()`:
+
+```ts
+interface WfOutletTriggerConfig {
+  allow?: string[]
+  block?: string[]
+  state: WfStateStrategy | ((wfid: string) => WfStateStrategy)
+  outlets: WfOutlet[]
+  token?: WfOutletTokenConfig
+  wfidName?: string
+  initialContext?: (body: Record<string, unknown> | undefined, wfid: string) => unknown
+  onFinished?: (ctx: { context: unknown; schemaId: string }) => unknown
+}
+```
+
+### `WfOutletTokenConfig`
+
+Token read/write configuration:
+
+```ts
+interface WfOutletTokenConfig {
+  read?: Array<'body' | 'query' | 'cookie'>
+  write?: 'body' | 'cookie'
+  name?: string
+  consume?: boolean | Record<string, boolean>
+}
+```
+
+### `WfStateStrategy`
+
+State persistence interface:
+
+```ts
+interface WfStateStrategy {
+  persist(state: WfState, options?: { ttl?: number }): Promise<string>
+  retrieve(token: string): Promise<WfState | null>
+  consume(token: string): Promise<WfState | null>
+}
+```
+
+### `WfOutlet`
+
+Delivery channel interface:
+
+```ts
+interface WfOutlet {
+  readonly name: string
+  deliver(request: WfOutletRequest, token: string): Promise<WfOutletResult | void>
+}
+```
+
+### `WfFinishedResponse`
+
+Completion response set via `useWfFinished()`:
+
+```ts
+interface WfFinishedResponse {
+  type: 'redirect' | 'data'
+  value: unknown
+  status?: number
+  cookies?: Record<string, { value: string; options?: Record<string, unknown> }>
+}
+```
+
+See [Outlets](/wf/outlets) for full usage details and examples.
+
+## Outlet Helpers
+
+### `outletHttp(payload, context?)`
+
+Returns an outlet signal that pauses the workflow and triggers the HTTP outlet.
+
+```ts
+return outletHttp({ type: 'form', fields: ['email'] })
+```
+
+### `outletEmail(target, template, context?)`
+
+Returns an outlet signal that pauses the workflow and triggers the email outlet.
+
+```ts
+return outletEmail('user@example.com', 'verify', { name: 'Alice' })
+```
+
+### `outlet(name, data?)`
+
+Generic outlet signal for custom delivery channels.
+
+```ts
+return outlet('sms', { target: '+1234567890' })
+```
+
+### `createHttpOutlet(opts?)`
+
+Creates an HTTP delivery outlet.
+
+```ts
+const httpOutlet = createHttpOutlet({ transform: (payload) => ({ ...payload, extra: true }) })
+```
+
+### `createEmailOutlet(send)`
+
+Creates an email delivery outlet with a user-provided send function.
+
+```ts
+const emailOutlet = createEmailOutlet(async ({ target, template, context, token }) => {
+  await mailer.send({ to: target, template, data: { ...context, link: `/flow?wfs=${token}` } })
+})
+```
+
+### `EncapsulatedStateStrategy`
+
+Stateless strategy — encrypts workflow state into the token (AES-256-GCM).
+
+```ts
+new EncapsulatedStateStrategy({ secret: '...', defaultTtl?: number })
+```
+
+### `HandleStateStrategy`
+
+Server-side strategy — stores state in a `WfStateStore`, token is an opaque handle.
+
+```ts
+new HandleStateStrategy({ store: WfStateStore, defaultTtl?: number, generateHandle?: () => string })
+```
+
+### `WfStateStoreMemory`
+
+In-memory `WfStateStore` for development and testing.
+
+```ts
+const store = new WfStateStoreMemory()
+```
+
 ## Composables
 
 ### `useWfState()`
@@ -299,6 +480,31 @@ state.resume                // boolean: is this a resume?
 ::: info
 In most cases, use `@WorkflowParam` decorators instead of calling `useWfState()` directly. The composable is useful for advanced scenarios like custom interceptors or utilities that need workflow context.
 :::
+
+### `useWfOutlet()`
+
+Returns outlet infrastructure accessors. Available inside step handlers during outlet-driven workflows.
+
+```ts
+import { useWfOutlet } from '@moostjs/event-wf'
+
+const { getStateStrategy, getOutlets, getOutlet } = useWfOutlet()
+```
+
+Most steps do not need this — use `outletHttp()` / `outletEmail()` / `outlet()` instead.
+
+### `useWfFinished()`
+
+Sets the completion response for a finished workflow. The outlet handler uses this to determine the HTTP response when the workflow completes.
+
+```ts
+import { useWfFinished } from '@moostjs/event-wf'
+
+useWfFinished().set({ type: 'redirect', value: '/dashboard' })
+useWfFinished().get() // returns the set response, or undefined
+```
+
+See [Outlets — Workflow Completion](/wf/outlets#workflow-completion) for details.
 
 ### `wfKind`
 

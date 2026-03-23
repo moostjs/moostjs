@@ -48,6 +48,26 @@ export function WorkflowSchema<T>(schema: TWorkflowSchema<T>): MethodDecorator {
 }
 
 /**
+ * Sets TTL (in ms) for the workflow state when this step pauses.
+ * The adapter wraps the step handler to set `expires` on the outlet signal,
+ * which is then passed to `strategy.persist(state, { ttl })`.
+ *
+ * @param ttlMs - Time-to-live in milliseconds for the paused state token.
+ *
+ * @example
+ * ```ts
+ * @Step('send-invite')
+ * @StepTTL(60 * 60 * 1000) // 1 hour
+ * async sendInvite(@WorkflowParam('context') ctx: any) {
+ *   return outletEmail(ctx.email, 'invite')
+ * }
+ * ```
+ */
+export function StepTTL(ttlMs: number): MethodDecorator {
+  return getWfMate().decorate('wfStepTTL', ttlMs)
+}
+
+/**
  * Parameter decorator that resolves a workflow context value into a step handler argument.
  *
  * @param name - The workflow value to resolve:
