@@ -1,3 +1,12 @@
+## [0.6.5](https://github.com/moostjs/moostjs/compare/v0.6.4...v0.6.5) (2026-03-23)
+
+
+### Features
+
+* **event-wf:** add workflow outlets support with handleOutlet, StepTTL, and docs ([596671e](https://github.com/moostjs/moostjs/commit/596671e7a37b7b3e41150f374d281d9dff1025b0))
+
+
+
 ## [0.6.4](https://github.com/moostjs/moostjs/compare/v0.6.3...v0.6.4) (2026-03-22)
 
 
