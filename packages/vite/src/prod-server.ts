@@ -67,10 +67,12 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
       const path = await import('node:path')
 
       ssrFallback = async (req: any, res, next) => {
-        if (req.method !== 'GET') return next()
+        if (req.method !== 'GET') {
+          return next()
+        }
         const url = req.originalUrl || req.url || '/'
         try {
-          let template = await fs.readFile(path.resolve(process.cwd(), 'index.html'), 'utf-8')
+          let template = await fs.readFile(path.resolve(process.cwd(), 'index.html'), 'utf8')
           template = await vite.transformIndexHtml(url, template)
           const { render } = await vite.ssrLoadModule(ssrEntry)
           const { html: appHtml, state } = await render(url)
@@ -81,11 +83,11 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
               .replace(ssrOutlet, appHtml)
               .replace(ssrState, state ? `<script>window.__SSR_STATE__=${state}</script>` : ''),
           )
-        } catch (e: any) {
-          vite.ssrFixStacktrace(e)
-          console.error(e)
+        } catch (error: any) {
+          vite.ssrFixStacktrace(error)
+          console.error(error)
           res.statusCode = 500
-          res.end(e.message)
+          res.end(error.message)
         }
       }
     }
@@ -98,7 +100,9 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
         for (const mw of userMiddlewares) {
           vite.middlewares.use(mw as any)
         }
-        if (ssrFallback) vite.middlewares.use(ssrFallback as any)
+        if (ssrFallback) {
+          vite.middlewares.use(ssrFallback as any)
+        }
         await vite.listen()
         vite.printUrls()
       },
@@ -113,22 +117,25 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const { createServer: createHttpServer } = await import('node:http')
 
   const clientDir = (opts.clientDir as string) || path.resolve(import.meta.dirname, '../client')
-  const ssrOutlet = (opts.ssrOutlet as string) || (typeof __MOOST_SSR_OUTLET__ !== 'undefined' ? __MOOST_SSR_OUTLET__ : '<!--ssr-outlet-->')
-  const ssrState = (opts.ssrState as string) || (typeof __MOOST_SSR_STATE__ !== 'undefined' ? __MOOST_SSR_STATE__ : '<!--ssr-state-->')
+  const ssrOutlet = (opts.ssrOutlet as string) || (__MOOST_SSR_OUTLET__ !== undefined ? __MOOST_SSR_OUTLET__ : '<!--ssr-outlet-->')
+  const ssrState = (opts.ssrState as string) || (__MOOST_SSR_STATE__ !== undefined ? __MOOST_SSR_STATE__ : '<!--ssr-state-->')
   let prefix = (opts.prefix as string) || __MOOST_PREFIX__
-  if (!prefix.startsWith('/')) prefix = `/${prefix}`
-  if (prefix.endsWith('/')) prefix = prefix.slice(0, -1)
-  const prefixSlash = prefix + '/'
+  if (!prefix.startsWith('/')) {
+    prefix = `/${prefix}`
+  }
+  if (prefix.endsWith('/')) {
+    prefix = prefix.slice(0, -1)
+  }
+  const prefixSlash = `${prefix}/`
   const defaultPort = (opts.port as number) || Number(process.env.PORT) || 3000
 
   // Read HTML template once at startup
-  const template = await fs.readFile(path.resolve(clientDir, 'index.html'), 'utf-8')
+  const template = await fs.readFile(path.resolve(clientDir, 'index.html'), 'utf8')
 
   // SSR render function (if ssrEntry is configured), otherwise SPA fallback
   let render: ((url: string) => Promise<{ html: string; state?: string }>) | null = null
-  const hasSsr = typeof __MOOST_SSR_ENTRY__ !== 'undefined' && !!__MOOST_SSR_ENTRY__
+  const hasSsr = __MOOST_SSR_ENTRY__ !== undefined && !!__MOOST_SSR_ENTRY__
   if (hasSsr) {
-    // @ts-ignore dynamic import of built SSR entry
     const ssrModule = await import(/* @vite-ignore */ __MOOST_SSR_ENTRY__)
     render = ssrModule.render
   }
@@ -136,11 +143,11 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   // Patch MoostHttp.listen to capture the handler instead of binding a port
   const { MoostHttp, enableLocalFetch } = await import('@moostjs/event-http')
   let moostHandler: ((req: IncomingMessage, res: ServerResponse) => void) | null = null
-  let moostHttpInstance: any = null
+  const moostHttpRef: { instance: any } = { instance: null }
   const origListen = MoostHttp.prototype.listen
   MoostHttp.prototype.listen = function (...args: any[]) {
     moostHandler = this.getServerCb()
-    moostHttpInstance = this
+    moostHttpRef.instance = this
     setTimeout(() => args.filter((a: any) => typeof a === 'function').forEach((a: any) => a()), 1)
     return Promise.resolve()
   }
@@ -159,10 +166,13 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   MoostHttp.prototype.listen = origListen
 
   // Enable local fetch for SSR — fetch('/api/...') calls moost handler in-process
-  if (enableLocalFetch && moostHttpInstance) enableLocalFetch(moostHttpInstance)
+  if (enableLocalFetch && moostHttpRef.instance) {
+    enableLocalFetch(moostHttpRef.instance)
+  }
 
   // Static file serving
-  const sirv = (await import('sirv')).default
+  const sirvModule = await import('sirv')
+  const sirv = sirvModule.default
   const serve = sirv(path.resolve(clientDir), { extensions: [] })
 
   return {
@@ -183,7 +193,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
           }
 
           // 2. API routes → moost
-          if (moostHandler && (url.startsWith(prefixSlash) || url === prefix || url.startsWith(prefix + '?'))) {
+          if (moostHandler && (url.startsWith(prefixSlash) || url === prefix || url.startsWith(`${prefix}?`))) {
             moostHandler(req, res)
             return
           }
@@ -214,10 +224,10 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
                 res.setHeader('Content-Type', 'text/html')
                 res.end(template)
               }
-            } catch (e: any) {
-              console.error(e)
+            } catch (error: any) {
+              console.error(error)
               res.statusCode = 500
-              res.end(e.message)
+              res.end(error.message)
             }
           })
         }

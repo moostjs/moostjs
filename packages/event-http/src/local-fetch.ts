@@ -16,18 +16,18 @@ export function enableLocalFetch(http: MoostHttp): () => void {
     if (typeof input === 'string') {
       if (input.startsWith('/')) {
         const response = await http.request(input, init)
-        if (response) return response
+        if (response) { return response }
       }
     } else if (input instanceof URL) {
       if (isLocalOrigin(input)) {
         const response = await http.request(input, init)
-        if (response) return response
+        if (response) { return response }
       }
     } else {
       const url = new URL(input.url)
       if (isLocalOrigin(url)) {
         const response = await http.fetch(input)
-        if (response) return response
+        if (response) { return response }
       }
     }
     return originalFetch(input, init)

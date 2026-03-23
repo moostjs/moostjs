@@ -1,5 +1,5 @@
 import { createProvideRegistry } from '@prostojs/infact'
-import type { TProstoRouterPathBuilder } from '@prostojs/router'
+import type { IncomingMessage, ServerResponse } from 'http'
 import type { TWooksHttpOptions } from '@wooksjs/event-http'
 import {
   createHttpApp,
@@ -19,6 +19,8 @@ import type {
 } from 'moost'
 import { defineMoostEventHandler, getMoostMate } from 'moost'
 import type { ListenOptions } from 'net'
+
+type TPathBuilder<ParamsType = Record<string, string | string[]>> = (params?: ParamsType) => string
 
 /** Handler metadata for HTTP events, carrying the HTTP method and route path. */
 export interface THttpHandlerMeta {
@@ -84,7 +86,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     return this.httpApp
   }
 
-  public getServerCb(onNoMatch?: (req: import('http').IncomingMessage, res: import('http').ServerResponse) => void) {
+  public getServerCb(onNoMatch?: (req: IncomingMessage, res: ServerResponse) => void) {
     return this.httpApp.getServerCb(onNoMatch)
   }
 
@@ -142,11 +144,11 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
   public readonly pathBuilders: Record<
     string,
     {
-      GET?: TProstoRouterPathBuilder<Record<string, string | string[]>>
-      PUT?: TProstoRouterPathBuilder<Record<string, string | string[]>>
-      PATCH?: TProstoRouterPathBuilder<Record<string, string | string[]>>
-      POST?: TProstoRouterPathBuilder<Record<string, string | string[]>>
-      DELETE?: TProstoRouterPathBuilder<Record<string, string | string[]>>
+      GET?: TPathBuilder
+      PUT?: TPathBuilder
+      PATCH?: TPathBuilder
+      POST?: TPathBuilder
+      DELETE?: TPathBuilder
     }
   > = {}
 

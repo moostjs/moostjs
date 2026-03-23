@@ -194,12 +194,12 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   // Normalize prefix: ensure leading slash, strip trailing slash
   let prefix = options.prefix
   if (prefix) {
-    if (!prefix.startsWith('/')) prefix = `/${prefix}`
-    if (prefix.endsWith('/')) prefix = prefix.slice(0, -1)
+    if (!prefix.startsWith('/')) { prefix = `/${prefix}` }
+    if (prefix.endsWith('/')) { prefix = prefix.slice(0, -1) }
   }
 
-  const prefixSlash = prefix ? prefix + '/' : undefined
-  const prefixQuery = prefix ? prefix + '?' : undefined
+  const prefixSlash = prefix ? `${prefix}/` : undefined
+  const prefixQuery = prefix ? `${prefix}?` : undefined
 
   let moostMiddleware: TMiddleware | null = null
   let localFetchTeardown: (() => void) | null = null
@@ -220,7 +220,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
               moostMiddleware = this.getServerCb()
             }
             if (options.ssrFetch !== false && moduleExports?.enableLocalFetch) {
-              if (localFetchTeardown) localFetchTeardown()
+              if (localFetchTeardown) { localFetchTeardown() }
               localFetchTeardown = moduleExports.enableLocalFetch(this)
               logger.log(`🔀 ${__DYE_DIM__}Local fetch enabled for SSR`)
             }
@@ -296,7 +296,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
                 rollupOptions: {
                   input: ssrInput,
                   external: (id: string) => {
-                    if (id === '@moostjs/vite/server') return false
+                    if (id === '@moostjs/vite/server') { return false }
                     return defaultExternals.some((ext) => ext.test(id))
                   },
                   output: { format: 'esm' },
@@ -398,7 +398,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
      * Resolves our "virtual:vite-id" module.
      */
     resolveId(id) {
-      if (id === 'virtual:vite-id') return '\0virtual:vite-id'
+      if (id === 'virtual:vite-id') { return '\0virtual:vite-id' }
     },
 
     /**
@@ -535,10 +535,10 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
             // Return post-hook so this runs AFTER Vite's internal middleware
             return () => {
               server.middlewares.use(async (req: any, res: ServerResponse, next: () => void) => {
-                if (req.method !== 'GET') return next()
+                if (req.method !== 'GET') { return next() }
                 const url = req.originalUrl || req.url || '/'
                 try {
-                  let template = await fs.readFile(resolve(process.cwd(), 'index.html'), 'utf-8')
+                  let template = await fs.readFile(resolve(process.cwd(), 'index.html'), 'utf8')
                   template = await server.transformIndexHtml(url, template)
                   const { render } = await server.ssrLoadModule(options.ssrEntry!)
                   const { html: appHtml, state } = await render(url)
@@ -552,11 +552,11 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
                         state ? `<script>window.__SSR_STATE__=${state}</script>` : '',
                       ),
                   )
-                } catch (e: any) {
-                  server.ssrFixStacktrace(e)
-                  console.error(e)
+                } catch (error: any) {
+                  server.ssrFixStacktrace(error)
+                  console.error(error)
                   res.statusCode = 500
-                  res.end(e.message)
+                  res.end(error.message)
                 }
               })
             }

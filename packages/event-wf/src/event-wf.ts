@@ -1,5 +1,10 @@
 import type { TFlowOutput, TWorkflowSpy } from '@prostojs/wf'
-import type { TStepHandler, TWooksWfOptions, WfOutletTriggerConfig } from '@wooksjs/event-wf'
+import type {
+  TStepHandler,
+  TWooksWfOptions,
+  WfOutletTriggerConfig,
+  WfOutletTriggerDeps,
+} from '@wooksjs/event-wf'
 import { createWfApp, handleWfOutletRequest, WooksWf } from '@wooksjs/event-wf'
 import type { Moost, TMoostAdapter, TMoostAdapterOptions } from 'moost'
 import { defineMoostEventHandler, getMoostInfact, setControllerContext, useScopeId } from 'moost'
@@ -104,7 +109,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
         state: { schemaId: string; context: unknown; indexes: number[] },
         opts?: { input?: unknown },
       ) => this.resume(state as { schemaId: string; context: T; indexes: number[] }, opts?.input),
-    })
+    } as WfOutletTriggerDeps)
   }
 
   /**
