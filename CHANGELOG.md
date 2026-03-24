@@ -1,3 +1,12 @@
+## [0.6.6](https://github.com/moostjs/moostjs/compare/v0.6.5...v0.6.6) (2026-03-24)
+
+
+### Features
+
+* **moost:** add getPrefix() to useControllerContext for runtime access to computed controller prefix ([3596b6c](https://github.com/moostjs/moostjs/commit/3596b6c87f8e933448240ccf7f473ba999e2bbe2))
+
+
+
 ## [0.6.5](https://github.com/moostjs/moostjs/compare/v0.6.4...v0.6.5) (2026-03-23)
 
 
