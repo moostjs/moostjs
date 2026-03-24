@@ -35,7 +35,8 @@ Beyond `instantiate`, the composable exposes the current controller's runtime co
 | `instantiate(Class)` | DI-resolved instance of the given class |
 | `getController()` | Current controller instance |
 | `getMethod()` | Current handler method name |
-| `getRoute()` | Current route string |
+| `getRoute()` | Full route path (prefix + handler path) |
+| `getPrefix()` | Controller's computed prefix (accumulated from all parents) |
 | `getControllerMeta()` | Class-level metadata |
 | `getMethodMeta(name?)` | Method-level metadata |
 | `getScope()` | Controller's injectable scope |

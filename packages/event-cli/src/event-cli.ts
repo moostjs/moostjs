@@ -151,6 +151,7 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
         resolveArgs: opts.resolveArgs,
         logErrors: this.opts?.debug,
         targetPath,
+        controllerPrefix: opts.prefix,
         handlerType: handler.type,
       })
 

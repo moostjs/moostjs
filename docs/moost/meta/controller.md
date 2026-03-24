@@ -18,6 +18,46 @@ The `useControllerContext` composable serves to:
 
 The `useControllerContext` composable provides several methods to access different aspects of controller metadata:
 
+### `getPrefix(): string | undefined`
+
+**Description:**
+Returns the controller's fully computed prefix — the accumulated path from all parent controllers and `@ImportController` overrides. Available in the constructor of singleton controllers and inside event handlers.
+
+**Parameters:**
+None
+
+**Returns:**
+The computed prefix string (e.g., `'/api/v2'`) or `undefined` if not set.
+
+**Usage Example:**
+
+```ts
+const { getPrefix } = useControllerContext()
+console.log(getPrefix()) // e.g., '/api/v2'
+```
+
+::: tip
+For singleton controllers imported at multiple prefixes, `getPrefix()` in the constructor reflects the prefix from the first registration only. Inside event handlers, it always reflects the correct prefix for the current route.
+:::
+
+### `getRoute(): string | undefined`
+
+**Description:**
+Returns the full route path for the current handler, including the controller prefix and the handler's own path segment.
+
+**Parameters:**
+None
+
+**Returns:**
+The full route string (e.g., `'/api/v2/users'`) or `undefined` if not set.
+
+**Usage Example:**
+
+```ts
+const { getRoute } = useControllerContext()
+console.log(getRoute()) // e.g., '/api/v2/users'
+```
+
 ### `getPropMeta(propName: string | symbol): TMoostMetadata | undefined`
 
 **Description:**  

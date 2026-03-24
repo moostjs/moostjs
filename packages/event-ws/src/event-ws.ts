@@ -166,6 +166,7 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
       controllerName: opts.controllerName,
       resolveArgs: opts.resolveArgs,
       targetPath,
+      controllerPrefix: opts.prefix,
       handlerType: handler.type,
     })
 

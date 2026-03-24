@@ -169,6 +169,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
         resolveArgs: opts.resolveArgs,
         manualUnscope: true,
         targetPath,
+        controllerPrefix: opts.prefix,
         handlerType: handler.type,
       })
 
@@ -199,7 +200,9 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
           // so we have to provide Moost as controller for now
           // so we can use controller context and instantiate moost-level singletones
           // even before real controller is instantiated
-          setControllerContext(this.moost!, 'bindHandler' as keyof typeof this.moost, targetPath)
+          setControllerContext(this.moost!, 'bindHandler' as keyof typeof this.moost, targetPath, {
+            prefix: opts.prefix,
+          })
           return fn()
         }) as () => void
         this.toInit.push(() => {

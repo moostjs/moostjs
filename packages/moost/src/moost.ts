@@ -212,6 +212,12 @@ export class Moost extends Hookable {
     const infact = getMoostInfact()
     const isControllerConsructor = isConstructor(controller)
 
+    const ownPrefix =
+      typeof replaceOwnPrefix === 'string'
+        ? replaceOwnPrefix
+        : classMeta?.controller?.prefix || ''
+    const computedPrefix = `${globalPrefix}/${ownPrefix}`
+
     const pipes = mergeSorted(this.pipes, classMeta?.pipes)
     let instance: TObject | undefined
     const infactOpts = { provide, replace, customData: { pipes } }
@@ -220,7 +226,7 @@ export class Moost extends Hookable {
       (classMeta?.injectable === 'SINGLETON' || classMeta?.injectable === true)
     ) {
       await createEventContext({ logger: this.logger }, async () => {
-        setControllerContext(this, 'bindController' as keyof this, '')
+        setControllerContext(this, 'bindController' as keyof this, '', { prefix: computedPrefix })
         instance = (await infact.get(
           controller as TClassConstructor<TAny>,
           infactOpts,

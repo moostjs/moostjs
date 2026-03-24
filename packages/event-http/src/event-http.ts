@@ -211,6 +211,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
           },
         },
         targetPath,
+        controllerPrefix: opts.prefix,
         handlerType: handler.type,
       })
 

@@ -31,8 +31,8 @@ Below is a representative diagram illustrating the lifecycle of a Moost event.
 
 <div id="step4" style="transform: translateY(-70px)" />
 
-4. **Set Controller Instance in Event Context**  
-   With a route found, Moost either creates or retrieves an appropriate [controller](/moost/controllers) instance. It attaches this [controller](/moost/controllers) to the event context, making its metadata accessible throughout the event lifecycle via [`useControllerContext`](/moost/meta/controller) composable.
+4. **Set Controller Instance in Event Context**
+   With a route found, Moost either creates or retrieves an appropriate [controller](/moost/controllers) instance. It attaches this [controller](/moost/controllers) to the event context along with the full route path and the controller's computed prefix, making them accessible throughout the event lifecycle via [`useControllerContext`](/moost/meta/controller) composable (`getRoute()`, `getPrefix()`).
 
 <div id="step5" style="transform: translateY(-70px)" />
 

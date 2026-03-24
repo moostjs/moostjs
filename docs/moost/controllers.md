@@ -127,6 +127,24 @@ class MyServer extends Moost {
 
 This modular approach scales well as your application grows, encouraging separation of concerns and logical grouping of related logic.
 
+## Accessing the Controller Prefix at Runtime
+
+Use `useControllerContext().getPrefix()` to access the controller's fully computed prefix — the accumulated path from all parent controllers and `@ImportController` overrides:
+
+```ts
+import { Controller, useControllerContext } from 'moost'
+
+@Controller('api')
+export class ApiController {
+  constructor() {
+    const { getPrefix } = useControllerContext()
+    console.log(getPrefix()) // '/api'
+  }
+}
+```
+
+This works in both singleton constructors and event handlers. For singletons imported at multiple prefixes, the constructor sees the prefix from the first registration. Inside event handlers, `getPrefix()` always reflects the correct prefix for the current route.
+
 ## Best Practices
 
 1. **Keep Controllers Focused:**  

@@ -36,6 +36,7 @@ export interface TMoostEventHandlerOptions<T> {
     end?: (opts: TMoostEventHandlerHookOptions<T>) => unknown
   }
   targetPath: string
+  controllerPrefix?: string
   handlerType: string
 }
 
@@ -131,11 +132,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
 
     function afterInstance(instance: T | undefined): unknown {
       if (instance) {
-        setControllerContext(
-          instance,
-          options.controllerMethod || ('' as keyof T),
-          options.targetPath,
-        )
+        setControllerContext(instance, options.controllerMethod || ('' as keyof T), options.targetPath, {
+          prefix: options.controllerPrefix,
+        })
         ci?.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
       }
 
