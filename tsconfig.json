@@ -3,6 +3,7 @@
     "vitePressExtensions": [".md"]
   },
   "compilerOptions": {
+    "rootDir": "./packages",
     "outDir": ".types",
     "declaration": true,
     "emitDeclarationOnly": true,
