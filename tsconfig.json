@@ -13,8 +13,8 @@
     "lib": ["ESNext", "DOM", "WebWorker", "DOM.Iterable"],
     "noUnusedLocals": true,
     "paths": {
-      "moost": ["packages/moost/src"],
-      "@moostjs/*": ["packages/*/src"]
+      "moost": ["./packages/moost/src"],
+      "@moostjs/*": ["./packages/*/src"]
     },
     "types": ["node", "@prostojs/dye/global"],
     "declarationMap": false,

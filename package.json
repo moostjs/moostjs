@@ -62,15 +62,21 @@
     "rollup-plugin-dts": "^6.3.0",
     "typescript": "^5.9.3",
     "unplugin-swc": "^1.5.9",
-    "vitepress": "^1.6.4",
-    "vitepress-plugin-llmstxt": "^0.4.2",
+    "vite": "^7.3.2",
+    "vitepress": "2.0.0-alpha.17",
+    "vitepress-plugin-llmstxt": "^0.5.1",
     "vitest": "3.2.4",
     "vue-chartjs": "^5.3.3",
     "zx": "^8.8.5"
   },
   "pnpm": {
     "overrides": {
-      "minimatch": "^10.2.3"
+      "minimatch": "^10.2.3",
+      "handlebars": ">=4.7.9",
+      "picomatch@>=4": ">=4.0.4",
+      "defu": ">=6.1.5",
+      "brace-expansion@>=4": ">=5.0.5",
+      "yaml@>=2": ">=2.8.3"
     }
   }
 }

@@ -60,10 +60,6 @@ export default defineConfig({
         languages: [atscriptGrammar as any],
     },
 
-    vue: {
-        // reactivityTransform: true,
-    },
-
     themeConfig: {
         logo: '/moost-full-logo.svg', //'/logo.svg',
 
