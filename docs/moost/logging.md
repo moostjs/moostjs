@@ -78,14 +78,15 @@ To use the event logger within a controller, you can inject it using the
 
 ```ts
 import { Get } from '@moostjs/event-http';
-import { EventLogger, Controller, InjectEventLogger } from 'moost';
+import type { Logger } from 'moost'
+import { Controller, InjectEventLogger } from 'moost'
 
 @Controller()
 class MyController {
-  @Get("endpoint")
-  handleRequest(@InjectEventLogger() logger: EventLogger) {
+  @Get('endpoint')
+  handleRequest(@InjectEventLogger() logger: Logger) {
     // Controller logic for handling the request
-    logger.log("...");
+    logger.log('...')
   }
 }
 ```
@@ -94,6 +95,43 @@ In the example above, the `MyController` class
 has an event handler method `handleRequest`, which receives the event logger
 instance injected using the `@InjectEventLogger` decorator. The event logger can
 be used to log messages within the event handler.
+
+## @InjectMoostLogger
+
+While `@InjectEventLogger` provides event-scoped loggers from the Wooks context, `@InjectMoostLogger` resolves the **app-level** logger from the Moost instance. This is useful when you need a logger that lives outside the event lifecycle — for example, in singleton services that log during initialization or background work.
+
+```ts
+import { Controller, InjectMoostLogger } from 'moost'
+import type { ProstoLogger } from 'moost'
+
+@Controller()
+class NotificationService {
+  constructor(@InjectMoostLogger('notifications') private logger: ProstoLogger) {
+    this.logger.log('NotificationService initialized')
+  }
+}
+```
+
+The optional `topic` argument sets the logger's topic (banner). If omitted, the topic falls back to the class-level `@LoggerTopic` value, or the class `@Id` metadata.
+
+### @LoggerTopic
+
+`@LoggerTopic` sets a default logger topic at the class level, used by `@InjectMoostLogger` when no explicit topic is passed:
+
+```ts
+import { Controller, InjectMoostLogger, LoggerTopic } from 'moost'
+import type { ProstoLogger } from 'moost'
+
+@LoggerTopic('mailer')
+@Controller()
+class MailerController {
+  constructor(@InjectMoostLogger() private logger: ProstoLogger) {
+    // logger topic is 'mailer'
+  }
+}
+```
+
+An explicit topic in `@InjectMoostLogger('override')` takes precedence over the class-level `@LoggerTopic`.
 
 For more details on logging in Moost, please refer to the
 [Logging in Wooks](https://wooks.moost.org/wooks/advanced/logging.html) page as

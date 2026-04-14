@@ -96,3 +96,65 @@ This is especially useful for:
 - **Testing** — inject mocks without changing consumer code
 - **Feature toggles** — swap implementations at startup
 - **Third-party controllers** — override dependencies you can't modify directly
+
+## Custom Scopes
+
+Beyond the built-in `SINGLETON` and `FOR_EVENT` scopes, you can define custom named scopes with associated variables using `defineInfactScope`. Classes injected via `@InjectFromScope` are instantiated within that scope, and `@InjectScopeVars` lets them access the scope's variables.
+
+### Defining a Scope
+
+Register a named scope with its variables before the app starts:
+
+```ts
+import { defineInfactScope } from 'moost'
+
+defineInfactScope('tenant', {
+  tenantId: 'acme',
+  region: 'eu-west-1',
+})
+```
+
+### @InjectFromScope
+
+Marks a constructor parameter or property so that the injected class is instantiated **within the named scope**:
+
+```ts
+import { Injectable, InjectFromScope } from 'moost'
+
+@Injectable()
+class TenantConfig {
+  constructor(/* resolved within the 'tenant' scope */) {}
+}
+
+@Controller()
+class BillingController {
+  constructor(@InjectFromScope('tenant') private config: TenantConfig) {}
+}
+```
+
+### @InjectScopeVars
+
+Resolves scope variables for classes living inside a custom scope. Use it inside classes that are instantiated via `@InjectFromScope`:
+
+```ts
+import { Injectable, InjectScopeVars } from 'moost'
+
+@Injectable()
+class TenantService {
+  constructor(
+    // inject a single variable by name
+    @InjectScopeVars('tenantId') private tenantId: string,
+  ) {}
+}
+```
+
+Omit the name to receive the entire scope variables object:
+
+```ts
+@Injectable()
+class TenantService {
+  constructor(
+    @InjectScopeVars() private vars: { tenantId: string; region: string },
+  ) {}
+}
+```
