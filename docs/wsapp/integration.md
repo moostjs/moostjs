@@ -1,8 +1,5 @@
 # HTTP Integration
 
-::: warning Experimental
-This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
-:::
 
 The recommended way to run WebSocket in production is HTTP-integrated mode, where the WS server shares the HTTP port. This gives you control over which paths accept WebSocket connections, enables authentication during the upgrade handshake, and keeps everything on a single port.
 

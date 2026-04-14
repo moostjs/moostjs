@@ -1,8 +1,5 @@
 # Request Data
 
-::: warning Experimental
-This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
-:::
 
 Moost WS provides resolver decorators to extract data from WebSocket messages and connections.
 These decorators can be applied to handler method arguments.

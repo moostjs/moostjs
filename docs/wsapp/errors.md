@@ -1,8 +1,5 @@
 # Error Handling
 
-::: warning Experimental
-This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
-:::
 
 Moost WS uses `WsError` for structured error responses. When a handler throws a `WsError`, the server sends an error reply to the client with the specified code and message.
 

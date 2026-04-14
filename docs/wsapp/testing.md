@@ -1,8 +1,5 @@
 # Testing
 
-::: warning Experimental
-This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
-:::
 
 `@moostjs/event-ws` re-exports test helpers from `@wooksjs/event-ws` that let you unit-test WebSocket handlers and composables without starting a real server.
 

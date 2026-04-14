@@ -1,9 +1,5 @@
 # Client
 
-::: warning Experimental
-This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
-:::
-
 `@wooksjs/ws-client` is a type-safe WebSocket client with RPC support, automatic reconnection, and push event handling. It works in both browsers and Node.js.
 
 For the full API reference, see the [Wooks WS Client Documentation](https://wooks.moost.org/wsapp/client.html).

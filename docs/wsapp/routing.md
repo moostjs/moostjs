@@ -1,8 +1,5 @@
 # Routing
 
-::: warning Experimental
-This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
-:::
 
 WebSocket message routing in Moost uses a two-dimensional scheme: messages are matched by both **event type** and **path**. This is powered by the same router that handles HTTP routes in Wooks.
 

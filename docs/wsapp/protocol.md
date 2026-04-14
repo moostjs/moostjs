@@ -1,8 +1,5 @@
 # Wire Protocol
 
-::: warning Experimental
-This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
-:::
 
 Moost WS uses a simple JSON-over-WebSocket protocol. Messages are plain JSON objects sent as text frames — no custom framing, no binary encoding.
 

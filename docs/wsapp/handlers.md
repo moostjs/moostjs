@@ -1,8 +1,5 @@
 # Handlers
 
-::: warning Experimental
-This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
-:::
 
 Moost WS provides three decorator types for handling WebSocket events: message handlers, connection handlers, and disconnection handlers.
 

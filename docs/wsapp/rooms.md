@@ -1,8 +1,5 @@
 # Rooms & Broadcasting
 
-::: warning Experimental
-This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
-:::
 
 Rooms let you group connections and broadcast messages to all members. A connection can join multiple rooms. Room names are strings — by default, the current message path is used as the room name.
 

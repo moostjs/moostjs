@@ -1,8 +1,5 @@
 # Quick Start
 
-::: warning Experimental
-This package is in an experimental phase. The API may change without following semver until it reaches a stable release.
-:::
 
 This guide shows you how to build a WebSocket application with Moost.
 
