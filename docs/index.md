@@ -24,5 +24,5 @@ actions:
     link: /webapp/benchmarks
   - theme: alt
     text: AI Skill
-    link: https://github.com/moostjs/moostjs/tree/main/skills/moostjs
+    link: /moost/ai-skill
 ---

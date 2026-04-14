@@ -15,13 +15,12 @@ pnpm add @moostjs/event-wf
 ```
 :::
 
-### AI Agent Skills (Optional)
+### AI Agent Skill (Optional)
 
-Give your AI coding agent (Claude Code, Cursor, etc.) deep knowledge of the workflow API:
+Install the unified Moost AI skill for context-aware assistance in AI coding agents (Claude Code, Cursor, etc.):
 
 ```bash
-npx moostjs-event-wf-skill        # project-local
-npx moostjs-event-wf-skill --global # global
+npx skills add moostjs/moostjs
 ```
 
 ## Define a Workflow Controller

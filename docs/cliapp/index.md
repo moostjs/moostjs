@@ -75,26 +75,12 @@ You'll see `Hello, World!` in the terminal.
 
 The `@Cli('greet/:name')` decorator registers the method as a CLI command. The `:name` segment becomes a positional argument, extracted by `@Param('name')`.
 
-## AI agent skills
+## AI Agent Skill
 
-`@moostjs/event-cli` ships with structured skill files for AI coding agents (Claude Code, Cursor, Windsurf, Codex, etc.). Install them to get context-aware assistance:
+Install the unified Moost AI skill for context-aware assistance in AI coding agents (Claude Code, Cursor, Windsurf, Codex, etc.):
 
 ```bash
-# Project-local (recommended — version-locked, commits with your repo)
-npx moostjs-event-cli-skill
-
-# Global (available across all your projects)
-npx moostjs-event-cli-skill --global
-```
-
-To keep skills automatically up-to-date, add a postinstall script:
-
-```json
-{
-  "scripts": {
-    "postinstall": "moostjs-event-cli-skill --postinstall"
-  }
-}
+npx skills add moostjs/moostjs
 ```
 
 ## What's next
