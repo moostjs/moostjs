@@ -1,3 +1,17 @@
+## [0.6.7](https://github.com/moostjs/moostjs/compare/v0.6.6...v0.6.7) (2026-04-14)
+
+
+### Bug Fixes
+
+* resolve dependabot alerts, unify vite to single version ([334e073](https://github.com/moostjs/moostjs/commit/334e07355a704394ebdb766f5212d5fb31c81071))
+
+
+### Features
+
+* unified AI skill, fix docs and skill errors, update wooks deps ([a1a3d15](https://github.com/moostjs/moostjs/commit/a1a3d15c5b0362d8d1a87e52465b1c949063dec9))
+
+
+
 ## [0.6.6](https://github.com/moostjs/moostjs/compare/v0.6.5...v0.6.6) (2026-03-24)
 
 
