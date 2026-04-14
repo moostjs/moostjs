@@ -7,8 +7,8 @@ Controllers group related route handlers into a single class. They're the primar
 Apply `@Controller()` to a class. The optional argument sets a path prefix for all handlers inside:
 
 ```ts
-import { Get, Post, Delete } from '@moostjs/event-http'
-import { Controller, Param, Body } from 'moost'
+import { Get, Post, Delete, Body } from '@moostjs/event-http'
+import { Controller, Param } from 'moost'
 
 @Controller('users')
 export class UserController {
@@ -112,8 +112,8 @@ Now `UserController`'s routes use `/people/` instead of `/user/`.
 The same controller class can be imported multiple times with different prefixes and constructor arguments:
 
 ```ts
-import { Controller, Param, Body } from 'moost'
-import { Get, Post, Delete } from '@moostjs/event-http'
+import { Controller, Param } from 'moost'
+import { Get, Post, Delete, Body } from '@moostjs/event-http'
 
 @Controller()
 export class CrudController<T> {

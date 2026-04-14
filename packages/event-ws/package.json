@@ -22,13 +22,8 @@
     "url": "git+https://github.com/moostjs/moostjs.git",
     "directory": "packages/event-ws"
   },
-  "bin": {
-    "moostjs-event-ws-skill": "./scripts/setup-skills.js"
-  },
   "files": [
-    "dist",
-    "skills",
-    "scripts/setup-skills.js"
+    "dist"
   ],
   "type": "module",
   "sideEffects": false,
@@ -45,8 +40,7 @@
   },
   "scripts": {
     "pub": "pnpm publish --access public",
-    "test": "vitest",
-    "setup-skills": "node ./scripts/setup-skills.js"
+    "test": "vitest"
   },
   "dependencies": {
     "@wooksjs/event-ws": "catalog:"

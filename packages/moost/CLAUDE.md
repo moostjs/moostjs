@@ -9,7 +9,7 @@ Core framework package. Contains the Moost class, decorator system, DI integrati
 - `src/moost.ts` — The `Moost` class (extends `Hookable`). Central orchestrator: manages adapters, controllers, pipes, interceptors, DI provide/replace registries
 - `src/adapter-utils.ts` — `defineMoostEventHandler()` implementing the full event processing lifecycle
 - `src/interceptor-handler.ts` — `InterceptorHandler` class with init/before/after/onError phases
-- `src/define.ts` — `defineInterceptorFn()` and `definePipeFn()` helper factories
+- `src/define.ts` — `defineBeforeInterceptor()`, `defineAfterInterceptor()`, `defineErrorInterceptor()`, `defineInterceptor()`, and `definePipeFn()` helper factories
 - `src/metadata/moost-metadata.ts` — `TMoostMetadata` interface and `getMoostMate()` singleton
 - `src/metadata/infact.ts` — `getMoostInfact()`, DI container configuration (param/prop resolution via pipes)
 - `src/binding/bind-controller.ts` — `bindControllerMethods()` wiring methods to adapters
@@ -28,7 +28,7 @@ Core framework package. Contains the Moost class, decorator system, DI integrati
 
 **Fake instances for metadata reading.** `bindControllerMethods()` creates `Object.create(constructor.prototype)` to read method metadata without triggering constructor side effects.
 
-**Singleton controllers are instantiated in a synthetic event context.** `bindController()` wraps singleton instantiation in `createAsyncEventContext({ event: { type: 'init' } })` because Infact and composables require an event context to exist.
+**Singleton controllers are instantiated in a synthetic event context.** `bindController()` wraps singleton instantiation in `createEventContext({ event: { type: 'init' } }, fn)` because Infact and composables require an event context to exist.
 
 **Pipe composition is always re-sorted.** Pipes merged from global + class + method + param levels are `.toSorted()` by priority each time, so they interleave by priority regardless of declaration order.
 

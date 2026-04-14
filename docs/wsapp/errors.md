@@ -116,15 +116,12 @@ The actual error details are **not** exposed to the client for security.
 You can use Moost's interceptor system to create centralized error handling:
 
 ```ts
-import { defineInterceptorFn } from 'moost'
+import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
 
-const wsErrorHandler = defineInterceptorFn({
-  priority: 'CATCH_ERROR',
-  onError(error) {
-    // log, transform, or suppress errors
-    console.error('WS handler error:', error)
-  },
-})
+const wsErrorHandler = defineErrorInterceptor((error, reply) => {
+  // log, transform, or suppress errors
+  console.error('WS handler error:', error)
+}, TInterceptorPriority.CATCH_ERROR)
 
 @Controller('chat')
 @Intercept(wsErrorHandler)

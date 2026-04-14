@@ -3,7 +3,6 @@
     "vitePressExtensions": [".md"]
   },
   "compilerOptions": {
-    "baseUrl": ".",
     "outDir": ".types",
     "declaration": true,
     "emitDeclarationOnly": true,
@@ -20,7 +19,6 @@
     "types": ["node", "@prostojs/dye/global"],
     "declarationMap": false,
     "resolveJsonModule": true,
-    "downlevelIteration": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noImplicitAny": true,

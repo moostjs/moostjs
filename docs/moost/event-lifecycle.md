@@ -22,7 +22,7 @@ Below is a representative diagram illustrating the lifecycle of a Moost event.
 <div id="step2" style="transform: translateY(-70px)" />
 
 2. **Create Event Context**  
-   Wooks uses `createAsyncEventContext` ([What is Wooks?](https://wooks.moost.org/wooks/what)) to initialize a per-event context that persists across asynchronous operations. This ensures each event has its own storage for data, dependencies, and state.
+   Wooks uses `createEventContext` ([What is Wooks?](https://wooks.moost.org/wooks/what)) to initialize a per-event context that persists across asynchronous operations. This ensures each event has its own storage for data, dependencies, and state.
   
 <div id="step3" style="transform: translateY(-70px)" />
 

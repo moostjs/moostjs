@@ -21,13 +21,8 @@
     "url": "git+https://github.com/moostjs/moostjs.git",
     "directory": "packages/moost"
   },
-  "bin": {
-    "moost-skill": "./scripts/setup-skills.js"
-  },
   "files": [
-    "dist",
-    "skills",
-    "scripts/setup-skills.js"
+    "dist"
   ],
   "type": "module",
   "sideEffects": false,
@@ -44,8 +39,7 @@
   },
   "scripts": {
     "pub": "pnpm publish --access public",
-    "test": "vitest",
-    "setup-skills": "node ./scripts/setup-skills.js"
+    "test": "vitest"
   },
   "dependencies": {
     "@prostojs/infact": "^0.4.1",

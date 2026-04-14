@@ -125,14 +125,17 @@ login() {
 ### Dynamic — `@CookieRef`
 
 ```ts
-import { Post, CookieRef } from '@moostjs/event-http'
-import type { TCookieRef } from '@moostjs/event-http'
+import { Post, CookieRef, CookieAttrsRef } from '@moostjs/event-http'
+import type { TCookieRef, TCookieAttributes } from '@moostjs/event-http'
 
 @Post('login')
-login(@CookieRef('session') cookie: TCookieRef) {
+login(
+    @CookieRef('session') cookie: TCookieRef,
+    @CookieAttrsRef('session') attrs: { value: TCookieAttributes },
+) {
     const token = generateToken()
     cookie.value = token
-    cookie.attrs = { maxAge: '1h', httpOnly: true, secure: true }
+    attrs.value = { maxAge: '1h', httpOnly: true, secure: true }
     return { ok: true }
 }
 ```

@@ -21,7 +21,7 @@ function goToDef(n) {
         <tspan x="283.678" y="192.515">2. Create Event Context </tspan>
     </text>
     <text fill="var(--ec-text)" xml:space="preserve" style="white-space: pre" font-family="monospace" font-size="14" letter-spacing="0em">
-        <tspan x="258.986" y="213.515">createAsyncEventContext()</tspan>
+        <tspan x="258.986" y="213.515">createEventContext()</tspan>
     </text>
     </g>
 

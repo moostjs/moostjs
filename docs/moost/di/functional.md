@@ -7,20 +7,18 @@ Most dependencies are resolved via constructor injection. But sometimes you need
 The `useControllerContext()` composable provides an `instantiate` function that creates class instances through Moost's DI system, respecting scopes, provide registries, and replace registries:
 
 ```ts
-import { defineInterceptorFn, useControllerContext } from 'moost'
+import { defineBeforeInterceptor, defineAfterInterceptor, useControllerContext } from 'moost'
 
-const metricsInterceptor = defineInterceptorFn((before, after) => {
+const startMetrics = defineBeforeInterceptor(async (reply) => {
   const { instantiate } = useControllerContext()
+  const metrics = await instantiate(MetricsCollector)
+  metrics.startTimer()
+})
 
-  before(async () => {
-    const metrics = await instantiate(MetricsCollector)
-    metrics.startTimer()
-  })
-
-  after(async () => {
-    const metrics = await instantiate(MetricsCollector)
-    metrics.record()
-  })
+const recordMetrics = defineAfterInterceptor(async (response, reply) => {
+  const { instantiate } = useControllerContext()
+  const metrics = await instantiate(MetricsCollector)
+  metrics.record()
 })
 ```
 

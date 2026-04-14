@@ -107,7 +107,7 @@ export class AppController {
   @Cli('install/:package')
   @CliAlias('i/:package')
   @CliAlias('add/:package')
-  install(@Param('name') pkg: string) {
+  install(@Param('package') pkg: string) {
     return `Installing ${pkg}...`
   }
 }

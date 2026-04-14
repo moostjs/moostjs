@@ -32,6 +32,7 @@ pnpm workspace with all packages under `packages/`. All packages share the same 
 | `event-http`   | `@moostjs/event-http` | HTTP adapter wrapping `@wooksjs/event-http`                      |
 | `event-cli`    | `@moostjs/event-cli`  | CLI adapter wrapping `@wooksjs/event-cli`                        |
 | `event-wf`     | `@moostjs/event-wf`   | Workflow adapter wrapping `@wooksjs/event-wf`                    |
+| `event-ws`     | `@moostjs/event-ws`   | WebSocket adapter wrapping `@wooksjs/event-ws`                   |
 | `swagger`      | `@moostjs/swagger`    | Swagger/OpenAPI integration                                      |
 | `otel`         | `@moostjs/otel`       | OpenTelemetry tracing                                            |
 | `arbac`        | `@moostjs/arbac`      | RBAC/ABAC access control                                         |
@@ -93,3 +94,7 @@ Custom build script (`scripts/build.js`) using:
 - **Linting rules of note:** `import/no-default-export` (error), `typescript/consistent-type-imports` (error), `max-params: 4`, `max-statements: 20`, `complexity: 10`.
 - **Formatting:** No semicolons, single quotes, trailing commas, 100 char print width.
 - **Path aliases in tsconfig:** `moost` → `packages/moost/src`, `@moostjs/*` → `packages/*/src`.
+
+## AI Agent Skill
+
+A unified AI agent skill is available at `skills/moostjs/` with comprehensive framework guidance across all packages. Install via `npx skills add moostjs/moostjs`.

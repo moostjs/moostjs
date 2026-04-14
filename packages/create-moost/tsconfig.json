@@ -1,7 +1,8 @@
 {
   "extends": ["../../tsconfig.json"],
   "compilerOptions": {
-    "outDir": ".types"
+    "noEmit": true,
+    "rootDir": ".."
   },
   "include": ["src", "templates", "../../global.d.ts"],
   "exclude": []
