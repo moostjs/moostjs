@@ -34,12 +34,12 @@ import {
   MoostWf,
   Workflow, WorkflowSchema, Step, WorkflowParam,
   outletHttp, useWfFinished,
-  createHttpOutlet, EncapsulatedStateStrategy,
+  createHttpOutlet, HandleStateStrategy, WfStateStoreMemory,
 } from '@moostjs/event-wf'
 
-const state = new EncapsulatedStateStrategy({ // [!code focus]
-  secret: process.env.WF_SECRET!, // 32-byte hex string // [!code focus]
-}) // [!code focus]
+// Login is security-sensitive — use HandleStateStrategy for truly single-use tokens. // [!code focus]
+// Swap WfStateStoreMemory for a Redis/database-backed WfStateStore in production. // [!code focus]
+const state = new HandleStateStrategy({ store: new WfStateStoreMemory() }) // [!code focus]
 
 const httpOutlet = createHttpOutlet() // [!code focus]
 
@@ -137,16 +137,32 @@ this.wf.handleOutlet({
     read: ['body', 'query', 'cookie'],  // where to look for the token (default: all three)
     write: 'body',                       // where to write the token in the response (default: 'body')
     name: 'wfs',                         // parameter name (default: 'wfs')
-    consume: { email: true },            // consume (invalidate) tokens per outlet
   },
 })
 ```
 
-When `consume` is enabled for an outlet, the token is deleted from the store after retrieval — useful for single-use email magic links. With `EncapsulatedStateStrategy` (stateless tokens), consumption has no effect since there is no server-side state to delete.
+### Single-Use Tokens
+
+Every resume calls `strategy.consume(token)` atomically **before** the step runs — replay of the same `wfs` returns `400`. With `HandleStateStrategy` the token is truly deleted; with `EncapsulatedStateStrategy` the consume is a stateless no-op and the token remains replayable until its TTL — use `HandleStateStrategy` for security-sensitive flows (auth, password reset, financial ops).
+
+**Fail-closed on unexpected errors.** Because consume fires before the step runs, an unexpected throw during resume burns the token with no fresh replacement — the user must restart the workflow from the beginning. This is intentional: no lingering replayable token after a failed attempt. For expected validation failures (wrong password, invalid input, rate limit), return an outlet signal from the step handler instead of throwing — the engine re-pauses and issues a fresh token so the user can retry without restarting.
+
+### Out-of-Band Outlets
+
+An outlet's `tokenDelivery` field controls whether the `wfs` token is returned to the HTTP caller or delivered through the outlet's own channel:
+
+- `tokenDelivery: 'caller'` (default for `createHttpOutlet()`) — token is merged into the HTTP response body or cookie per `token.write`.
+- `tokenDelivery: 'out-of-band'` (default for `createEmailOutlet()`) — token is NOT returned to the caller; the outlet delivers it via its own channel (email link, SMS, etc.).
+
+Any custom outlet whose resumer is a different principal than the HTTP caller MUST declare `'out-of-band'`, otherwise the caller receives a token they shouldn't have — a privilege escalation vector.
 
 ## State Strategies
 
 A state strategy controls how paused workflow state is persisted and retrieved. Two strategies are provided.
+
+::: danger Selection rule
+If the flow has any real-world side effect (auth, credentials, money, permissions, invites), use **`HandleStateStrategy`**. It is the only strategy that can enforce single-use tokens. Use **`EncapsulatedStateStrategy`** only when every step is idempotent and replay-within-TTL is harmless.
+:::
 
 ### EncapsulatedStateStrategy
 
@@ -162,11 +178,12 @@ const state = new EncapsulatedStateStrategy({
 ```
 
 **Pros:** Zero infrastructure, horizontally scalable, no cleanup needed.
-**Cons:** Tokens are larger (they contain the full state), cannot be revoked server-side.
+
+**Cons:** Tokens are larger (they contain the full state), cannot be revoked server-side, and — most importantly — **stateless strategies cannot enforce single-use**. `consume()` is a no-op alias for `retrieve()`, so any copy of the token (forwarded email link, logged URL, browser history) remains valid for the full TTL regardless of how many times the workflow was resumed. Do not use for auth, password reset, invite accept, financial operations, or anything else where replay within the TTL window is a problem.
 
 ### HandleStateStrategy
 
-Stores state server-side with an opaque handle as the token. Requires a `WfStateStore` implementation.
+Stores state server-side with an opaque handle as the token. Requires a `WfStateStore` implementation. **Required for security-sensitive flows.**
 
 ```ts
 import { HandleStateStrategy, WfStateStoreMemory } from '@moostjs/event-wf'
@@ -181,8 +198,9 @@ const state = new HandleStateStrategy({
 })
 ```
 
-**Pros:** Small tokens, server-side revocation, true token consumption.
-**Cons:** Requires a persistent store in production.
+**Pros:** Small tokens, server-side revocation, and **truly single-use tokens** via the store's atomic `getAndDelete`. Once the trigger calls `consume()` on a resume, the token is gone — replay of the same `wfs` returns `400`, even if an attacker captured the token in transit or from a forwarded link.
+
+**Cons:** Requires a persistent store in production. In-memory `WfStateStoreMemory` is for dev/testing only — it loses state on restart and does not survive across replicas.
 
 #### Custom Store
 
@@ -229,6 +247,10 @@ this.wf.handleOutlet({
   // ...
 })
 ```
+
+::: warning Shared-storage constraint
+The trigger resolves the strategy at resume time using `wfid` from the request. If the resume request does not carry `wfid` (cookie-only transport, token-only body), the trigger falls back to `state('')`. So **either** every strategy returned by the function must share the same underlying storage (same Redis instance, same `WfStateStore`, same encryption key), **or** every resume request must include `wfid`. Violating this silently breaks single-use invalidation — `consume()` runs against the wrong strategy's storage and the real token stays live.
+:::
 
 ## Outlets
 
@@ -328,6 +350,7 @@ import type { WfOutlet, WfOutletRequest, WfOutletResult } from '@moostjs/event-w
 
 const smsOutlet: WfOutlet = {
   name: 'sms',
+  tokenDelivery: 'out-of-band', // SMS recipient ≠ HTTP caller — do not leak token to the caller
   async deliver(request: WfOutletRequest, token: string): Promise<WfOutletResult | void> {
     await smsService.send({
       to: request.target!,
@@ -407,12 +430,12 @@ import {
   Workflow, WorkflowSchema, Step, WorkflowParam, StepTTL,
   outletHttp, outletEmail, useWfFinished,
   createHttpOutlet, createEmailOutlet,
-  EncapsulatedStateStrategy,
+  HandleStateStrategy, WfStateStoreMemory,
 } from '@moostjs/event-wf'
 
-const stateStrategy = new EncapsulatedStateStrategy({
-  secret: process.env.WF_SECRET!,
-})
+// Auth flows are security-sensitive — HandleStateStrategy gives truly single-use tokens.
+// Use a Redis/database-backed WfStateStore in production (WfStateStoreMemory is dev-only).
+const stateStrategy = new HandleStateStrategy({ store: new WfStateStoreMemory() })
 
 const httpOutlet = createHttpOutlet()
 
@@ -441,7 +464,6 @@ class AuthController {
       allow: ['auth/login', 'auth/recovery'],
       state: stateStrategy,
       outlets: [httpOutlet, emailOutlet],
-      token: { consume: { email: true } },
     })
   }
 

@@ -428,13 +428,17 @@ sendVerification() { return outletEmail(this.ctx.email, 'verify-email', { name: 
 
 ### State Strategies
 
+**Selection rule.** If the flow has any real-world side effect (auth, credentials, money, permissions, invites), use `HandleStateStrategy` — only it can enforce single-use tokens. Use `EncapsulatedStateStrategy` only when every step is idempotent and replay-within-TTL is harmless.
+
 **`EncapsulatedStateStrategy`** -- Encrypt state into a self-contained token (stateless):
 
 ```ts
 const strategy = new EncapsulatedStateStrategy({ secret: process.env.SECRET!, defaultTtl: 3600_000 })
 ```
 
-**`HandleStateStrategy`** -- Store state server-side, return a handle reference:
+Pros: zero infrastructure, horizontally scalable. Cons: **stateless — cannot enforce single-use**. `consume()` is a no-op alias for `retrieve()`, so any copy of the token (forwarded email link, logged URL, browser history) stays valid for the full TTL. Do NOT use for auth, password reset, invite accept, or financial operations.
+
+**`HandleStateStrategy`** -- Store state server-side, return a handle reference. **Required for security-sensitive flows.**
 
 ```ts
 const strategy = new HandleStateStrategy({
@@ -444,9 +448,13 @@ const strategy = new HandleStateStrategy({
 })
 ```
 
+Pros: truly single-use tokens via atomic `getAndDelete`, server-side revocation, small tokens. Cons: requires persistent store in production (`WfStateStoreMemory` is dev-only — loses state on restart, does not survive across replicas).
+
 **`WfStateStoreMemory`** -- In-memory `WfStateStore` for dev/testing. Interface: `set()`, `get()`, `delete()`, `getAndDelete()`, `cleanup?()`.
 
 All strategies implement `WfStateStrategy`: `persist(state, { ttl? })`, `retrieve(token)`, `consume(token)`.
+
+**Per-workflow strategies (shared-storage constraint).** When `state` is a function `(wfid) => WfStateStrategy`, the trigger resolves the strategy using `wfid` from the request. If `wfid` is absent (cookie-only transport, token-only body), it falls back to `state('')`. Either every returned strategy MUST share the same underlying storage (same Redis, same `WfStateStore`, same encryption key), OR every resume request MUST include `wfid`. Violating this silently breaks single-use invalidation.
 
 ### Trigger Handlers
 
@@ -470,6 +478,12 @@ async triggerWorkflow() {
 **`createHttpOutlet(opts?)`** -- Outlet passing payload as HTTP response. Optional `transform` callback.
 
 **`createEmailOutlet(send)`** -- Outlet delegating to a send function receiving `{ target, template, context, token }`.
+
+### Token Semantics
+
+- **Single-use consume**: every resume calls `strategy.consume(token)` atomically before the step runs. Replay returns `400`. Truly single-use with `HandleStateStrategy`; no-op (replayable within TTL) with `EncapsulatedStateStrategy` — use `HandleStateStrategy` for security-sensitive flows.
+- **Fail-closed on errors**: because consume fires before the step runs, an unexpected throw during resume burns the token with no fresh replacement — the user restarts the workflow. Handle expected validation failures (wrong password, invalid input, rate limit) by returning an outlet signal from the step handler instead of throwing; the engine re-pauses and issues a new token.
+- **`tokenDelivery`** on `WfOutlet`: `'caller'` (default, `createHttpOutlet()`) merges token into HTTP response; `'out-of-band'` (default, `createEmailOutlet()`) suppresses body/cookie write so the HTTP caller does not receive the token. Custom outlets whose resumer is a different principal than the HTTP caller (SMS, Slack, webhook) MUST declare `'out-of-band'` — otherwise the caller receives a token they shouldn't have, which is a privilege escalation vector.
 
 ### Outlet Composables
 
@@ -502,10 +516,10 @@ interface WfOutletTokenConfig {
   read?: Array<'body' | 'query' | 'cookie'>  // default: ['body', 'query', 'cookie']
   write?: 'body' | 'cookie'                  // default: 'body'
   name?: string                              // default: 'wfs'
-  consume?: boolean | Record<string, boolean> // default: { email: true }
 }
 interface WfOutlet {
   readonly name: string
+  readonly tokenDelivery?: 'caller' | 'out-of-band'  // default: 'caller'
   deliver(request: WfOutletRequest, token: string): Promise<WfOutletResult | void>
 }
 interface WfOutletRequest<P = unknown> {
@@ -565,7 +579,8 @@ class ApiController {
   async handle() {
     return this.wf.handleOutlet({
       allow: ['onboarding/signup'],
-      state: new EncapsulatedStateStrategy({ secret: process.env.SECRET! }),
+      // Signup + email verification is security-sensitive — use HandleStateStrategy for single-use tokens.
+      state: new HandleStateStrategy({ store: redisStore }),
       outlets: [createHttpOutlet(), createEmailOutlet(sendMail)],
     })
   }
