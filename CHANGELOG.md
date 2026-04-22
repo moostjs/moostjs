@@ -1,3 +1,12 @@
+## [0.6.8](https://github.com/moostjs/moostjs/compare/v0.6.7...v0.6.8) (2026-04-22)
+
+
+### Bug Fixes
+
+* add explicit rootDir for TypeScript 6.0 compatibility ([10d4e6c](https://github.com/moostjs/moostjs/commit/10d4e6c9cd1492b2bb6c4ccfee971d3ee17a532e))
+
+
+
 ## [0.6.7](https://github.com/moostjs/moostjs/compare/v0.6.6...v0.6.7) (2026-04-14)
 
 
