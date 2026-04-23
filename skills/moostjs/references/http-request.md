@@ -1,230 +1,107 @@
 # HTTP Request Data — @moostjs/event-http
 
-Extract data from incoming HTTP requests using resolver decorators.
+Resolver decorators for incoming HTTP requests. All usable as **parameter** or **property** decorator (property form requires `@Injectable('FOR_EVENT')`). Setup/routing: [event-http.md](event-http.md).
 
-For adapter setup and routing, see [event-http.md]. For response control, see [http-response.md].
+- [Table](#table)
+- [@Query](#query)
+- [@Header / @Cookie](#header--cookie)
+- [@Body / @RawBody](#body--rawbody)
+- [@Authorization](#authorization)
+- [@Url / @Method / @ReqId](#url--method--reqid)
+- [@Req / @Res](#req--res)
+- [@Ip / @IpList](#ip--iplist)
+- [Gotchas](#gotchas)
 
-## Resolver decorators
+## Table
 
-All resolver decorators can also be used as **property decorators** on `FOR_EVENT`-scoped controllers.
+| Decorator | Returns | Import |
+|---|---|---|
+| `@Param(name)` | route param | `moost` |
+| `@Params()` | all route params | `moost` |
+| `@Query(name?)` | query value / all | `@moostjs/event-http` |
+| `@Header(name)` | header (case-insensitive) | `@moostjs/event-http` |
+| `@Cookie(name)` | cookie value | `@moostjs/event-http` |
+| `@Body()` | parsed body (JSON/form/text) | `@moostjs/event-http` |
+| `@RawBody()` | raw `Buffer` | `@moostjs/event-http` |
+| `@Authorization(field)` | `'username'`/`'password'`/`'bearer'`/`'raw'`/`'type'` | `@moostjs/event-http` |
+| `@Url()` | URL string | `@moostjs/event-http` |
+| `@Method()` | HTTP method | `@moostjs/event-http` |
+| `@ReqId()` | request UUID | `@moostjs/event-http` |
+| `@Ip(opts?)` | client IP (`{ trustProxy }` for `x-forwarded-for`) | `@moostjs/event-http` |
+| `@IpList()` | full IP chain | `@moostjs/event-http` |
+| `@Req()` | Node `IncomingMessage` | `@moostjs/event-http` |
+| `@Res(opts?)` | Node `ServerResponse` | `@moostjs/event-http` |
 
-### `@Query(name?)`
-
-Extract query parameters. With a name, return a single value; without, return all as an object.
+## @Query
 
 ```ts
-import { Get, Query } from '@moostjs/event-http'
-
 @Get('search')
 search(
-  @Query('q') query: string,                // single param
-  @Query() params: Record<string, string>,   // all params
+  @Query('q') q: string,                    // single
+  @Query() all: Record<string,string>,      // all (undefined if no query present)
 ) {}
-// GET /search?q=moost&limit=10
-// query = 'moost', params = { q: 'moost', limit: '10' }
+// GET /search?q=moost&limit=10 → q='moost', all={q:'moost',limit:'10'}
 ```
 
-- Returns `undefined` if the parameter is missing
-- `@Query()` returns `undefined` (not `{}`) when there are no query params at all
-- Sets metadata: `paramSource: 'QUERY_ITEM'` (named) or `'QUERY'` (all)
+`paramSource`: `'QUERY_ITEM'` (named) or `'QUERY'` (all).
 
-### `@Header(name)`
-
-Extract a request header value.
+## @Header / @Cookie
 
 ```ts
-import { Get, Header } from '@moostjs/event-http'
-
-@Get('test')
-test(@Header('content-type') contentType: string) {}
+@Header('content-type') ct: string
+@Cookie('session') session: string
 ```
 
-Header names are case-insensitive.
-
-### `@Cookie(name)`
-
-Extract a request cookie value.
+## @Body / @RawBody
 
 ```ts
-import { Get, Cookie } from '@moostjs/event-http'
-
-@Get('profile')
-profile(@Cookie('session') session: string) {}
-```
-
-### `@Body()`
-
-Parse and return the request body. Automatically detect JSON, form-encoded, and text content types.
-
-```ts
-import { Post, Body } from '@moostjs/event-http'
-
 @Post('users')
-create(@Body() data: { name: string, email: string }) {}
-```
-
-- Sets metadata: `paramSource: 'BODY'`
-- Uses `@wooksjs/http-body` for parsing
-
-### `@RawBody()`
-
-Get the raw request body as a `Buffer`.
-
-```ts
-import { Post, RawBody } from '@moostjs/event-http'
+create(@Body() data: { name: string; email: string }) {}
 
 @Post('upload')
 upload(@RawBody() raw: Buffer) {}
 ```
 
-### `@Authorization(field)`
+`@Body()` uses `@wooksjs/http-body`, auto-detects JSON / form-encoded / text.
 
-Extract parts of the `Authorization` header.
-
-```ts
-import { Get, Authorization } from '@moostjs/event-http'
-
-@Get('profile')
-profile(
-  @Authorization('bearer') token: string,      // full Authorization header value
-  @Authorization('type') authType: string,     // "Bearer", "Basic", etc.
-  @Authorization('username') user: string,     // from Basic auth
-  @Authorization('password') pass: string,     // from Basic auth
-  @Authorization('raw') credentials: string,   // credentials after scheme prefix
-) {}
-```
-
-Valid fields: `'username'`, `'password'`, `'bearer'`, `'raw'`, `'type'`
-
-### `@Url()`
-
-Get the requested URL string.
+## @Authorization
 
 ```ts
-import { Get, Url } from '@moostjs/event-http'
-
-@Get('info')
-info(@Url() url: string) {}
-// url = '/info?page=1'
+@Authorization('bearer')   token: string      // raw token after "Bearer "
+@Authorization('type')     type: string       // "Bearer" / "Basic" / …
+@Authorization('username') user: string       // Basic auth
+@Authorization('password') pass: string       // Basic auth
+@Authorization('raw')      creds: string      // credentials after scheme prefix
 ```
 
-### `@Method()`
-
-Get the HTTP method string.
+## @Url / @Method / @ReqId
 
 ```ts
-import { All, Method } from '@moostjs/event-http'
-
-@All('proxy')
-proxy(@Method() method: string) {}
-// method = 'GET', 'POST', etc.
+@Url() url: string          // '/info?page=1'
+@Method() method: string    // 'GET'
+@ReqId() id: string         // UUID per request
 ```
 
-### `@Req()`
-
-Get the raw Node.js `IncomingMessage`.
+## @Req / @Res
 
 ```ts
-import { Get, Req } from '@moostjs/event-http'
-import type { IncomingMessage } from 'http'
-
-@Get('raw')
-raw(@Req() request: IncomingMessage) {
-  return { httpVersion: request.httpVersion }
-}
+@Req() request: IncomingMessage
+@Res() res: ServerResponse                          // framework does NOT process return
+@Res({ passthrough: true }) res: ServerResponse     // framework still processes return
 ```
 
-### `@Res(opts?)`
-
-Get the raw Node.js `ServerResponse`. When used, the framework does **not** process the return value.
+## @Ip / @IpList
 
 ```ts
-import { Get, Res } from '@moostjs/event-http'
-import type { ServerResponse } from 'http'
-
-@Get('raw')
-raw(@Res() res: ServerResponse) {
-  res.writeHead(200, { 'content-type': 'text/plain' })
-  res.end('Manual response')
-}
+@Ip() ip: string
+@Ip({ trustProxy: true }) realIp: string   // considers x-forwarded-for
+@IpList() all: string[]
 ```
-
-Pass `{ passthrough: true }` to get the raw response but still let the framework handle the return value:
-
-```ts
-@Get('hybrid')
-hybrid(@Res({ passthrough: true }) res: ServerResponse) {
-  res.setHeader('x-custom', 'value')
-  return { data: 'processed by framework' }
-}
-```
-
-### `@ReqId()`
-
-Get the unique request UUID.
-
-```ts
-import { Get, ReqId } from '@moostjs/event-http'
-
-@Get('test')
-test(@ReqId() requestId: string) {}
-```
-
-### `@Ip(opts?)`
-
-Get the client IP address.
-
-```ts
-import { Get, Ip } from '@moostjs/event-http'
-
-@Get('client')
-client(
-  @Ip() ip: string,                          // direct client IP
-  @Ip({ trustProxy: true }) realIp: string,  // considers x-forwarded-for
-) {}
-```
-
-### `@IpList()`
-
-Get the full IP address chain.
-
-```ts
-import { Get, IpList } from '@moostjs/event-http'
-
-@Get('client')
-client(@IpList() allIps: string[]) {}
-```
-
-## Decorator summary table
-
-| Decorator | Returns | Import |
-|-----------|---------|--------|
-| `@Param(name)` | Route parameter | `moost` |
-| `@Params()` | All route params | `moost` |
-| `@Query(name?)` | Query param(s) | `@moostjs/event-http` |
-| `@Header(name)` | Header value | `@moostjs/event-http` |
-| `@Cookie(name)` | Cookie value | `@moostjs/event-http` |
-| `@Body()` | Parsed body | `@moostjs/event-http` |
-| `@RawBody()` | Raw Buffer | `@moostjs/event-http` |
-| `@Authorization(field)` | Auth field | `@moostjs/event-http` |
-| `@Url()` | URL string | `@moostjs/event-http` |
-| `@Method()` | HTTP method | `@moostjs/event-http` |
-| `@ReqId()` | Request UUID | `@moostjs/event-http` |
-| `@Ip(opts?)` | Client IP | `@moostjs/event-http` |
-| `@IpList()` | IP chain | `@moostjs/event-http` |
-| `@Req()` | IncomingMessage | `@moostjs/event-http` |
-| `@Res(opts?)` | ServerResponse | `@moostjs/event-http` |
-
-## Best practices
-
-- Use `@Authorization()` for quick header parsing; use `@Authenticate()` guards for production auth (see [http-auth.md])
-- Prefer `@Body()` over `@RawBody()` unless you need the raw bytes
-- Query values are always strings — use pipes to transform to numbers or other types
-- Use `@Ip({ trustProxy: true })` behind reverse proxies to get the real client IP
 
 ## Gotchas
 
-- `@Query('name')` returns `undefined` when the parameter is missing (not `null` or empty string)
-- `@Query()` (all params) returns `undefined` when there are no query params, not an empty object
-- `@Res()` without `passthrough` takes over the response — the handler's return value is ignored
-- `@Param` and `@Params` are imported from `moost`, not from `@moostjs/event-http`
+- `@Query('name')` → `undefined` when missing (not `null` / empty string).
+- `@Res()` without `passthrough` suppresses handler-return processing entirely.
+- Query / param / header values are always strings — coerce via pipes.
+- `@Param` / `@Params` are from `moost`, the rest from `@moostjs/event-http`.
+- Property-form resolvers require `@Injectable('FOR_EVENT')` (or a `FOR_EVENT` controller).

@@ -1,49 +1,34 @@
 # Workflow Adapter — @moostjs/event-wf
 
-Moost adapter for multi-step workflow processes, wrapping @wooksjs/event-wf and @prostojs/wf.
+Moost adapter over `@wooksjs/event-wf` + `@prostojs/wf` for multi-step workflows with pause/resume, schemas, and HTTP/email outlets.
 
-## Table of Contents
+- [Concepts](#concepts)
+- [MoostWf](#moostwf)
+- [Decorators & composables](#decorators--composables)
+- [Schemas & flow control](#schemas--flow-control)
+- [Start / resume / TFlowOutput](#start--resume--tflowoutput)
+- [Error handling](#error-handling)
+- [Spies](#spies)
+- [Outlets](#outlets)
+- [Integration (HTTP / CLI)](#integration-http--cli)
+- [Gotchas](#gotchas)
 
-1. [Setup & Concepts](#setup--concepts)
-2. [Decorators & Composables](#decorators--composables)
-3. [Schemas & Flow Control](#schemas--flow-control)
-4. [Execution & Lifecycle](#execution--lifecycle)
-5. [Outlets](#outlets)
-6. [Integration](#integration)
-7. [Best Practices](#best-practices)
-8. [Gotchas](#gotchas)
+## Concepts
 
-## Setup & Concepts
+- **Step** — method with `@Step('id')`; reads/mutates shared context.
+- **Schema** — array defining execution order, conditions, loops.
+- **Context** — typed shared state across steps.
+- **Workflow entry** — `@Workflow('id')` + `@WorkflowSchema<T>([...])`.
+- **`TFlowOutput`** — result of `start()`/`resume()`: finished | paused (resume) | failed (retry).
 
-### Key Abstractions
-
-- **Steps** -- Controller methods decorated with `@Step` that read/write shared context.
-- **Schemas** -- Declarative arrays defining execution order, conditions, and loops.
-- **Context** -- A typed object holding shared state across all steps in a workflow.
-- **MoostWf** -- The adapter class bridging `@wooksjs/event-wf` into Moost's decorator/DI system.
-- **TFlowOutput** -- The result object from `start()`/`resume()` containing state, completion status, and resume functions.
-
-Use workflows when a process has multiple stages, needs branching, can be interrupted for external input, requires auditability, or spans time.
-
-### Installation
-
-```bash
-pnpm add @moostjs/event-wf
-```
-
-Peer dependencies: `moost`, `@wooksjs/event-core`, `@prostojs/infact`, `@prostojs/mate`, `wooks`.
-
-### Getting Started
+Use workflows for multi-stage processes needing branching, pause for external input, auditability, or time-spanning execution.
 
 ```ts
-import { Controller, Injectable, Moost } from 'moost'
-import { MoostWf, Step, Workflow, WorkflowParam, WorkflowSchema } from '@moostjs/event-wf'
-
-interface TOrderCtx { orderId: string, validated: boolean, charged: boolean }
+interface TOrderCtx { orderId: string; validated: boolean; charged: boolean }
 
 @Injectable('FOR_EVENT')
 @Controller()
-class OrderController {
+class OrderCtrl {
   @WorkflowParam('context') ctx!: TOrderCtx
   @Workflow('process-order')
   @WorkflowSchema<TOrderCtx>(['validate', 'charge'])
@@ -55,136 +40,74 @@ class OrderController {
 const app = new Moost()
 const wf = new MoostWf()
 app.adapter(wf)
-app.registerControllers(OrderController)
+app.registerControllers(OrderCtrl)
 await app.init()
 const result = await wf.start('process-order', { orderId: 'ORD-001', validated: false, charged: false })
-// result.finished === true
 ```
 
-### MoostWf Constructor
+## MoostWf
 
 ```ts
 new MoostWf<T, IR>(opts?: WooksWf<T, IR> | TWooksWfOptions, debug?: boolean)
 ```
 
-Pass an existing `WooksWf` instance, a config object, or nothing for defaults. Set `debug` to enable error logging.
+`TWooksWfOptions`: `onError`, `onNotFound`, `onUnknownFlow`, `logger`, `eventOptions`, `router`.
 
-| TWooksWfOptions Field | Type | Description |
-|---|---|---|
-| `onError` | `(e: Error) => void` | Global error handler |
-| `onNotFound` | `TWooksHandler` | Handler for unregistered steps |
-| `onUnknownFlow` | `(schemaId, raiseError) => unknown` | Handler for unknown workflow schemas |
-| `logger` | `TConsoleBase` | Custom logger instance |
-| `eventOptions` | `EventContextOptions` | Event context configuration |
-| `router` | `TWooksOptions['router']` | Router configuration |
+Adapter name is `'workflow'`.
 
-### Lifecycle
-
-1. `app.adapter(wf)` -- register the adapter
-2. `app.registerControllers(...)` -- register controllers
-3. `app.init()` -- process decorators, bind `@Step`/`@Workflow` handlers
-4. `wf.start(schemaId, context)` -- start workflow execution
-5. Steps execute in sequence, reading/mutating shared context
-6. Workflow completes or pauses (if a step needs input)
-
-## Decorators & Composables
+## Decorators & composables
 
 ### `@Step(path?)`
 
-Mark a method as a workflow step handler. `path` defaults to the method name. Supports parametric paths resolved via the Wooks router:
+Method = step handler. Path = method name by default. Parametric paths resolve via Wooks router:
 
 ```ts
-@Step('validate')
-validate(@WorkflowParam('context') ctx: TCtx) { ctx.validated = true }
-
 @Step('notify/:channel(email|sms)')
-notify(@Param('channel') channel: 'email' | 'sms') { /* schema: { id: 'notify/email' } */ }
+notify(@Param('channel') c: 'email' | 'sms') {}
+// schema reference: { id: 'notify/email' }
 ```
 
 ### `@Workflow(path?)` + `@WorkflowSchema<T>(schema)`
 
-Mark a method as workflow entry point and attach a step sequence. The effective schema ID combines controller prefix + workflow path (`@Controller('admin')` + `@Workflow('order')` = `admin/order`):
-
-```ts
-@Workflow('order-processing')
-@WorkflowSchema<TOrderCtx>(['validate', 'charge', 'ship'])
-processOrder() {}
-```
-
-### `WorkflowParam(name)`
-
-Parameter and property decorator injecting workflow runtime values:
-
-| Name | Type | Description |
-|---|---|---|
-| `'context'` | `T` | Shared workflow context object |
-| `'input'` | `I \| undefined` | Input passed to `start()` or `resume()` |
-| `'stepId'` | `string \| null` | Current step ID (`null` in entry point) |
-| `'schemaId'` | `string` | Active workflow schema identifier |
-| `'indexes'` | `number[] \| undefined` | Current position in nested schemas |
-| `'resume'` | `boolean` | `true` when resuming, `false` on first run |
-| `'state'` | `object` | Full state object from `useWfState()` |
-
-As method parameter or class property (class properties require `@Injectable('FOR_EVENT')`):
-
-```ts
-@Step('process')
-process(@WorkflowParam('context') ctx: TCtx, @WorkflowParam('input') input?: TInput) { ... }
-
-// Or as class property:
-@Injectable('FOR_EVENT')
-@Controller()
-export class MyCtrl {
-  @WorkflowParam('context') ctx!: TCtx
-  @Step('review') review() { this.ctx.status = 'reviewed' }
-}
-```
+Workflow entry. Effective schema ID = controller prefix + workflow path (e.g. `@Controller('admin')` + `@Workflow('order')` = `admin/order`).
 
 ### `@StepTTL(ttlMs)`
 
-Set TTL (ms) for paused workflow state when this step returns `inputRequired`. The adapter sets `expires` on the output:
+Set TTL for paused state when this step returns `inputRequired`. Adapter wraps the step handler to set `expires` on the outlet signal (passed to `strategy.persist(state, { ttl })`).
 
-```ts
-@Step('send-invite')
-@StepTTL(60 * 60 * 1000)
-sendInvite() { return outletEmail(this.ctx.email, 'invite') }
-```
+### `WorkflowParam(name)` (param or property)
+
+| name | type |
+|---|---|
+| `'context'` | `T` — shared context |
+| `'input'` | `I \| undefined` — from `start()`/`resume()` |
+| `'stepId'` | `string \| null` (null in entry) |
+| `'schemaId'` | `string` |
+| `'indexes'` | `number[] \| undefined` |
+| `'resume'` | `boolean` (true when resuming) |
+| `'state'` | full `useWfState()` object |
+
+Property form requires `@Injectable('FOR_EVENT')`.
 
 ### `useWfState()`
 
-Composable returning current workflow execution state. Prefer `@WorkflowParam` in most cases:
-
-```ts
-const state = useWfState()
-state.ctx<T>()    // workflow context
-state.input<I>()  // step input (or undefined)
-state.schemaId    // workflow schema ID
-state.stepId()    // current step ID (or null)
-state.indexes     // position in nested schemas
-state.resume      // boolean: is this a resume?
-```
+Alternative to `@WorkflowParam`: returns `{ ctx<T>(), input<I>(), schemaId, stepId(), indexes, resume }`.
 
 ### `wfKind`
 
-Event kind marker for workflow events. Use for event-type-aware logic.
+Event kind marker for workflow events.
 
-### Pattern: Reusing Steps Across Workflows
+## Schemas & flow control
 
-Steps are resolved by path through the Wooks router. Any workflow schema can reference any registered step from any controller.
-
-## Schemas & Flow Control
-
-### Linear Schemas
-
-A flat list of step IDs runs in order:
+### Linear
 
 ```ts
 @WorkflowSchema(['build', 'test', 'publish'])
 ```
 
-### Conditional Steps
+### Conditional
 
-Use function conditions for type safety or string conditions for serializability:
+Function condition (type-safe) or string condition (serializable). String conditions use `new Function()` + `with(ctx)` — context props available directly: `'amount > 100'`.
 
 ```ts
 @WorkflowSchema<TCtx>([
@@ -194,43 +117,30 @@ Use function conditions for type safety or string conditions for serializability
 ])
 ```
 
-String conditions are evaluated with `new Function()` using `with(ctx)` scope. Context properties are accessed directly: `'amount > 100'`, `'status === "active"'`.
-
 ### Loops
 
-Use `while` with a nested `steps` array. `break` exits the loop, `continue` skips to next iteration. Both accept function or string conditions:
+`while` with nested `steps`. `break` / `continue` accept function or string:
 
 ```ts
 @WorkflowSchema<TCtx>([
-  {
-    while: 'running',
-    steps: [
-      'check-temperature',
-      { break: 'temperature > safeLimit' },
-      'process-batch',
-      { continue: 'skipCooling' },
-      'cool-down',
-    ],
-  },
+  { while: 'running', steps: [
+    'check-temperature',
+    { break:    'temperature > safeLimit' },
+    'process-batch',
+    { continue: 'skipCooling' },
+    'cool-down',
+  ]},
   'shutdown',
 ])
 ```
 
-### Nested Sub-Workflows
-
-Group steps with `steps` array without `while` to apply a shared condition:
+### Nested sub-workflows (shared condition)
 
 ```ts
-@WorkflowSchema<TCtx>([
-  'prepare',
-  { condition: (ctx) => ctx.size > 1000, steps: ['segment', 'schedule', 'warm-up'] },
-  'send',
-])
+{ condition: (ctx) => ctx.size > 1000, steps: ['segment', 'schedule', 'warm-up'] }
 ```
 
-### Input in Schema
-
-Pass input to a step directly. The step receives it via `@WorkflowParam('input')`:
+### Inline input
 
 ```ts
 @WorkflowSchema([
@@ -239,22 +149,14 @@ Pass input to a step directly. The step receives it via `@WorkflowParam('input')
 ])
 ```
 
-### Schema Type Reference
-
-| Form | Description |
-|---|---|
-| `'stepId'` | Run unconditionally |
-| `{ id, condition?, input? }` | Step with optional condition/input |
-| `{ steps, condition?, while? }` | Nested group or loop |
-| `{ break: fn \| string }` | Exit enclosing loop |
-| `{ continue: fn \| string }` | Skip to next iteration |
-
-### TypeScript Types
+### Schema types
 
 ```ts
 type TWorkflowSchema<T> = TWorkflowItem<T>[]
-type TWorkflowItem<T> = string | TWorkflowStepSchemaObj<T, any>
-  | TSubWorkflowSchemaObj<T> | TWorkflowControl<T>
+type TWorkflowItem<T> = string
+  | TWorkflowStepSchemaObj<T, any>
+  | TSubWorkflowSchemaObj<T>
+  | TWorkflowControl<T>
 
 interface TWorkflowStepSchemaObj<T, I> {
   id: string
@@ -264,201 +166,145 @@ interface TWorkflowStepSchemaObj<T, I> {
 interface TSubWorkflowSchemaObj<T> {
   steps: TWorkflowSchema<T>
   condition?: string | ((ctx: T) => boolean | Promise<boolean>)
-  while?: string | ((ctx: T) => boolean | Promise<boolean>)
+  while?:     string | ((ctx: T) => boolean | Promise<boolean>)
 }
 type TWorkflowControl<T> =
+  | { break:    string | ((ctx: T) => boolean | Promise<boolean>) }
   | { continue: string | ((ctx: T) => boolean | Promise<boolean>) }
-  | { break: string | ((ctx: T) => boolean | Promise<boolean>) }
 ```
 
-## Execution & Lifecycle
-
-### `wf.start<I>(schemaId, initialContext, input?)`
-
-Start a new workflow. `schemaId` matches `@Workflow` path (including controller prefix). Returns `Promise<TFlowOutput<T, I, IR>>`.
-
-### `wf.resume<I>(state, input?)`
-
-Resume a paused workflow. `state` is the state object from `TFlowOutput.state`.
-
-### `wf.attachSpy<I>(fn)` / `wf.detachSpy<I>(fn)`
-
-Observe step executions. `attachSpy` returns a detach function. The callback receives internal spy data (not the same as `TFlowOutput`):
+## Start / resume / TFlowOutput
 
 ```ts
-const detach = wf.attachSpy((event, eventOutput, spyData, ms) => {
-  // spyData has: stepId, state, finished, interrupt, etc. (internal TFlowSpyData type)
-  console.log(`[${event}] step=${spyData.stepId} (${ms}ms)`)
-})
+wf.start<I>(schemaId, initialContext, input?): Promise<TFlowOutput<T, I, IR>>
+wf.resume<I>(state, input?):                    Promise<TFlowOutput<T, I, IR>>
 ```
 
-### TFlowOutput (discriminated union)
-
 ```ts
-type TFlowOutput<T, I, IR> = TFlowFinished<T, IR> | TFlowPaused<T, I, IR> | TFlowFailed<T, I, IR>
+type TFlowOutput<T, I, IR> =
+  | TFlowFinished<T, IR>
+  | TFlowPaused<T, I, IR>
+  | TFlowFailed<T, I, IR>
 
 interface TFlowState<T> {
-  schemaId: string, context: T, indexes: number[], meta?: Record<string, unknown>
+  schemaId: string; context: T; indexes: number[]; meta?: Record<string, unknown>
 }
-
-// Completed successfully
 interface TFlowFinished<T, _IR> {
-  finished: true
-  state: TFlowState<T>
-  stepId: string
-  // resume, retry, error, inputRequired, expires are `never`
+  finished: true; state: TFlowState<T>; stepId: string
 }
-
-// Paused — needs input to continue
 interface TFlowPaused<T, I, IR> {
-  finished: false
-  state: TFlowState<T>
-  stepId: string
-  inputRequired: IR                                    // what the step needs
+  finished: false; state: TFlowState<T>; stepId: string
+  inputRequired: IR
   resume: (input: I) => Promise<TFlowOutput<T, unknown, IR>>
-  expires?: number                                     // TTL timestamp (informational)
-  errorList?: unknown
-}
-
-// Failed — retriable via StepRetriableError
-interface TFlowFailed<T, I, IR> {
-  finished: false
-  state: TFlowState<T>
-  stepId: string
-  error: Error
-  retry: (input?: I) => Promise<TFlowOutput<T, unknown, IR>>
-  inputRequired?: IR
   expires?: number
   errorList?: unknown
 }
+interface TFlowFailed<T, I, IR> {
+  finished: false; state: TFlowState<T>; stepId: string
+  error: Error
+  retry: (input?: I) => Promise<TFlowOutput<T, unknown, IR>>
+  inputRequired?: IR; expires?: number; errorList?: unknown
+}
 ```
 
-- `finished: true` -- completed. `finished: false` + `inputRequired` -- paused (resume). `finished: false` + `error` -- retriable (retry). Regular (non-retriable) errors reject the promise.
+### Pause & resume
 
-### Pause & Resume
-
-Return `{ inputRequired: ... }` from a step to pause. The value can be anything (boolean, form schema, etc.):
+Return `{ inputRequired: ... }` from a step to pause (value is anything — form schema, enum, …):
 
 ```ts
 @Step('collect-address')
-collectAddress(@WorkflowParam('input') input?: TAddress, @WorkflowParam('context') ctx: TCtx) {
+collectAddress(@WorkflowParam('input') input?: TAddr, @WorkflowParam('context') ctx: TCtx) {
   if (!input) return { inputRequired: { fields: ['street', 'city'] } }
   ctx.address = input
 }
 ```
 
-Resume with the convenience function or from stored state:
+Resume:
 
 ```ts
-// Convenience
-if (result.resume) await result.resume({ street: '123 Main St' })
-
-// From stored state
-const resumed = await wf.resume(savedState, userInput)
-
-// Multi-step
-let r = await wf.start('registration', {})
-r = await wf.resume(r.state, { name: 'Alice' })
-r = await wf.resume(r.state, { email: 'a@b.com' })
+if (!result.finished) await result.resume({ street: '123 Main St' })
+// or cross-process:
+const r2 = await wf.resume(savedState, userInput)
 ```
 
-**Expiration:** Use `@StepTTL(ms)` or return `{ inputRequired: ..., expires: Date.now() + ttl }`. The engine provides the value; your application enforces it.
+**Expiration.** `@StepTTL(ms)` or return `{ inputRequired, expires: Date.now() + ttl }`. Informational — the engine does NOT enforce it; your app must reject stale resumes.
 
-### Error Handling
+## Error handling
 
-**Regular errors** fail the workflow immediately (no retry). **StepRetriableError** pauses instead:
+- **Regular `Error`** → rejects the promise (no retry, not captured in output).
+- **`StepRetriableError`** → produces `finished: false` + `error` + `retry()`.
 
 ```ts
-import { StepRetriableError } from '@moostjs/event-wf'
-
 @Step('charge-card')
-chargeCard(@WorkflowParam('input') input?: TPayment) {
+charge(@WorkflowParam('input') input?: TPayment) {
   try { processPayment(input) }
   catch (e) {
     throw new StepRetriableError(e as Error, [{ code: 'DECLINED' }], { type: 'payment-form' })
+    // new StepRetriableError(originalError, errorList?, inputRequired?, expires?)
   }
 }
-// Constructor: new StepRetriableError(originalError, errorList?, inputRequired?, expires?)
-// Retry: result.retry(newInput) or wf.resume(result.state, newInput)
 ```
 
-| Scenario | Approach |
+| Scenario | Use |
 |---|---|
-| Programming bug, invalid config | `throw new Error(...)` |
-| External service unavailable | `throw new StepRetriableError(...)` |
-| User input fails validation | `StepRetriableError` with `errorList` + `inputRequired` |
+| Bug, invalid config | `Error` |
+| External service down | `StepRetriableError` |
+| User validation failure | `StepRetriableError` with `errorList` + `inputRequired` |
 | Rate limit hit | `StepRetriableError` with `expires` |
 
-### Spy Events
-
-| Event | When | eventOutput |
-|---|---|---|
-| `'workflow-start'` / `'workflow-end'` | Begin / complete | `undefined` |
-| `'workflow-interrupt'` | Pause | `undefined` |
-| `'subflow-start'` / `'subflow-end'` | Nested sub-workflow | `undefined` |
-| `'step'` | Step finishes | Step ID (string) |
-| `'eval-condition-fn'` | Condition evaluated | `{ fn, result }` |
-| `'eval-while-cond'` | Loop condition | `{ fn, result }` |
-| `'eval-break-fn'` / `'eval-continue-fn'` | Break/continue condition | `{ fn, result }` |
-
-## Outlets
-
-Outlets are delivery channels for pause/resume interactions. When a step pauses, an outlet handles delivery (HTTP response, email) and later accepts the resume trigger.
-
-### Outlet Signal Helpers
-
-Return from step handlers to pause and trigger a specific outlet:
+## Spies
 
 ```ts
-outlet(name, data?)                      // generic outlet signal
-outletHttp(payload, context?)            // pause, return payload as HTTP response
-outletEmail(target, template, context?)  // pause, trigger email delivery
-```
-
-```ts
-@Step('collect-info')
-collectInfo(@WorkflowParam('input') input?: TForm) {
-  if (!input) return outletHttp({ fields: ['email', 'name'] })
-}
-
-@Step('send-verification')
-@StepTTL(24 * 60 * 60 * 1000)
-sendVerification() { return outletEmail(this.ctx.email, 'verify-email', { name: this.ctx.name }) }
-```
-
-### State Strategies
-
-**Selection rule.** If the flow has any real-world side effect (auth, credentials, money, permissions, invites), use `HandleStateStrategy` — only it can enforce single-use tokens. Use `EncapsulatedStateStrategy` only when every step is idempotent and replay-within-TTL is harmless.
-
-**`EncapsulatedStateStrategy`** -- Encrypt state into a self-contained token (stateless):
-
-```ts
-const strategy = new EncapsulatedStateStrategy({ secret: process.env.SECRET!, defaultTtl: 3600_000 })
-```
-
-Pros: zero infrastructure, horizontally scalable. Cons: **stateless — cannot enforce single-use**. `consume()` is a no-op alias for `retrieve()`, so any copy of the token (forwarded email link, logged URL, browser history) stays valid for the full TTL. Do NOT use for auth, password reset, invite accept, or financial operations.
-
-**`HandleStateStrategy`** -- Store state server-side, return a handle reference. **Required for security-sensitive flows.**
-
-```ts
-const strategy = new HandleStateStrategy({
-  store: new WfStateStoreMemory(),  // or custom WfStateStore
-  defaultTtl: 3600_000,
-  generateHandle: () => crypto.randomUUID(),
+const detach = wf.attachSpy((event, eventOutput, spyData, ms) => {
+  console.log(`[${event}] step=${spyData.stepId} (${ms}ms)`)
 })
 ```
 
-Pros: truly single-use tokens via atomic `getAndDelete`, server-side revocation, small tokens. Cons: requires persistent store in production (`WfStateStoreMemory` is dev-only — loses state on restart, does not survive across replicas).
+Events: `workflow-start`, `workflow-end`, `workflow-interrupt`, `subflow-start`, `subflow-end`, `step` (eventOutput = stepId), `eval-condition-fn` / `eval-while-cond` / `eval-break-fn` / `eval-continue-fn` (eventOutput = `{ fn, result }`).
 
-**`WfStateStoreMemory`** -- In-memory `WfStateStore` for dev/testing. Interface: `set()`, `get()`, `delete()`, `getAndDelete()`, `cleanup?()`.
+## Outlets
 
-All strategies implement `WfStateStrategy`: `persist(state, { ttl? })`, `retrieve(token)`, `consume(token)`.
+Delivery channels for pause/resume. When a step pauses, an outlet delivers payload (HTTP response, email) and accepts the resume trigger.
 
-**Per-workflow strategies (shared-storage constraint).** When `state` is a function `(wfid) => WfStateStrategy`, the trigger resolves the strategy using `wfid` from the request. If `wfid` is absent (cookie-only transport, token-only body), it falls back to `state('')`. Either every returned strategy MUST share the same underlying storage (same Redis, same `WfStateStore`, same encryption key), OR every resume request MUST include `wfid`. Violating this silently breaks single-use invalidation.
+### Signal helpers — return from step to pause + trigger outlet
 
-### Trigger Handlers
+```ts
+outlet(name, data?)                      // generic
+outletHttp(payload, context?)            // pause, reply over HTTP
+outletEmail(target, template, context?)  // pause, trigger email
+```
 
-**`wf.handleOutlet(config)`** -- Handle an outlet trigger within an HTTP handler. Reads `wfid`/`wfs` from request, starts or resumes workflow, dispatches pauses to outlets:
+### State strategies
+
+**Selection rule.** Any flow with real-world side effects (auth, credentials, money, permissions, invites) MUST use `HandleStateStrategy` — only it enforces single-use tokens. Use `EncapsulatedStateStrategy` only when every step is idempotent and replay-within-TTL is harmless.
+
+**`EncapsulatedStateStrategy`** — encrypts state into a self-contained token (stateless).
+
+```ts
+new EncapsulatedStateStrategy({ secret: process.env.SECRET!, defaultTtl: 3_600_000 })
+```
+Pros: zero infra, scales horizontally. Cons: **stateless — cannot enforce single-use** (`consume()` is a no-op alias for `retrieve()`). NOT for auth / password reset / invite accept / financial ops.
+
+**`HandleStateStrategy`** — state server-side, token is a handle.
+
+```ts
+new HandleStateStrategy({
+  store: new WfStateStoreMemory(),    // or custom WfStateStore
+  defaultTtl: 3_600_000,
+  generateHandle: () => crypto.randomUUID(),
+})
+```
+Pros: truly single-use (atomic `getAndDelete`), server-side revocation. Cons: needs persistent store in production (`WfStateStoreMemory` is dev-only — loses state on restart).
+
+**`WfStateStoreMemory`** — in-memory store for dev/testing. `WfStateStore` interface: `set`, `get`, `delete`, `getAndDelete`, `cleanup?`.
+
+All strategies implement `WfStateStrategy`: `persist(state, { ttl? }): token`, `retrieve(token)`, `consume(token)`.
+
+**Per-workflow strategies (shared-storage constraint).** When `state` is a function `(wfid) => WfStateStrategy`, the trigger resolves it using `wfid` from the request; absent `wfid` falls back to `state('')`. Either all returned strategies MUST share the same underlying storage (same Redis, same `WfStateStore`, same encryption key) OR every resume MUST include `wfid`. Violating this silently breaks single-use invalidation.
+
+### Trigger handlers
+
+**`wf.handleOutlet(config)`** — call inside an HTTP handler. Reads `wfid`/`wfs` from request, starts or resumes, dispatches pauses to outlets.
 
 ```ts
 @Post('workflow')
@@ -473,83 +319,73 @@ async triggerWorkflow() {
 }
 ```
 
-**`createOutletHandler(wfApp)`** -- Pre-wired handler from MoostWf/WooksWf instance.
+**`createOutletHandler(wfApp)`** — pre-wired handler factory.
 
-**`createHttpOutlet(opts?)`** -- Outlet passing payload as HTTP response. Optional `transform` callback.
+**`createHttpOutlet(opts?)`** — HTTP outlet (pass payload as response). Optional `transform` callback.
 
-**`createEmailOutlet(send)`** -- Outlet delegating to a send function receiving `{ target, template, context, token }`.
+**`createEmailOutlet(send)`** — delegates to a send function receiving `{ target, template, context, token }`.
 
-### Token Semantics
+### Token semantics
 
-- **Single-use consume**: every resume calls `strategy.consume(token)` atomically before the step runs. Replay returns `400`. Truly single-use with `HandleStateStrategy`; no-op (replayable within TTL) with `EncapsulatedStateStrategy` — use `HandleStateStrategy` for security-sensitive flows.
-- **Fail-closed on errors**: because consume fires before the step runs, an unexpected throw during resume burns the token with no fresh replacement — the user restarts the workflow. Handle expected validation failures (wrong password, invalid input, rate limit) by returning an outlet signal from the step handler instead of throwing; the engine re-pauses and issues a new token.
-- **`tokenDelivery`** on `WfOutlet`: `'caller'` (default, `createHttpOutlet()`) merges token into HTTP response; `'out-of-band'` (default, `createEmailOutlet()`) suppresses body/cookie write so the HTTP caller does not receive the token. Custom outlets whose resumer is a different principal than the HTTP caller (SMS, Slack, webhook) MUST declare `'out-of-band'` — otherwise the caller receives a token they shouldn't have, which is a privilege escalation vector.
+- **Single-use**: every resume calls `strategy.consume(token)` atomically before the step. Replay → 400. Truly single-use with `HandleStateStrategy`; replayable within TTL with `EncapsulatedStateStrategy`.
+- **Fail-closed**: consume fires before the step runs; unexpected throw during resume burns the token with no fresh replacement — user restarts. Handle expected failures (wrong password, invalid input, rate limit) by returning an outlet signal instead of throwing; the engine re-pauses and issues a new token.
+- **`tokenDelivery`** on `WfOutlet`: `'caller'` (default for `createHttpOutlet`) merges token into HTTP response; `'out-of-band'` (default for `createEmailOutlet`) suppresses body/cookie write so the HTTP caller doesn't receive the token. Custom outlets whose resumer is a different principal than the HTTP caller (SMS, Slack, webhook) MUST declare `'out-of-band'` — otherwise it's a privilege escalation vector.
 
-### Outlet Composables
+### Outlet composables
 
-**`useWfOutlet()`** -- Access outlet infrastructure: `getStateStrategy()`, `getOutlets()`, `getOutlet(name)`.
+- **`useWfOutlet()`** — `getStateStrategy()`, `getOutlets()`, `getOutlet(name)`.
+- **`useWfFinished()`** — `.set({ type: 'redirect', value: '/dashboard' })` / `.set({ type: 'data', value, status })` / `.get(): WfFinishedResponse | undefined`.
 
-**`useWfFinished()`** -- Set or read completion response:
-
-```ts
-useWfFinished().set({ type: 'redirect', value: '/dashboard' })
-useWfFinished().set({ type: 'data', value: { success: true }, status: 200 })
-
-// Read a previously set response
-const response = useWfFinished().get()  // WfFinishedResponse | undefined
-```
-
-### Outlet Types
+### Outlet types
 
 ```ts
 interface WfOutletTriggerConfig {
-  allow?: string[]            // whitelist of workflow IDs
-  block?: string[]            // blacklist (checked after allow)
+  allow?: string[]; block?: string[]
   state: WfStateStrategy | ((wfid: string) => WfStateStrategy)
   outlets: WfOutlet[]
   token?: WfOutletTokenConfig
-  wfidName?: string           // default: 'wfid'
+  wfidName?: string  // default 'wfid'
   initialContext?: (body: Record<string, unknown> | undefined, wfid: string) => unknown
-  onFinished?: (ctx: { context: unknown, schemaId: string }) => unknown
+  onFinished?: (ctx: { context: unknown; schemaId: string }) => unknown
 }
 interface WfOutletTokenConfig {
-  read?: Array<'body' | 'query' | 'cookie'>  // default: ['body', 'query', 'cookie']
-  write?: 'body' | 'cookie'                  // default: 'body'
-  name?: string                              // default: 'wfs'
+  read?: Array<'body'|'query'|'cookie'>  // default ['body','query','cookie']
+  write?: 'body' | 'cookie'              // default 'body'
+  name?: string                          // default 'wfs'
 }
 interface WfOutlet {
   readonly name: string
-  readonly tokenDelivery?: 'caller' | 'out-of-band'  // default: 'caller'
-  deliver(request: WfOutletRequest, token: string): Promise<WfOutletResult | void>
+  readonly tokenDelivery?: 'caller' | 'out-of-band'  // default 'caller'
+  deliver(req: WfOutletRequest, token: string): Promise<WfOutletResult | void>
 }
 interface WfOutletRequest<P = unknown> {
-  outlet: string, payload?: P, target?: string, template?: string
+  outlet: string; payload?: P; target?: string; template?: string
   context?: Record<string, unknown>
 }
 interface WfOutletResult {
-  response?: unknown, status?: number
+  response?: unknown; status?: number
   headers?: Record<string, string>
-  cookies?: Record<string, { value: string, options?: Record<string, unknown> }>
+  cookies?: Record<string, { value: string; options?: Record<string, unknown> }>
 }
 interface WfStateStrategy {
   persist(state: WfState, options?: { ttl?: number }): Promise<string>
   retrieve(token: string): Promise<WfState | null>
-  consume(token: string): Promise<WfState | null>
+  consume(token: string):  Promise<WfState | null>
 }
 interface WfStateStore {
   set(handle: string, state: WfState, expiresAt?: number): Promise<void>
-  get(handle: string): Promise<{ state: WfState, expiresAt?: number } | null>
+  get(handle: string): Promise<{ state: WfState; expiresAt?: number } | null>
   delete(handle: string): Promise<void>
-  getAndDelete(handle: string): Promise<{ state: WfState, expiresAt?: number } | null>
+  getAndDelete(handle: string): Promise<{ state: WfState; expiresAt?: number } | null>
   cleanup?(): Promise<number>
 }
 interface WfFinishedResponse {
-  type: 'redirect' | 'data', value: unknown, status?: number
-  cookies?: Record<string, { value: string, options?: Record<string, unknown> }>
+  type: 'redirect' | 'data'; value: unknown; status?: number
+  cookies?: Record<string, { value: string; options?: Record<string, unknown> }>
 }
 ```
 
-### Pattern: Full Outlet Workflow
+### Full outlet example
 
 ```ts
 @Injectable('FOR_EVENT')
@@ -579,7 +415,7 @@ class ApiController {
   async handle() {
     return this.wf.handleOutlet({
       allow: ['onboarding/signup'],
-      // Signup + email verification is security-sensitive — use HandleStateStrategy for single-use tokens.
+      // Security-sensitive — use HandleStateStrategy.
       state: new HandleStateStrategy({ store: redisStore }),
       outlets: [createHttpOutlet(), createEmailOutlet(sendMail)],
     })
@@ -587,83 +423,38 @@ class ApiController {
 }
 ```
 
-## Integration
+## Integration (HTTP / CLI)
 
-### Triggering Workflows from HTTP
-
-Inject `MoostWf` via constructor DI:
+Inject `MoostWf` via constructor DI.
 
 ```ts
 @Controller('tickets')
-export class TicketController {
+class TicketController {
   constructor(private wf: MoostWf<TTicketCtx>) {}
-
-  @Post()
-  async create(@Body() body: { description: string }) {
+  @Post() async create(@Body() body: { description: string }) {
     const result = await this.wf.start('support-ticket', {
       ticketId: generateId(), description: body.description, status: 'new',
     })
     return { finished: result.finished, state: result.finished ? undefined : result.state }
   }
-
-  @Post(':id/resume')
-  async resume(@Body() body: { state: any, input: any }) {
+  @Post(':id/resume') async resume(@Body() body: { state: any; input: any }) {
     return this.wf.resume(body.state, body.input)
   }
 }
 ```
 
-### Triggering Workflows from CLI
-
-```ts
-@Cli('deploy :env')
-async deploy(@Param('env') env: string) {
-  const result = await this.wf.start('deploy', { environment: env })
-  return result.finished ? `Deployed to ${env}` : `Paused: ${JSON.stringify(result.inputRequired)}`
-}
-```
-
-### Multi-Adapter Setup
-
-```ts
-const app = new Moost()
-app.adapter(new MoostHttp()).listen(3000)
-app.adapter(new MoostWf())
-app.registerControllers(HttpCtrl, WfCtrl).init()
-```
-
-### Interceptors, Pipes, and DI
-
-All standard Moost features work on workflow steps:
-
-```ts
-@Step('assign')
-@Intercept(LogStepExecution)  // all priority levels work, including global interceptors
-assign(@WorkflowParam('context') ctx: TCtx) { ctx.assignee = findAgent() }
-
-@Step('process')
-process(@WorkflowParam('input') @Pipe(validateInput) input: TInput) { ... }
-```
-
-DI works normally -- inject services via constructor. Use `@Injectable('FOR_EVENT')` for per-execution instances.
-
-## Best Practices
-
-- Use `@Injectable('FOR_EVENT')` on workflow controllers for fresh instances per step. Without it, class properties leak between concurrent workflows.
-- Keep `@Workflow` entry point method body empty -- all logic belongs in steps.
-- Pass a TypeScript interface as generic to `@WorkflowSchema<T>()` for type-safe conditions.
-- Use function conditions for type safety; string conditions for database-stored schemas.
-- Inject `MoostWf` via constructor DI from HTTP/CLI controllers.
-- Keep spy callbacks lightweight -- they run synchronously.
-- The `state` object is plain JSON -- safe for serialization and storage.
+Standard Moost features work on steps (interceptors, pipes, DI).
 
 ## Gotchas
 
-- `WorkflowParam('resume')` returns a boolean, not a function. The resume *function* is on `TFlowOutput`.
-- Regular errors reject the promise (not captured in output). Only `StepRetriableError` produces `finished: false` + `error` + `retry()`.
-- `expires` is informational -- the engine does not enforce it. Check and reject stale resumes yourself.
-- `result.resume`/`result.retry` are for in-process use. For cross-process, use `wf.resume(state, input)`.
-- String conditions use `new Function()` + `with(ctx)`. Only context properties are available.
-- Call `app.init()` before starting workflows -- steps must be registered first.
-- Step IDs are router paths. `'process/items'` = two segments. Use `'process-items'` for flat IDs.
-- The adapter name is `'workflow'` (`wf.name === 'workflow'`).
+- `@WorkflowParam('resume')` is a **boolean**, not a function. Resume *function* is on `TFlowOutput`.
+- Regular errors reject the promise (not captured in output). Only `StepRetriableError` produces `finished: false` + `retry()`.
+- `expires` is informational — engine doesn't enforce.
+- `result.resume` / `result.retry` are in-process only. For cross-process: `wf.resume(state, input)`.
+- String conditions use `new Function()` + `with(ctx)`; only context props are in scope.
+- Step IDs are router paths: `'process/items'` = two segments.
+- Adapter name is `'workflow'` (`wf.name === 'workflow'`).
+- `@Workflow` entry method body should be empty — all logic in steps.
+- Controllers holding per-workflow state MUST be `@Injectable('FOR_EVENT')`; otherwise class properties leak between concurrent workflows.
+- `app.init()` must complete before calling `wf.start()` — steps are registered during init.
+- `state` object is plain JSON — safe to serialize/store.

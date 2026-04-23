@@ -1,54 +1,49 @@
 # Dependency Injection — moost
 
-> SINGLETON vs FOR_EVENT scopes, injectable classes, provide/inject/replace registries, circular dependencies, and DI container integration.
+Powered by `@prostojs/infact`. Scopes, providers, replacements, circular refs, logger injection.
 
-## Concepts
+- [Scopes](#scopes)
+- [Core decorators](#core-decorators)
+- [Registries](#registries)
+- [Scoped injection](#scoped-injection)
+- [Logger decorators](#logger-decorators)
+- [Patterns](#patterns)
+- [Gotchas](#gotchas)
 
-Moost DI is powered by `@prostojs/infact`, a lightweight dependency injection container. Key concepts:
+## Scopes
 
-1. **Scopes** — `SINGLETON` (one instance per app) or `FOR_EVENT` (one instance per event/request)
-2. **Provide registries** — Map class constructors or string keys to factory functions
-3. **Replace registries** — Substitute one class with another throughout the DI tree
-4. **Auto-wiring** — Constructor parameters and properties are resolved via pipes and metadata
+- `SINGLETON` / `true` — one instance for app lifetime. Instantiated once during `init()` (in a synthetic event context) or on first use.
+- `FOR_EVENT` — fresh instance per event. Requires an active event context. Auto-cleaned when the scope unregisters.
 
-The DI container resolves dependencies by reading `@prostojs/mate` metadata (type info, inject keys, circular refs) and running the pipe pipeline for each parameter and property.
+`@Controller()` implicitly sets `@Injectable(true)` (SINGLETON). Add `@Injectable('FOR_EVENT')` explicitly on controllers that hold per-event state (property-level ref decorators, per-request fields).
 
-## API Reference
+## Core decorators
 
-### @Injectable(scope?)
-
-Mark a class for dependency injection.
-
-```ts
-import { Injectable } from 'moost'
-
-@Injectable()           // SINGLETON (default)
-@Injectable(true)       // SINGLETON
-@Injectable('SINGLETON') // explicit SINGLETON
-@Injectable('FOR_EVENT') // new instance per event
-class MyService {}
-```
-
-Scope behavior:
-- `SINGLETON` / `true` — Single instance shared across all events. Created once during init or first use.
-- `FOR_EVENT` — New instance created for each incoming event. Automatically cleaned up when the event scope ends.
-
-### @Inject(key)
-
-Inject a value from the provide registry by string key or class constructor.
+### `@Injectable(scope?)` — class
 
 ```ts
-class MyController {
-  constructor(
-    @Inject('DATABASE_URL') private dbUrl: string,
-    @Inject(ConfigService) private config: ConfigService,
-  ) {}
-}
+@Injectable()            // SINGLETON (default)
+@Injectable(true)        // SINGLETON
+@Injectable('SINGLETON') // SINGLETON
+@Injectable('FOR_EVENT') // per-event
 ```
 
-### @Provide(type, factory)
+### `@Inject(key)` — param / prop
 
-Define a provide entry on a class. The factory is available to the class and all its nested controllers/children.
+Resolve by string key or class constructor from the provide registry.
+
+```ts
+constructor(
+  @Inject('DATABASE_URL') private url: string,
+  @Inject(ConfigService) private cfg: ConfigService,
+) {}
+// property
+@Inject('CONFIG') config!: AppConfig
+```
+
+### `@Provide(type, factory)` — class / param / prop
+
+Adds a provide entry visible to the class and its `@ImportController` children.
 
 ```ts
 @Provide('DATABASE_URL', () => process.env.DATABASE_URL)
@@ -57,218 +52,87 @@ Define a provide entry on a class. The factory is available to the class and all
 class ApiController {}
 ```
 
-### @Circular(() => Type)
+### `@Replace(from, to)` — class
 
-Break circular dependency references by deferring resolution.
+Substitute one class with another in the subtree. Shorthand for `createReplaceRegistry([from, to])` applied to this class.
 
-```ts
-class ServiceA {
-  constructor(@Circular(() => ServiceB) private b: ServiceB) {}
-}
+### `@Circular(() => Type)` — param only
 
-class ServiceB {
-  constructor(@Circular(() => ServiceA) private a: ServiceA) {}
-}
-```
+Break constructor-parameter cycles by deferring resolution. Not supported on properties.
 
-### createProvideRegistry(...entries)
-
-Create a provide registry from `[key, factory]` pairs.
+## Registries
 
 ```ts
-import { createProvideRegistry } from 'moost'
-
-const registry = createProvideRegistry(
+const provide = createProvideRegistry(
   [ConfigService, () => new ConfigService()],
-  ['API_KEY', () => process.env.API_KEY],
+  ['API_KEY',     () => process.env.API_KEY],
 )
-app.setProvideRegistry(registry)
+app.setProvideRegistry(provide)
+
+const replace = createReplaceRegistry([AbstractRepo, ConcreteRepo])
+app.setReplaceRegistry(replace)
 ```
 
-### createReplaceRegistry(...entries)
+Registries merge — later entries override earlier ones with the same key.
 
-Create a replace registry from `[original, replacement]` pairs.
+## Scoped injection
 
-```ts
-import { createReplaceRegistry } from 'moost'
-
-const registry = createReplaceRegistry(
-  [AbstractRepo, ConcreteRepo],
-)
-app.setReplaceRegistry(registry)
-```
-
-### getMoostInfact()
-
-Return the shared Infact DI container instance. Rarely needed directly — use decorators instead.
+`defineInfactScope(name, vars)` defines a named scope with variables. `@InjectFromScope(name)` pulls an instance from that scope; `@InjectScopeVars(name?)` reads its variables (without name = full vars object).
 
 ```ts
-import { getMoostInfact } from 'moost'
-
-const infact = getMoostInfact()
-// Register a scope manually
-infact.registerScope('my-scope')
-// Unregister when done
-infact.unregisterScope('my-scope')
-```
-
-### @InjectFromScope(name)
-
-Inject an instance from a named scope defined by `defineInfactScope()`.
-
-```ts
-import { InjectFromScope } from 'moost'
-
-class MyHandler {
-  constructor(@InjectFromScope('tenant') private tenantService: TenantService) {}
-}
-```
-
-### @InjectScopeVars(name?)
-
-Inject scope variables defined by `defineInfactScope()`. Without a name argument, returns the full vars object.
-
-### defineInfactScope(name, vars)
-
-Define a named scope with key-value variables.
-
-```ts
-import { defineInfactScope } from 'moost'
-
 defineInfactScope('tenant', { tenantId: 'abc', region: 'us-east' })
+class Handler {
+  constructor(@InjectFromScope('tenant') private svc: TenantService) {}
+}
 ```
 
-### @Replace(originalClass, replacementClass)
-
-Class decorator. Substitute one class with another in the DI tree. The replacement class must be compatible with the original.
+## Logger decorators
 
 ```ts
-import { Replace } from 'moost'
-
-@Replace(AbstractRepo, ConcreteRepo)
-@Controller('api')
-class ApiController {}
-```
-
-Internally uses `createReplaceRegistry`. Equivalent to calling `app.setReplaceRegistry(createReplaceRegistry([AbstractRepo, ConcreteRepo]))` but scoped to the controller hierarchy.
-
-### Logger Decorators
-
-Inject loggers via decorators instead of composables:
-
-```ts
-import { InjectEventLogger, InjectMoostLogger, LoggerTopic } from 'moost'
-import type { Logger } from 'moost'
-
-@LoggerTopic('orders')  // sets default topic for @InjectMoostLogger
-@Controller('orders')
+@LoggerTopic('orders')   // class-level default topic for @InjectMoostLogger
 class OrderController {
-  @InjectEventLogger('orders')  // scoped to the current event context
-  logger!: Logger
-
-  @InjectMoostLogger()          // app-level logger (uses @LoggerTopic or class ID as topic)
-  appLogger!: Logger
-
-  @Get(':id')
-  find(@Param('id') id: string) {
-    this.logger.info(`Finding order ${id}`)  // per-request logger
-    return findOrder(id)
-  }
+  @InjectEventLogger('orders') logger!: Logger   // per-event (useLogger under the hood)
+  @InjectMoostLogger()         appLogger!: Logger // app-level (uses @LoggerTopic or class @Id)
 }
 ```
 
-- `@InjectEventLogger(topic?)` — Resolves via `useLogger()` from the event context. Scoped to the current request/command/message.
-- `@InjectMoostLogger(topic?)` — Resolves the app-level logger from the Moost instance. Uses `@LoggerTopic` value or the class `@Id` as fallback topic.
-- `@LoggerTopic(topic)` — Class/param/property decorator that sets the logger topic in metadata.
+## Patterns
 
-## Common Patterns
-
-### Adapter DI Providers
-
-Adapters expose services to the DI container via `getProvideRegistry()`:
+### Provider from adapter
 
 ```ts
-class MyAdapter implements TMoostAdapter<TMyHandlerMeta> {
+class MyAdapter implements TMoostAdapter<TMeta> {
   name = 'my-adapter'
-
   getProvideRegistry() {
-    return createProvideRegistry(
-      [MyAdapterService, () => this.service],
-      ['ADAPTER_CONFIG', () => this.config],
-    )
+    return createProvideRegistry([MyEngine, () => this.engine])
   }
-
-  // ...
 }
 ```
 
-### Scope Cleanup
-
-FOR_EVENT scoped instances are automatically cleaned up when the event scope is unregistered. For manual scope management (e.g., in custom adapters), use `registerEventScope()`:
+### Replace for tests
 
 ```ts
-import { useScopeId, registerEventScope } from 'moost'
+app.setReplaceRegistry(createReplaceRegistry([DatabaseService, MockDatabaseService]))
+```
 
+### Scoped provide via controller hierarchy
+
+`@Provide` on a parent controller is visible to all `@ImportController` descendants.
+
+### Manual scope (custom adapters)
+
+```ts
 const scopeId = useScopeId()
 const unscope = registerEventScope(scopeId)
 // ... handle event ...
-unscope() // clean up FOR_EVENT instances
+unscope()   // cleans up FOR_EVENT instances
 ```
-
-### Property Injection
-
-Properties decorated with `@Inject` are resolved after construction:
-
-```ts
-@Injectable()
-class MyService {
-  @Inject('CONFIG')
-  config!: AppConfig
-
-  @Inject(Logger)
-  logger!: Logger
-}
-```
-
-### Replacing Services in Tests
-
-Use replace registries to swap implementations:
-
-```ts
-const app = new Moost()
-app.setReplaceRegistry(createReplaceRegistry(
-  [DatabaseService, MockDatabaseService],
-))
-```
-
-### Providing via Controller Hierarchy
-
-`@Provide` on a parent controller makes the value available to all `@ImportController` children:
-
-```ts
-@Provide(DbConnection, () => createConnection('main'))
-@Controller('api')
-@ImportController(UsersController)
-@ImportController(OrdersController)
-class ApiController {}
-```
-
-## Best Practices
-
-- Prefer `SINGLETON` scope unless the service needs per-request state
-- Use `@Inject(key)` for string-keyed providers (config values, tokens)
-- Use constructor injection for type-safe class dependencies
-- Use `@Circular(() => Type)` only when genuinely needed — restructure to avoid cycles when possible
-- Use `createProvideRegistry()` at the app level for cross-cutting concerns
-- Use `@Provide()` on controllers for scoped/hierarchical configuration
 
 ## Gotchas
 
-- `@Controller` auto-sets `@Injectable` — do not add both decorators
-- `@Injectable()` with no argument defaults to `SINGLETON`, not `FOR_EVENT`
-- `FOR_EVENT` instances require an active event context — they cannot be created outside of event processing
-- Singleton controllers are instantiated in a synthetic event context during `init()`, so composables that read event data will not work in constructors
-- The DI container runs pipes for constructor parameters — the resolve pipe must be in the pipeline for `@Inject` to work
-- `@Circular` only works on constructor parameters, not properties
-- Provide registries merge (later entries override earlier ones with the same key)
-- Replace registries affect the entire DI tree — use sparingly
+- `@Injectable()` with no arg = SINGLETON, not FOR_EVENT.
+- SINGLETON constructors run in a synthetic context during `init()` — composables reading event data (`useRequest`, etc.) don't work there.
+- FOR_EVENT requires an active event context — cannot be instantiated outside one.
+- `@Circular` works on params only, not properties.
+- Provide registries merge; replace registries apply tree-wide — use sparingly.
+- The DI container runs pipes when resolving constructor params/properties, so the resolve pipe must be in the pipeline (it is, by default via `sharedPipes`).

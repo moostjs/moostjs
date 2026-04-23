@@ -1,120 +1,86 @@
-# Core Concepts & Setup — moost
+# Core — moost
 
-> Moost application lifecycle, controller registration, adapter attachment, and the mental model for event-driven TypeScript applications.
+Moost lifecycle, controller registration, adapter attachment.
 
-## Scaffolding
+- [Scaffold](#scaffold)
+- [Mental model](#mental-model)
+- [Lifecycle](#lifecycle)
+- [API](#api)
+- [Patterns](#patterns)
+- [Gotchas](#gotchas)
 
-Create a new project with `npm create moost@latest`. The CLI prompts for project name and template.
-
-Available templates:
-- `--http` — HTTP server with `@moostjs/event-http`
-- `--cli` — CLI application with `@moostjs/event-cli`
-- `--ws` — WebSocket server with `@wooksjs/event-ws`
-- `--ssr` — SSR application with `@moostjs/vite`
-- `--wf` — Workflow engine with `@moostjs/event-wf`
-- `--oxc` — Pre-configured with oxlint + oxfmt tooling
+## Scaffold
 
 ```sh
-npm create moost@latest my-app -- --http
+npm create moost@latest [name] -- [flags]
 ```
 
-## Concepts
+Flags (from `create-moost/src/index.ts`):
+- `--http` — HTTP server with `@moostjs/event-http`
+- `--cli` — CLI with `@moostjs/event-cli`
+- `--ws` — WebSocket with `@moostjs/event-ws`
+- `--ssr` — Vue SSR/SPA with `@moostjs/vite`
+- `--wf` — add `@moostjs/event-wf` workflow adapter (combines with `--http`)
+- `--oxc` — oxlint + oxfmt tooling
+- `--force` — overwrite existing directory
 
-Moost is a **metadata-driven event processing framework**. The core mental model:
+Combinations (e.g. `--http --ws --wf`) produce one app with all adapters.
 
-1. **Controllers** — Classes decorated with `@Controller()` that contain handler methods
-2. **Adapters** — Implementations of `TMoostAdapter<H>` that bridge external event sources (HTTP, CLI, WS, etc.) to Moost's handler system
-3. **Handlers** — Methods on controllers decorated with adapter-specific decorators (e.g., `@Get()`, `@Cli()`, `@Message()`) that process events
-4. **Pipes** — Transform/resolve/validate method arguments before handler execution
-5. **Interceptors** — Cross-cutting logic (auth, logging, error handling) wrapping handler execution
+## Mental model
 
-Unlike NestJS, Moost has **no module abstraction** — controllers are registered directly on the Moost instance.
+- **Controllers** — `@Controller()` classes with handler methods
+- **Adapters** — `TMoostAdapter<H>` implementations bridging an event source (HTTP/CLI/WS/WF/…) to handlers
+- **Handlers** — methods decorated with `@Get`/`@Cli`/`@Message`/`@Step`/…
+- **Pipes** — transform/resolve/validate handler args
+- **Interceptors** — cross-cutting before/after/error logic
 
-### Lifecycle
+No module abstraction: controllers register directly on the Moost instance. Moost itself is a controller — decorating methods on a Moost subclass makes them handlers.
+
+## Lifecycle
 
 ```
-app.adapter(adapter)           // 1. Attach adapters
-app.registerControllers(Ctrl)  // 2. Register controller classes
-await app.init()               // 3. Bind all handlers + call adapter.onInit()
-adapter.listen(3000)           // 4. Start listening (adapter-specific)
+new Moost(opts?)               // logger, globalPrefix
+app.adapter(adapter)           // attach (order irrelevant functionally)
+app.registerControllers(...)   // classes, instances, or [prefix, ctrl] tuples
+await app.init()               // async — bind all handlers, call adapter.onInit()
+adapter.listen(3000)           // adapter-specific; may come before or after init()
 ```
 
 During `init()`:
-1. Adapter provide registries are merged into DI
-2. All controller methods are scanned for handler metadata
-3. For each handler, `adapter.bindHandler()` is called with full context
-4. Each adapter's `onInit(moost)` hook fires last
+1. Adapter `getProvideRegistry()` entries merged into DI.
+2. Controller methods scanned for handler metadata.
+3. `adapter.bindHandler(opts)` called per handler.
+4. `adapter.onInit(moost)` called last.
 
-## API Reference
+## API
 
-### Moost (class)
+### `new Moost(opts?: TMoostOptions)`
 
-```ts
-import { Moost } from 'moost'
-const app = new Moost({ globalPrefix?: string, logger?: TConsoleBase })
-```
+- `globalPrefix?: string` — prepended to all event paths
+- `logger?: TConsoleBase` — defaults to console-backed `ProstoLogger`
 
-- `globalPrefix` — Prefix prepended to all event paths across all adapters (e.g., `'api/v1'` makes all routes start with `/api/v1/`).
-- `logger` — Custom logger instance (defaults to a console-based logger).
+### Methods
 
-#### app.adapter\<T\>(a: T): T
+| Method | Notes |
+|---|---|
+| `adapter<T>(a: T): T` | attach adapter; returns the adapter |
+| `registerControllers(...ctrls)` | classes / instances / `[prefix, ctrl]` tuples |
+| `init(): Promise<void>` | must be awaited |
+| `applyGlobalInterceptors(...items)` | class ctors, `TInterceptorDef`, or `TInterceptorData` |
+| `applyGlobalPipes(...pipes)` | `TPipeFn` or `TPipeData` |
+| `setProvideRegistry(reg)` | merges DI providers |
+| `setReplaceRegistry(reg)` | DI class replacements |
+| `getLogger(topic?)` | scoped logger |
+| `getControllersOverview()` | introspection |
+| `getGlobalInterceptorHandler()` | for not-found paths in custom adapters |
 
-Attach an event adapter. Returns the adapter for chaining.
+### `@Controller(prefix?)`
 
-```ts
-const http = app.adapter(new MoostHttp())
-http.listen(3000)
-```
+Class decorator. Prepends `prefix` to all handler paths. Auto-sets `@Injectable(true)` (SINGLETON) if not already injectable.
 
-#### app.registerControllers(...controllers)
+### `@ImportController(ctrl, provide?)` / `@ImportController(prefix, ctrl, provide?)`
 
-Register one or more controller classes or instances. Accepts class constructors, instances, or `[prefix, controller]` tuples to override the controller's own prefix.
-
-```ts
-app.registerControllers(UserController, OrderController)
-app.registerControllers(['api/v2', UserControllerV2])
-```
-
-#### app.init(): Promise\<void\>
-
-Initialize the application: bind all controllers to all adapters, then call each adapter's `onInit()`.
-
-#### app.applyGlobalInterceptors(...interceptors)
-
-Register global interceptors that apply to all handlers. Accepts class constructors, `TInterceptorDef` objects, or `TInterceptorData` entries.
-
-```ts
-app.applyGlobalInterceptors(authGuard, cliHelpInterceptor())
-```
-
-#### app.applyGlobalPipes(...pipes)
-
-Register global pipes that apply to all parameter/property resolution.
-
-#### app.getLogger(topic?: string)
-
-Return a logger instance, optionally scoped to a topic.
-
-```ts
-const logger = app.getLogger('MyApp')
-logger.info('Server started')
-```
-
-#### app.setProvideRegistry(provide)
-
-Register DI provide entries. Use `createProvideRegistry()` from `@prostojs/infact`.
-
-#### app.setReplaceRegistry(replace)
-
-Register DI class replacements. Use `createReplaceRegistry()` from `@prostojs/infact`.
-
-### @Controller(prefix?: string)
-
-Class decorator marking a class as a controller. The optional prefix is prepended to all handler paths. Auto-sets `@Injectable` if not already present.
-
-### @ImportController(ctrl, opts?)
-
-Register a nested controller within another controller, inheriting its prefix. Supports lazy loading with `() => ControllerClass`.
+Nest a sub-controller; its prefix is appended to the parent's. `ctrl` may be `() => Ctrl` for lazy / circular refs.
 
 ```ts
 @Controller('api')
@@ -123,67 +89,35 @@ Register a nested controller within another controller, inheriting its prefix. S
 class AppController {}
 ```
 
-## Common Patterns
+## Patterns
 
 ### Extending Moost
-
-For simple apps, extend `Moost` directly and add handler methods:
 
 ```ts
 class MyApp extends Moost {
   @Get('hello/:name')
-  hello(@Param('name') name: string) {
-    return `Hello, ${name}!`
-  }
+  hello(@Param('name') name: string) { return `Hello, ${name}!` }
 }
-
 const app = new MyApp()
 app.adapter(new MoostHttp()).listen(3000)
 await app.init()
 ```
 
-### Multi-Adapter Application
-
-Attach multiple adapters to handle different event sources:
-
-```ts
-const app = new Moost()
-const http = app.adapter(new MoostHttp())
-const cli = app.adapter(new MoostCli())
-app.registerControllers(AppController)
-await app.init()
-http.listen(3000)
-```
-
-### Controller-Only Registration
-
-The same controller can respond to both HTTP and CLI events:
+### Shared controller across event types
 
 ```ts
 @Controller('greet')
 class GreetController {
   @Get(':name')
   @Cli(':name')
-  greet(@Param('name') name: string) {
-    return `Hello, ${name}!`
-  }
+  greet(@Param('name') name: string) { return `Hello, ${name}!` }
 }
 ```
 
-## Best Practices
-
-- Call `app.init()` after registering all controllers and adapters
-- Start listening before or after `init()` — adapter buffers requests
-- Use `@Controller(prefix)` to namespace related handlers
-- Keep controllers focused — one per feature area
-- Extend Moost for simple apps; use `registerControllers()` for larger projects
-- Use `createProvideRegistry()` to supply adapter-specific services to DI
-
 ## Gotchas
 
-- `app.init()` must be awaited — it is async
-- Handler methods are bound to all attached adapters but each adapter filters by handler type
-- The order of `adapter()` calls does not matter for functionality
-- Moost itself is a controller — methods decorated with `@Get()` etc. directly on a `Moost` subclass become handlers
-- `@Controller` auto-sets `@Injectable` — no need to add both decorators
-- Singleton controllers are instantiated in a synthetic event context during `init()`
+- `init()` is async — must be awaited. Routes are bound inside.
+- `@Controller()` defaults to SINGLETON (not FOR_EVENT). Singleton controllers are instantiated once during `init()` in a synthetic event context — composables reading request data do not work in SINGLETON constructors.
+- `adapter()` call order does not affect behavior.
+- `registerControllers()` accepts classes OR instances; prefer classes so DI instantiates them.
+- Each adapter filters handlers by its own type — adding an adapter doesn't accidentally double-bind.

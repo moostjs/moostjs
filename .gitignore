@@ -21,3 +21,7 @@ docs/.vitepress/cache
 .windsurf/skills/wooksjs-event-ws
 .codex/skills/wooksjs-event-ws
 .opencode/skills/wooksjs-event-ws
+
+# MemPalace per-project files (issue #185)
+mempalace.yaml
+entities.json

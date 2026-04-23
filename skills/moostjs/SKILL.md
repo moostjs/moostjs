@@ -1,290 +1,118 @@
 ---
 name: moostjs
 description: >-
-  Use this skill when working with the Moost framework (moost, @moostjs/event-http,
+  Use when working with the Moost framework (moost, @moostjs/event-http,
   @moostjs/event-cli, @moostjs/event-wf, @moostjs/event-ws, @moostjs/swagger,
-  @moostjs/otel, @moostjs/arbac) — to create decorator-driven applications handling HTTP, CLI,
-  WebSocket, or Workflow events. Covers decorators (@Controller, @Get, @Post, @Put,
-  @Delete, @Patch, @Cli, @Message, @Connect, @Disconnect, @Step, @Workflow, @Body,
-  @Query, @Header, @Param, @Intercept, @Pipe, @Injectable, @Inject, @Provide,
-  @Resolve, @Authenticate, @SetStatus, @SetHeader, @SetCookie, @CliOption,
-  @WorkflowSchema, @WorkflowParam, @MessageData, @ConnectionId), composables
-  (useLogger, useWfState, useWsConnection, useWsRooms, useWsMessage, useWsServer,
-  useControllerContext), DI scopes, interceptor lifecycle, pipe pipeline, adapter
-  pattern, multi-adapter setup, auth guards, controller registration, and scaffolding
-  with create-moost.
+  @moostjs/otel, @moostjs/arbac, @moostjs/vite, create-moost) — to build
+  decorator-driven TypeScript apps handling HTTP, CLI, WebSocket, or Workflow
+  events, or to build custom adapters. Covers: controller decorators (@Controller,
+  @ImportController, @Inherit), handler decorators (@Get/@Post/@Put/@Delete/@Patch/@All/
+  @HttpMethod/@Upgrade, @Cli/@CliAlias/@CliExample/@CliGlobalOption/@CliHelpInterceptor,
+  @Message/@Connect/@Disconnect, @Step/@Workflow/@WorkflowSchema/@StepTTL), parameter
+  resolvers (@Param/@Params/@Const/@ConstFactory, @Body/@RawBody/@Query/@Header/@Cookie/
+  @Authorization/@Url/@Method/@Req/@Res/@ReqId/@Ip/@IpList, @CliOption, @MessageData/
+  @RawMessage/@MessageId/@MessageType/@MessagePath/@ConnectionId, @WorkflowParam),
+  response decorators (@SetStatus/@SetHeader/@SetCookie, @StatusRef/@HeaderRef/@CookieRef/
+  @CookieAttrsRef, @BodySizeLimit/@CompressedBodySizeLimit/@BodyReadTimeoutMs),
+  DI (@Injectable, @Inject, @Provide, @Replace, @Circular, @InjectFromScope/@InjectScopeVars,
+  @InjectEventLogger/@InjectMoostLogger/@LoggerTopic), interceptors (@Intercept, @Interceptor,
+  @Before/@After/@OnError, @Overtake/@Response, defineBeforeInterceptor/defineAfterInterceptor/
+  defineErrorInterceptor/defineInterceptor, TInterceptorPriority), pipes (@Pipe, @Resolve,
+  definePipeFn, TPipePriority), auth (@Authenticate, defineAuthGuard, AuthGuard), errors
+  (HttpError, WsError, StepRetriableError), common (@Description/@Label/@Value/@Id/@Optional/
+  @Required, ApplyDecorators), composables (current, useLogger, useControllerContext,
+  useWfState, useWfOutlet, useWfFinished, useWsConnection/useWsMessage/useWsRooms/useWsServer/
+  currentConnection), adapter authoring (TMoostAdapter, defineMoostEventHandler, getMoostMate,
+  getMoostInfact, createProvideRegistry, createReplaceRegistry, registerEventScope,
+  useScopeId), quick-apps (CliApp, WsApp), outlets (outlet/outletHttp/outletEmail,
+  createHttpOutlet/createEmailOutlet, HandleStateStrategy/EncapsulatedStateStrategy/
+  WfStateStoreMemory), WS testing (prepareTestWsMessageContext, prepareTestWsConnectionContext).
 ---
 
 # Moost
 
-Moost is a metadata-driven event processing framework for TypeScript. It uses decorators and a composable architecture powered by Wooks to handle HTTP, CLI, WebSocket, and Workflow events. Each event type has an adapter — no module abstraction exists; controllers register directly with the Moost instance. DI, interceptors, and pipes are shared across all adapters.
+Metadata-driven event processing framework for TypeScript. Decorators + composables (via Wooks) handle HTTP, CLI, WebSocket, Workflow events. Each event type = one adapter. No module abstraction — controllers register directly on `Moost`. DI, interceptors, pipes are shared across all adapters. A single controller can expose `@Get`, `@Cli`, `@Message` methods simultaneously; each adapter binds only its own handler type.
 
-## Scaffolding
+Powered by: `@prostojs/mate` (metadata), `@prostojs/infact` (DI), `@wooksjs/event-core` (async event context), `@prostojs/dye` (compile-time terminal colors).
+
+## Domain map — load only what you need
+
+| Domain | File | Load when |
+|---|---|---|
+| Core concepts, Moost class, lifecycle, registration | [core.md](references/core.md) | New project, multi-adapter setup, `app.init()`, Moost subclass |
+| Decorators, metadata, custom decorators, Mate | [decorators.md](references/decorators.md) | Creating/using decorators, reading metadata |
+| DI scopes, @Injectable, @Inject, @Provide, @Circular | [di.md](references/di.md) | Services, scoping, providers, replacements |
+| Interceptors: priority, @Intercept, guards, class-based | [interceptors.md](references/interceptors.md) | Auth/logging/error cross-cutting |
+| Pipes: @Pipe, @Resolve, TRANSFORM/VALIDATE | [pipes.md](references/pipes.md) | Validation, transformation, custom param decorators |
+| Custom adapter: TMoostAdapter, defineMoostEventHandler | [custom-adapters.md](references/custom-adapters.md) | Build an adapter for a new event source |
+| HTTP setup/routing | [event-http.md](references/event-http.md) | MoostHttp, route decorators, handler returns, fetch/SSR |
+| HTTP request data | [http-request.md](references/http-request.md) | @Query/@Header/@Cookie/@Body/@Req/@Res/@Ip |
+| HTTP response control | [http-response.md](references/http-response.md) | @SetStatus/@SetHeader/@SetCookie, refs, body limits, HttpError |
+| HTTP auth guards | [http-auth.md](references/http-auth.md) | defineAuthGuard, AuthGuard, @Authenticate |
+| CLI | [event-cli.md](references/event-cli.md) | CliApp, @Cli/@CliOption, help, CLI interceptors |
+| Workflow | [event-wf.md](references/event-wf.md) | @Step/@Workflow/@WorkflowSchema, pause/resume, outlets, state strategies |
+| WebSocket core | [event-ws.md](references/event-ws.md) | MoostWs/WsApp, @Message/@Connect/@Disconnect, wire protocol |
+| WebSocket rooms | [ws-rooms.md](references/ws-rooms.md) | useWsRooms, broadcasting, WsBroadcastTransport |
+| WebSocket testing | [ws-testing.md](references/ws-testing.md) | prepareTestWsMessageContext / prepareTestWsConnectionContext |
+| Swagger/OpenAPI | `@moostjs/swagger` ([npm](https://www.npmjs.com/package/@moostjs/swagger)) | SwaggerController, Swagger* decorators |
+| OpenTelemetry | `@moostjs/otel` ([npm](https://www.npmjs.com/package/@moostjs/otel)) | `initMoostOtel`, spans, tracing |
+| RBAC/ABAC | `@moostjs/arbac` ([npm](https://www.npmjs.com/package/@moostjs/arbac)) | `MoostArbac` adapter |
+
+## Scaffold
 
 ```bash
-npm create moost@latest
+npm create moost@latest [name] -- [--http] [--cli] [--ws] [--wf] [--ssr] [--oxc] [--force]
 ```
 
-Options: `--http` (HTTP web app), `--cli` (CLI app), `--ws` (WebSocket app), `--ssr` (Vue SSR), `--wf` (add workflows to HTTP), `--oxc` (add oxlint+oxfmt).
+`--wf` adds workflows to `--http`. Combinations (e.g. `--http --ws`) produce one app with both adapters. See [core.md](references/core.md) for details.
 
-The scaffolder creates a ready-to-run project with the chosen adapter(s), a sample controller, and build/dev scripts. Multi-adapter combinations (e.g., `--http --ws --wf`) produce a single app with all adapters attached.
-
-## Architecture
-
-### Decorator system
-All decorators go through `getMoostMate()` — a singleton `Mate` instance from `@prostojs/mate` operating in the `'moost'` metadata workspace. Metadata is stored on classes/methods/params and read at bind time.
-
-### Dependency injection
-Powered by `@prostojs/infact`. Two scopes: `SINGLETON` (one instance for the app lifetime) and `FOR_EVENT` (fresh instance per event). `@Controller` implicitly sets `@Injectable`. The DI container resolves constructor params, property injections, and `@Provide`/`@Inject` bindings.
-
-### Adapter pattern
-Each event type implements `TMoostAdapter<H>`. Adapters are attached via `app.adapter(instance)` and implement `bindHandler()` to register routes/commands with their underlying Wooks engine. The core knows nothing about HTTP/CLI/WS specifics.
-
-### Interceptor lifecycle
-Priority levels execute in order: `BEFORE_ALL` > `BEFORE_GUARD` > `GUARD` > `AFTER_GUARD` > `INTERCEPTOR` > `CATCH_ERROR` > `AFTER_ALL`. Each interceptor has phases: `before` (can reply early) > handler execution > `after`/`onError`. After/onError phases run in LIFO (onion) order.
-
-### Pipe pipeline
-Pipes transform/resolve/validate handler arguments in priority order:
-`BEFORE_RESOLVE` > `RESOLVE` > `AFTER_RESOLVE` > `BEFORE_TRANSFORM` > `TRANSFORM` > `AFTER_TRANSFORM` > `BEFORE_VALIDATE` > `VALIDATE` > `AFTER_VALIDATE`.
-The built-in resolve pipe invokes resolver functions set by param decorators (`@Param`, `@Body`, `@Query`, etc.).
-
-### Event handler lifecycle (`defineMoostEventHandler`)
-1. Scope registration and logger setup
-2. Controller resolution (DI)
-3. Argument resolution via pipes
-4. Interceptor before phase (can short-circuit with `reply()`)
-5. Handler method execution
-6. Interceptor after/onError phase
-7. Scope cleanup
-
-## How to use this skill
-
-Read the domain file that matches the task. Do not load all files — only what you need.
-
-| Domain | File | Load when... |
-|--------|------|------------|
-| Core concepts & setup | [core.md](references/core.md) | Starting a new project, Moost class, controller registration, adapters |
-| Decorators & metadata | [decorators.md](references/decorators.md) | Creating/using decorators, reading metadata, getMoostMate() |
-| Dependency injection | [di.md](references/di.md) | DI scopes, @Injectable, @Inject, @Provide, @Circular |
-| Interceptors | [interceptors.md](references/interceptors.md) | Creating interceptors, priority levels, guards, @Intercept |
-| Pipes & resolvers | [pipes.md](references/pipes.md) | @Pipe, @Resolve, validation/transform, argument resolution |
-| Custom adapters | [custom-adapters.md](references/custom-adapters.md) | Building a new adapter, TMoostAdapter, defineMoostEventHandler |
-| HTTP: setup & routing | [event-http.md](references/event-http.md) | MoostHttp, route decorators, controllers, handler returns |
-| HTTP: request data | [http-request.md](references/http-request.md) | @Query, @Header, @Cookie, @Body, @Authorization, @Ip |
-| HTTP: response control | [http-response.md](references/http-response.md) | @SetStatus, @SetHeader, @SetCookie, refs, body limits, HttpError |
-| HTTP: authentication | [http-auth.md](references/http-auth.md) | Auth guards, defineAuthGuard, AuthGuard, @Authenticate |
-| CLI application | [event-cli.md](references/event-cli.md) | CliApp, @Cli, @CliOption, help system, controllers |
-| Workflow engine | [event-wf.md](references/event-wf.md) | @Step, @Workflow, schemas, pause/resume, outlets, spies |
-| WebSocket: core | [event-ws.md](references/event-ws.md) | MoostWs, @Message, @Connect, handlers, protocol, WsError |
-| WebSocket: rooms | [ws-rooms.md](references/ws-rooms.md) | Room management, broadcasting, useWsRooms, scaling |
-| WebSocket: testing | [ws-testing.md](references/ws-testing.md) | Unit testing WS handlers, prepareTestWsMessageContext |
-| Swagger / OpenAPI | `@moostjs/swagger` ([npm](https://www.npmjs.com/package/@moostjs/swagger)) | SwaggerController, @SwaggerTag, @SwaggerResponse, OpenAPI spec |
-| OpenTelemetry | `@moostjs/otel` ([npm](https://www.npmjs.com/package/@moostjs/otel)) | Automatic spans, tracing, metrics |
-| RBAC / ABAC | `@moostjs/arbac` ([npm](https://www.npmjs.com/package/@moostjs/arbac)) | Role/attribute-based access control |
-
-## Quick reference
-
-### moost (core)
+## Quick-start patterns
 
 ```ts
-// Core
-import { Moost, Controller, ImportController, Param, Params } from 'moost'
-// DI
-import { Injectable, Inject, Provide, Replace, Circular } from 'moost'
-import { InjectFromScope, InjectScopeVars } from 'moost'
-import { createProvideRegistry, createReplaceRegistry } from 'moost'
-// Interceptors & pipes
-import { Intercept, Pipe, Resolve, Const, ConstFactory } from 'moost'
-import { defineBeforeInterceptor, defineAfterInterceptor, defineInterceptor } from 'moost'
-import { defineErrorInterceptor, definePipeFn } from 'moost'
-// Common decorators
-import { Description, Optional, Required, Label, Value, Id } from 'moost'
-import { ApplyDecorators, LoggerTopic } from 'moost'
-// Loggers
-import { InjectEventLogger, InjectMoostLogger } from 'moost'
-import { createLogger, loggerConsoleTransport } from 'moost'
-// Metadata & adapter utilities
-import { getMoostMate, getMoostInfact, defineMoostEventHandler } from 'moost'
-import type { TMoostAdapter, TMoostAdapterOptions, TMoostMetadata } from 'moost'
-// Composables (re-exported from @wooksjs/event-core)
-import { current, useLogger, key, cached, run, createEventContext, eventTypeKey } from 'moost'
-import { useControllerContext } from 'moost'
-import type { Logger, EventContext } from 'moost'
-```
-
-### @moostjs/event-http
-
-```ts
-// Route decorators
-import { MoostHttp, Get, Post, Put, Delete, Patch, All, HttpMethod, Upgrade } from '@moostjs/event-http'
-// Request data
-import { Query, Header, Cookie, Body, RawBody, Authorization } from '@moostjs/event-http'
-import { Url, Method, Req, Res, ReqId, Ip, IpList } from '@moostjs/event-http'
-// Response control
-import { SetHeader, SetCookie, SetStatus } from '@moostjs/event-http'
-import { StatusRef, HeaderRef, CookieRef, CookieAttrsRef } from '@moostjs/event-http'
-import { BodySizeLimit, CompressedBodySizeLimit, BodyReadTimeoutMs } from '@moostjs/event-http'
-// Auth & errors
-import { Authenticate, AuthGuard, defineAuthGuard, HttpError } from '@moostjs/event-http'
-import { httpKind, enableLocalFetch } from '@moostjs/event-http'
-```
-
-### @moostjs/event-cli
-
-```ts
-import { CliApp, MoostCli, Cli, CliOption, CliAlias, CliExample } from '@moostjs/event-cli'
-import { CliGlobalOption, cliHelpInterceptor, CliHelpInterceptor } from '@moostjs/event-cli'
-import { cliKind } from '@moostjs/event-cli'
-```
-
-### @moostjs/event-wf
-
-```ts
-import { MoostWf, Step, Workflow, WorkflowSchema, WorkflowParam } from '@moostjs/event-wf'
-import { StepRetriableError, useWfState, wfKind } from '@moostjs/event-wf'
-import { outlet, outletHttp, outletEmail } from '@moostjs/event-wf'
-import { handleWfOutletRequest, createOutletHandler, createHttpOutlet, createEmailOutlet } from '@moostjs/event-wf'
-import { useWfOutlet, useWfFinished } from '@moostjs/event-wf'
-import type { TFlowOutput, TWorkflowSchema } from '@moostjs/event-wf'
-```
-
-### @moostjs/event-ws
-
-```ts
-import { MoostWs, WsApp, WooksWs } from '@moostjs/event-ws'
-import { Message, Connect, Disconnect } from '@moostjs/event-ws'
-import { MessageData, RawMessage, MessageId, MessageType, MessagePath, ConnectionId } from '@moostjs/event-ws'
-import { useWsConnection, useWsMessage, useWsRooms, useWsServer, currentConnection } from '@moostjs/event-ws'
-import { WsError, WsRoomManager } from '@moostjs/event-ws'
-import { prepareTestWsMessageContext, prepareTestWsConnectionContext } from '@moostjs/event-ws'
-import type { WsClientMessage, WsReplyMessage, WsPushMessage, WsBroadcastTransport } from '@moostjs/event-ws'
-```
-
-### @moostjs/swagger
-
-```ts
-import { SwaggerController, getSwaggerMate } from '@moostjs/swagger'
-// Decorators
-import {
-  SwaggerTag, SwaggerResponse, SwaggerRequestBody, SwaggerParam,
-  SwaggerPublic, SwaggerDeprecated, SwaggerOperationId, SwaggerExternalDocs,
-  SwaggerExclude, SwaggerDescription, SwaggerExample, SwaggerSecurity,
-  SwaggerSecurityAll, SwaggerLink, SwaggerCallback,
-} from '@moostjs/swagger'
-```
-
-### @moostjs/otel
-
-```ts
-import { initMoostOtel } from '@moostjs/otel'
-// Composables & decorators available after init
-```
-
-### @moostjs/arbac
-
-```ts
-import { MoostArbac } from '@moostjs/arbac'
-// RBAC/ABAC access control adapter
-```
-
-### Quick-start patterns
-
-```ts
-// HTTP app
+// HTTP
 const app = new Moost()
-app.adapter(new MoostHttp({ port: 3000 }))
+app.adapter(new MoostHttp()).listen(3000)
 app.registerControllers(AppController)
 await app.init()
 
-// CLI app
-new CliApp()
-  .controllers(AppController)
-  .useHelp({ name: 'my-cli' })
-  .start()
+// CLI (CliApp is sugar over Moost + MoostCli + cliHelpInterceptor)
+new CliApp().controllers(AppController).useHelp({ name: 'my-cli' }).start()
 
-// Multi-adapter (HTTP + WS + CLI)
+// Standalone WS (WsApp is sugar over Moost + MoostWs)
+await new WsApp().controllers(ChatController).start(3000)
+
+// Multi-adapter
 const app = new Moost()
-app.adapter(new MoostHttp({ port: 3000 }))
-app.adapter(new MoostWs())
-app.registerControllers(AppController)
-await app.init()
-```
-
-## Cross-cutting patterns
-
-### Multi-adapter setup
-
-All adapters share one Moost instance. Controllers can have handlers for different event types — a single controller can define `@Get()` methods, `@Cli()` methods, and `@Message()` methods. Each adapter only binds the handlers it recognizes.
-
-```ts
-const app = new Moost()
-app.adapter(new MoostHttp({ port: 3000 }))
-app.adapter(new MoostWs())
+app.adapter(new MoostHttp()).listen(3000)
+app.adapter(new MoostWs({ httpApp: http.getHttpApp() }))  // share HTTP server
 app.adapter(new MoostWf())
-app.registerControllers(SharedController)
+app.registerControllers(AppController)
 await app.init()
-```
 
-### Using Wooks composables inside Moost handlers
-
-Moost handlers run inside a Wooks event context. All `@wooksjs/*` composables work directly:
-
-```ts
-import { useRequest, useResponse } from '@wooksjs/event-http'
-import { useLogger } from 'moost'
-
-@Get('status')
-status() {
-  const { url } = useRequest()
-  const logger = useLogger('status')
-  logger.info(url())
-  return { ok: true }
-}
-```
-
-### DI scopes
-
-```ts
-@Injectable('SINGLETON')  // one instance for app lifetime (default)
-class DbService {}
-
-@Injectable('FOR_EVENT')  // fresh instance per event
-class RequestContext {}
-```
-
-`@Controller()` implicitly sets `@Injectable('FOR_EVENT')`. Singleton controllers are instantiated once during init; FOR_EVENT controllers are created per request/command/message.
-
-### Logging
-
-```ts
-// Composable (inside event handler)
-const logger = useLogger('topic')
-
-// Decorator injection
-class MyController {
-  @InjectEventLogger('topic')  // scoped to current event
-  logger!: Logger
-
-  @InjectMoostLogger('topic')  // app-level logger
-  appLogger!: Logger
-}
-
-// Standalone logger
-import { createLogger, loggerConsoleTransport } from 'moost'
-const logger = createLogger({ transports: [loggerConsoleTransport()] })
-```
-
-### Controller as Moost subclass
-
-Moost itself is a controller. Decorate methods on a Moost subclass directly:
-
-```ts
+// Moost subclass as root controller
 class MyApp extends Moost {
-  @Get('health')
-  health() { return 'ok' }
+  @Get('health') health() { return 'ok' }
 }
-
-const app = new MyApp()
-app.adapter(new MoostHttp({ port: 3000 }))
-await app.init()
 ```
+
+## Cross-cutting facts
+
+**DI scopes** — `@Injectable()` / `@Injectable(true)` / `@Injectable('SINGLETON')` = one instance for app lifetime. `@Injectable('FOR_EVENT')` = fresh instance per event. `@Controller()` implicitly sets `@Injectable(true)` (SINGLETON). Use `'FOR_EVENT'` when class properties hold per-request state or when using property-level ref/resolver decorators. FOR_EVENT requires an active event context (composables don't work in SINGLETON constructors).
+
+**Wooks composables work inside handlers** — All `@wooksjs/*` composables (e.g., `useRequest`, `useResponse`, `useHeaders`) work directly in Moost handlers; they run in the same event context.
+
+**Logging** — composable: `useLogger('topic')` (from `moost`, re-exported from `@wooksjs/event-core`). Property: `@InjectEventLogger('topic')` (per-event) / `@InjectMoostLogger('topic')` (app-level, uses `@LoggerTopic` or class `@Id` as fallback). Standalone: `createLogger({ transports: [loggerConsoleTransport()] })`.
+
+**Re-exports** — `moost` re-exports `current`, `useLogger`, `key`, `cached`, `eventTypeKey`, `createEventContext`, `run` from `@wooksjs/event-core`, plus `createProvideRegistry`/`createReplaceRegistry` from `@prostojs/infact`. `@moostjs/event-http` re-exports `httpKind`, `HttpError`, `useHttpContext`. `@moostjs/event-cli` re-exports `cliKind`, and `Param`/`Controller`/`Intercept`/`Description`/`Optional`/`defineBeforeInterceptor`/`defineAfterInterceptor`/`defineInterceptor` from `moost` (note: `defineErrorInterceptor` is NOT re-exported — import from `moost`). `@moostjs/event-wf` re-exports `wfKind`, `useWfState`, `StepRetriableError`, outlet primitives. `@moostjs/event-ws` re-exports `wsConnectionKind`/`wsMessageKind`, `WsError`, all `useWs*` composables, `currentConnection`, `prepareTestWs*`.
+
+## Architecture in one page
+
+**Decorator system.** All decorators go through `getMoostMate()` — singleton `Mate` in the `'moost'` workspace. Metadata read at bind time. Class-level, method-level, property-level, parameter-level. Details: [decorators.md](references/decorators.md).
+
+**Interceptor lifecycle.** Priority order (lower first in `before`): `BEFORE_ALL` < `BEFORE_GUARD` < `GUARD` < `AFTER_GUARD` < `INTERCEPTOR` < `CATCH_ERROR` < `AFTER_ALL`. Phases per interceptor: `before` (can `reply()` early) → handler → `after`/`onError` (LIFO onion). Details: [interceptors.md](references/interceptors.md).
+
+**Pipe pipeline.** Priority order: `BEFORE_RESOLVE` < `RESOLVE` (built-in resolve pipe; calls resolver set by `@Param`/`@Body`/`@Query`/`@Resolve`) < `AFTER_RESOLVE` < `BEFORE_TRANSFORM` < `TRANSFORM` < `AFTER_TRANSFORM` < `BEFORE_VALIDATE` < `VALIDATE` < `AFTER_VALIDATE`. Scopes: global / class / method / parameter — merged & sorted. Details: [pipes.md](references/pipes.md).
+
+**Event handler lifecycle** (`defineMoostEventHandler`). Scope + logger setup → `hooks.init` → resolve controller (DI) → set controller context → interceptor `before` → resolve args (pipes) → handler → interceptor `after`/`onError` → scope cleanup (unless `manualUnscope`) → `hooks.end`. Details: [custom-adapters.md](references/custom-adapters.md).
+
+**Adapter pattern.** Each adapter implements `TMoostAdapter<H>`; attached via `app.adapter(a)`; `bindHandler()` registers one handler. Adapters filter `opts.handlers` by their own `handler.type`. Details: [custom-adapters.md](references/custom-adapters.md).
