@@ -1,32 +1,13 @@
 ---
 name: moostjs
 description: >-
-  Use when working with the Moost framework (moost, @moostjs/event-http,
-  @moostjs/event-cli, @moostjs/event-wf, @moostjs/event-ws, @moostjs/swagger,
-  @moostjs/otel, @moostjs/arbac, @moostjs/vite, create-moost) — to build
-  decorator-driven TypeScript apps handling HTTP, CLI, WebSocket, or Workflow
-  events, or to build custom adapters. Covers: controller decorators (@Controller,
-  @ImportController, @Inherit), handler decorators (@Get/@Post/@Put/@Delete/@Patch/@All/
-  @HttpMethod/@Upgrade, @Cli/@CliAlias/@CliExample/@CliGlobalOption/@CliHelpInterceptor,
-  @Message/@Connect/@Disconnect, @Step/@Workflow/@WorkflowSchema/@StepTTL), parameter
-  resolvers (@Param/@Params/@Const/@ConstFactory, @Body/@RawBody/@Query/@Header/@Cookie/
-  @Authorization/@Url/@Method/@Req/@Res/@ReqId/@Ip/@IpList, @CliOption, @MessageData/
-  @RawMessage/@MessageId/@MessageType/@MessagePath/@ConnectionId, @WorkflowParam),
-  response decorators (@SetStatus/@SetHeader/@SetCookie, @StatusRef/@HeaderRef/@CookieRef/
-  @CookieAttrsRef, @BodySizeLimit/@CompressedBodySizeLimit/@BodyReadTimeoutMs),
-  DI (@Injectable, @Inject, @Provide, @Replace, @Circular, @InjectFromScope/@InjectScopeVars,
-  @InjectEventLogger/@InjectMoostLogger/@LoggerTopic), interceptors (@Intercept, @Interceptor,
-  @Before/@After/@OnError, @Overtake/@Response, defineBeforeInterceptor/defineAfterInterceptor/
-  defineErrorInterceptor/defineInterceptor, TInterceptorPriority), pipes (@Pipe, @Resolve,
-  definePipeFn, TPipePriority), auth (@Authenticate, defineAuthGuard, AuthGuard), errors
-  (HttpError, WsError, StepRetriableError), common (@Description/@Label/@Value/@Id/@Optional/
-  @Required, ApplyDecorators), composables (current, useLogger, useControllerContext,
-  useWfState, useWfOutlet, useWfFinished, useWsConnection/useWsMessage/useWsRooms/useWsServer/
-  currentConnection), adapter authoring (TMoostAdapter, defineMoostEventHandler, getMoostMate,
-  getMoostInfact, createProvideRegistry, createReplaceRegistry, registerEventScope,
-  useScopeId), quick-apps (CliApp, WsApp), outlets (outlet/outletHttp/outletEmail,
-  createHttpOutlet/createEmailOutlet, HandleStateStrategy/EncapsulatedStateStrategy/
-  WfStateStoreMemory), WS testing (prepareTestWsMessageContext, prepareTestWsConnectionContext).
+  Use when working with the Moost framework (moost, @moostjs/event-http/cli/wf/ws,
+  @moostjs/swagger, @moostjs/otel, @moostjs/arbac, @moostjs/vite, create-moost) to
+  build decorator-driven TypeScript apps for HTTP, CLI, WebSocket, Workflow events,
+  or custom adapters. Covers controllers, handler/parameter/response decorators, DI,
+  interceptors, pipes, auth guards, framework errors, common metadata decorators,
+  Wooks composables, adapter authoring, quick apps, workflow outlets/state
+  strategies, WebSocket rooms/testing, logging, and event context/scoping.
 ---
 
 # Moost
