@@ -191,7 +191,12 @@ function EventData(field?: string): ParameterDecorator & PropertyDecorator {
 
 ## Custom metadata extension
 
-For fields that don't belong in `TMoostMetadata`, use a separate Mate workspace:
+Two patterns — see [decorators.md → Custom metadata extension](decorators.md#custom-metadata-extension) for the full picture.
+
+- **Adapter-private state** (read only by your adapter, never by other moost tooling) — use a separate `Mate` workspace; no augmentation, no collision surface.
+- **Public extension** (typed library/framework metadata you want to read with full IDE support) — augment `TMoostMetadata` / `TMoostParamsMetadata` and ship a typed `get<LibName>Mate()` wrapper around `getMoostMate()`. Eliminates magic strings and `as` casts. This is the right choice when other moost-aware code (your own readers, swagger, otel) should see the metadata.
+
+Adapter-private quick form:
 
 ```ts
 import { Mate } from '@prostojs/mate'

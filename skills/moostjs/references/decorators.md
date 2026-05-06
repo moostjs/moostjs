@@ -115,12 +115,72 @@ Resolver runs at `RESOLVE` priority via the built-in resolve pipe; it receives `
 
 ### Custom metadata extension
 
-For adapter-specific metadata that doesn't belong in `TMoostMetadata`, use a separate Mate workspace:
+Two patterns depending on whether your library's fields should be visible on the shared `TMoostMetadata`. Pick by who reads the metadata: yourself + other moost-aware tooling → augment; you alone → isolate.
+
+**Augment the moost workspace + ship a typed wrapper (recommended).** When your decorators write metadata you'll later read — eliminates magic strings, casts, and duck-typing. Augment `TMoostMetadata` / `TMoostParamsMetadata` via TypeScript declaration merging, then export `get<LibName>Mate()` returning `getMoostMate()` typed against your additions.
+
+```ts
+// my-lib/mate.ts
+import { type Mate, type TMateParamMeta, type TMoostMetadata, getMoostMate } from 'moost'
+
+interface MyLibMeta {
+  mylib_action?: { name: string; opts?: { default?: boolean } }
+}
+interface MyLibParamsMeta {
+  mylib_action_param?: 'id' | 'ids'
+  mylib_input_form?: { type: Function; name: string }
+}
+
+declare module 'moost' {
+  interface TMoostMetadata extends MyLibMeta {}
+  interface TMoostParamsMetadata extends MyLibParamsMeta {}
+}
+
+export type MyLibMate = Mate<
+  TMoostMetadata & { params: (TMateParamMeta & MyLibParamsMeta)[] },
+  TMoostMetadata & { params: (TMateParamMeta & MyLibParamsMeta)[] }
+>
+
+export function getMyLibMate(): MyLibMate {
+  return getMoostMate<MyLibMeta, MyLibMeta, MyLibParamsMeta>() as MyLibMate
+}
+```
+
+Use it everywhere your library reads or writes:
+
+```ts
+// scalar form — both key and value are type-checked
+function MyAction(name: string): MethodDecorator {
+  return getMyLibMate().decorate('mylib_action', { name })
+}
+
+// callback form — `current` is typed; no `as` cast inside or on the return
+function MyDefault(): MethodDecorator {
+  return getMyLibMate().decorate(current => ({
+    ...current,
+    mylib_action: { ...current.mylib_action, name: current.mylib_action?.name ?? '' },
+  })) as MethodDecorator
+}
+
+// reader — typed return, dot access
+const meta = getMyLibMate().read(ctor.prototype, 'methodName')
+const action = meta?.mylib_action                      // typed
+const form = meta?.params?.[0]?.mylib_input_form       // typed
+```
+
+Conventions:
+- **Namespace every key** (`mylib_*`) — augmentations share one workspace; collisions silently overwrite.
+- Augment via `interface ... extends MyLibMeta` (single source of truth), not field-by-field at the `declare module` site.
+- Re-export `MyLibMeta` / `MyLibParamsMeta` if downstream consumers may layer their own augmentations on top.
+
+**Separate workspace (adapter-private state).** When metadata is read only by your own adapter/library and should not appear on `TMoostMetadata`, spin up an isolated `Mate` — no augmentation, zero collision surface:
 
 ```ts
 import { Mate } from '@prostojs/mate'
 const myMate = new Mate<TMyAdapterMeta, TMyAdapterMeta>('my-adapter')
 ```
+
+Tradeoff: invisible to anything reading via `getMoostMate()` (other moost-aware tooling, swagger, otel, arbac).
 
 ### Inheritance
 
