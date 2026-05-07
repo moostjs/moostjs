@@ -1,3 +1,12 @@
+## [0.6.9](https://github.com/moostjs/moostjs/compare/v0.6.8...v0.6.9) (2026-05-07)
+
+
+### Bug Fixes
+
+* **deps:** bump vite to patched versions to address CVE-2026-39363/39364 ([372c2e4](https://github.com/moostjs/moostjs/commit/372c2e4a01b792a377876bc65cfc1aac22b68b09))
+
+
+
 ## [0.6.8](https://github.com/moostjs/moostjs/compare/v0.6.7...v0.6.8) (2026-04-22)
 
 
