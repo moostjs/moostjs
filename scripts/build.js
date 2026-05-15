@@ -6,7 +6,6 @@ import { dye } from '@prostojs/dye'
 import { rollup } from 'rollup'
 import { rolldown } from 'rolldown'
 import dyePlugin from '@prostojs/dye/rolldown'
-import { createDyeReplacements } from '@prostojs/dye/common'
 import dtsPlugin from 'rollup-plugin-dts'
 import { writeFileSync } from 'fs'
 import pkg from '../package.json' with { type: 'json' }
@@ -14,8 +13,6 @@ import path from 'path'
 import swcPlugin from 'unplugin-swc'
 
 const swc = swcPlugin.rolldown()
-const dyeReplacements = createDyeReplacements()
-const _dye = dyePlugin()
 
 let i = 1
 
@@ -137,7 +134,7 @@ async function rollupTypes(ws) {
 async function generateBundles() {
   step('Rolldown Bundles')
   for (const ws of workspaces) {
-    rolldownPackages(ws)
+    await rolldownPackages(ws)
   }
 }
 
@@ -148,11 +145,12 @@ async function rolldownPackages(ws) {
       const inputOptions = {
         input: path.join(`packages/${ws}`, entry),
         external: external || externals.get(ws),
-        define: {
-          __VERSION__: JSON.stringify(pkg.version),
-          ...dyeReplacements,
+        transform: {
+          define: {
+            __VERSION__: JSON.stringify(pkg.version),
+          },
         },
-        plugins: [_dye, swc],
+        plugins: [dyePlugin(), swc],
       }
       const fileName = entry
         .split('/')

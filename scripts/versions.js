@@ -13,6 +13,7 @@ const step = dye('cyan')
 const done = dye('green')
   .prefix(() => ` ✅ `)
   .attachConsole()
+const noPush = process.argv.includes('--no-push')
 
 // Function to sync workspace package versions to the new version
 function syncVersions(newVersion) {
@@ -97,10 +98,15 @@ async function main() {
     await $`git tag v${newVersion} -m "Release version ${newVersion}"`
     done('Git tag created.')
 
-    // Step 10: Push commits and tags to the remote repository
-    step('Pushing to remote repository...')
-    await $`git push --follow-tags`
-    done('Pushed to git successfully!')
+    if (noPush) {
+      step('Skipping remote push...')
+      done('Version commit and tag created locally. Push is deferred to the release script.')
+    } else {
+      // Step 10: Push commits and tags to the remote repository
+      step('Pushing to remote repository...')
+      await $`git push --follow-tags`
+      done('Pushed to git successfully!')
+    }
   } catch (error) {
     info('\n❌ Failed version update:', error)
     process.exit(1)
