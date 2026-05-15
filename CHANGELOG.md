@@ -1,3 +1,12 @@
+## [0.6.10](https://github.com/moostjs/moostjs/compare/v0.6.9...v0.6.10) (2026-05-15)
+
+
+### Bug Fixes
+
+* **deps:** override postcss to >=8.5.10 to address GHSA-qx2v-qp2m-jg93 ([d1cf5cd](https://github.com/moostjs/moostjs/commit/d1cf5cda685643164d81e8372d21444f5170a283))
+
+
+
 ## [0.6.9](https://github.com/moostjs/moostjs/compare/v0.6.8...v0.6.9) (2026-05-07)
 
 
