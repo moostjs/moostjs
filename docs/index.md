@@ -22,9 +22,6 @@ actions:
   - theme: alt
     text: Benchmarks
     link: /webapp/benchmarks
-  - theme: alt
-    text: AI Skill
-    link: /moost/ai-skill
 ---
 
 ## For LLMs
