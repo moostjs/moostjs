@@ -4,6 +4,10 @@ Moost provides a declarative auth guard system that handles credential extractio
 
 Auth guards also integrate with `@moostjs/swagger` for automatic security scheme documentation.
 
+::: tip Need a batteries-included auth + authorization stack?
+This page covers the **primitives** for wiring custom auth into Moost. If you'd rather not assemble the stack yourself — passwords, MFA (TOTP, backup codes), JWT / session tokens with refresh rotation, magic links, password reset, invite workflows, and resource/action-level RBAC with row-level scopes — see [**aooth.moost.org**](https://aooth.moost.org). The `@aooth/*` packages ship as ready-to-mount Moost controllers, interceptors, and `.as`-driven workflows on top of the guard primitives below.
+:::
+
 ## Functional auth guards
 
 Use `defineAuthGuard()` for straightforward, standalone guards:

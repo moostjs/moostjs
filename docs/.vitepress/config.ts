@@ -102,6 +102,15 @@ export default defineConfig({
                     { text: 'OpenTelemetry', link: '/otel/' },
                 ],
             },
+            {
+                text: 'Ecosystem',
+                items: [
+                    { text: 'Aooth (Auth + RBAC)', link: 'https://aooth.moost.org' },
+                    { text: 'Atscript', link: 'https://atscript.dev' },
+                    { text: 'Atscript DB', link: 'https://db.atscript.dev' },
+                    { text: 'Atscript UI', link: 'https://ui.atscript.dev' },
+                ],
+            },
             // { text: 'Config', link: '/config/', activeMatch: '/config/' },
             // { text: 'Plugins', link: '/plugins/', activeMatch: '/plugins/' },
             {

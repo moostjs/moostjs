@@ -40,3 +40,12 @@ npx skills add moostjs/moostjs
 ```
 
 Learn more about AI agent skills at [skills.sh](https://skills.sh).
+
+## Auth + Authorization
+
+Building user accounts, sessions, and role-based access control on top of Moost? The [**aooth.moost.org**](https://aooth.moost.org) stack ships ready-to-mount controllers, interceptors, and `.as`-driven workflows — password + MFA, JWT / session tokens with refresh rotation, magic links, password reset, invites, and resource/action RBAC with row-level scopes.
+
+```bash
+pnpm add @aooth/auth-moost @aooth/arbac-moost
+npx skills add moostjs/aoothjs
+```
