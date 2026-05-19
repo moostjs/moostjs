@@ -245,7 +245,6 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
     config(cfg) {
       // Middleware mode: configure multi-environment build
       if (options.middleware) {
-        const defaultExternals = getExternals({ node: true, workspace: true })
         const serverDefines: Record<string, string> = {
           'process.env.MOOST_DEFERRED_ENV': '"production"',
           __MOOST_ENTRY__: JSON.stringify(options.entry),
@@ -271,6 +270,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         return {
           // SSR needs 'custom' to disable Vite's default HTML serving; SPA keeps default
           ...(options.ssrEntry && { appType: 'custom' as const }),
+          // Ensure prod-server.mjs is bundled so define: substitutions land
+          // (Vite's SSR externalizer would otherwise externalize it from node_modules).
+          ssr: { noExternal: [/^@moostjs\/vite($|\/)/] },
           builder: {
             async buildApp(builder: any) {
               rmSync(resolve(cfg.root || process.cwd(), outDir), { recursive: true, force: true })
@@ -295,10 +297,6 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
                 sourcemap: !!(options.sourcemap ?? true),
                 rollupOptions: {
                   input: ssrInput,
-                  external: (id: string) => {
-                    if (id === '@moostjs/vite/server') { return false }
-                    return defaultExternals.some((ext) => ext.test(id))
-                  },
                   output: { format: 'esm' },
                 },
               },
