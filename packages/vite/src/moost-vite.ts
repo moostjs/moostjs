@@ -152,6 +152,31 @@ export interface TMoostViteDevOptions {
    * production server that serves static files + Moost API (+ SSR if configured).
    */
   serverEntry?: string
+  /**
+   * Packages to keep external in the production SSR bundle.
+   *
+   * In middleware mode during `vite build`, the plugin defaults to
+   * `ssr.noExternal: true` — every dependency is bundled into the SSR
+   * output. This avoids two common failure modes:
+   *  - duplicate module instances of packages like `@wooksjs/event-http`
+   *    whose Symbol-identity slot keys do not match across instances;
+   *  - pnpm strict-resolution failures where externalized transitive deps
+   *    are not hoist-accessible from the consumer's `node_modules`.
+   *
+   * Use `ssrExternal` to opt specific packages OUT of bundling for cases
+   * where bundling is impossible or undesirable — native bindings such as
+   * `mongodb`, `ioredis`, or anything that loads `.node` modules.
+   *
+   * Only applied in `middleware: true` mode during `vite build`. Dev
+   * (`vite serve`) is unaffected: Vite's default externalizer continues
+   * to handle node_modules, which is required so CJS-only packages like
+   * `@vue/server-renderer` can be loaded by Node's ESM/CJS interop
+   * instead of evaluated by Vite's ESM-only SSR module runner.
+   *
+   * Concatenated with any `cfg.ssr.external` the consumer sets directly
+   * in `vite.config.ts`.
+   */
+  ssrExternal?: string[]
 }
 
 /**
@@ -242,7 +267,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const pluginConfig: PluginOption = {
     name: PLUGIN_NAME,
     enforce: 'pre',
-    config(cfg) {
+    config(cfg, env) {
       // Middleware mode: configure multi-environment build
       if (options.middleware) {
         const serverDefines: Record<string, string> = {
@@ -267,12 +292,46 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
 
         // Nitro pattern: clean once upfront, emptyOutDir: false on all environments
         const outDir = cfg.build?.outDir || 'dist'
+
+        // Build: bundle every dep into the SSR output to avoid duplicate-module
+        // instances (Symbol-identity slot keys mismatch) and pnpm transitive-dep
+        // leaks. Dev: keep a selective allowlist — bundling CJS-only deps would
+        // break Vite's ESM-only SSR module runner. We still need to bundle
+        // `@moostjs/vite/server` so the `define:` substitutions land in dev imports.
+        const isBuild = env.command === 'build'
+        const userNoExternal = cfg.ssr?.noExternal
+        const ssrNoExternal = isBuild
+          ? true
+          : Array.from(
+              new Set([
+                ...(Array.isArray(userNoExternal)
+                  ? userNoExternal
+                  : userNoExternal && typeof userNoExternal !== 'boolean'
+                    ? [userNoExternal]
+                    : []),
+                /^@moostjs\/vite($|\/)/,
+              ]),
+            )
+
+        // In build, concat the consumer's explicit `ssr.external` (string list)
+        // with the plugin's `ssrExternal` option (for native bindings etc.).
+        // If the consumer set `ssr.external: true` we leave the concat empty —
+        // `noExternal: true` is the policy and `true` on both sides is incoherent.
+        const userExternal = cfg.ssr?.external
+        const ssrExternal: string[] | undefined = isBuild
+          ? [
+              ...(Array.isArray(userExternal) ? userExternal : []),
+              ...(options.ssrExternal ?? []),
+            ]
+          : undefined
+
         return {
           // SSR needs 'custom' to disable Vite's default HTML serving; SPA keeps default
           ...(options.ssrEntry && { appType: 'custom' as const }),
-          // Ensure prod-server.mjs is bundled so define: substitutions land
-          // (Vite's SSR externalizer would otherwise externalize it from node_modules).
-          ssr: { noExternal: [/^@moostjs\/vite($|\/)/] },
+          ssr: {
+            noExternal: ssrNoExternal,
+            ...(ssrExternal && ssrExternal.length > 0 ? { external: ssrExternal } : {}),
+          },
           builder: {
             async buildApp(builder: any) {
               rmSync(resolve(cfg.root || process.cwd(), outDir), { recursive: true, force: true })
