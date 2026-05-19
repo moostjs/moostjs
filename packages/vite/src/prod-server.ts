@@ -144,10 +144,12 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const { MoostHttp, enableLocalFetch } = await import('@moostjs/event-http')
   let moostHandler: ((req: IncomingMessage, res: ServerResponse) => void) | null = null
   const moostHttpRef: { instance: any } = { instance: null }
+  let captured = false
   const origListen = MoostHttp.prototype.listen
   MoostHttp.prototype.listen = function (...args: any[]) {
     moostHandler = this.getServerCb()
     moostHttpRef.instance = this
+    captured = true
     setTimeout(() => args.filter((a: any) => typeof a === 'function').forEach((a: any) => a()), 1)
     return Promise.resolve()
   }
@@ -160,6 +162,20 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
     await import(/* @vite-ignore */ opts.entry)
   } else {
     await import(__MOOST_ENTRY__)
+  }
+
+  // Fire-and-forget async entries (e.g. `startServer().catch(...)`) let the
+  // import resolve before listen() is called — wait up to 30s for capture.
+  if (!captured) {
+    const deadline = Date.now() + 30_000
+    while (!captured && Date.now() < deadline) {
+      await new Promise<void>(resolve => setTimeout(resolve, 10))
+    }
+    if (!captured) {
+      console.warn(
+        '[moost-vite] MoostHttp.listen was not called within 30s after entry import. The Moost HTTP handler will not be active. Ensure your entry uses top-level await for async setup.',
+      )
+    }
   }
 
   // Restore original listen
