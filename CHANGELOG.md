@@ -1,3 +1,15 @@
+## [0.6.11](https://github.com/moostjs/moostjs/compare/v0.6.10...v0.6.11) (2026-05-20)
+
+
+### Bug Fixes
+
+* **create-moost:** await listen/init and register controllers first in SSR template ([8448d4b](https://github.com/moostjs/moostjs/commit/8448d4b7455c7a07810b4e99a7c11c32bb6bb09e))
+* **vite:** bundle prod-server.mjs and stop externalizing consumer deps for SSR ([96cccdf](https://github.com/moostjs/moostjs/commit/96cccdfda2bd124219eec3a1506f78223092bdf8))
+* **vite:** bundle-everything for SSR build, selective noExternal in dev ([cac80c5](https://github.com/moostjs/moostjs/commit/cac80c5d1c4ed4461f693c51907bf36ee82101db))
+* **vite:** wait for MoostHttp.listen capture across async entries ([8264da9](https://github.com/moostjs/moostjs/commit/8264da907382a5bd890709056e49a9c0e5eae783))
+
+
+
 ## [0.6.10](https://github.com/moostjs/moostjs/compare/v0.6.9...v0.6.10) (2026-05-15)
 
 
