@@ -1,3 +1,12 @@
+## [0.6.14](https://github.com/moostjs/moostjs/compare/v0.6.13...v0.6.14) (2026-05-20)
+
+
+### Bug Fixes
+
+* **vite:** mark __MOOST_ENTRY__ import [@vite-ignore](https://github.com/vite-ignore) so SSR build resolves it at runtime ([ef739fe](https://github.com/moostjs/moostjs/commit/ef739febfe0ae4ad4c8a797d807d4d39b6f31683))
+
+
+
 ## [0.6.13](https://github.com/moostjs/moostjs/compare/v0.6.12...v0.6.13) (2026-05-20)
 
 
