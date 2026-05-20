@@ -155,13 +155,16 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   }
 
   // Import moost entry — __MOOST_ENTRY__ is replaced by define during build:app
-  // e.g., becomes: await import("/src/main.ts") which rolldown bundles inline
+  // (e.g. becomes: await import("/src/main.ts")). The @vite-ignore keeps
+  // rolldown from trying to resolve the substituted literal against
+  // node_modules/@moostjs/vite/dist/; Node evaluates it at runtime relative
+  // to the consumer's cwd.
   if (typeof opts.entry === 'function') {
     await opts.entry()
   } else if (typeof opts.entry === 'string') {
     await import(/* @vite-ignore */ opts.entry)
   } else {
-    await import(__MOOST_ENTRY__)
+    await import(/* @vite-ignore */ __MOOST_ENTRY__)
   }
 
   // Fire-and-forget async entries (e.g. `startServer().catch(...)`) let the
