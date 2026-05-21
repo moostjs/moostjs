@@ -163,18 +163,21 @@ export interface TMoostViteDevOptions {
    *  - pnpm strict-resolution failures where externalized transitive deps
    *    are not hoist-accessible from the consumer's `node_modules`.
    *
-   * Use `ssrExternal` to opt specific packages OUT of bundling for cases
-   * where bundling is impossible or undesirable — native bindings such as
-   * `mongodb`, `ioredis`, or anything that loads `.node` modules.
+   * Use `ssrExternal` to opt specific packages OUT of bundling — native
+   * bindings (`mongodb`, `ioredis`, anything loading `.node` modules), or
+   * stable upstream libraries you'd rather resolve from `node_modules` at
+   * runtime (e.g. `['vue', 'vue-router', '@vue/server-renderer']` to drop
+   * a megabyte from `dist/server/`).
+   *
+   * Equivalent to `cfg.ssr.external` — entries from both are concatenated.
+   * The standalone `cfg.ssr.external` field works the same way; this
+   * plugin option exists for symmetry with `entry`/`ssrEntry`/`prefix`.
    *
    * Only applied in `middleware: true` mode during `vite build`. Dev
    * (`vite serve`) is unaffected: Vite's default externalizer continues
    * to handle node_modules, which is required so CJS-only packages like
    * `@vue/server-renderer` can be loaded by Node's ESM/CJS interop
    * instead of evaluated by Vite's ESM-only SSR module runner.
-   *
-   * Concatenated with any `cfg.ssr.external` the consumer sets directly
-   * in `vite.config.ts`.
    */
   ssrExternal?: string[]
 }
@@ -293,25 +296,27 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         // Nitro pattern: clean once upfront, emptyOutDir: false on all environments
         const outDir = cfg.build?.outDir || 'dist'
 
-        // Build: bundle every dep into the SSR output to avoid duplicate-module
-        // instances (Symbol-identity slot keys mismatch) and pnpm transitive-dep
-        // leaks. Dev: keep a selective allowlist — bundling CJS-only deps would
-        // break Vite's ESM-only SSR module runner. We still need to bundle
-        // `@moostjs/vite/server` so the `define:` substitutions land in dev imports.
+        // Default: bundle every dep into the SSR build (`noExternal: true`) to
+        // avoid duplicate-module instances (Symbol-identity slot keys mismatch)
+        // and pnpm transitive-dep leaks. Dev defaults to a selective allowlist
+        // because bundling CJS-only deps would break Vite's ESM-only SSR module
+        // runner. If the consumer sets their own `ssr.noExternal`, honor it
+        // literally — but always include `@moostjs/vite` so the `define:`
+        // substitutions in `prod-server.mjs` still land.
         const isBuild = env.command === 'build'
+        const ourPlugin = /^@moostjs\/vite($|\/)/
         const userNoExternal = cfg.ssr?.noExternal
-        const ssrNoExternal = isBuild
-          ? true
-          : Array.from(
-              new Set([
-                ...(Array.isArray(userNoExternal)
-                  ? userNoExternal
-                  : userNoExternal && typeof userNoExternal !== 'boolean'
-                    ? [userNoExternal]
-                    : []),
-                /^@moostjs\/vite($|\/)/,
-              ]),
-            )
+        const ssrNoExternal =
+          userNoExternal === true
+            ? true
+            : userNoExternal !== undefined
+              ? [
+                  ...(Array.isArray(userNoExternal) ? userNoExternal : [userNoExternal]),
+                  ourPlugin,
+                ]
+              : isBuild
+                ? true
+                : [ourPlugin]
 
         // In build, concat the consumer's explicit `ssr.external` (string list)
         // with the plugin's `ssrExternal` option (for native bindings etc.).

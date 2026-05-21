@@ -149,6 +149,46 @@ await app.listen()
 
 `createSSRServer` handles dev/prod branching — in dev it creates a Vite dev server, in prod it serves built assets with `sirv`.
 
+### SSR Bundle Size
+
+By default, `vite build` in middleware mode sets `ssr.noExternal: true` — every dependency is bundled into the SSR output. This is the safe default for two reasons:
+
+- **Symbol-identity slot keys** — packages like `@wooksjs/event-http` use `Symbol()` for internal slot keys. If the same package is reachable via both an externalized path (Node ESM at runtime) and a bundled path (rolldown inlines it transitively), each module instance creates fresh Symbols and slot lookups miss. Bundling everything yields a single instance per package.
+- **pnpm strict resolution** — externalized transitive deps may not be hoist-accessible from the consumer's top-level `node_modules`.
+
+For a real frontend with Vue/Vue Router/etc., the resulting `dist/server/` can exceed a megabyte. To externalize stable upstream libraries and shrink the bundle, set `ssr.external` (or the equivalent `ssrExternal` plugin option):
+
+```ts
+// vite.config.ts
+export default defineConfig({
+  ssr: {
+    external: ['vue', 'vue-router', '@vue/server-renderer'],
+  },
+  plugins: [
+    vue(),
+    moostVite({
+      entry: '/src/main.ts',
+      middleware: true,
+      prefix: '/api',
+      ssrEntry: '/src/entry-server.ts',
+    }),
+  ],
+})
+```
+
+**Safe to externalize:** publicly-published, semver-stable libraries that ship a single canonical build (Vue, Vue Router, `@vue/server-renderer`, VueUse, etc.). Node's ESM resolver loads them once and identity is shared between `server.js` and the SSR entry.
+
+**Don't externalize:** workspace packages (`workspace:*`), anything that uses `Symbol()` as a public slot key (Moost, wooks, atscript), anything not reliably hoisted by pnpm.
+
+You can also opt out of bundle-everything by setting `ssr.noExternal` to an explicit list — the plugin honors it literally (appending only `/^@moostjs\/vite($|\/)/` so its own `define:` substitutions still land):
+
+```ts
+ssr: {
+  noExternal: ['@moostjs/vite', /^@aooth\//, /^@atscript\//],
+  external: ['vue', 'vue-router'],
+}
+```
+
 ## SSR Local Fetch
 
 When `ssrFetch` is enabled (default: `true`), the plugin patches `globalThis.fetch` so that local paths are routed in-process through Moost instead of making a real HTTP request. This is useful for SSR where server-side code fetches from its own API:
@@ -193,6 +233,7 @@ The plugin injects a `__VITE_ID` decorator on `@Injectable` and `@Controller` cl
 | `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
 | `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |
 | `serverEntry` | `string` | — | Custom production server entry file (e.g. `'./server.ts'`) |
+| `ssrExternal` | `string[]` | — | Packages to keep external in the SSR build (middleware mode, `vite build` only). Concatenated with `cfg.ssr.external`. See [SSR Bundle Size](#ssr-bundle-size). |
 
 Options marked "backend mode only" are ignored when `middleware: true` — the user's `vite.config.ts` controls build/server configuration in middleware mode.
 
