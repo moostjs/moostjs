@@ -162,7 +162,42 @@ Both modes support full HMR for controllers. When a file changes, the plugin inv
 | `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
 | `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |
 | `serverEntry` | `string` | — | Custom production server entry file (e.g. `'./server.ts'`) |
+| `ssrExternal` | `string[]` | — | Packages to keep external in the middleware-mode SSR build (concatenated with `cfg.ssr.external`). See [SSR Bundle Size](#ssr-bundle-size). |
 
 ::: tip
 Options `port`, `host`, `outDir`, `format`, `sourcemap`, and `externals` are only used in backend mode. In middleware mode, your `vite.config.ts` controls build and server configuration.
 :::
+
+## SSR Bundle Size
+
+By default, `vite build` in middleware mode sets `ssr.noExternal: true` — every dependency is inlined into `dist/server/`. This avoids two failure modes:
+
+- **Symbol-identity slot keys** — packages like `@wooksjs/event-http` use `Symbol()` as internal slot keys. When the same package is reachable via both an externalized path and a bundled path, each module instance creates fresh Symbols → slot lookups miss → request-time crashes. Bundling everything yields a single instance per package.
+- **pnpm strict resolution** — externalized transitive deps may not be hoist-accessible from the consumer's top-level `node_modules`.
+
+For real frontends, the resulting `dist/server/` chunk can exceed a megabyte (Vue + Vue Router + `@vue/server-renderer` alone is ~1.2 MB). To externalize stable upstream libraries:
+
+```ts
+export default defineConfig({
+  ssr: {
+    external: ['vue', 'vue-router', '@vue/server-renderer'],
+  },
+  plugins: [
+    vue(),
+    moostVite({ entry: '/src/main.ts', middleware: true, prefix: '/api', ssrEntry: '/src/entry-server.ts' }),
+  ],
+})
+```
+
+**Safe to externalize:** publicly-published, semver-stable libraries with a single canonical build (Vue, Vue Router, `@vue/server-renderer`, VueUse).
+
+**Don't externalize:** workspace packages, anything that uses `Symbol()` as a public slot key (Moost, wooks), anything not reliably hoisted by pnpm.
+
+You can also opt out of bundle-everything entirely by setting `ssr.noExternal` to an explicit list — the plugin honors it literally and only appends `/^@moostjs\/vite($|\/)/` (so its `define:` substitutions still land):
+
+```ts
+ssr: {
+  noExternal: ['@moostjs/vite', /^@aooth\//, /^@atscript\//],
+  external: ['vue', 'vue-router'],
+}
+```
