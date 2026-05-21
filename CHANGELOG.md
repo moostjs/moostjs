@@ -1,3 +1,12 @@
+## [0.6.15](https://github.com/moostjs/moostjs/compare/v0.6.14...v0.6.15) (2026-05-21)
+
+
+### Bug Fixes
+
+* **vite:** honor user-set ssr.noExternal in middleware-mode SSR build ([e60c48b](https://github.com/moostjs/moostjs/commit/e60c48b87bcfcf83db4f116cd2b76117c61e067f))
+
+
+
 ## [0.6.14](https://github.com/moostjs/moostjs/compare/v0.6.13...v0.6.14) (2026-05-20)
 
 
