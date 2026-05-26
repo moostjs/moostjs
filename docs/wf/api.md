@@ -359,11 +359,17 @@ State persistence interface:
 
 ```ts
 interface WfStateStrategy {
-  persist(state: WfState, options?: { ttl?: number }): Promise<string>
-  retrieve(token: string): Promise<WfState | null>
-  consume(token: string): Promise<WfState | null>
+  persist(
+    state: WfState,
+    options?: { ttl?: number },
+    overrides?: { handle?: string }, // since @wooksjs/event-wf 0.7.14 — hint to reuse a handle so the wfs stays stable across resumes
+  ): Promise<string>
+  retrieve(token: string): Promise<WfState | null>          // no invalidation
+  consume(token: string): Promise<WfState | null>           // atomic retrieve + invalidate (mutex against concurrent resumes)
 }
 ```
+
+`HandleStateStrategy` honors the `handle` hint and reuses the same storage key on every resume — the `wfs` token is a stable session credential, not single-use. `EncapsulatedStateStrategy` ignores the hint (the ciphertext is a function of the state, so the token changes on every state mutation regardless). See [Outlets — Token Stability & Resume Semantics](./outlets.md#token-stability--resume-semantics).
 
 ### `WfOutlet`
 

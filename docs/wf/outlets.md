@@ -37,7 +37,7 @@ import {
   createHttpOutlet, HandleStateStrategy, WfStateStoreMemory,
 } from '@moostjs/event-wf'
 
-// Login is security-sensitive — use HandleStateStrategy for truly single-use tokens. // [!code focus]
+// Login is security-sensitive — use HandleStateStrategy for server-side state + fail-closed semantics. // [!code focus]
 // Swap WfStateStoreMemory for a Redis/database-backed WfStateStore in production. // [!code focus]
 const state = new HandleStateStrategy({ store: new WfStateStoreMemory() }) // [!code focus]
 
@@ -89,9 +89,9 @@ class AuthController {
 
 1. Client sends `POST /auth/flow` with `{ "wfid": "auth/login" }`
 2. Workflow starts → `credentials` step returns `outletHttp(...)` → workflow pauses
-3. State is encrypted into a token → HTTP outlet returns the form payload + token (`wfs`) in the response
+3. State is persisted by the strategy (server-side row for `HandleStateStrategy`, encrypted blob for `EncapsulatedStateStrategy`) → HTTP outlet returns the form payload + token (`wfs`) in the response
 4. Client renders the form, user fills it in, sends `POST /auth/flow` with `{ "wfs": "<token>", "username": "...", "password": "..." }`
-5. State is decrypted from token → workflow resumes at `credentials` with input → `create-session` runs → workflow finishes
+5. State is retrieved via `consume()` (atomic mutex against concurrent resumes) → workflow resumes at `credentials` with input → `create-session` runs → workflow finishes
 6. Response includes the redirect and session cookie from `useWfFinished()`
 
 ## The `handleOutlet` Method
@@ -141,11 +141,17 @@ this.wf.handleOutlet({
 })
 ```
 
-### Single-Use Tokens
+### Token Stability & Resume Semantics
 
-Every resume calls `strategy.consume(token)` atomically **before** the step runs — replay of the same `wfs` returns `400`. With `HandleStateStrategy` the token is truly deleted; with `EncapsulatedStateStrategy` the consume is a stateless no-op and the token remains replayable until its TTL — use `HandleStateStrategy` for security-sensitive flows (auth, password reset, financial ops).
+The `wfs` token is a **workflow session credential**, not a per-step single-use token. With `HandleStateStrategy` it is minted on start and reused on every resume (the engine re-persists under the same handle), so a single `wfs` survives browser refresh, bookmark-and-resume, magic-link reopen on a different device, and lost-connection retry across the entire workflow run.
 
-**Fail-closed on unexpected errors.** Because consume fires before the step runs, an unexpected throw during resume burns the token with no fresh replacement — the user must restart the workflow from the beginning. This is intentional: no lingering replayable token after a failed attempt. For expected validation failures (wrong password, invalid input, rate limit), return an outlet signal from the step handler instead of throwing — the engine re-pauses and issues a fresh token so the user can retry without restarting.
+Every resume still calls `strategy.consume(token)` atomically **before** the step runs — but only as a brief mutex against concurrent resumes. Two tabs racing the same `wfs`: one wins, the other gets HTTP **410 Gone** with body `{ error: 'Invalid or expired workflow state' }`. After the winner re-persists under the same handle, the loser's next attempt succeeds.
+
+With `EncapsulatedStateStrategy` the token IS the state — `consume()` is a stateless no-op, and a copy of the token remains valid for the full TTL. Because the ciphertext is a function of the (now-advanced) state, the response token differs from the request token on every state-mutating resume, so clients on this strategy must always read the renewed `wfs` from each response.
+
+**Fail-closed on unexpected errors.** The engine re-persists under the same handle only **after** the step returns. An unexpected throw during resume skips that re-persist — the handle is gone and the user must restart the workflow. This is the security-preferred behavior (no lingering replayable token after a failed attempt). For expected validation failures (wrong password, invalid input, rate limit), return an outlet signal from the step handler instead of throwing — the engine re-persists under the same handle on the re-pause, and the same `wfs` keeps working.
+
+**Replay protection.** Single-use rotation at the transport layer is no longer the model. The workflow record itself advances after each successful step, so a replayed token resumes from the current step, not a previous one — there is no way to re-execute a past step via the token. Steps with non-idempotent side effects should still guard themselves at the step layer (idempotency keys in the form payload, advance counters, etc.); do not rely on token rotation for replay safety.
 
 ### Out-of-Band Outlets
 
@@ -161,7 +167,7 @@ Any custom outlet whose resumer is a different principal than the HTTP caller MU
 A state strategy controls how paused workflow state is persisted and retrieved. Two strategies are provided.
 
 ::: danger Selection rule
-If the flow has any real-world side effect (auth, credentials, money, permissions, invites), use **`HandleStateStrategy`**. It is the only strategy that can enforce single-use tokens. Use **`EncapsulatedStateStrategy`** only when every step is idempotent and replay-within-TTL is harmless.
+If the flow has any real-world side effect (auth, credentials, money, permissions, invites), use **`HandleStateStrategy`**. It is the only strategy with server-side state — required for revocation, fail-closed semantics on unexpected errors, and a stable resume URL across the entire workflow. Use **`EncapsulatedStateStrategy`** only when every step is idempotent and replay-within-TTL is harmless.
 :::
 
 ### EncapsulatedStateStrategy
@@ -179,7 +185,7 @@ const state = new EncapsulatedStateStrategy({
 
 **Pros:** Zero infrastructure, horizontally scalable, no cleanup needed.
 
-**Cons:** Tokens are larger (they contain the full state), cannot be revoked server-side, and — most importantly — **stateless strategies cannot enforce single-use**. `consume()` is a no-op alias for `retrieve()`, so any copy of the token (forwarded email link, logged URL, browser history) remains valid for the full TTL regardless of how many times the workflow was resumed. Do not use for auth, password reset, invite accept, financial operations, or anything else where replay within the TTL window is a problem.
+**Cons:** Tokens are larger (they contain the full state), cannot be revoked server-side, and — most importantly — **the token cannot be invalidated**. `consume()` is a no-op alias for `retrieve()`, so any copy of the token (forwarded email link, logged URL, browser history) remains valid for the full TTL. The token does rotate on every state-mutating resume (the ciphertext changes with the state), but the previous token stays valid until it expires. Do not use for auth, password reset, invite accept, financial operations, or anything else where replay within the TTL window is a problem.
 
 ### HandleStateStrategy
 
@@ -198,7 +204,7 @@ const state = new HandleStateStrategy({
 })
 ```
 
-**Pros:** Small tokens, server-side revocation, and **truly single-use tokens** via the store's atomic `getAndDelete`. Once the trigger calls `consume()` on a resume, the token is gone — replay of the same `wfs` returns `400`, even if an attacker captured the token in transit or from a forwarded link.
+**Pros:** Small tokens, server-side revocation, and **fail-closed on unexpected errors** — `consume()` runs atomically before the step (acting as a mutex against concurrent resumes), and the engine re-persists under the same handle only after the step returns. If the step throws unexpectedly, the handle is gone and the workflow cannot be resumed without restart. The `wfs` itself stays stable across normal resumes (refresh, bookmark, magic-link reopen all keep working).
 
 **Cons:** Requires a persistent store in production. In-memory `WfStateStoreMemory` is for dev/testing only — it loses state on restart and does not survive across replicas.
 
@@ -249,7 +255,7 @@ this.wf.handleOutlet({
 ```
 
 ::: warning Shared-storage constraint
-The trigger resolves the strategy at resume time using `wfid` from the request. If the resume request does not carry `wfid` (cookie-only transport, token-only body), the trigger falls back to `state('')`. So **either** every strategy returned by the function must share the same underlying storage (same Redis instance, same `WfStateStore`, same encryption key), **or** every resume request must include `wfid`. Violating this silently breaks single-use invalidation — `consume()` runs against the wrong strategy's storage and the real token stays live.
+The trigger resolves the strategy at resume time using `wfid` from the request. If the resume request does not carry `wfid` (cookie-only transport, token-only body), the trigger falls back to `state('')`. So **either** every strategy returned by the function must share the same underlying storage (same Redis instance, same `WfStateStore`, same encryption key), **or** every resume request must include `wfid`. Violating this silently breaks the mutex on `consume()` — it runs against the wrong storage and concurrent-resume protection no longer holds. The engine also detects a strategy-reference mismatch between the request `wfid` and the persisted `state.schemaId`: when the factory returns a *different* strategy reference for the two ids, it skips the handle-reuse optimization and mints a fresh handle (the original belongs to the provisional strategy's keyspace, not the real one).
 :::
 
 ## Outlets
@@ -433,7 +439,7 @@ import {
   HandleStateStrategy, WfStateStoreMemory,
 } from '@moostjs/event-wf'
 
-// Auth flows are security-sensitive — HandleStateStrategy gives truly single-use tokens.
+// Auth flows are security-sensitive — HandleStateStrategy gives server-side state, revocation, and fail-closed semantics.
 // Use a Redis/database-backed WfStateStore in production (WfStateStoreMemory is dev-only).
 const stateStrategy = new HandleStateStrategy({ store: new WfStateStoreMemory() })
 
@@ -556,33 +562,33 @@ class AuthController {
 }
 ```
 
-**Client-side flow for login:**
+**Client-side flow for login** (the `wfs` minted at start is reused across every resume — with `HandleStateStrategy` the engine re-persists under the same handle):
 
 ```
 POST /auth/flow  { "wfid": "auth/login" }
-  ← 200  { "wfs": "...", "inputRequired": { "outlet": "http", "payload": { "type": "login", ... } } }
+  ← 200  { "wfs": "T1", "inputRequired": { "outlet": "http", "payload": { "type": "login", ... } } }
 
-POST /auth/flow  { "wfs": "...", "username": "alice", "password": "s3cret" }
-  ← 200  { "wfs": "...", "inputRequired": { "outlet": "http", "payload": { "type": "mfa", ... } } }
+POST /auth/flow  { "wfs": "T1", "username": "alice", "password": "s3cret" }
+  ← 200  { "wfs": "T1", "inputRequired": { "outlet": "http", "payload": { "type": "mfa", ... } } }
   (or skip MFA if not required → redirect directly)
 
-POST /auth/flow  { "wfs": "...", "code": "123456" }
+POST /auth/flow  { "wfs": "T1", "code": "123456" }
   ← 302  Location: /dashboard   Set-Cookie: sid=...
 ```
 
-**Client-side flow for recovery:**
+**Client-side flow for recovery** (same `wfs` throughout — the email-link token is the same `T1` minted at start; on `EncapsulatedStateStrategy` the token would rotate on every state change instead):
 
 ```
 POST /auth/flow  { "wfid": "auth/recovery" }
-  ← 200  { "wfs": "...", "inputRequired": { "outlet": "http", "payload": { "type": "email-form", ... } } }
+  ← 200  { "wfs": "T1", "inputRequired": { "outlet": "http", "payload": { "type": "email-form", ... } } }
 
-POST /auth/flow  { "wfs": "...", "email": "alice@example.com" }
-  ← 200  (email sent, workflow paused at email outlet — no wfs in response)
+POST /auth/flow  { "wfs": "T1", "email": "alice@example.com" }
+  ← 200  (email sent, workflow paused at email outlet — no wfs in response; tokenDelivery: 'out-of-band')
 
-GET /auth/flow?wfs=<token-from-email-link>
-  ← 200  { "wfs": "...", "inputRequired": { "outlet": "http", "payload": { "type": "password-form", ... } } }
+GET /auth/flow?wfs=T1
+  ← 200  { "wfs": "T1", "inputRequired": { "outlet": "http", "payload": { "type": "password-form", ... } } }
 
-POST /auth/flow  { "wfs": "...", "password": "n3wP@ss" }
+POST /auth/flow  { "wfs": "T1", "password": "n3wP@ss" }
   ← 302  Location: /dashboard   Set-Cookie: sid=...
 ```
 

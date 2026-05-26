@@ -276,16 +276,16 @@ outletEmail(target, template, context?)  // pause, trigger email
 
 ### State strategies
 
-**Selection rule.** Any flow with real-world side effects (auth, credentials, money, permissions, invites) MUST use `HandleStateStrategy` — only it enforces single-use tokens. Use `EncapsulatedStateStrategy` only when every step is idempotent and replay-within-TTL is harmless.
+**Selection rule.** Any flow with real-world side effects (auth, credentials, money, permissions, invites) MUST use `HandleStateStrategy` — only it has server-side state (required for revocation and fail-closed semantics on unexpected errors). Use `EncapsulatedStateStrategy` only when every step is idempotent and replay-within-TTL is harmless.
 
 **`EncapsulatedStateStrategy`** — encrypts state into a self-contained token (stateless).
 
 ```ts
 new EncapsulatedStateStrategy({ secret: process.env.SECRET!, defaultTtl: 3_600_000 })
 ```
-Pros: zero infra, scales horizontally. Cons: **stateless — cannot enforce single-use** (`consume()` is a no-op alias for `retrieve()`). NOT for auth / password reset / invite accept / financial ops.
+Pros: zero infra, scales horizontally. Cons: **stateless — cannot be invalidated** (`consume()` is a no-op alias for `retrieve()`; a copy of the token remains valid until TTL). The ciphertext changes when state mutates, so the response token differs from the request token on every state-mutating resume — clients must read the renewed `wfs` from each response. NOT for auth / password reset / invite accept / financial ops.
 
-**`HandleStateStrategy`** — state server-side, token is a handle.
+**`HandleStateStrategy`** — state server-side, token is a stable handle.
 
 ```ts
 new HandleStateStrategy({
@@ -294,13 +294,13 @@ new HandleStateStrategy({
   generateHandle: () => crypto.randomUUID(),
 })
 ```
-Pros: truly single-use (atomic `getAndDelete`), server-side revocation. Cons: needs persistent store in production (`WfStateStoreMemory` is dev-only — loses state on restart).
+Pros: small tokens, server-side revocation, **fail-closed on unexpected errors** (the engine re-persists under the same handle only *after* the step returns — an unexpected throw burns the handle). The `wfs` is minted on start and reused for the entire workflow run (engine passes `{ handle: token }` to `persist()` since `@wooksjs/event-wf` 0.7.14), so refresh / bookmark / lost-connection retry / magic-link reopen all keep working with the same URL token. Cons: needs persistent store in production (`WfStateStoreMemory` is dev-only — loses state on restart).
 
 **`WfStateStoreMemory`** — in-memory store for dev/testing. `WfStateStore` interface: `set`, `get`, `delete`, `getAndDelete`, `cleanup?`.
 
-All strategies implement `WfStateStrategy`: `persist(state, { ttl? }): token`, `retrieve(token)`, `consume(token)`.
+All strategies implement `WfStateStrategy`: `persist(state, { ttl? }, { handle? }): token`, `retrieve(token)`, `consume(token)`. The `handle` override (third arg) is the 0.7.14+ hint for handle reuse; `HandleStateStrategy` honors it, `EncapsulatedStateStrategy` ignores it.
 
-**Per-workflow strategies (shared-storage constraint).** When `state` is a function `(wfid) => WfStateStrategy`, the trigger resolves it using `wfid` from the request; absent `wfid` falls back to `state('')`. Either all returned strategies MUST share the same underlying storage (same Redis, same `WfStateStore`, same encryption key) OR every resume MUST include `wfid`. Violating this silently breaks single-use invalidation.
+**Per-workflow strategies (shared-storage constraint).** When `state` is a function `(wfid) => WfStateStrategy`, the trigger resolves it using `wfid` from the request; absent `wfid` falls back to `state('')`. Either all returned strategies MUST share the same underlying storage (same Redis, same `WfStateStore`, same encryption key) OR every resume MUST include `wfid`. Violating this silently breaks the `consume()` mutex against concurrent resumes. The engine also detects a strategy-reference mismatch between request `wfid` and persisted `state.schemaId` — when the factory returns *different* strategy references for the two ids, the handle-reuse optimization is skipped and a fresh handle is minted (the original belongs to the provisional strategy's keyspace).
 
 ### Trigger handlers
 
@@ -327,8 +327,10 @@ async triggerWorkflow() {
 
 ### Token semantics
 
-- **Single-use**: every resume calls `strategy.consume(token)` atomically before the step. Replay → 400. Truly single-use with `HandleStateStrategy`; replayable within TTL with `EncapsulatedStateStrategy`.
-- **Fail-closed**: consume fires before the step runs; unexpected throw during resume burns the token with no fresh replacement — user restarts. Handle expected failures (wrong password, invalid input, rate limit) by returning an outlet signal instead of throwing; the engine re-pauses and issues a new token.
+- **Stable session credential (since `@wooksjs/event-wf` 0.7.14).** With `HandleStateStrategy` the `wfs` is minted on start, reused across every resume (engine re-persists under the same handle), and dies on finish or unexpected error. With `EncapsulatedStateStrategy` the ciphertext rotates on every state-mutating persist — clients must always read the renewed `wfs` from the response.
+- **`consume()` as concurrent-resume mutex**: every resume calls `strategy.consume(token)` atomically before the step. Two tabs racing the same `wfs`: one wins, the other gets HTTP **410 Gone** with body `{ error: 'Invalid or expired workflow state' }`. After the winner re-persists, the loser's *next* attempt succeeds — the token is alive again.
+- **Fail-closed**: consume fires before the step; re-persist happens only after the step returns. An unexpected throw during resume skips re-persist, the handle is gone, user must restart. Handle expected failures (wrong password, invalid input, rate limit) by returning an outlet signal instead of throwing; the engine re-persists under the same handle on the re-pause, so the same `wfs` keeps working.
+- **Replay protection at workflow layer, not transport.** The record advances after each successful step — a replayed token resumes from the current step, not a previous one. Steps with non-idempotent side effects should guard themselves (idempotency keys, advance counters), not rely on token rotation.
 - **`tokenDelivery`** on `WfOutlet`: `'caller'` (default for `createHttpOutlet`) merges token into HTTP response; `'out-of-band'` (default for `createEmailOutlet`) suppresses body/cookie write so the HTTP caller doesn't receive the token. Custom outlets whose resumer is a different principal than the HTTP caller (SMS, Slack, webhook) MUST declare `'out-of-band'` — otherwise it's a privilege escalation vector.
 
 ### Outlet composables
@@ -368,9 +370,13 @@ interface WfOutletResult {
   cookies?: Record<string, { value: string; options?: Record<string, unknown> }>
 }
 interface WfStateStrategy {
-  persist(state: WfState, options?: { ttl?: number }): Promise<string>
+  persist(
+    state: WfState,
+    options?: { ttl?: number },
+    overrides?: { handle?: string }, // 0.7.14+: hint to reuse a handle so wfs stays stable across resumes
+  ): Promise<string>
   retrieve(token: string): Promise<WfState | null>
-  consume(token: string):  Promise<WfState | null>
+  consume(token: string):  Promise<WfState | null> // atomic retrieve+invalidate — used as concurrent-resume mutex by the engine
 }
 interface WfStateStore {
   set(handle: string, state: WfState, expiresAt?: number): Promise<void>
@@ -415,7 +421,7 @@ class ApiController {
   async handle() {
     return this.wf.handleOutlet({
       allow: ['onboarding/signup'],
-      // Security-sensitive — use HandleStateStrategy.
+      // Security-sensitive — HandleStateStrategy gives server-side state, revocation, and fail-closed semantics.
       state: new HandleStateStrategy({ store: redisStore }),
       outlets: [createHttpOutlet(), createEmailOutlet(sendMail)],
     })
