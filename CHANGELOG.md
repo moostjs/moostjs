@@ -1,3 +1,12 @@
+## [0.6.17](https://github.com/moostjs/moostjs/compare/v0.6.16...v0.6.17) (2026-05-26)
+
+
+### Bug Fixes
+
+* fix bundle externals ([97f5f1b](https://github.com/moostjs/moostjs/commit/97f5f1b552a1eed6c0351ca2ed5166b6464ed380))
+
+
+
 ## [0.6.16](https://github.com/moostjs/moostjs/compare/v0.6.15...v0.6.16) (2026-05-26)
 
 
