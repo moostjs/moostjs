@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/arbac",
-  "version": "0.6.15",
+  "version": "0.6.16",
   "description": "Access Control @prostojs/arbac",
   "keywords": [
     "abac",
