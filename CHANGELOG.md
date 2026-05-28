@@ -1,3 +1,12 @@
+## [0.6.18](https://github.com/moostjs/moostjs/compare/v0.6.17...v0.6.18) (2026-05-28)
+
+
+### Features
+
+* **event-wf:** adopt wooksjs 0.7.16 strategy registry + opts-bag start/resume ([c8dd83b](https://github.com/moostjs/moostjs/commit/c8dd83bae073ebecbb103e9565fcadcc34726a91))
+
+
+
 ## [0.6.17](https://github.com/moostjs/moostjs/compare/v0.6.16...v0.6.17) (2026-05-26)
 
 
