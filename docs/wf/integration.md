@@ -49,7 +49,7 @@ export class TicketController {
     @Param('id') id: string,
     @Body() body: { state: any, input: any },
   ) {
-    const result = await this.wf.resume(body.state, body.input) // [!code focus]
+    const result = await this.wf.resume(body.state, { input: body.input }) // [!code focus]
     return {
       ticketId: id,
       status: result.state.context.status,

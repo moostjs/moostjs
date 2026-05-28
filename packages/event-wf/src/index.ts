@@ -2,7 +2,7 @@ export * from './decorators'
 export * from './event-wf'
 export type { TFlowOutput, TWorkflowSchema } from '@prostojs/wf'
 export { StepRetriableError } from '@prostojs/wf'
-export { useWfState, wfKind } from '@wooksjs/event-wf'
+export { swapStrategy, useWfState, useWfStrategy, wfKind } from '@wooksjs/event-wf'
 
 // Outlet orchestration (from @wooksjs/event-wf)
 export {
@@ -18,6 +18,7 @@ export type {
   WfOutletTriggerDeps,
   WfOutletTokenConfig,
   WfFinishedResponse,
+  WfPauseRequest,
 } from '@wooksjs/event-wf'
 
 // Outlet primitives (from @prostojs/wf/outlets)

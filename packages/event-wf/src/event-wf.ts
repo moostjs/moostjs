@@ -1,6 +1,7 @@
 import type { TFlowOutput, TWorkflowSpy } from '@prostojs/wf'
 import type {
   TStepHandler,
+  TWfRunOptions,
   TWooksWfOptions,
   WfOutletTriggerConfig,
   WfOutletTriggerDeps,
@@ -30,7 +31,7 @@ const CONTEXT_TYPE = 'WF'
  * ```ts
  * const wf = new MoostWf()
  * app.adapter(wf).controllers(MyWorkflows).init()
- * const result = await wf.start('my-flow', {}, input)
+ * const result = await wf.start('my-flow', {}, { input })
  * ```
  */
 export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta> {
@@ -103,12 +104,13 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
    */
   public handleOutlet(config: WfOutletTriggerConfig): Promise<unknown> {
     return handleWfOutletRequest(config, {
-      start: (schemaId: string, context: unknown, opts?: { input?: unknown }) =>
-        this.start(schemaId, context as T, opts?.input),
-      resume: (
-        state: { schemaId: string; context: unknown; indexes: number[] },
-        opts?: { input?: unknown },
-      ) => this.resume(state as { schemaId: string; context: T; indexes: number[] }, opts?.input),
+      start: (schemaId, context, opts) =>
+        this.start(schemaId, context as T, opts as TWfRunOptions<unknown, T, IR>),
+      resume: (state, opts) =>
+        this.resume(
+          state as { schemaId: string; context: T; indexes: number[] },
+          opts as TWfRunOptions<unknown, T, IR>,
+        ),
     } as WfOutletTriggerDeps)
   }
 
@@ -117,11 +119,19 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
    *
    * @param schemaId - Identifier of the registered workflow schema.
    * @param initialContext - Initial context data for the workflow.
-   * @param input - Optional input passed to the first step.
+   * @param opts - Optional run options: `input` for the first step, `eventContext`
+   *   to link this run to a parent event scope (e.g. an HTTP request), and
+   *   `strategy.name` to pick the initial state strategy. Passing a bare
+   *   `input` value (legacy positional form) is no longer supported — wrap it
+   *   in `{ input }`.
    */
-  public start<I>(schemaId: string, initialContext: T, input?: I): Promise<TFlowOutput<T, I, IR>> {
+  public start<I>(
+    schemaId: string,
+    initialContext: T,
+    opts?: TWfRunOptions<I, T, IR>,
+  ): Promise<TFlowOutput<T, I, IR>> {
     return this.wfApp.start(schemaId, initialContext, {
-      input,
+      ...opts,
       cleanup: () => {
         getMoostInfact().unregisterScope(useScopeId())
       },
@@ -132,14 +142,16 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
    * Resumes a previously paused workflow from a saved state.
    *
    * @param state - Saved workflow state containing schema, context, and step indexes.
-   * @param input - Optional input for the resumed step.
+   * @param opts - Optional run options: `input` for the resumed step, `eventContext`
+   *   for parent-chain composable access, and `strategy.name` for the strategy
+   *   that loaded this state. Legacy positional `input` is no longer supported.
    */
   public resume<I>(
     state: { schemaId: string; context: T; indexes: number[] },
-    input?: I,
+    opts?: TWfRunOptions<I, T, IR>,
   ): Promise<TFlowOutput<T, I, IR>> {
     return this.wfApp.resume(state, {
-      input,
+      ...opts,
       cleanup: () => {
         getMoostInfact().unregisterScope(useScopeId())
       },

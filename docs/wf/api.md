@@ -111,7 +111,7 @@ new MoostWf<T, IR>(opts?: WooksWf<T, IR> | TWooksWfOptions, debug?: boolean)
 | `eventOptions` | `EventContextOptions` | Event context configuration |
 | `router` | `TWooksOptions['router']` | Router configuration |
 
-### `start<I>(schemaId, initialContext, input?)`
+### `start<I>(schemaId, initialContext, opts?)`
 
 Starts a new workflow execution.
 
@@ -119,7 +119,11 @@ Starts a new workflow execution.
 start<I>(
   schemaId: string,
   initialContext: T,
-  input?: I,
+  opts?: {
+    input?: I
+    eventContext?: EventContext
+    strategy?: { name: string }
+  },
 ): Promise<TFlowOutput<T, I, IR>>
 ```
 
@@ -127,30 +131,42 @@ start<I>(
 |-----------|-------------|
 | `schemaId` | Workflow identifier (matching `@Workflow` path, including controller prefix) |
 | `initialContext` | Initial context object passed to steps |
-| `input` | Optional input for the first step |
+| `opts.input` | Optional input for the first step |
+| `opts.eventContext` | Parent event context (e.g. from `current()` inside an HTTP handler) — links the run to a parent scope so steps can read its composables |
+| `opts.strategy` | `{ name }` of the initial state strategy. A step may later swap it via `swapStrategy(name)` |
 
 ```ts
-const result = await wf.start('process-order', { orderId: '123', status: 'new' })
+const result = await wf.start('process-order', { orderId: '123' }, { input: { source: 'web' } })
 ```
 
-### `resume<I>(state, input?)`
+::: warning Breaking change in 0.6.18
+Prior versions accepted `input` as a positional third argument. Wrap it in `{ input }`. See [`WF_UPDATE.md`](https://github.com/moostjs/moostjs) for migration details.
+:::
+
+### `resume<I>(state, opts?)`
 
 Resumes a paused workflow from a saved state.
 
 ```ts
 resume<I>(
   state: { schemaId: string, context: T, indexes: number[] },
-  input?: I,
+  opts?: {
+    input?: I
+    eventContext?: EventContext
+    strategy?: { name: string }
+  },
 ): Promise<TFlowOutput<T, I, IR>>
 ```
 
 | Parameter | Description |
 |-----------|-------------|
 | `state` | State object from a previous `TFlowOutput.state` |
-| `input` | Input for the paused step |
+| `opts.input` | Input for the paused step |
+| `opts.eventContext` | Parent event context (see `start` above) |
+| `opts.strategy` | `{ name }` of the strategy that loaded this state — used by offline resume drivers; the HTTP trigger passes it automatically |
 
 ```ts
-const resumed = await wf.resume(previousResult.state, { answer: 'yes' })
+const resumed = await wf.resume(previousResult.state, { input: { answer: 'yes' } })
 ```
 
 ### `attachSpy<I>(fn)`

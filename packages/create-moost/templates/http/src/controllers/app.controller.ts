@@ -74,11 +74,11 @@ export class AppController {
 
     if (typeof wfState === "object") {
       // Resume an existing workflow with the provided state and input
-      return this.wf.resume<TWfExampleInput>(wfState as TWfState, input);
+      return this.wf.resume<TWfExampleInput>(wfState as TWfState, { input });
     }
 
     // Start a new workflow with the provided input
-    return this.wf.start<TWfExampleInput>("wf-example", {}, input);
+    return this.wf.start<TWfExampleInput>("wf-example", {}, { input });
   }
 
   /**

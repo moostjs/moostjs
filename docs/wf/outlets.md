@@ -119,7 +119,7 @@ The full `WfOutletTriggerConfig` interface:
 |-------|------|-------------|
 | `allow` | `string[]` | Whitelist of workflow IDs that can be started. Empty = all allowed |
 | `block` | `string[]` | Blacklist of workflow IDs (checked after `allow`) |
-| `state` | `WfStateStrategy \| (wfid: string) => WfStateStrategy` | State persistence strategy (required) |
+| `state` | `WfStateStrategy \| { strategies: Record<string, WfStateStrategy>, default: string \| ((wfid) => string) }` | State persistence strategy (required). See [State Strategies](#state-strategies) below. |
 | `outlets` | `WfOutlet[]` | Registered delivery channels (required) |
 | `token` | `WfOutletTokenConfig` | Token read/write/naming configuration |
 | `wfidName` | `string` | Request parameter name for workflow ID (default: `'wfid'`) |
@@ -240,23 +240,45 @@ class RedisStateStore implements WfStateStore {
 }
 ```
 
-### Per-Workflow Strategy
+### Named Strategy Registry
 
-Pass a function to use different strategies per workflow:
+Register strategies under names and pick one per workflow (or per workflow run). The active strategy name is embedded in the issued token as `<name>.<raw>`, so resume always picks the strategy that persisted the state — each strategy can have its own independent storage.
 
 ```ts
+const encapsulated = new EncapsulatedStateStrategy({ secret: process.env.WF_SECRET! })
+const durable = new HandleStateStrategy({ store: new RedisStore() })
+
 this.wf.handleOutlet({
-  state: (wfid) => {
-    if (wfid.startsWith('auth/')) return authStrategy
-    return defaultStrategy
+  state: {
+    strategies: { mem: encapsulated, kv: durable },
+    default: (wfid) => (wfid.startsWith('auth/') ? 'kv' : 'mem'),
   },
   // ...
 })
 ```
 
-::: warning Shared-storage constraint
-The trigger resolves the strategy at resume time using `wfid` from the request. If the resume request does not carry `wfid` (cookie-only transport, token-only body), the trigger falls back to `state('')`. So **either** every strategy returned by the function must share the same underlying storage (same Redis instance, same `WfStateStore`, same encryption key), **or** every resume request must include `wfid`. Violating this silently breaks the mutex on `consume()` — it runs against the wrong storage and concurrent-resume protection no longer holds. The engine also detects a strategy-reference mismatch between the request `wfid` and the persisted `state.schemaId`: when the factory returns a *different* strategy reference for the two ids, it skips the handle-reuse optimization and mints a fresh handle (the original belongs to the provisional strategy's keyspace, not the real one).
-:::
+- `strategies` — record of named `WfStateStrategy` instances. Names must match `/^[A-Za-z0-9_-]+$/`.
+- `default` — either a name string or `(wfid) => name` invoked on workflow start.
+
+Passing a bare `WfStateStrategy` (the shortcut form) is auto-promoted to `{ strategies: { default: <strategy> }, default: 'default' }`.
+
+### Swapping the Strategy at Runtime
+
+A step can escalate from cheap encapsulated state to durable storage right before a long-running pause:
+
+```ts
+import { swapStrategy } from '@moostjs/event-wf'
+
+@Step('await-approval')
+async awaitApproval() {
+  swapStrategy('kv') // next pause persists via the 'kv' strategy
+  return outletHttp({ fields: ['decision'] })
+}
+```
+
+`swapStrategy(name)` validates only the name format. Unknown names surface as a loud error from the trigger at pause time, when it cannot find the name in its registry.
+
+To inspect the active name from within a step, use `useWfStrategy().current()`.
 
 ## Outlets
 
@@ -617,10 +639,24 @@ Advanced composable for accessing outlet infrastructure from within a workflow s
 ```ts
 import { useWfOutlet } from '@moostjs/event-wf'
 
-const { getStateStrategy, getOutlets, getOutlet } = useWfOutlet()
+const { getOutlets, getOutlet } = useWfOutlet()
 ```
 
 Most steps do not need this — use `outletHttp()` / `outletEmail()` / `outlet()` instead.
+
+### `useWfStrategy()`
+
+Inspect or swap the active state strategy name from within a workflow step. The new name applies to the **next** pause — it travels back to the outlet trigger via `output.inputRequired.stateStrategy` and persists in the issued token's prefix.
+
+```ts
+import { swapStrategy, useWfStrategy } from '@moostjs/event-wf'
+
+const { current, swap } = useWfStrategy()
+current() // → 'mem'
+swap('kv') // or use the sugar: swapStrategy('kv')
+```
+
+Only the name format is validated here (`/^[A-Za-z0-9_-]+$/`); existence in the trigger's registry is validated at pause time.
 
 ### `useWfFinished()`
 

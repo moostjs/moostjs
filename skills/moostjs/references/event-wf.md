@@ -176,9 +176,17 @@ type TWorkflowControl<T> =
 ## Start / resume / TFlowOutput
 
 ```ts
-wf.start<I>(schemaId, initialContext, input?): Promise<TFlowOutput<T, I, IR>>
-wf.resume<I>(state, input?):                    Promise<TFlowOutput<T, I, IR>>
+wf.start<I>(schemaId, initialContext, opts?): Promise<TFlowOutput<T, I, IR>>
+wf.resume<I>(state, opts?):                    Promise<TFlowOutput<T, I, IR>>
+
+interface TWfRunOptions<I> {
+  input?: I
+  eventContext?: EventContext            // parent ctx for composable inheritance
+  strategy?: { name: string }            // initial state strategy name (named-registry mode)
+}
 ```
+
+**Breaking in 0.6.18.** Both methods used to take `input` as a positional arg; now it lives on the opts bag. `wf.start('flow', ctx, val)` → `wf.start('flow', ctx, { input: val })`.
 
 ```ts
 type TFlowOutput<T, I, IR> =
@@ -224,7 +232,7 @@ Resume:
 ```ts
 if (!result.finished) await result.resume({ street: '123 Main St' })
 // or cross-process:
-const r2 = await wf.resume(savedState, userInput)
+const r2 = await wf.resume(savedState, { input: userInput })
 ```
 
 **Expiration.** `@StepTTL(ms)` or return `{ inputRequired, expires: Date.now() + ttl }`. Informational — the engine does NOT enforce it; your app must reject stale resumes.
@@ -300,7 +308,9 @@ Pros: small tokens, server-side revocation, **fail-closed on unexpected errors**
 
 All strategies implement `WfStateStrategy`: `persist(state, { ttl? }, { handle? }): token`, `retrieve(token)`, `consume(token)`. The `handle` override (third arg) is the 0.7.14+ hint for handle reuse; `HandleStateStrategy` honors it, `EncapsulatedStateStrategy` ignores it.
 
-**Per-workflow strategies (shared-storage constraint).** When `state` is a function `(wfid) => WfStateStrategy`, the trigger resolves it using `wfid` from the request; absent `wfid` falls back to `state('')`. Either all returned strategies MUST share the same underlying storage (same Redis, same `WfStateStore`, same encryption key) OR every resume MUST include `wfid`. Violating this silently breaks the `consume()` mutex against concurrent resumes. The engine also detects a strategy-reference mismatch between request `wfid` and persisted `state.schemaId` — when the factory returns *different* strategy references for the two ids, the handle-reuse optimization is skipped and a fresh handle is minted (the original belongs to the provisional strategy's keyspace).
+**Named strategy registry (since `@wooksjs/event-wf` 0.7.16).** `state` accepts either a single `WfStateStrategy` (shortcut, auto-promoted under name `'default'`) or `{ strategies: Record<name, WfStateStrategy>, default: name | ((wfid) => name) }`. The active strategy name is embedded in the issued token as `<name>.<raw>`, so resume always picks the strategy that persisted the state — each strategy can have its own independent storage. Names must match `/^[A-Za-z0-9_-]+$/`. The old `(wfid) => WfStateStrategy` function form was removed in this version.
+
+**Swapping strategies mid-run.** A step can call `swapStrategy('kv')` (sugar for `useWfStrategy().swap('kv')`) to escalate from cheap encapsulated state to durable storage right before a long-running pause. The new name applies to the **next** pause — it travels back to the trigger via `output.inputRequired.stateStrategy` and prefixes the issued token. The composable only validates name format; the trigger validates existence at pause time and throws loudly on unknown names. `useWfStrategy().current()` reports the active name. Removed `useWfOutlet().getStateStrategy()` — use `useWfStrategy().current()` instead.
 
 ### Trigger handlers
 
@@ -335,7 +345,8 @@ async triggerWorkflow() {
 
 ### Outlet composables
 
-- **`useWfOutlet()`** — `getStateStrategy()`, `getOutlets()`, `getOutlet(name)`.
+- **`useWfOutlet()`** — `getOutlets()`, `getOutlet(name)`. (`getStateStrategy()` removed in 0.7.16 — use `useWfStrategy().current()`.)
+- **`useWfStrategy()`** — `current(): string` (active strategy name) / `swap(name)` (apply to next pause). `swapStrategy(name)` is sugar for `swap`.
 - **`useWfFinished()`** — `.set({ type: 'redirect', value: '/dashboard' })` / `.set({ type: 'data', value, status })` / `.get(): WfFinishedResponse | undefined`.
 
 ### Outlet types
@@ -343,13 +354,17 @@ async triggerWorkflow() {
 ```ts
 interface WfOutletTriggerConfig {
   allow?: string[]; block?: string[]
-  state: WfStateStrategy | ((wfid: string) => WfStateStrategy)
+  state: WfStateStrategy | {
+    strategies: Record<string, WfStateStrategy>     // names: /^[A-Za-z0-9_-]+$/
+    default: string | ((wfid: string) => string)    // name on workflow start
+  }
   outlets: WfOutlet[]
   token?: WfOutletTokenConfig
   wfidName?: string  // default 'wfid'
   initialContext?: (body: Record<string, unknown> | undefined, wfid: string) => unknown
   onFinished?: (ctx: { context: unknown; schemaId: string }) => unknown
 }
+type WfPauseRequest<P = unknown> = WfOutletRequest<P> & { stateStrategy?: string }
 interface WfOutletTokenConfig {
   read?: Array<'body'|'query'|'cookie'>  // default ['body','query','cookie']
   write?: 'body' | 'cookie'              // default 'body'
@@ -444,7 +459,7 @@ class TicketController {
     return { finished: result.finished, state: result.finished ? undefined : result.state }
   }
   @Post(':id/resume') async resume(@Body() body: { state: any; input: any }) {
-    return this.wf.resume(body.state, body.input)
+    return this.wf.resume(body.state, { input: body.input })
   }
 }
 ```
@@ -456,7 +471,8 @@ Standard Moost features work on steps (interceptors, pipes, DI).
 - `@WorkflowParam('resume')` is a **boolean**, not a function. Resume *function* is on `TFlowOutput`.
 - Regular errors reject the promise (not captured in output). Only `StepRetriableError` produces `finished: false` + `retry()`.
 - `expires` is informational — engine doesn't enforce.
-- `result.resume` / `result.retry` are in-process only. For cross-process: `wf.resume(state, input)`.
+- `result.resume` / `result.retry` are in-process only. For cross-process: `wf.resume(state, { input })`.
+- `MoostWf.start` / `.resume` take an opts bag since 0.6.18 (`{ input, eventContext, strategy }`). Calling with a positional `input` arg silently passes the value as the opts object — the step will read `undefined` for input. Always wrap: `{ input }`.
 - String conditions use `new Function()` + `with(ctx)`; only context props are in scope.
 - Step IDs are router paths: `'process/items'` = two segments.
 - Adapter name is `'workflow'` (`wf.name === 'workflow'`).
