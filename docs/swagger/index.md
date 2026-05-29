@@ -1,6 +1,6 @@
 # @moostjs/swagger
 
-`@moostjs/swagger` generates an [OpenAPI 3](https://spec.openapis.org/oas/v3.0.3) document from your Moost controllers and serves a Swagger UI. It reads controller metadata, argument resolvers (`@Param`, `@Query`, `@Header`, `@Body`), and Atscript-annotated DTOs to produce accurate schemas with minimal manual annotation.
+`@moostjs/swagger` generates an [OpenAPI 3](https://spec.openapis.org/oas/v3.0.3) document from your Moost controllers and serves a Swagger UI. It reads controller metadata, argument resolvers (`@Param`, `@Query`, `@Header`, `@Body`), and Atscript-annotated DTOs to produce accurate schemas with minimal manual annotation. Both OpenAPI 3.0 and 3.1 are supported — select the version via `openapiVersion` (see [Configuration](/swagger/configuration#openapi-version)).
 
 ## Installation
 

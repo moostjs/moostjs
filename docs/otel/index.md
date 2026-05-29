@@ -40,10 +40,9 @@ import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 
 // 1. Configure OpenTelemetry SDK (your setup may differ)
-const provider = new NodeTracerProvider()
-provider.addSpanProcessor(
-  new MoostBatchSpanProcessor(new OTLPTraceExporter())
-)
+const provider = new NodeTracerProvider({
+  spanProcessors: [new MoostBatchSpanProcessor(new OTLPTraceExporter())],
+})
 provider.register()
 
 // 2. Enable Moost instrumentation (before creating the app)

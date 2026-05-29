@@ -36,7 +36,7 @@ export class StaticController {
 | Option | Type | Description |
 |---|---|---|
 | `baseDir` | `string` | Base directory for resolving file paths |
-| `cacheControl` | `string \| object` | Cache-Control header value |
+| `cacheControl` | `object` (`TCacheControl`) | Cache-Control header value |
 | `expires` | `string` | Expires header value |
 | `pragmaNoCache` | `boolean` | Add `Pragma: no-cache` header |
 | `headers` | `object` | Additional response headers |

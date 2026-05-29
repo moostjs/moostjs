@@ -1,4 +1,4 @@
-import type { Span, SpanOptions, TimeInput } from '@opentelemetry/api'
+import type { Span, TimeInput } from '@opentelemetry/api'
 import { context, trace } from '@opentelemetry/api'
 import type { EventContext } from '@wooksjs/event-core'
 import { current, key } from 'moost'
@@ -83,11 +83,6 @@ export function useOtelContext(ctx?: EventContext) {
 
   return {
     trace,
-    withChildSpan: <T>(name: string, cb: (...a: any[]) => T, opts?: SpanOptions) => {
-      const tracer = trace.getTracer('moost-tracer')
-      const span = tracer.startSpan(name, opts)
-      return () => context.with(trace.setSpan(context.active(), span), cb)
-    },
     getSpan,
     getSpanContext,
     getPropagationHeaders,

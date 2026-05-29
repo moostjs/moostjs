@@ -95,7 +95,7 @@ if (result.inputRequired) {
 
 // Step 3: Load and resume // [!code focus]
 const saved = await db.load('pending-workflows', workflowId)
-const resumed = await wf.resume(saved.state, userInput) // [!code focus]
+const resumed = await wf.resume(saved.state, { input: userInput }) // [!code focus]
 ```
 
 The `state` object contains everything needed to resume:
@@ -122,13 +122,13 @@ A workflow can pause and resume multiple times. Each resume continues from the p
 let result = await wf.start('registration', emptyContext)
 
 // Resume with name — runs 'collect-name', then pauses at 'collect-email'
-result = await wf.resume(result.state, { name: 'Alice' })
+result = await wf.resume(result.state, { input: { name: 'Alice' } })
 
 // Resume with email — runs 'collect-email', then pauses at 'collect-address'
-result = await wf.resume(result.state, { email: 'alice@example.com' })
+result = await wf.resume(result.state, { input: { email: 'alice@example.com' } })
 
 // Resume with address — runs remaining steps
-result = await wf.resume(result.state, { street: '123 Main', city: 'Springfield' })
+result = await wf.resume(result.state, { input: { street: '123 Main', city: 'Springfield' } })
 console.log(result.finished) // true
 ```
 

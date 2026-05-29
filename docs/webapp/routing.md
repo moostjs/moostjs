@@ -14,8 +14,11 @@ Moost provides a decorator for each HTTP method:
 | `@Delete(path?)` | DELETE |
 | `@Patch(path?)` | PATCH |
 | `@All(path?)` | All methods |
+| `@Upgrade(path?)` | UPGRADE (WebSocket handshake) |
 
 All decorators are imported from `@moostjs/event-http`.
+
+`@Upgrade(path?)` (equivalently `@HttpMethod('UPGRADE', ...)`) registers a WebSocket-upgrade handler. See the [WebSocket docs](../wsapp/) for completing the handshake.
 
 ```ts
 import { Get, Post, Put, Delete, Patch } from '@moostjs/event-http'

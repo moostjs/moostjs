@@ -92,7 +92,7 @@ Now every handler parameter whose type was compiled by Atscript is validated aut
 ```ts
 app.applyGlobalPipes(
   validatorPipe({
-    unknwonProps: 'ignore',
+    unknownProps: 'ignore',
     errorLimit: 50,
   }),
 )

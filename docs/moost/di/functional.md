@@ -38,7 +38,8 @@ Beyond `instantiate`, the composable exposes the current controller's runtime co
 | `getControllerMeta()` | Class-level metadata |
 | `getMethodMeta(name?)` | Method-level metadata |
 | `getScope()` | Controller's injectable scope |
-| `getParamsMeta()` | Handler parameter metadata |
+| `getParamsMeta()` | Array of handler parameter metadata (always an array; empty when none) |
+| `getPropertiesList()` | Decorated property keys — `(string \| symbol)[]` |
 
 ## When to Use
 

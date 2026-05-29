@@ -16,7 +16,6 @@ async getUser(@Param('id') id: string) {
     getSpan,               // Get the current event span
     getSpanContext,         // Get span context (traceId, spanId)
     getPropagationHeaders,  // Get W3C headers for outgoing requests
-    withChildSpan,         // Create a child span
     customSpanAttr,        // Add attribute to the event span
     customMetricAttr,      // Add attribute to event metrics
   } = useOtelContext()
@@ -92,35 +91,6 @@ const response = await fetch('http://user-service/api/users', {
 })
 ```
 
-### `withChildSpan(name, callback, options?)`
-
-Creates a child span and returns a function that executes the callback within that span's context. This two-step API lets you prepare the span and invoke it separately.
-
-```ts
-const { withChildSpan } = useOtelContext()
-
-// Create and immediately invoke
-const result = await withChildSpan('fetch-user-data', async () => {
-  return await db.users.findById(id)
-})()
-
-// Or prepare and invoke later
-const fetchData = withChildSpan('fetch-user-data', async () => {
-  return await db.users.findById(id)
-})
-const data = await fetchData()
-```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `name` | `string` | Span name |
-| `callback` | `(...args) => T` | Function to execute within the span |
-| `options?` | `SpanOptions` | OpenTelemetry span options (kind, attributes, links, etc.) |
-
-::: tip
-`withChildSpan` creates the span immediately but only activates its context when you call the returned function. The span remains open until the callback completes.
-:::
-
 ## `useTrace()`
 
 Shorthand to access the OpenTelemetry `trace` API directly. Useful when you need to create custom tracers.
@@ -173,7 +143,7 @@ const response = await fetch('http://downstream-service/api', {
 
 ## `withSpan()`
 
-Low-level utility for executing a callback within a span context. Unlike `withChildSpan` from `useOtelContext()`, this is a standalone function that doesn't require an active event context.
+Utility for executing a callback within a span context — the way to wrap a unit of work in a child span. Unlike the `useOtelContext()` composables, this is a standalone function that doesn't require an active event context, and it accepts either a span name (`{ name, options }`) or an existing span.
 
 ```ts
 import { withSpan } from '@moostjs/otel'

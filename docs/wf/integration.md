@@ -190,3 +190,7 @@ const wooksWf = wf.getWfApp() // [!code focus]
 ```
 
 This gives you direct access to the low-level workflow engine from `@wooksjs/event-wf`.
+
+::: info
+The `WooksWf` type is not re-exported from `@moostjs/event-wf` — import it directly from `@wooksjs/event-wf` if you need to annotate it.
+:::

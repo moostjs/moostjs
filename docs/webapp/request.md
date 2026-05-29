@@ -108,7 +108,7 @@ import { Get, Authorization } from '@moostjs/event-http'
 
 @Get('profile')
 profile(
-    @Authorization('bearer') token: string,    // Bearer token (without "Bearer " prefix)
+    @Authorization('bearer') token: string,    // full Authorization header incl. "Bearer " prefix (undefined unless scheme is bearer)
     @Authorization('type') authType: string,   // "Bearer", "Basic", etc.
 ) { /* ... */ }
 
@@ -116,7 +116,7 @@ profile(
 login(
     @Authorization('username') user: string,   // from Basic auth
     @Authorization('password') pass: string,   // from Basic auth
-    @Authorization('raw') credentials: string, // raw credentials string
+    @Authorization('raw') credentials: string, // credentials with the scheme prefix stripped
 ) { /* ... */ }
 ```
 

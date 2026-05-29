@@ -90,7 +90,7 @@ copy(@Param('source') s: string, @Param('dest') d: string) {}
 
 ### `@CliOption(...keys)` — param
 
-Binds to `--key` / `-k`. Long names (≥2 chars) = `--flag`, single char = `-f`. Type `boolean` = flag (no value). Missing = `undefined` (not `false`).
+Binds to `--key` / `-k`. Long names (≥2 chars) = `--flag`, single char = `-f`. Type `boolean` = flag (no value). Missing registered boolean = `false`; missing non-boolean = `undefined`.
 
 ```ts
 @Cli('deploy/:env')
@@ -243,7 +243,7 @@ class HealthController {
 
 - `@Cli()` with no arg → **method name** path. `@Cli('')` = root.
 - Literal colons must be escaped: `@Cli('build\\:dev')`.
-- Missing flags → `undefined`, not `false` (even for booleans).
+- Missing registered boolean flags → `false`; missing non-boolean options → `undefined`.
 - `@Optional` doesn't set a default — use `??`.
 - `@Value` is cosmetic only.
 - Registering a child controller directly AND via `@ImportController` duplicates commands.

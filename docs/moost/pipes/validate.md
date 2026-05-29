@@ -79,7 +79,7 @@ export class UsersController {
 ```ts
 app.applyGlobalPipes(
   validatorPipe({
-    unknwonProps: 'ignore',
+    unknownProps: 'ignore',
     errorLimit: 50,
   }),
 )

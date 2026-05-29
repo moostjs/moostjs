@@ -36,42 +36,36 @@ This allows you to have granular control over event-specific logging and even pe
 
 ## Usage
 
-To create a Moost application with customized logging configuration, you can
-provide the `eventOptions` object when initializing your Moost instance. This
-can be achieved using the `createMoostApp` function.
+To customize logging, create a logger instance and pass it to the HTTP adapter.
+The `MoostHttp` constructor signature is
+`new MoostHttp(httpApp?: WooksHttp | TWooksHttpOptions)`, where
+`TWooksHttpOptions.logger` is a logger *instance* (type `TConsoleBase`). Use the
+`createLogger` helper exported from `moost` to build one.
 
 Here's an example that demonstrates the creation of a Moost HTTP adapter with
 logging configuration:
 
 ```ts
+import { Moost, createLogger, loggerConsoleTransport } from 'moost';
 import { MoostHttp } from '@moostjs/event-http';
 
-const httpAdapter = new MoostHttp({
-  logger: {
-    topic: "my-moost-app",
-    level: 2, // Allow only fatal and error logs
-    transports: [
-      (log) =>
-        console.log(
-          `[${log.topic}][${log.type}] ${log.timestamp}`,
-          ...log.messages,
-        ),
-    ],
-  },
-  eventOptions: {
-    eventLogger: {
-      level: 5, // Allow fatal, error, warn, log, info, and debug logs
-      persistLevel: 3, // Persist only fatal, error, and warn logs
-    },
-  },
+const logger = createLogger({
+  level: 2, // Allow only fatal and error logs
+  transports: [loggerConsoleTransport],
 });
+
+const app = new Moost();
+const httpAdapter = new MoostHttp({ logger });
+
+app.adapter(httpAdapter);
+app.registerControllers(/* ...controllers */);
+await app.init();
 ```
 
 The example above demonstrates the configuration of a Moost HTTP adapter. The
-`logger` option is used to define the logging behavior for the entire Moost
-instance. It specifies the topic, log level, and transports for the logger. In
-this case, log messages at the `fatal` and `error` levels are allowed, and the
-log messages are sent to the console.
+`logger` option is a logger instance that defines the logging behavior for the
+adapter. In this case, log messages at the `fatal` and `error` levels are
+allowed, and the log messages are sent to the console.
 
 To use the event logger within a controller, you can inject it using the
 `@InjectEventLogger` decorator. Here's an example:

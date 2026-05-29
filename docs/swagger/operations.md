@@ -43,7 +43,7 @@ Both are standard Moost decorators — no swagger-specific import needed. If you
 
 ## Operation ID
 
-Every operation gets an auto-generated `operationId` based on the controller and method name (e.g., `UsersController_list`). Override it with:
+The `operationId` is resolved in this order: `@SwaggerOperationId()` → `@Id()` → an auto-generated value. The auto-generated value has the form `{METHOD}_{sanitized_path}` — the uppercase HTTP method joined to the route path with non-alphanumeric characters replaced by underscores (`/` → `_`, `{`/`}` → `__`, any other → `_`). For example, `GET /users` generates `GET__users` and `GET /users/{id}` generates `GET__users___id__`. Override it with:
 
 ```ts
 // Swagger-specific override (highest priority)

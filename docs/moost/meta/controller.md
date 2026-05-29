@@ -77,10 +77,10 @@ const propMeta = getPropMeta('username');
 console.log(propMeta?.description); // Outputs the description metadata of the 'username' property
 ```
 
-### `getControllerMeta(): TMoostMetadata | undefined`
+### `getControllerMeta<TT extends object>(): TMoostMetadata | undefined`
 
 **Description:**  
-Fetches the metadata of the current controller class.
+Fetches the metadata of the current controller class. Accepts an optional generic `TT` to type custom metadata extensions.
 
 **Parameters:**  
 None
@@ -95,13 +95,14 @@ const controllerMeta = getControllerMeta();
 console.log(controllerMeta?.label); // Outputs the label metadata of the controller
 ```
 
-### `getMethodMeta(): TMoostMetadata | undefined`
+### `getMethodMeta<TT extends object>(name?: string): TMoostMetadata | undefined`
 
 **Description:**  
-Obtains the metadata of the current event handler method.
+Obtains the metadata of the current event handler method. Pass an optional `name` to read metadata of a different method; accepts an optional generic `TT` to type custom metadata extensions.
 
-**Parameters:**  
-None
+**Parameters:**
+
+- `name` (optional): The name of the method whose metadata you want to read. Defaults to the current handler method.
 
 **Returns:**  
 The metadata object of the method or `undefined` if not found.
@@ -113,7 +114,7 @@ const methodMeta = getMethodMeta();
 console.log(methodMeta?.id); // Outputs the ID metadata of the method
 ```
 
-### `getParamsMeta(): TMoostMetadata[] | undefined`
+### `getParamsMeta(): (TMoostParamsMetadata & TMateParamMeta)[]`
 
 **Description:**  
 Retrieves an array of metadata objects for each parameter of the current event handler method.
@@ -122,13 +123,13 @@ Retrieves an array of metadata objects for each parameter of the current event h
 None
 
 **Returns:**  
-An array of metadata objects for the parameters or `undefined` if not found.
+An array of parameter metadata objects. Always returns an array — it is empty when no method metadata is available.
 
 **Usage Example:**
 
 ```ts
 const paramsMeta = getParamsMeta();
-paramsMeta?.forEach((meta, index) => {
+paramsMeta.forEach((meta, index) => {
   console.log(`Parameter ${index} description: ${meta.description}`);
 });
 ```
@@ -167,4 +168,41 @@ The scope of the controller (`'SINGLETON'` or `'FOR_EVENT'`) or `undefined` if n
 ```ts
 const scope = getScope();
 console.log(`Controller scope: ${scope}`);
+```
+
+### `instantiate<T>(Class): Promise<T>`
+
+**Description:**  
+Creates an instance of the given class through Moost's DI container, scoped to the current controller instance (respecting scopes, provide, and replace registries).
+
+**Parameters:**
+
+- `Class`: The class constructor to instantiate.
+
+**Returns:**  
+A `Promise` resolving to the instantiated class.
+
+**Usage Example:**
+
+```ts
+const { instantiate } = useControllerContext()
+const metrics = await instantiate(MetricsCollector)
+```
+
+### `getPropertiesList(): (string | symbol)[]`
+
+**Description:**  
+Returns the list of decorated property keys collected on the current controller class.
+
+**Parameters:**  
+None
+
+**Returns:**  
+An array of property keys (`string` or `symbol`). Always returns an array — empty when none are present.
+
+**Usage Example:**
+
+```ts
+const props = getPropertiesList();
+console.log(props); // e.g., ['username', 'email']
 ```

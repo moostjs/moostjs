@@ -139,8 +139,8 @@ Both server and client support pluggable serialization for formats like MessageP
 ```ts
 const ws = new MoostWs({
   wooksWs: {
-    messageParser: (raw: string) => myCustomParse(raw),
-    messageSerializer: (msg: unknown) => myCustomSerialize(msg),
+    messageParser: (raw: Buffer | string) => myCustomParse(raw),
+    messageSerializer: (msg: WsReplyMessage | WsPushMessage) => myCustomSerialize(msg),
   },
 })
 ```

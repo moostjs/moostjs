@@ -82,7 +82,7 @@ build(
 ```bash
 my-cli build --watch --minify    # → watch=true, minify=true
 my-cli build -wm                 # → same (combined short flags)
-my-cli build                     # → watch=undefined, minify=undefined
+my-cli build                     # → watch=false, minify=false
 ```
 
 ## Optional parameters

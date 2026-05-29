@@ -100,6 +100,10 @@ new MoostWf<T, IR>(opts?: WooksWf<T, IR> | TWooksWfOptions, debug?: boolean)
 | `opts` | `WooksWf \| TWooksWfOptions \| undefined` | Pre-existing WooksWf instance, configuration options, or `undefined` for defaults |
 | `debug` | `boolean` | Enable error logging |
 
+::: info
+`WooksWf` is an upstream type — import it from `@wooksjs/event-wf`, not from `@moostjs/event-wf` (it is not re-exported).
+:::
+
 **`TWooksWfOptions` fields:**
 
 | Field | Type | Description |
@@ -347,7 +351,7 @@ Configuration for `handleOutlet()`:
 interface WfOutletTriggerConfig {
   allow?: string[]
   block?: string[]
-  state: WfStateStrategy | ((wfid: string) => WfStateStrategy)
+  state: WfStateStrategy | { strategies: Record<string, WfStateStrategy>; default: string | ((wfid: string) => string) }
   outlets: WfOutlet[]
   token?: WfOutletTokenConfig
   wfidName?: string
@@ -365,7 +369,6 @@ interface WfOutletTokenConfig {
   read?: Array<'body' | 'query' | 'cookie'>
   write?: 'body' | 'cookie'
   name?: string
-  consume?: boolean | Record<string, boolean>
 }
 ```
 
@@ -397,6 +400,26 @@ interface WfOutlet {
   deliver(request: WfOutletRequest, token: string): Promise<WfOutletResult | void>
 }
 ```
+
+### `WfOutletRequest`
+
+Argument passed to `WfOutlet.deliver()` — the outlet name plus the step's payload/target/template/context. See the custom-outlet example in [Outlets — Custom Outlets](/wf/outlets#custom-outlets).
+
+### `WfOutletResult`
+
+Optional return from `WfOutlet.deliver()` describing the HTTP response (`response`, `status`, `headers`, `cookies`). Return `void` for out-of-band channels.
+
+### `WfPauseRequest`
+
+The `WfOutletRequest` extended with an optional `stateStrategy` name — the pause signal carried back to the trigger when a step swaps strategy. See [Outlets — Swapping the Strategy at Runtime](/wf/outlets#swapping-the-strategy-at-runtime).
+
+### `WfState`
+
+Serializable workflow state record persisted by a `WfStateStrategy` / stored by a `WfStateStore`.
+
+### `WfStateStore`
+
+Storage backend used by `HandleStateStrategy` (`set`, `get`, `delete`, `getAndDelete`, optional `cleanup`). Implement it to back state with Redis or a database. See [Outlets — Custom Store](/wf/outlets#custom-store).
 
 ### `WfFinishedResponse`
 
@@ -510,10 +533,30 @@ Returns outlet infrastructure accessors. Available inside step handlers during o
 ```ts
 import { useWfOutlet } from '@moostjs/event-wf'
 
-const { getStateStrategy, getOutlets, getOutlet } = useWfOutlet()
+const { getOutlets, getOutlet } = useWfOutlet()
 ```
 
 Most steps do not need this — use `outletHttp()` / `outletEmail()` / `outlet()` instead.
+
+### `useWfStrategy()`
+
+Inspects or swaps the active state strategy name from within a step. Returns `{ current(), swap(name) }`; the swapped name applies to the **next** pause. See [Outlets — Swapping the Strategy at Runtime](/wf/outlets#swapping-the-strategy-at-runtime).
+
+```ts
+import { useWfStrategy } from '@moostjs/event-wf'
+
+const { current, swap } = useWfStrategy()
+```
+
+### `swapStrategy(name)`
+
+Sugar for `useWfStrategy().swap(name)` — switches the strategy used for the next pause. Use when a step escalates from cheap encapsulated state to durable storage before a long-running pause. See [Outlets — Swapping the Strategy at Runtime](/wf/outlets#swapping-the-strategy-at-runtime).
+
+```ts
+import { swapStrategy } from '@moostjs/event-wf'
+
+swapStrategy('kv')
+```
 
 ### `useWfFinished()`
 

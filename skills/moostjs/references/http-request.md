@@ -67,7 +67,7 @@ upload(@RawBody() raw: Buffer) {}
 ## @Authorization
 
 ```ts
-@Authorization('bearer')   token: string      // raw token after "Bearer "
+@Authorization('bearer')   token: string      // full header incl. "Bearer " prefix; undefined unless scheme is bearer
 @Authorization('type')     type: string       // "Bearer" / "Basic" / …
 @Authorization('username') user: string       // Basic auth
 @Authorization('password') pass: string       // Basic auth

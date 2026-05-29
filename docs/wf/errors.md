@@ -106,7 +106,7 @@ if (result.error && result.retry) {
 Or resume from stored state:
 
 ```ts
-const retried = await wf.resume(result.state, newInput)
+const retried = await wf.resume(result.state, { input: newInput })
 ```
 
 ## When to Use Which

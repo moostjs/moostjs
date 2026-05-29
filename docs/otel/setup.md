@@ -16,15 +16,15 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 import { MoostBatchSpanProcessor } from '@moostjs/otel'
 
 // Example configuration — adjust for your tracing backend
-const provider = new NodeTracerProvider()
-
-provider.addSpanProcessor(
-  new MoostBatchSpanProcessor(
-    new OTLPTraceExporter({
-      url: 'http://localhost:4318/v1/traces',
-    })
-  )
-)
+const provider = new NodeTracerProvider({
+  spanProcessors: [
+    new MoostBatchSpanProcessor(
+      new OTLPTraceExporter({
+        url: 'http://localhost:4318/v1/traces',
+      })
+    ),
+  ],
+})
 
 provider.register()
 ```
@@ -59,10 +59,9 @@ import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 
 // 1. Tracer provider + exporter (your setup may differ)
-const provider = new NodeTracerProvider()
-provider.addSpanProcessor(
-  new MoostBatchSpanProcessor(new OTLPTraceExporter())
-)
+const provider = new NodeTracerProvider({
+  spanProcessors: [new MoostBatchSpanProcessor(new OTLPTraceExporter())],
+})
 provider.register()
 
 // 2. Enable Moost instrumentation
@@ -83,15 +82,18 @@ OpenTelemetry span processors control how spans are batched and exported. Moost 
 Extends the standard `BatchSpanProcessor`. Spans marked with `@OtelIgnoreSpan()` are silently dropped before batching — they never reach the exporter.
 
 ```ts
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
 import { MoostBatchSpanProcessor } from '@moostjs/otel'
 
-provider.addSpanProcessor(
-  new MoostBatchSpanProcessor(exporter, {
-    maxQueueSize: 2048,
-    maxExportBatchSize: 512,
-    scheduledDelayMillis: 5000,
-  })
-)
+const provider = new NodeTracerProvider({
+  spanProcessors: [
+    new MoostBatchSpanProcessor(exporter, {
+      maxQueueSize: 2048,
+      maxExportBatchSize: 512,
+      scheduledDelayMillis: 5000,
+    }),
+  ],
+})
 ```
 
 Use this for production. It batches spans and exports them periodically, reducing overhead.
@@ -101,11 +103,12 @@ Use this for production. It batches spans and exports them periodically, reducin
 Extends the standard `SimpleSpanProcessor`. Exports spans immediately (one by one) while still filtering out ignored spans.
 
 ```ts
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
 import { MoostSimpleSpanProcessor } from '@moostjs/otel'
 
-provider.addSpanProcessor(
-  new MoostSimpleSpanProcessor(exporter)
-)
+const provider = new NodeTracerProvider({
+  spanProcessors: [new MoostSimpleSpanProcessor(exporter)],
+})
 ```
 
 Use this for development or debugging when you want to see spans in real time.

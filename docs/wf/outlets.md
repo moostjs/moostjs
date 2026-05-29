@@ -22,7 +22,7 @@ Install or update the required packages:
 pnpm add @moostjs/event-wf@latest
 ```
 
-The outlet APIs come from the underlying packages (`@prostojs/wf` v0.1.1+ and `@wooksjs/event-wf` v0.7.8+), but everything is re-exported from `@moostjs/event-wf` for convenience — you only need one import source.
+The outlet APIs come from the underlying packages (`@prostojs/wf` v0.2.1+ and `@wooksjs/event-wf` v0.7.16+), but everything is re-exported from `@moostjs/event-wf` for convenience — you only need one import source.
 
 ## Quick Example
 
