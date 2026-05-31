@@ -1,3 +1,13 @@
+## [0.6.19](https://github.com/moostjs/moostjs/compare/v0.6.18...v0.6.19) (2026-05-31)
+
+
+### Bug Fixes
+
+* **moost:** intern context keys via globalKey to survive duplicate module loads ([a24754f](https://github.com/moostjs/moostjs/commit/a24754fec74acb8ae818d54db0da39cd201e9abf))
+* **vite:** serialize HMR reloads to prevent mid-reload request races ([08ba00c](https://github.com/moostjs/moostjs/commit/08ba00cec66de3599fdc09b5aadfbbaa47c74ff9))
+
+
+
 ## [0.6.18](https://github.com/moostjs/moostjs/compare/v0.6.17...v0.6.18) (2026-05-28)
 
 
