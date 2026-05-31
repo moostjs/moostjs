@@ -264,6 +264,13 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   /** A logger instance for plugin debug output. */
   const logger = isTest ? console : getLogger()
   let reloadRequired = false
+  /** In-flight app reload, shared so concurrent requests await one reload. */
+  let reloadPromise: Promise<void> | null = null
+  /**
+   * Drains any pending Moost app reload before a request is served. Assigned once
+   * the SSR module runner exists (see configureServer); a no-op until then.
+   */
+  let drainReload: () => Promise<void> = () => Promise.resolve()
 
   patchMoostHandlerLogging()
 
@@ -492,6 +499,33 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
       const runner = createServerModuleRunner(server.environments.ssr)
       const ssrImport = (id: string) => runner.import(id)
 
+      // Serialize app reloads. On HMR, hotUpdate() nulls moostMiddleware and sets
+      // reloadRequired; the next request lazily re-imports the entry. Without a lock,
+      // a request arriving while the re-import is in flight would slip past into a
+      // half-initialized app (null middleware / "controller.instance" not yet set)
+      // and 500. The while-loop also covers a new hot update firing mid-reload: the
+      // request keeps draining until no reload is pending.
+      const runReload = () => {
+        reloadRequired = false
+        console.log()
+        logger.debug('🚀 Reloading Moost App...')
+        console.log()
+        return (async () => {
+          await ssrImport(options.entry)
+          await new Promise((resolve) => setTimeout(resolve, 1))
+        })().finally(() => {
+          reloadPromise = null
+        })
+      }
+      drainReload = async () => {
+        while (reloadRequired || reloadPromise) {
+          if (!reloadPromise) {
+            reloadPromise = runReload()
+          }
+          await reloadPromise
+        }
+      }
+
       // Wire up SSR module loading so adapter detection patches
       // the same module instances that the SSR app will use.
       for (const adapter of adapters) {
@@ -506,14 +540,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
 
       // Attach Moost as a middleware if present
       server.middlewares.use(async (req, res, next) => {
-        if (reloadRequired) {
-          reloadRequired = false
-          console.log()
-          logger.debug('🚀 Reloading Moost App...')
-          console.log()
-          await ssrImport(options.entry)
-          await new Promise((resolve) => setTimeout(resolve, 1))
-        }
+        await drainReload()
 
         // In middleware mode with prefix: skip Moost for non-matching paths (fast path)
         if (options.middleware && prefix) {
@@ -600,6 +627,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
                 if (req.method !== 'GET') { return next() }
                 const url = req.originalUrl || req.url || '/'
                 try {
+                  // Same reload lock as the main middleware: an HMR mid-render would
+                  // otherwise race ssrLoadModule against a half-ejected app.
+                  await drainReload()
                   let template = await fs.readFile(resolve(process.cwd(), 'index.html'), 'utf8')
                   template = await server.transformIndexHtml(url, template)
                   const { render } = await server.ssrLoadModule(options.ssrEntry!)
