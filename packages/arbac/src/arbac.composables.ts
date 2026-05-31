@@ -1,5 +1,5 @@
 import type { EventContext } from '@wooksjs/event-core'
-import { current, getConstructor, key, useControllerContext } from 'moost'
+import { current, getConstructor, globalKey, useControllerContext } from 'moost'
 
 import type { TArbacMeta } from './arbac.mate'
 import { MoostArbac } from './moost-arbac'
@@ -10,7 +10,7 @@ import { ArbacUserProvider } from './user.provider'
  *
  * @template TScope - Type representing the scope of access control.
  */
-const arbacScopesKey = key<unknown[] | undefined>('arbac.scopes')
+const arbacScopesKey = globalKey<unknown[] | undefined>('arbac.scopes')
 
 export function useArbac<TScope extends object>(ctx?: EventContext) {
   const _ctx = ctx || current()

@@ -175,10 +175,13 @@ const fn = defineMoostEventHandler({
 ## Parameter resolvers
 
 ```ts
-import { Resolve } from 'moost'
-import { current, key } from '@wooksjs/event-core'
+import { Resolve, globalKey } from 'moost'
+import { current } from '@wooksjs/event-core'
 
-const eventDataKey = key<unknown>('my-adapter.data')
+// Use moost's `globalKey` (not event-core's bare `key`) for adapter context keys:
+// it interns the slot by name across duplicate module loads (dual ESM/CJS, or a
+// duplicated install), so set/get can't desync into a "Key ... is not set" 500.
+const eventDataKey = globalKey<unknown>('my-adapter.data')
 function setEventData(data: unknown) { current().set(eventDataKey, data) }
 
 function EventData(field?: string): ParameterDecorator & PropertyDecorator {

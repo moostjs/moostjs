@@ -1,16 +1,16 @@
 import type { EventContext } from '@wooksjs/event-core'
-import { current, key } from '@wooksjs/event-core'
+import { current } from '@wooksjs/event-core'
 
 import type { TAny } from '../common-types'
+import { globalKey } from './global-key'
 
 /** Callback used by interceptors to short-circuit and replace the handler response. */
 export type TOvertakeFn = (response: TAny) => void
 
-// Use globalThis to ensure a single key instance even when this module is loaded
-// from both source and dist (dual-package hazard in tests).
-const g = globalThis as TAny
-const overtakeKey = (g.__moost_overtakeKey ??= key<TOvertakeFn>('interceptor.overtake'))
-const interceptResultKey = (g.__moost_interceptResultKey ??= key<unknown>('interceptor.result'))
+// Interned via globalKey so the slot stays a single instance across duplicate
+// moost loads (dual ESM/CJS, or duplicate installs).
+const overtakeKey = globalKey<TOvertakeFn>('interceptor.overtake')
+const interceptResultKey = globalKey<unknown>('interceptor.result')
 
 /** Stores the overtake (reply) function in the current event context. */
 export function setOvertake(fn: TOvertakeFn, ctx?: EventContext) {

@@ -1,13 +1,14 @@
 import type { EventContext } from '@wooksjs/event-core'
-import { current, key } from '@wooksjs/event-core'
+import { current } from '@wooksjs/event-core'
 
 import type { TAny, TClassConstructor } from '../common-types'
 import { getMoostInfact, getMoostMate } from '../metadata'
+import { globalKey } from './global-key'
 
-const controllerInstanceKey = key<unknown>('controller.instance')
-const controllerMethodKey = key<string>('controller.method')
-const controllerRouteKey = key<string>('controller.route')
-const controllerPrefixKey = key<string>('controller.prefix')
+const controllerInstanceKey = globalKey<unknown>('controller.instance')
+const controllerMethodKey = globalKey<string>('controller.method')
+const controllerRouteKey = globalKey<string>('controller.route')
+const controllerPrefixKey = globalKey<string>('controller.prefix')
 
 /**
  * Sets the controller context for the current event scope.
