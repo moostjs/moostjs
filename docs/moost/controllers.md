@@ -145,6 +145,21 @@ export class ApiController {
 
 This works in both singleton constructors and event handlers. For singletons imported at multiple prefixes, the constructor sees the prefix from the first registration. Inside event handlers, `getPrefix()` always reflects the correct prefix for the current route.
 
+## Inspecting Registered Controllers
+
+`app.getControllersOverview()` returns the framework's final, post-bind view of every registered controller: its class (`type`), computed prefix, and handlers. Each handler carries `registeredAs[]` — the actual paths an adapter mounted it under (prefixes are already composed):
+
+```ts
+for (const c of app.getControllersOverview()) {
+  for (const h of c.handlers) {
+    // h.method, h.type (the handler's event type), and the real mounted paths:
+    h.registeredAs.forEach((r) => console.log(`${c.type.name}.${h.method} → ${r.path}`))
+  }
+}
+```
+
+The overview is only complete **after** all controllers are bound. A singleton constructor runs *during* bind, so it sees a partial table — to read the full overview, run your logic in an [`@MoostInit`](/moost/app-init) method, which is guaranteed to fire post-bind. To resolve one method's mounted path(s) without walking the overview yourself, use `getHandlerPaths()` / `@HandlerPaths()` — see [Resolving a handler path](/moost/app-init#resolving-a-handler-path).
+
 ## Best Practices
 
 1. **Keep Controllers Focused:**  

@@ -1,6 +1,7 @@
 import type { TEmpty, TObject } from '../common-types'
 import type { TMoostHandler, TMoostMetadata, TMoostParamsMetadata } from '../metadata'
 import { getMoostMate } from '../metadata'
+import { sharedPipes } from '../pipes/shared-pipes'
 import { resolveArguments } from '../resolve-arguments'
 import { mergeSorted } from '../shared-utils'
 import type { TControllerOverview, THandlerOverview } from '../types'
@@ -34,6 +35,34 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
 
   for (const method of methods) {
     const methodMeta = getMoostMate().read(fakeInstance, method as string) || ({} as TMoostMetadata)
+
+    if (methodMeta.moostInit) {
+      if (meta.injectable === 'FOR_EVENT') {
+        throw new Error(
+          `@MoostInit is not allowed on a FOR_EVENT controller (${classConstructor.name}.${String(
+            method,
+          )}). Init hooks run once at boot on the SINGLETON instance; FOR_EVENT controllers have no init-time instance.`,
+        )
+      }
+      // Init params resolve through the RESOLVE pipe only — no global/transform/
+      // validate pipes and no interceptors. This is DI/injection, not an event.
+      const initArgsPipes = (methodMeta.params || ([] as TMoostParamsMetadata[])).map((p) => ({
+        meta: p,
+        pipes: sharedPipes,
+      }))
+      options.registerInitHook?.({
+        priority: methodMeta.moostInit.priority,
+        method: method as string,
+        computedPrefix: prefix,
+        getInstance,
+        resolveArgs: resolveArguments(initArgsPipes, {
+          classMeta: meta,
+          methodMeta,
+          type: classConstructor,
+          key: method,
+        }),
+      })
+    }
 
     if (!methodMeta.handlers?.length) {
       continue

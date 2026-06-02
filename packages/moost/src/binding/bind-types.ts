@@ -17,4 +17,19 @@ export interface TBindControllerOptions {
   pipes?: TPipeData[]
   logger: TConsoleBase
   moostInstance: Moost
+  /** Collector for `@MoostInit` methods discovered while walking the controller. */
+  registerInitHook?: (hook: TInitHook) => void
+}
+
+/**
+ * A `@MoostInit`-decorated controller method, collected at bind time and run
+ * once by `Moost.init()` after all controllers are bound. Interceptors are not
+ * applied; params resolve through the RESOLVE pipe only.
+ */
+export interface TInitHook {
+  priority: number
+  method: string
+  computedPrefix: string
+  getInstance: () => Promise<TObject> | TObject
+  resolveArgs?: () => unknown[] | Promise<unknown[]>
 }

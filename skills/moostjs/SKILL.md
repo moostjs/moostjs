@@ -7,7 +7,8 @@ description: >-
   or custom adapters. Covers controllers, handler/parameter/response decorators, DI,
   interceptors, pipes, auth guards, framework errors, common metadata decorators,
   Wooks composables, adapter authoring, quick apps, workflow outlets/state
-  strategies, WebSocket rooms/testing, logging, and event context/scoping.
+  strategies, WebSocket rooms/testing, logging, app-init hooks (@MoostInit), and
+  event context/scoping.
 ---
 
 # Moost
@@ -20,7 +21,7 @@ Powered by: `@prostojs/mate` (metadata), `@prostojs/infact` (DI), `@wooksjs/even
 
 | Domain | File | Load when |
 |---|---|---|
-| Core concepts, Moost class, lifecycle, registration | [core.md](references/core.md) | New project, multi-adapter setup, `app.init()`, Moost subclass |
+| Core concepts, Moost class, lifecycle, registration, app init | [core.md](references/core.md) | New project, multi-adapter setup, `app.init()`, `@MoostInit`/`@InjectMoost`, boot-time setup, Moost subclass |
 | Decorators, metadata, custom decorators, Mate | [decorators.md](references/decorators.md) | Creating/using decorators, reading metadata |
 | DI scopes, @Injectable, @Inject, @Provide, @Circular | [di.md](references/di.md) | Services, scoping, providers, replacements |
 | Interceptors: priority, @Intercept, guards, class-based | [interceptors.md](references/interceptors.md) | Auth/logging/error cross-cutting |

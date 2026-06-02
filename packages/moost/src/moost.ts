@@ -8,7 +8,8 @@ import { createEventContext } from '@wooksjs/event-core'
 import { Hookable } from 'hookable'
 
 import { bindControllerMethods } from './binding/bind-controller'
-import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from './common-types'
+import type { TInitHook } from './binding/bind-types'
+import type { TAny, TAnyFn, TClassConstructor, TEmpty, TFunction, TObject } from './common-types'
 import { setControllerContext } from './composables'
 import type { TInterceptorDef } from './decorators'
 import { TInterceptorPriority } from './decorators'
@@ -21,7 +22,7 @@ import { sharedPipes } from './pipes/shared-pipes'
 import type { TPipeData, TPipeFn } from './pipes/types'
 import { TPipePriority } from './pipes/types'
 import { mergeSorted } from './shared-utils'
-import type { TControllerOverview } from './types'
+import type { TControllerOverview, THandlerOverview } from './types'
 import { getIterceptorHandlerFactory } from './utils'
 
 export type { TConsoleBase } from '@prostojs/logger'
@@ -97,6 +98,10 @@ export class Moost extends Hookable {
 
   protected controllersOverview: TControllerOverview[] = []
 
+  protected handlerOverviewIndex?: Map<TFunction, Map<string, THandlerOverview[]>>
+
+  protected initHooks: TInitHook[] = []
+
   protected provide: TProvideRegistry = createProvideRegistry(
     [Infact, getMoostInfact],
     [Mate, getMoostMate],
@@ -150,6 +155,34 @@ export class Moost extends Hookable {
   }
 
   /**
+   * @internal Memoized index of the controllers overview (controller class →
+   * method name → handler records), built once and reused for fast handler
+   * lookups (see `getHandlerPaths`). Rebuilt whenever controllers are (re)bound.
+   */
+  public getHandlerOverviewIndex(): Map<TFunction, Map<string, THandlerOverview[]>> {
+    if (!this.handlerOverviewIndex) {
+      const index = new Map<TFunction, Map<string, THandlerOverview[]>>()
+      for (const c of this.controllersOverview) {
+        let byMethod = index.get(c.type)
+        if (!byMethod) {
+          byMethod = new Map<string, THandlerOverview[]>()
+          index.set(c.type, byMethod)
+        }
+        for (const h of c.handlers) {
+          const list = byMethod.get(h.method)
+          if (list) {
+            list.push(h)
+          } else {
+            byMethod.set(h.method, [h])
+          }
+        }
+      }
+      this.handlerOverviewIndex = index
+    }
+    return this.handlerOverviewIndex
+  }
+
+  /**
    * ### init
    * Ititializes adapter. Must be called after adapters are attached.
    */
@@ -172,8 +205,34 @@ export class Moost extends Hookable {
     }
     this.unregisteredControllers.unshift(this)
     await this.bindControllers()
+    await this.runInitHooks()
     for (const a of this.adapters) {
       await (a.onInit && a.onInit(this))
+    }
+  }
+
+  /**
+   * Runs every `@MoostInit`-decorated controller method exactly once, after all
+   * controllers are bound (complete `getControllersOverview()`) and before the
+   * `adapter.onInit` loop. Hooks run in ascending `priority`, then registration
+   * order. Each runs on its controller's SINGLETON instance inside a synthetic
+   * init context (no interceptors; params resolve via the RESOLVE pipe only).
+   * A throwing hook rejects `init()` (fail-fast).
+   */
+  protected async runInitHooks() {
+    if (this.initHooks.length === 0) {
+      return
+    }
+    const hooks = this.initHooks.toSorted((a, b) => a.priority - b.priority)
+    for (const hook of hooks) {
+      await createEventContext({ logger: this.logger }, async () => {
+        const instance = await hook.getInstance()
+        setControllerContext(instance, hook.method as keyof typeof instance, '', {
+          prefix: hook.computedPrefix,
+        })
+        const args = hook.resolveArgs ? await hook.resolveArgs() : []
+        await (instance as Record<string, TAnyFn>)[hook.method](...args)
+      })
     }
   }
 
@@ -261,8 +320,10 @@ export class Moost extends Hookable {
         replace: classMeta?.replace,
         logger: this.logger,
         moostInstance: this,
+        registerInitHook: (hook) => this.initHooks.push(hook),
       }),
     )
+    this.handlerOverviewIndex = undefined // overview changed — drop the memoized index
     if (classMeta?.importController) {
       const prefix =
         typeof replaceOwnPrefix === 'string' ? replaceOwnPrefix : classMeta.controller?.prefix

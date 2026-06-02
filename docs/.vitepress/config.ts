@@ -265,6 +265,10 @@ export default defineConfig({
                             link: '/moost/controllers',
                         },
                         {
+                            text: 'Application Init',
+                            link: '/moost/app-init',
+                        },
+                        {
                             text: 'Interceptors',
                             link: '/moost/interceptors',
                         },

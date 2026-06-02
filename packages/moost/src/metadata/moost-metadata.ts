@@ -36,6 +36,12 @@ export interface TMoostMetadata<H extends TObject = TEmpty>
   provide?: TProvideRegistry
   replace?: TReplaceRegistry
   loggerTopic?: string
+  /**
+   * Set by `@MoostInit()` — marks a method to run once after all controllers
+   * are bound and before adapters start serving. `priority` orders hooks
+   * (ascending) across all controllers.
+   */
+  moostInit?: { priority: number }
   params: (TMateParamMeta & TMoostParamsMetadata)[]
 }
 

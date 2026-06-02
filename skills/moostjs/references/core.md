@@ -5,6 +5,7 @@ Moost lifecycle, controller registration, adapter attachment.
 - [Scaffold](#scaffold)
 - [Mental model](#mental-model)
 - [Lifecycle](#lifecycle)
+- [App init (`@MoostInit`)](#app-init-moostinit)
 - [API](#api)
 - [Patterns](#patterns)
 - [Gotchas](#gotchas)
@@ -50,7 +51,55 @@ During `init()`:
 1. Adapter `getProvideRegistry()` entries merged into DI.
 2. Controller methods scanned for handler metadata.
 3. `adapter.bindHandler(opts)` called per handler.
-4. `adapter.onInit(moost)` called last.
+4. `@MoostInit` methods run (post-bind, complete overview) — see below.
+5. `adapter.onInit(moost)` called last.
+
+## App init (`@MoostInit`)
+
+Run a controller method **once at boot** — after all controllers are bound (complete `getControllersOverview()`) and before adapters serve. For one-time setup that needs the final route table (e.g. derive a controller's actual mounted path, warm a cache, validate config).
+
+```ts
+import { Moost, Controller, MoostInit, InjectMoost } from 'moost'
+
+@Controller('auth')
+class AuthController {
+  @MoostInit({ priority: 0 })            // lower priority runs first; default 0
+  init(@InjectMoost() moost: Moost) {    // or constructor-inject Moost
+    const overview = moost.getControllersOverview() // COMPLETE here
+  }
+}
+```
+
+| # | Invariant |
+|---|---|
+| 1 | Runs after all `bindHandler` calls, before `adapter.onInit` — `getControllersOverview()` is complete (incl. `handlers[].registeredAs[].path`). A SINGLETON constructor runs *during* bind and sees a PARTIAL overview — use `@MoostInit` instead. |
+| 2 | Runs exactly once per `init()`. |
+| 3 | SINGLETON controllers only. `@MoostInit` on a `FOR_EVENT` controller throws at bind. |
+| 4 | Args resolve via the RESOLVE pipe ONLY — `@InjectMoost`/`@Inject`/`@Resolve`/`@Const` work; TRANSFORM/VALIDATE pipes and interceptors do NOT run. |
+| 5 | No event context — request composables (`useRequest`/`useHeaders`/`useRouteParams`/`useCookies`) fail. DI + `app.getLogger()` work. |
+| 6 | Ordered by `priority` ascending (default 0) across ALL controllers, then registration order. |
+| 7 | Async hooks awaited; a throwing hook rejects `init()` (fail-fast). |
+
+Key imports: `import { MoostInit, InjectMoost } from 'moost'`. `@InjectMoost` injects the running `Moost`; constructor injection of `Moost` also works (it's in the provide registry).
+
+### Resolving a handler's mounted path
+
+Common `@MoostInit` task: get a handler's *actual* composed path (e.g. to scope a cookie). Don't hand-walk `getControllersOverview()` — use the helpers (all return **all distinct** paths as `string[]`):
+
+```ts
+import { getHandlerPaths, useHandlerPaths } from 'moost'
+
+@MoostInit() init(@HandlerPaths('refresh') paths: string[]) {}         // param resolver
+@MoostInit() async init() { await useHandlerPaths('refresh') }        // composable (current controller)
+getHandlerPaths(moost, AuthController, 'refresh')                      // pure fn, anywhere
+```
+
+| # | Invariant |
+|---|---|
+| 1 | Returns ALL distinct mounted paths — a method can resolve to several (multi-prefix `@ImportController`, multiple verbs, multiple `registeredAs`). Don't assume one. |
+| 2 | `[]` when nothing matches — check and warn at boot. |
+| 3 | `opts.type` filters by event type (`'HTTP'`); `opts.predicate(h)` narrows by transport detail (e.g. HTTP verb `h.handler.method`) without coupling core to a transport. |
+| 4 | `@HandlerPaths(method?)`/`useHandlerPaths(method?)` default `method` to the current context method — in `@MoostInit` that's the init method, so pass the handler method name explicitly. |
 
 ## API
 

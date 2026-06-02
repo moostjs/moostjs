@@ -1,8 +1,7 @@
 import { useLogger } from '@wooksjs/event-core'
 
-import { useControllerContext } from '../composables'
 import { getMoostMate } from '../metadata'
-import { Moost } from '../moost'
+import { resolveMoost } from './resolve-moost'
 import { Resolve } from './resolve.decorator'
 
 /**
@@ -24,9 +23,7 @@ export function InjectEventLogger(topic?: string) {
  */
 export function InjectMoostLogger(topic?: string) {
   return Resolve(async (metas) => {
-    const { instantiate, getController } = useControllerContext()
-    const controller = getController()
-    const moostApp = controller instanceof Moost ? controller : await instantiate(Moost)
+    const moostApp = await resolveMoost()
     const meta = metas.classMeta
     return moostApp.getLogger(meta?.loggerTopic || topic || meta?.id)
   })

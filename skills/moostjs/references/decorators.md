@@ -22,6 +22,9 @@ Decorators run through `getMoostMate()` — singleton `Mate` in the `'moost'` wo
 | `@Id(str)` | any | `id` |
 | `@Optional()` | param / prop | `optional: true` |
 | `@Required()` | param / prop | `required: true`; also appends to class `requiredProps` |
+| `@MoostInit({ priority? })` | method | `moostInit: { priority }` — run once at boot, post-bind. Semantics: [core.md](core.md#app-init-moostinit) |
+| `@InjectMoost()` | param / prop | resolver returning the running `Moost` instance |
+| `@HandlerPaths(method?, opts?)` | param / prop | resolver → `string[]` of a handler's mounted paths. [core.md](core.md#resolving-a-handlers-mounted-path) |
 | `ApplyDecorators(...ds)` | any | composition helper (wraps `mate.apply`) |
 
 ## TMoostMetadata
@@ -57,6 +60,7 @@ interface TMoostMetadata<H = {}> {
   inherit?: boolean
   properties?: (string | symbol)[]       // collected by Mate `collectPropKeys`
   loggerTopic?: string
+  moostInit?: { priority: number }       // set by @MoostInit (method)
   params: (TMateParamMeta & TMoostParamsMetadata)[]
 }
 ```
