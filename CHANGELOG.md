@@ -1,3 +1,12 @@
+## [0.6.21](https://github.com/moostjs/moostjs/compare/v0.6.20...v0.6.21) (2026-06-02)
+
+
+### Features
+
+* **moost:** add @MoostInit application-init hook and handler-path helpers ([8156397](https://github.com/moostjs/moostjs/commit/81563973cd37e6f40e954050eb168c5e37437085))
+
+
+
 ## [0.6.20](https://github.com/moostjs/moostjs/compare/v0.6.19...v0.6.20) (2026-05-31)
 
 
