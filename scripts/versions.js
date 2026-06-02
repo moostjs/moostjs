@@ -51,20 +51,28 @@ async function main() {
       major: `${major + 1}.0.0`,
     }
 
-    // Step 3: Prompt the user to select a version bump
+    // Step 3: Determine the version bump — non-interactive via a `--patch` |
+    // `--minor` | `--major` flag (used by the release scripts so the cascade can
+    // release without a prompt), falling back to an interactive prompt otherwise.
     step('Selecting version bump type...')
-    const { bump } = await inquirer.prompt([
-      {
-        type: 'list',
-        name: 'bump',
-        message: `Current version: ${currentVersion}. Select version bump:`,
-        choices: [
-          { name: `Patch (${currentVersion} → ${versions.patch})`, value: 'patch' },
-          { name: `Minor (${currentVersion} → ${versions.minor})`, value: 'minor' },
-          { name: `Major (${currentVersion} → ${versions.major})`, value: 'major' },
-        ],
-      },
-    ])
+    const flagBump = ['patch', 'minor', 'major'].find((b) => process.argv.includes(`--${b}`))
+    let bump
+    if (flagBump) {
+      bump = flagBump
+    } else {
+      ;({ bump } = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'bump',
+          message: `Current version: ${currentVersion}. Select version bump:`,
+          choices: [
+            { name: `Patch (${currentVersion} → ${versions.patch})`, value: 'patch' },
+            { name: `Minor (${currentVersion} → ${versions.minor})`, value: 'minor' },
+            { name: `Major (${currentVersion} → ${versions.major})`, value: 'major' },
+          ],
+        },
+      ]))
+    }
 
     step(`🚀 Bumping version: ${bump} (${currentVersion} → ${versions[bump]})\n`)
 
