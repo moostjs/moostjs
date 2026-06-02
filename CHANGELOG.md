@@ -1,3 +1,12 @@
+## [0.6.22](https://github.com/moostjs/moostjs/compare/v0.6.21...v0.6.22) (2026-06-02)
+
+
+### Bug Fixes
+
+* **moost:** make getHandlerPaths robust to Moost-like stubs (fall back to getControllersOverview) ([d2b1cd1](https://github.com/moostjs/moostjs/commit/d2b1cd1e9cd0361dbf717caff8373389395f0c17))
+
+
+
 ## [0.6.21](https://github.com/moostjs/moostjs/compare/v0.6.20...v0.6.21) (2026-06-02)
 
 
