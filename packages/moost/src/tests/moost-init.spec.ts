@@ -334,4 +334,37 @@ describe('handler path helpers', () => {
 
     expect(paths).toEqual([])
   })
+
+  it('falls back to getControllersOverview for a Moost-like stub (no index method)', () => {
+    class Stub {}
+    // Minimal Moost-like object exposing only getControllersOverview() — mirrors
+    // how integrations (e.g. @atscript/moost-db) fake Moost in their tests.
+    const overview = [
+      {
+        meta: {},
+        computedPrefix: '/api/auth',
+        type: Stub,
+        handlers: [
+          {
+            meta: {},
+            path: 'refresh',
+            type: 'HTTP',
+            method: 'refresh',
+            handler: { type: 'HTTP', path: 'refresh', method: 'POST' },
+            registeredAs: [{ path: '/api/auth/refresh', args: [] }],
+          },
+        ],
+      },
+    ]
+    const stub = { getControllersOverview: () => overview } as unknown as Moost
+
+    expect(getHandlerPaths(stub, Stub, 'refresh')).toEqual(['/api/auth/refresh'])
+    expect(
+      getHandlerPaths(stub, Stub, 'refresh', {
+        type: 'HTTP',
+        predicate: (h) => (h.handler as { method?: string }).method === 'POST',
+      }),
+    ).toEqual(['/api/auth/refresh'])
+    expect(getHandlerPaths(stub, Stub, 'missing')).toEqual([])
+  })
 })

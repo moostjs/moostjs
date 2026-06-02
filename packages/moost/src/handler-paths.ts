@@ -17,6 +17,33 @@ export interface TGetHandlerPathsOptions {
 }
 
 /**
+ * Resolves the handler-overview records for `ctor.method`. Uses Moost's memoized
+ * index when available (the fast path for a real `Moost` instance), and otherwise
+ * derives them from `getControllersOverview()` — so the helper also works with a
+ * minimal Moost-like object that only implements that documented method (e.g. a
+ * test stub or a lightweight harness).
+ */
+function resolveHandlers(moost: Moost, ctor: TFunction, method: string): THandlerOverview[] {
+  const getIndex = (moost as Partial<Pick<Moost, 'getHandlerOverviewIndex'>>)
+    .getHandlerOverviewIndex
+  if (typeof getIndex === 'function') {
+    return getIndex.call(moost).get(ctor)?.get(method) ?? []
+  }
+  const handlers: THandlerOverview[] = []
+  for (const c of moost.getControllersOverview()) {
+    if (c.type !== ctor) {
+      continue
+    }
+    for (const h of c.handlers) {
+      if (h.method === method) {
+        handlers.push(h)
+      }
+    }
+  }
+  return handlers
+}
+
+/**
  * Returns every actual mounted path under which `controller.method` is registered,
  * read from the post-bind controllers overview. Accounts for multi-prefix mounts
  * (`@ImportController` at several places), multiple verbs on one method, and
@@ -36,10 +63,8 @@ export function getHandlerPaths(
   opts?: TGetHandlerPathsOptions,
 ): string[] {
   const ctor = (isConstructor(controller) ? controller : getConstructor(controller)) as TFunction
-  // O(1) lookup via Moost's memoized overview index (built once, reused across
-  // all init-phase calls) instead of re-scanning every controller each time.
-  const handlers = moost.getHandlerOverviewIndex().get(ctor)?.get(method)
-  if (!handlers) {
+  const handlers = resolveHandlers(moost, ctor, method)
+  if (handlers.length === 0) {
     return []
   }
   const { type, predicate } = opts ?? {}
