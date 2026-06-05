@@ -1,3 +1,12 @@
+## [0.6.23](https://github.com/moostjs/moostjs/compare/v0.6.22...v0.6.23) (2026-06-05)
+
+
+### Bug Fixes
+
+* **event-wf:** honor @StepTTL on requireInput() re-pause throw path (closes [#1](https://github.com/moostjs/moostjs/issues/1)) ([3c30ac1](https://github.com/moostjs/moostjs/commit/3c30ac186c169a90f390eaf7ccc3ed32ce07bc4e))
+
+
+
 ## [0.6.22](https://github.com/moostjs/moostjs/compare/v0.6.21...v0.6.22) (2026-06-02)
 
 
