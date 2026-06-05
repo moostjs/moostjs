@@ -191,11 +191,30 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
         if (stepTTL !== undefined) {
           const wrapped = stepHandler
           stepHandler = async () => {
-            const result = await wrapped()
-            if (result && typeof result === 'object' && 'inputRequired' in result) {
-              return { ...(result as Record<string, unknown>), expires: Date.now() + stepTTL }
+            try {
+              const result = await wrapped()
+              if (result && typeof result === 'object' && 'inputRequired' in result) {
+                return { ...(result as Record<string, unknown>), expires: Date.now() + stepTTL }
+              }
+              return result
+            } catch (error) {
+              // A step can also re-pause by throwing requireInput() (a
+              // StepRetriableError). Stamp the step TTL on that path too, but
+              // only when the error doesn't already carry one (so an explicitly
+              // stamped error TTL is respected). Duck-type rather than
+              // `instanceof StepRetriableError`: the error is constructed inside
+              // @wooksjs/event-wf and its class identity isn't guaranteed to
+              // match across @prostojs/wf copies in a consumer's install.
+              if (
+                error &&
+                typeof error === 'object' &&
+                'inputRequired' in error &&
+                (error as { expires?: number }).expires === undefined
+              ) {
+                ;(error as { expires?: number }).expires = Date.now() + stepTTL
+              }
+              throw error
             }
-            return result
           }
         }
         this.wfApp.step(targetPath, { handler: stepHandler as TStepHandler<any, any, any> })

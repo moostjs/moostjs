@@ -1,9 +1,15 @@
 import type * as EventWfModule from '@wooksjs/event-wf'
-import { outletHttp, swapStrategy, useWfStrategy, WooksWf } from '@wooksjs/event-wf'
-import { Controller, Moost } from 'moost'
-import { describe, expect, it, vi } from 'vitest'
+import {
+  outletHttp,
+  StepRetriableError,
+  swapStrategy,
+  useWfStrategy,
+  WooksWf,
+} from '@wooksjs/event-wf'
+import { clearGlobalWooks, Controller, Moost } from 'moost'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Step, Workflow, WorkflowSchema } from './decorators'
+import { Step, StepTTL, Workflow, WorkflowSchema } from './decorators'
 import { MoostWf } from './event-wf'
 
 // Coverage for WF_UPDATE.md adoption: verify that MoostWf forwards the new
@@ -29,6 +35,10 @@ async function buildMoost(...controllers: Function[]): Promise<MoostWf> {
   await app.init()
   return wf
 }
+
+beforeEach(() => {
+  clearGlobalWooks()
+})
 
 describe('MoostWf adapter — strategy + eventContext forwarding', () => {
   // Test #4 from WF_UPDATE.md — direct MoostWf.start with { strategy: { name } }
@@ -164,5 +174,93 @@ describe('MoostWf adapter — strategy + eventContext forwarding', () => {
       { schemaId: 'schemaX', context: { foo: 2 }, indexes: [0] },
       expect.objectContaining({ input: 'i', strategy: { name: 'kv' } }),
     )
+  })
+})
+
+// Coverage for the @StepTTL wrapper installed by bindHandler (WF_STEP branch).
+// A step can re-pause two ways: by RETURNING an inputRequired outlet, or by
+// THROWING a StepRetriableError (the idiomatic "re-render with validation
+// errors, keep the same wfs token" path). The wrapper must stamp the step's
+// TTL onto `output.expires` on BOTH paths — the engine forwards `expires`
+// through the error path identically to the return path.
+describe('MoostWf adapter — @StepTTL on re-pause', () => {
+  const HOUR = 60 * 60 * 1000
+  const MONTH = 30 * 24 * HOUR
+
+  // NOTE: WF steps register into the global wooks router (createWfApp/new MoostWf
+  // with no explicit Wooks instance => getGlobalWooks()), and duplicate step ids
+  // there silently first-win rather than throwing the way duplicate flow ids do.
+  // The top-level `beforeEach(clearGlobalWooks)` resets that router between tests
+  // so each test is hermetic — without it, a step id reused across tests would
+  // silently run the first-registered handler.
+
+  it('stamps @StepTTL when a step re-pauses by RETURNING an inputRequired outlet', async () => {
+    @Controller()
+    class WfReturn {
+      @Step('ttl-return-step')
+      @StepTTL(MONTH)
+      awaitInput() {
+        return outletHttp({ field: 'x' })
+      }
+
+      @Workflow('flow-ttl-return')
+      @WorkflowSchema(['ttl-return-step'])
+      flow() {}
+    }
+
+    const wf = await buildMoost(WfReturn)
+    const before = Date.now()
+    const output = await wf.start('/flow-ttl-return', {}, { strategy: { name: 'kv' } })
+    const after = Date.now()
+
+    expect(output.expires).toBeGreaterThanOrEqual(before + MONTH)
+    expect(output.expires).toBeLessThanOrEqual(after + MONTH)
+  })
+
+  it('stamps @StepTTL when a step re-pauses by THROWING a StepRetriableError', async () => {
+    @Controller()
+    class WfThrow {
+      @Step('ttl-throw-step')
+      @StepTTL(MONTH)
+      validate() {
+        // idiomatic re-pause: throw to re-render with errors, no expires set
+        throw new StepRetriableError(new Error('invalid input'))
+      }
+
+      @Workflow('flow-ttl-throw')
+      @WorkflowSchema(['ttl-throw-step'])
+      flow() {}
+    }
+
+    const wf = await buildMoost(WfThrow)
+    const before = Date.now()
+    const output = await wf.start('/flow-ttl-throw', {}, {})
+    const after = Date.now()
+
+    expect(output.expires).toBeGreaterThanOrEqual(before + MONTH)
+    expect(output.expires).toBeLessThanOrEqual(after + MONTH)
+  })
+
+  it('does not clobber an expires already set on the thrown StepRetriableError', async () => {
+    const explicit = 1_999_999_999_999
+
+    @Controller()
+    class WfThrowExplicit {
+      @Step('ttl-explicit-step')
+      @StepTTL(MONTH)
+      validate() {
+        // 4th ctor arg is `expires` — an explicitly stamped error TTL must win
+        throw new StepRetriableError(new Error('invalid input'), undefined, undefined, explicit)
+      }
+
+      @Workflow('flow-ttl-explicit')
+      @WorkflowSchema(['ttl-explicit-step'])
+      flow() {}
+    }
+
+    const wf = await buildMoost(WfThrowExplicit)
+    const output = await wf.start('/flow-ttl-explicit', {}, {})
+
+    expect(output.expires).toBe(explicit)
   })
 })
