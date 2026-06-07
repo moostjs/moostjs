@@ -280,16 +280,30 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
     config(cfg, env) {
       // Middleware mode: configure multi-environment build
       if (options.middleware) {
+        // Bake the Moost backend entry as a real Rollup input so it emits a built
+        // file in dist/server (symmetric with how ssrEntry is handled below).
+        // Previously __MOOST_ENTRY__ kept the raw dev path (e.g. '/src/main.ts'),
+        // which the generated prod server then tried to `import()` at runtime — a
+        // leading slash is a filesystem-absolute ESM specifier (file:///src/main.ts),
+        // so it crashed with ERR_MODULE_NOT_FOUND. Building it yields
+        // `dist/server/<name>.js` and __MOOST_ENTRY__ becomes a relative path
+        // resolved next to server.js.
+        const entryKeyBase = entryBasename(options.entry).replace(/\.js$/, '') // e.g. 'main'
+        // 'server' is the reserved input key for the server entry below.
+        const entryKey = entryKeyBase === 'server' ? 'moost-entry' : entryKeyBase
+
         const serverDefines: Record<string, string> = {
           'process.env.MOOST_DEFERRED_ENV': '"production"',
-          __MOOST_ENTRY__: JSON.stringify(options.entry),
+          __MOOST_ENTRY__: JSON.stringify(`./${entryKey}.js`),
           __MOOST_PREFIX__: JSON.stringify(prefix || '/api'),
         }
 
-        // Build inputs: server entry is always included, SSR entry added when configured
+        // Build inputs: server entry + Moost backend entry are always included,
+        // SSR entry added when configured.
         const serverEntry = options.serverEntry || generatedServerEntry(cfg.root)
         const ssrInput: Record<string, string> = {
           server: serverEntry,
+          [entryKey]: options.entry,
         }
 
         if (options.ssrEntry) {
@@ -313,7 +327,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         const isBuild = env.command === 'build'
         const ourPlugin = /^@moostjs\/vite($|\/)/
         const userNoExternal = cfg.ssr?.noExternal
-        const ssrNoExternal =
+        let ssrNoExternal: true | (string | RegExp)[] =
           userNoExternal === true
             ? true
             : userNoExternal !== undefined
@@ -336,6 +350,32 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
               ...(options.ssrExternal ?? []),
             ]
           : undefined
+
+        // Single-instance guard for the moost/wooks runtime.
+        //
+        // moost + wooks rely on per-module Symbol slot keys (cached()/key()). If
+        // the same logical package is reachable on two paths — bundled in one place,
+        // externalized in another — each path mints its own Symbols and event-context
+        // lookups (useRequest/useHeaders/useAuthorization) read `undefined` at runtime
+        // (prod only; dev dedupes via the SSR module runner).
+        //
+        // The bundle-everything default (`noExternal: true`, i.e. true / undefined-in-
+        // build above) already yields one instance. The split only appears once the
+        // consumer opts into an explicit `noExternal` list (e.g. to bundle `.as`-
+        // shipping packages like `@aooth/*` for unplugin-atscript): everything not
+        // listed is externalized, so external `moost` uses one `@wooksjs` copy while a
+        // bundled listed package pulls in a second. Force the runtime to be bundled
+        // alongside the listed packages so there is a single instance — unless the
+        // consumer has explicitly externalized the runtime themselves (e.g.
+        // `ssr.external: ['@wooksjs/event-http', ...]`), in which case their coherent
+        // all-external setup is left intact.
+        const runtimeNoExternal = [/^moost($|\/)/, /^@moostjs\//, /^@wooksjs\//, /^wooks($|\/)/]
+        const runtimeExternalized = (ssrExternal ?? []).some(
+          (e) => typeof e === 'string' && runtimeNoExternal.some((re) => re.test(e)),
+        )
+        if (isBuild && Array.isArray(ssrNoExternal) && !runtimeExternalized) {
+          ssrNoExternal = [...ssrNoExternal, ...runtimeNoExternal]
+        }
 
         return {
           // SSR needs 'custom' to disable Vite's default HTML serving; SPA keeps default

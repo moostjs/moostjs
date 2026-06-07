@@ -154,11 +154,12 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
     return Promise.resolve()
   }
 
-  // Import moost entry — __MOOST_ENTRY__ is replaced by define during build:app
-  // (e.g. becomes: await import("/src/main.ts")). The @vite-ignore keeps
-  // rolldown from trying to resolve the substituted literal against
-  // node_modules/@moostjs/vite/dist/; Node evaluates it at runtime relative
-  // to the consumer's cwd.
+  // Import moost entry — __MOOST_ENTRY__ is replaced by define during build:app.
+  // The plugin adds the Moost entry as its own Rollup input, so this becomes a
+  // built relative path next to server.js (e.g. await import("./main.js")). The
+  // @vite-ignore keeps rolldown from trying to resolve the substituted literal
+  // against node_modules/@moostjs/vite/dist/; Node resolves it at runtime
+  // relative to this module (dist/server/server.js).
   if (typeof opts.entry === 'function') {
     await opts.entry()
   } else if (typeof opts.entry === 'string') {
