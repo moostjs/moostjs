@@ -197,7 +197,9 @@ You can also opt out of bundle-everything entirely by setting `ssr.noExternal` t
 
 ```ts
 ssr: {
-  noExternal: ['@moostjs/vite', /^@aooth\//, /^@atscript\//],
+  noExternal: [/^@aooth\//, /^@atscript\//],
   external: ['vue', 'vue-router'],
 }
 ```
+
+When you use an explicit `noExternal` list, the plugin automatically keeps the **moost/wooks runtime** (`moost`, `@moostjs/*`, `@wooksjs/*`, `wooks`) bundled alongside your listed packages, so there is always a single runtime instance. Without this, any listed package that imports `@wooksjs/*` (e.g. `@aooth/*` and other `.as`-shipping libs) would pull in a second copy while externalized `moost` uses the first — splitting the event context so `useRequest()` / `useHeaders()` / `useAuthorization()` read `undefined` in production only. If you would rather externalize the runtime instead, list it under `ssr.external` (`['@wooksjs/event-http', '@wooksjs/event-core', 'wooks', …]`) and add those packages as direct dependencies — the plugin detects an externalized runtime and leaves your all-external setup intact.

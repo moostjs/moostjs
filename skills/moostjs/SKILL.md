@@ -7,8 +7,9 @@ description: >-
   or custom adapters. Covers controllers, handler/parameter/response decorators, DI,
   interceptors, pipes, auth guards, framework errors, common metadata decorators,
   Wooks composables, adapter authoring, quick apps, workflow outlets/state
-  strategies, WebSocket rooms/testing, logging, app-init hooks (@MoostInit), and
-  event context/scoping.
+  strategies, WebSocket rooms/testing, logging, app-init hooks (@MoostInit), the
+  Vite plugin (dev/build, middleware, SSR/SPA, deployment), and event
+  context/scoping.
 ---
 
 # Moost
@@ -36,6 +37,7 @@ Powered by: `@prostojs/mate` (metadata), `@prostojs/infact` (DI), `@wooksjs/even
 | WebSocket core | [event-ws.md](references/event-ws.md) | MoostWs/WsApp, @Message/@Connect/@Disconnect, wire protocol |
 | WebSocket rooms | [ws-rooms.md](references/ws-rooms.md) | useWsRooms, broadcasting, WsBroadcastTransport |
 | WebSocket testing | [ws-testing.md](references/ws-testing.md) | prepareTestWsMessageContext / prepareTestWsConnectionContext |
+| Vite plugin: dev/build, middleware, SSR/SPA, deploy | [vite.md](references/vite.md) | `moostVite`, `vite.config.ts`, `createSSRServer`, `ssrEntry`/`serverEntry`, `ssr.noExternal`, `dist/server`, HMR, "undefined `useRequest()` in prod" |
 | Swagger/OpenAPI | `@moostjs/swagger` ([npm](https://www.npmjs.com/package/@moostjs/swagger)) | SwaggerController, Swagger* decorators |
 | OpenTelemetry | `@moostjs/otel` ([npm](https://www.npmjs.com/package/@moostjs/otel)) | `initMoostOtel`, spans, tracing |
 | RBAC/ABAC | `@moostjs/arbac` ([npm](https://www.npmjs.com/package/@moostjs/arbac)) | `MoostArbac` adapter |
