@@ -1,3 +1,12 @@
+## [0.6.25](https://github.com/moostjs/moostjs/compare/v0.6.24...v0.6.25) (2026-06-08)
+
+
+### Bug Fixes
+
+* **vite:** re-capture MoostHttp.listen on HMR reload to prevent EADDRINUSE on entry-graph edits ([a412e36](https://github.com/moostjs/moostjs/commit/a412e36d4e7a7d7df51415639b06e4f1de01c2c8))
+
+
+
 ## [0.6.24](https://github.com/moostjs/moostjs/compare/v0.6.23...v0.6.24) (2026-06-07)
 
 
