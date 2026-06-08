@@ -551,6 +551,18 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         logger.debug('🚀 Reloading Moost App...')
         console.log()
         return (async () => {
+          // Re-establish the adapter capture before re-importing the entry. The
+          // listen() patch lives on whatever MoostHttp.prototype the runner first
+          // evaluated; a reload may hand the re-imported entry a fresh
+          // @moostjs/event-http evaluation whose prototype was never patched, so
+          // app.listen() would bind the port for real → EADDRINUSE. Re-running
+          // init() re-resolves the adapter through the same deduping runner the
+          // entry imports from, re-applying the patch to the live prototype.
+          for (const adapter of adapters) {
+            if (adapter.detected) {
+              await adapter.init()
+            }
+          }
           await ssrImport(options.entry)
           await new Promise((resolve) => setTimeout(resolve, 1))
         })().finally(() => {

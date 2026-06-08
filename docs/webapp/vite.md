@@ -141,7 +141,12 @@ await app.listen()
 
 ## Hot Module Replacement
 
-Both modes support full HMR for controllers. When a file changes, the plugin invalidates affected modules, cleans up stale DI instances (cascading to dependants), and re-initializes the app. The next request uses updated code — no restart needed.
+Both modes support full HMR across the entire server import graph — no restart needed. Edits resolve through one of two reload paths:
+
+- **Controllers and the modules they import** are HMR-bounded: the plugin invalidates the changed files, ejects stale DI instances (cascading to dependants), and the next request rebuilds them from updated code.
+- **Modules the entry imports transitively** — data-models, providers, `init`-style bootstrap files — trigger a full app re-initialization on the next request (the entry is re-imported). This reloads in place, so editing a data model or provider is as safe as editing a controller, including in middleware + SSR mode where the dev server keeps owning the port.
+
+Either way the next request serves updated code without a manual restart.
 
 ## Options
 

@@ -128,7 +128,8 @@ import { createSSRServer } from '@moostjs/vite/server' // custom dev/prod server
 - `serverEntry` is build-only. For custom middleware in dev, run `tsx server.ts` instead of `vite`.
 - `ssrEntry` forces `appType: 'custom'` (Vite stops serving HTML; the plugin's SSR fallback takes over).
 - Backend-mode-only options (`port`, `host`, `outDir`, `format`, `sourcemap`, `externals`) are ignored in middleware mode.
-- HMR cleans stale DI instances + Wooks router/Mate caches via tracked `__vite_id` decorators — no restart needed.
+- HMR covers the **full server import graph**, two paths: (a) controllers + their imports are HMR-bounded — stale DI instances + Wooks router/Mate caches are ejected via tracked `__vite_id` decorators; (b) modules the entry imports transitively (data-models, providers, `init`) re-import the entry and re-initialize the whole app. Both reload on the next request, no restart.
+- Editing an entry-graph module in middleware+SSR dev re-imports the entry, which re-runs `app.listen()`; the plugin re-captures the patched `MoostHttp.listen()` on each reload so it never re-binds the dev port. Diagnose a dev `EADDRINUSE` on HMR as an out-of-date `@moostjs/vite` (versions ≤ 0.6.24 crashed here).
 
 ## See also
 
