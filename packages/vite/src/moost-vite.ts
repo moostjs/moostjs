@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { resolve } from 'node:path'
-import type { PluginOption } from 'vite'
+import type { EnvironmentModuleGraph, PluginOption } from 'vite'
 import { createServerModuleRunner } from 'vite'
 import MagicString from 'magic-string'
 
@@ -222,8 +222,12 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   // Normalize prefix: ensure leading slash, strip trailing slash
   let prefix = options.prefix
   if (prefix) {
-    if (!prefix.startsWith('/')) { prefix = `/${prefix}` }
-    if (prefix.endsWith('/')) { prefix = prefix.slice(0, -1) }
+    if (!prefix.startsWith('/')) {
+      prefix = `/${prefix}`
+    }
+    if (prefix.endsWith('/')) {
+      prefix = prefix.slice(0, -1)
+    }
   }
 
   const prefixSlash = prefix ? `${prefix}/` : undefined
@@ -248,7 +252,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
               moostMiddleware = this.getServerCb()
             }
             if (options.ssrFetch !== false && moduleExports?.enableLocalFetch) {
-              if (localFetchTeardown) { localFetchTeardown() }
+              if (localFetchTeardown) {
+                localFetchTeardown()
+              }
               localFetchTeardown = moduleExports.enableLocalFetch(this)
               logger.log(`🔀 ${__DYE_DIM__}Local fetch enabled for SSR`)
             }
@@ -271,6 +277,35 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
    * the SSR module runner exists (see configureServer); a no-op until then.
    */
   let drainReload: () => Promise<void> = () => Promise.resolve()
+  /**
+   * Last Moost entry import failure. While set, the dev middleware answers matching
+   * requests with 502 instead of letting them fall through to the SPA/SSR fallback
+   * (which would serve index.html for API routes). Cleared on a successful reload;
+   * the next hot update schedules the retry.
+   */
+  let bootError: unknown = null
+  /**
+   * Looks up the Moost entry node with the verbatim `options.entry` string — the
+   * module graph keys (and memoizes) unresolved urls as-is, so the same spelling
+   * that was passed to `runner.import()` is guaranteed to return the very node
+   * that import created.
+   */
+  const getEntryModule = (moduleGraph: EnvironmentModuleGraph) =>
+    moduleGraph.getModuleByUrl(options.entry)
+  /**
+   * Drops the captured Moost app so the next request triggers a full reload:
+   * releases the middleware + local fetch and ejects DI instances affected by
+   * the changed modules.
+   */
+  const ejectApp = (cleanupInstances: Set<string>) => {
+    moostMiddleware = null
+    if (localFetchTeardown) {
+      localFetchTeardown()
+      localFetchTeardown = null
+    }
+    moostRestartCleanup(adapters, options.onEject, cleanupInstances)
+    reloadRequired = true
+  }
 
   patchMoostHandlerLogging()
 
@@ -310,7 +345,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           const ssrBasename = entryBasename(options.ssrEntry)
           ssrInput[`ssr/${ssrBasename.replace(/\.js$/, '')}`] = options.ssrEntry
           serverDefines.__MOOST_SSR_ENTRY__ = JSON.stringify(`./ssr/${ssrBasename}`)
-          serverDefines.__MOOST_SSR_OUTLET__ = JSON.stringify(options.ssrOutlet || DEFAULT_SSR_OUTLET)
+          serverDefines.__MOOST_SSR_OUTLET__ = JSON.stringify(
+            options.ssrOutlet || DEFAULT_SSR_OUTLET,
+          )
           serverDefines.__MOOST_SSR_STATE__ = JSON.stringify(options.ssrState || DEFAULT_SSR_STATE)
         }
 
@@ -331,10 +368,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           userNoExternal === true
             ? true
             : userNoExternal !== undefined
-              ? [
-                  ...(Array.isArray(userNoExternal) ? userNoExternal : [userNoExternal]),
-                  ourPlugin,
-                ]
+              ? [...(Array.isArray(userNoExternal) ? userNoExternal : [userNoExternal]), ourPlugin]
               : isBuild
                 ? true
                 : [ourPlugin]
@@ -345,10 +379,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         // `noExternal: true` is the policy and `true` on both sides is incoherent.
         const userExternal = cfg.ssr?.external
         const ssrExternal: string[] | undefined = isBuild
-          ? [
-              ...(Array.isArray(userExternal) ? userExternal : []),
-              ...(options.ssrExternal ?? []),
-            ]
+          ? [...(Array.isArray(userExternal) ? userExternal : []), ...(options.ssrExternal ?? [])]
           : undefined
 
         // Single-instance guard for the moost/wooks runtime.
@@ -419,8 +450,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
 
       // Moost-first mode: configure for backend SSR build.
       const entry = cfg.build?.rollupOptions?.input || options.entry
-      const outfile =
-        typeof entry === 'string' ? entryBasename(entry) : undefined
+      const outfile = typeof entry === 'string' ? entryBasename(entry) : undefined
 
       return {
         server: {
@@ -507,7 +537,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
      * Resolves our "virtual:vite-id" module.
      */
     resolveId(id) {
-      if (id === 'virtual:vite-id') { return '\0virtual:vite-id' }
+      if (id === 'virtual:vite-id') {
+        return '\0virtual:vite-id'
+      }
     },
 
     /**
@@ -536,8 +568,19 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
      * - Hooks into the server middlewares to use our Moost callback.
      */
     async configureServer(server) {
-      const runner = createServerModuleRunner(server.environments.ssr)
+      // Pull-based runner: with HMR enabled, Vite's default ssr hot-update path
+      // (taken by files outside the Moost entry graph) ends in a `full-reload`
+      // payload that would make the runner clear its cache and re-import the entry
+      // outside the drainReload lock — with a fresh, unpatched MoostHttp.prototype,
+      // so app.listen() would bind a real port. All reloads go through runReload.
+      const runner = createServerModuleRunner(server.environments.ssr, { hmr: false })
       const ssrImport = (id: string) => runner.import(id)
+      // Reset closure state from a previous server (plugin instances are reused
+      // across server.restart()): a stale bootError / pending reload would 502 or
+      // double-boot the fresh server below.
+      bootError = null
+      reloadRequired = false
+      reloadPromise = null
 
       // Serialize app reloads. On HMR, hotUpdate() nulls moostMiddleware and sets
       // reloadRequired; the next request lazily re-imports the entry. Without a lock,
@@ -551,19 +594,36 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         logger.debug('🚀 Reloading Moost App...')
         console.log()
         return (async () => {
-          // Re-establish the adapter capture before re-importing the entry. The
-          // listen() patch lives on whatever MoostHttp.prototype the runner first
-          // evaluated; a reload may hand the re-imported entry a fresh
-          // @moostjs/event-http evaluation whose prototype was never patched, so
-          // app.listen() would bind the port for real → EADDRINUSE. Re-running
-          // init() re-resolves the adapter through the same deduping runner the
-          // entry imports from, re-applying the patch to the live prototype.
-          for (const adapter of adapters) {
-            if (adapter.detected) {
-              await adapter.init()
+          try {
+            // Re-establish the adapter capture before re-importing the entry. The
+            // listen() patch lives on whatever MoostHttp.prototype the runner first
+            // evaluated; a reload may hand the re-imported entry a fresh
+            // @moostjs/event-http evaluation whose prototype was never patched, so
+            // app.listen() would bind the port for real → EADDRINUSE. Re-running
+            // init() re-resolves the adapter through the same deduping runner the
+            // entry imports from, re-applying the patch to the live prototype.
+            for (const adapter of adapters) {
+              if (adapter.detected) {
+                await adapter.init()
+              }
             }
+            // hotUpdate() invalidates the entry node, so this import re-executes the
+            // entry (re-running listen() → re-capturing the middleware). Backstop for
+            // any path that left the entry node fresh: a cached import would be a
+            // silent no-op and strand the middleware at null, so invalidate first.
+            const entryModule = await getEntryModule(server.environments.ssr.moduleGraph)
+            if (entryModule?.transformResult) {
+              server.environments.ssr.moduleGraph.invalidateModule(entryModule)
+            }
+            await ssrImport(options.entry)
+            bootError = null
+          } catch (error) {
+            // Swallow instead of letting the rejection escape into connect (which
+            // would hang the request): the middleware serves 502 while bootError is
+            // set, and the next hot update schedules the retry.
+            bootError = error
+            logger.error(`✖️  Failed to reload Moost App: ${(error as Error).message}`)
           }
-          await ssrImport(options.entry)
           await new Promise((resolve) => setTimeout(resolve, 1))
         })().finally(() => {
           reloadPromise = null
@@ -610,49 +670,65 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           }
           return moostMiddleware(req, res)
         }
+        if (bootError) {
+          // The app failed to load — answer explicitly rather than falling through
+          // to the SPA/SSR fallback, which would serve index.html for API routes.
+          res.statusCode = 502
+          res.setHeader('Content-Type', 'text/plain')
+          res.end(`Moost app failed to load: ${(bootError as Error).message}`)
+          return
+        }
         next()
       })
-
     },
 
     /**
-     * When a hot update occurs on a .ts file:
-     * - Collect all importer modules recursively.
-     * - Invalidate them so Vite re-loads.
-     * - Clear Moost’s runtime registry for those classes.
-     * - Re-import the SSR entry to re-initialize the app.
+     * Scoped Moost hot reload. The hook runs once per environment:
+     * - Client (and custom) environments are never touched, so Vite's default HMR
+     *   keeps delivering browser updates for client-side ts/js/vue modules.
+     * - In the ssr environment, only changes whose importer chain reaches the Moost
+     *   entry trigger an app reload: collect importers for DI cleanup, invalidate
+     *   them (entry included, so the re-import re-executes), eject affected DI
+     *   instances and schedule the reload.
+     * - ssr modules outside the entry graph (e.g. the ssrEntry render graph) take
+     *   Vite's default invalidation, so the next SSR render picks them up without
+     *   rebooting Moost.
      */
-    hotUpdate({ file }) {
-      if (file.endsWith('.ts')) {
-        const modules = this.environment.moduleGraph.getModulesByFile(file)
-        if (modules) {
-          logger.debug(`🔃 Hot update: ${file}`)
-          const cleanupInstances = new Set<string>()
-          for (const mod of modules) {
-            const allImporters = gatherAllImporters(mod)
-            for (const impModule of allImporters) {
-              if (impModule.id) {
-                cleanupInstances.add(impModule.id)
-              }
-            }
-            this.environment.moduleGraph.invalidateModule(mod)
-          }
-
-          // Reset the Moost middleware and local fetch instances
-          moostMiddleware = null
-          if (localFetchTeardown) {
-            localFetchTeardown()
-            localFetchTeardown = null
-          }
-
-          // Clean up Moost container references
-          moostRestartCleanup(adapters, options.onEject, cleanupInstances)
-
-          reloadRequired = true
-        }
-        // Return an empty array so Vite doesn't do partial HMR
-        return []
+    async hotUpdate({ file, modules }) {
+      if (this.environment.name !== 'ssr' || modules.length === 0) {
+        return
       }
+      const { moduleGraph } = this.environment
+      const entryModule = await getEntryModule(moduleGraph)
+      const importerSets = modules.map((mod) => gatherAllImporters(mod))
+      // gatherAllImporters includes the start node, so editing the entry itself matches too
+      if (entryModule && !importerSets.some((importers) => importers.has(entryModule))) {
+        return
+      }
+      logger.debug(`🔃 Hot update: ${file}`)
+      const cleanupInstances = new Set<string>()
+      for (const importers of importerSets) {
+        for (const impModule of importers) {
+          if (impModule.id) {
+            cleanupInstances.add(impModule.id)
+          }
+        }
+      }
+      for (const mod of modules) {
+        moduleGraph.invalidateModule(mod)
+      }
+      if (entryModule) {
+        // Guarantee the next runReload() re-executes the entry even if importer
+        // propagation stopped short of it for any reason.
+        moduleGraph.invalidateModule(entryModule)
+      } else {
+        // Entry node not resolvable (it was never imported) — fail open with a
+        // full invalidation so the scheduled reload re-executes everything.
+        moduleGraph.invalidateAll()
+      }
+      ejectApp(cleanupInstances)
+      // Handled: suppress Vite's default ssr hot update for these modules
+      return []
     },
   }
 
@@ -676,13 +752,18 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
             // Return post-hook so this runs AFTER Vite's internal middleware
             return () => {
               server.middlewares.use(async (req: any, res: ServerResponse, next: () => void) => {
-                if (req.method !== 'GET') { return next() }
+                if (req.method !== 'GET') {
+                  return next()
+                }
                 const url = req.originalUrl || req.url || '/'
                 try {
                   // Same reload lock as the main middleware: an HMR mid-render would
                   // otherwise race ssrLoadModule against a half-ejected app.
                   await drainReload()
-                  let template = await fs.readFile(resolve(process.cwd(), 'index.html'), 'utf8')
+                  let template = await fs.readFile(
+                    resolve(server.config.root, 'index.html'),
+                    'utf8',
+                  )
                   template = await server.transformIndexHtml(url, template)
                   const { render } = await server.ssrLoadModule(options.ssrEntry!)
                   const { html: appHtml, state } = await render(url)

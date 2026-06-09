@@ -72,7 +72,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
         }
         const url = req.originalUrl || req.url || '/'
         try {
-          let template = await fs.readFile(path.resolve(process.cwd(), 'index.html'), 'utf8')
+          let template = await fs.readFile(path.resolve(vite.config.root, 'index.html'), 'utf8')
           template = await vite.transformIndexHtml(url, template)
           const { render } = await vite.ssrLoadModule(ssrEntry)
           const { html: appHtml, state } = await render(url)
@@ -117,8 +117,12 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const { createServer: createHttpServer } = await import('node:http')
 
   const clientDir = (opts.clientDir as string) || path.resolve(import.meta.dirname, '../client')
-  const ssrOutlet = (opts.ssrOutlet as string) || (__MOOST_SSR_OUTLET__ !== undefined ? __MOOST_SSR_OUTLET__ : '<!--ssr-outlet-->')
-  const ssrState = (opts.ssrState as string) || (__MOOST_SSR_STATE__ !== undefined ? __MOOST_SSR_STATE__ : '<!--ssr-state-->')
+  const ssrOutlet =
+    (opts.ssrOutlet as string) ||
+    (__MOOST_SSR_OUTLET__ !== undefined ? __MOOST_SSR_OUTLET__ : '<!--ssr-outlet-->')
+  const ssrState =
+    (opts.ssrState as string) ||
+    (__MOOST_SSR_STATE__ !== undefined ? __MOOST_SSR_STATE__ : '<!--ssr-state-->')
   let prefix = (opts.prefix as string) || __MOOST_PREFIX__
   if (!prefix.startsWith('/')) {
     prefix = `/${prefix}`
@@ -173,7 +177,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   if (!captured) {
     const deadline = Date.now() + 30_000
     while (!captured && Date.now() < deadline) {
-      await new Promise<void>(resolve => setTimeout(resolve, 10))
+      await new Promise<void>((resolve) => setTimeout(resolve, 10))
     }
     if (!captured) {
       console.warn(
@@ -213,7 +217,10 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
           }
 
           // 2. API routes → moost
-          if (moostHandler && (url.startsWith(prefixSlash) || url === prefix || url.startsWith(`${prefix}?`))) {
+          if (
+            moostHandler &&
+            (url.startsWith(prefixSlash) || url === prefix || url.startsWith(`${prefix}?`))
+          ) {
             moostHandler(req, res)
             return
           }

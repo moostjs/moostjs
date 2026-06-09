@@ -4,6 +4,7 @@ package-lock.json
 packages/**/dist
 dist
 temp
+packages/vite/tests/fixture-tmp
 .npmrc
 docs/.vitepress/cache
 

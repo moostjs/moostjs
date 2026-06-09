@@ -141,12 +141,14 @@ await app.listen()
 
 ## Hot Module Replacement
 
-Both modes support full HMR across the entire server import graph — no restart needed. Edits resolve through one of two reload paths:
+Server-side HMR is scoped to the Moost entry graph: any file the server imports (reachable from `entry` — `.ts`, `.json`, anything) reloads the app, with no restart needed. On such an edit the plugin invalidates the changed files, ejects the affected DI instances (cascading to dependants), and re-initializes the app on the next request — the entry is re-imported in place, so editing a controller, data model or provider all behave the same, including in middleware + SSR mode where the dev server keeps owning the port.
 
-- **Controllers and the modules they import** are HMR-bounded: the plugin invalidates the changed files, ejects stale DI instances (cascading to dependants), and the next request rebuilds them from updated code.
-- **Modules the entry imports transitively** — data-models, providers, `init`-style bootstrap files — trigger a full app re-initialization on the next request (the entry is re-imported). This reloads in place, so editing a data model or provider is as safe as editing a controller, including in middleware + SSR mode where the dev server keeps owning the port.
+Files outside the entry graph never touch the Moost app:
 
-Either way the next request serves updated code without a manual restart.
+- **Client-side modules** (composables, stores, anything only the browser imports) keep Vite's regular HMR — browser updates flow as in any Vite app while the API keeps serving.
+- **SSR render modules** (the `ssrEntry` graph) are refreshed by Vite's default invalidation, so the next server-rendered page picks them up without rebooting Moost.
+
+If a server edit breaks the app (e.g. a syntax error), requests matching `prefix` (or all requests when no `prefix` is set) answer `502` with the load error instead of falling through to the frontend; the next edit retries the reload.
 
 ## Options
 
