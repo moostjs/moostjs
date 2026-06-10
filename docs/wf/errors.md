@@ -4,7 +4,7 @@ When something goes wrong in a workflow step, you have two options: fail the wor
 
 ## Regular Errors
 
-Throwing a standard error fails the workflow. The output contains the error, and the workflow is marked as finished:
+Throwing a standard error fails the workflow: the error propagates up and the `start()`/`resume()` promise **rejects** — there is no output object to inspect. Wrap the call in `try/catch`:
 
 ```ts
 @Step('validate-payment')
@@ -15,13 +15,11 @@ validatePayment(@WorkflowParam('context') ctx: TPaymentContext) {
 }
 ```
 
-Output when a regular error is thrown:
-
 ```ts
-{
-  finished: true,   // workflow ended
-  error: Error('No payment method configured'),
-  stepId: 'validate-payment',
+try {
+  await wf.start('payment', paymentContext)
+} catch (error) {
+  // regular step errors land here — the workflow cannot be resumed // [!code focus]
 }
 ```
 
@@ -55,9 +53,11 @@ new StepRetriableError(
   originalError: Error,       // the underlying error
   errorList?: unknown,        // structured error details (any shape)
   inputRequired?: IR,         // what input is needed to retry
-  expires?: number,           // optional TTL in ms
+  expires?: number,           // optional absolute deadline: Date.now() + ttlMs
 )
 ```
+
+`expires` is an **absolute epoch-ms timestamp**, not a duration — pass `Date.now() + ttlMs`. The [`@StepTTL`](/wf/outlets#step-ttl) decorator stamps it for you from a relative TTL.
 
 All parameters except `originalError` are optional. You can throw a retriable error that just says "try again" without requesting specific input:
 
@@ -72,42 +72,37 @@ When a `StepRetriableError` is thrown, the output signals a paused (not finished
 ```ts
 {
   finished: false,    // not done — can be retried // [!code focus]
-  interrupt: true,    // execution paused // [!code focus]
-  error: Error('Card was declined'),
+  error: Error('Card was declined'), // [!code focus]
   errorList: [{ code: 'CARD_DECLINED', message: 'Card was declined' }],
   inputRequired: { type: 'payment-form', hint: 'Try a different card' },
   stepId: 'charge-card',
-  retry: [Function],  // retry from the same step // [!code focus]
-  resume: [Function], // same as retry for retriable errors
+  retry: [Function],  // in-process retry — resumes from the failed step
   state: { schemaId: '...', context: {...}, indexes: [...] },
 }
 ```
 
 Key differences from a regular error:
-- **`finished: false`** instead of `true`
-- **`interrupt: true`** — workflow is paused, not failed
-- **`retry`** function available to retry the same step
+- **the promise resolves** with `finished: false` instead of rejecting
+- **`error`** is captured on the output (a retriable failure is the only case where `error` appears on a `TFlowOutput`)
 - **`state`** available for serialization and later resumption
+
+There is no `resume` function on a retriable failure — `resume` exists only on input-required pauses without an error.
 
 ## Retrying
 
-Use the `retry` function to re-execute the failed step with new input:
+Retry by resuming from the failed state — the saved `state` points at the failed step, so `wf.resume()` re-executes it with the new input:
 
 ```ts
 const result = await wf.start('payment', paymentContext)
 
-if (result.error && result.retry) {
+if (!result.finished && result.error) {
   // Show error to user, get new payment details
   const newInput = { cardNumber: '4111...', cvv: '123' }
-  const retried = await result.retry(newInput) // [!code focus]
+  const retried = await wf.resume(result.state, { input: newInput }) // [!code focus]
 }
 ```
 
-Or resume from stored state:
-
-```ts
-const retried = await wf.resume(result.state, { input: newInput })
-```
+`result.retry(input)` is an in-process shortcut for the same call — it re-enters through the workflow engine with a fresh event context, so Moost step handlers (DI, `@WorkflowParam`, composables) work as usual. For retries across process boundaries (e.g. after persisting the failed state), serialize `result.state` and call `wf.resume()`.
 
 ## When to Use Which
 
@@ -121,5 +116,5 @@ const retried = await wf.resume(result.state, { input: newInput })
 | Payment declined, try different card | `StepRetriableError` with `inputRequired` |
 
 ::: info
-A workflow can be retried multiple times. Each `retry()` or `resume()` call re-executes only the failed step and continues from there — it does not re-run previously completed steps.
+A workflow can be retried multiple times. Each `resume()` call re-executes only the failed step and continues from there — it does not re-run previously completed steps.
 :::

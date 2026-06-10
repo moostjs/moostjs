@@ -1,12 +1,12 @@
 # Configuration
 
-`SwaggerController` accepts an options object that controls the generated OpenAPI document and the serving behaviour. All fields are optional.
+`SwaggerController` accepts an options object that controls the generated OpenAPI document and the serving behaviour. All fields are optional. The options object type is `TSwaggerOptions`, importable from `'@moostjs/swagger'`.
 
 ## Basic setup
 
 ```ts
+import { createProvideRegistry } from 'moost'
 import { SwaggerController } from '@moostjs/swagger'
-import { createProvideRegistry } from '@prostojs/infact'
 
 const swagger = new SwaggerController({
   title: 'My API',
@@ -28,12 +28,16 @@ Without a provide registry, `SwaggerController` uses default values (`title: 'Mo
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `title` | `string` | `'Moost API'` | API title shown in the Swagger UI header |
+| `title` | `string` | `'API Documentation'` | API title shown in the Swagger UI header |
 | `description` | `string` | — | Markdown-supported description |
 | `version` | `string` | `'1.0.0'` | API version |
 | `contact` | `{ name?, url?, email? }` | — | Contact information |
 | `license` | `{ name, url? }` | — | License details |
 | `termsOfService` | `string` | — | URL to terms of service |
+
+::: info Title defaults
+When you pass an options object without `title`, the generated spec falls back to `'API Documentation'`. When `SwaggerController` is registered without any options (no provide registry), its DI default kicks in and the title is `'Moost API'`.
+:::
 
 ```ts
 new SwaggerController({
@@ -133,7 +137,7 @@ This is useful when hosting the spec on a different domain from your documentati
 
 ### Security schemes
 
-Security schemes can be defined manually in options or auto-discovered from `@Authenticate()` guards. See the [Security](/swagger/security) page for details.
+Security schemes can be defined manually in options or auto-discovered from `@Authenticate()` guards. See the [Security](/swagger/security) page for details. Each entry is a `TSwaggerSecurityScheme` (exported union of `http`, `apiKey`, `oauth2`, and `openIdConnect` scheme shapes); the root `security` array contains `TSwaggerSecurityRequirement` objects (`Record<schemeName, scopes[]>`).
 
 ```ts
 new SwaggerController({
@@ -156,10 +160,9 @@ new SwaggerController({
 ## Full example
 
 ```ts
-import { Moost } from 'moost'
+import { createProvideRegistry, Moost } from 'moost'
 import { MoostHttp } from '@moostjs/event-http'
 import { SwaggerController } from '@moostjs/swagger'
-import { createProvideRegistry } from '@prostojs/infact'
 
 const swagger = new SwaggerController({
   title: 'Acme API',
@@ -182,7 +185,8 @@ const swagger = new SwaggerController({
 })
 
 const app = new Moost()
-app.adapter(new MoostHttp())
+const http = new MoostHttp()
+app.adapter(http)
 app.setProvideRegistry(
   createProvideRegistry([SwaggerController, () => swagger])
 )
@@ -193,21 +197,34 @@ app.registerControllers(
   OrdersController,
 )
 await app.init()
+await http.listen(3000)
 ```
 
-## Using `mapToSwaggerSpec()` directly
+## Generating the spec without serving
 
-If you don't need the UI and just want the spec object (for SDK generation, CI validation, etc.), call `mapToSwaggerSpec()` directly:
+If you just want the spec object (for SDK generation, CI validation, etc.), request `spec.json` programmatically through the HTTP adapter — no server needs to be listening:
 
 ```ts
-import { mapToSwaggerSpec } from '@moostjs/swagger'
+await app.init()
 
-const spec = mapToSwaggerSpec(app.getControllersOverview(), {
-  title: 'My API',
-  version: '2.0.0',
-})
+const res = await http.request('/api-docs/spec.json')
+const spec = await res!.json()
 
 // Write to file, feed to openapi-generator, etc.
 ```
 
-The function accepts the same options as `SwaggerController` and returns a plain object matching the OpenAPI 3.0 / 3.1 structure.
+`MoostHttp.request()` invokes the route in-process, so this works in scripts and CI without binding a port. The returned object matches the OpenAPI 3.0 / 3.1 structure, built from the options passed to `SwaggerController`. Make sure `await app.init()` has run first — before init no controllers are bound.
+
+Alternatively, call the spec generator directly with `mapToSwaggerSpec` — no `SwaggerController` registration needed:
+
+```ts
+import { mapToSwaggerSpec } from '@moostjs/swagger'
+import type { TSwaggerOptions } from '@moostjs/swagger'
+
+await app.init()
+
+const options: TSwaggerOptions = { title: 'My API', version: '2.1.0' }
+const spec = mapToSwaggerSpec(app.getControllersOverview(), options)
+```
+
+`mapToSwaggerSpec(metadata, options?)` takes the controllers overview from `app.getControllersOverview()` and the same `TSwaggerOptions` object that `SwaggerController` accepts, and returns the spec as a plain object.

@@ -32,9 +32,9 @@ Use `@WorkflowParam` to inject workflow data into step methods:
 | `'input'` | `I \| undefined` | Input passed to `start()` or `resume()` |
 | `'stepId'` | `string \| null` | Current step identifier |
 | `'schemaId'` | `string` | Workflow schema identifier |
-| `'indexes'` | `number[]` | Position in nested schema (for sub-workflows) |
+| `'indexes'` | `number[] \| undefined` | Position in nested schemas |
 | `'resume'` | `boolean` | `true` when the workflow is being resumed, `false` on first run |
-| `'state'` | `object` | Full workflow state (context, indexes, schemaId) |
+| `'state'` | `object` | The full [`useWfState()`](/wf/api#usewfstate) accessor: `{ ctx(), input(), schemaId, stepId(), indexes(), resume }` |
 
 ```ts
 @Step('process')
@@ -52,7 +52,7 @@ process(
 
 ## Class Property Injection
 
-When using `@Injectable('FOR_EVENT')`, the controller is instantiated fresh for each step execution. This lets you inject context as a class property instead of a method parameter:
+When using `@Injectable('FOR_EVENT')`, the controller is instantiated fresh for each workflow run — each `start()` or `resume()` call — and shared by all steps within that run. This lets you inject context as a class property instead of a method parameter (the property stays consistent across steps of the same run):
 
 ```ts
 @Injectable('FOR_EVENT') // [!code focus]

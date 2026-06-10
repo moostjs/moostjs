@@ -1,3 +1,5 @@
 export * from './decorators'
+export { mapToSwaggerSpec } from './mapping'
+export type { TSwaggerOptions } from './mapping'
 export * from './swagger.controller'
 export * from './swagger.mate'

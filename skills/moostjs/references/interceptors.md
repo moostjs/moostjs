@@ -10,6 +10,8 @@ Onion-model wrappers around handler execution. Two APIs: functional (`TIntercept
 - [useControllerContext](#usecontrollercontext)
 - [Patterns](#patterns)
 - [Gotchas](#gotchas)
+- [Key imports](#key-imports)
+- [See also](#see-also)
 
 ## Priority
 
@@ -59,15 +61,7 @@ app.applyGlobalInterceptors(errorHandler, authGuard, cliHelpInterceptor())
 
 ## Functional API
 
-```ts
-interface TInterceptorDef {
-  before?(reply): void | Promise<void>
-  after?(response, reply): void | Promise<void>
-  error?(error, reply): void | Promise<void>
-  priority?: TInterceptorPriority
-  _name?: string
-}
-```
+A `TInterceptorDef` (`import type { TInterceptorDef } from 'moost'`) is a plain object with up to three hooks plus an optional `priority` and `_name`. Hook signatures: `before(reply)`, `after(response, reply)`, `error(error, reply)` — each `void | Promise<void>`; `reply(value)` short-circuits or replaces the response.
 
 ### Helper factories (from `moost`)
 
@@ -77,6 +71,8 @@ const wrap  = defineAfterInterceptor((response, reply) => { /* … */ }, TInterc
 const catch_= defineErrorInterceptor((error, reply) => { /* … */ }, TInterceptorPriority.CATCH_ERROR)
 const multi = defineInterceptor({ before, after }, TInterceptorPriority.INTERCEPTOR)
 ```
+
+`defineInterceptor(def, priority?)` always overwrites `def.priority` with its second argument (default `INTERCEPTOR`) — set priority via the argument, not inside the def object.
 
 ## Class-based API
 
@@ -97,6 +93,8 @@ class MyInterceptor {
 - `@Overtake()` param decorator — injects the `reply` function.
 - `@Response()` param decorator — injects the handler result (in `@After`) or the Error (in `@OnError`).
 - `@Interceptor` auto-adds `@Injectable`.
+
+Composable equivalents (what the decorators read): `useOvertake()` returns the reply fn (`TOvertakeFn`); `useInterceptResult()` returns the current handler result/error. Their `setOvertake`/`setInterceptResult` counterparts are exported for adapters that drive the interceptor chain manually — application code never calls them.
 
 ## useControllerContext
 
@@ -119,6 +117,10 @@ const svc  = await instantiate(SomeService)   // DI-resolved
 ### Auth guard
 
 ```ts
+import { defineBeforeInterceptor, TInterceptorPriority } from 'moost'
+import { HttpError } from '@moostjs/event-http'
+import { useHeaders } from '@wooksjs/event-http' // NOT re-exported by @moostjs/event-http
+
 const authGuard = defineBeforeInterceptor((reply) => {
   const { authorization } = useHeaders()
   if (!authorization) reply(new HttpError(401, 'Missing authorization'))
@@ -137,7 +139,8 @@ const wrap = defineAfterInterceptor((response, reply) => {
 
 ```ts
 const errorHandler = defineErrorInterceptor((error, reply) => {
-  const status = error instanceof HttpError ? error.statusCode : 500
+  // HttpError has no public statusCode — read it via the `body` getter
+  const status = error instanceof HttpError ? error.body.statusCode : 500
   reply({ error: error.message, status })
 }, TInterceptorPriority.CATCH_ERROR)
 app.applyGlobalInterceptors(errorHandler)
@@ -162,7 +165,25 @@ class RoleGuard {
 - `@Interceptor` auto-adds `@Injectable` — don't double-decorate.
 - `reply()` in `before` skips the handler entirely.
 - `after` receives the raw response; `onError` receives the `Error`.
-- `after` / `onError` are LIFO — inner (lower priority added later) runs first.
+- `after` / `onError` are LIFO — the interceptor whose `before` ran last (highest priority value) runs its `after`/`onError` hook first.
 - The `priority` arg on `@Intercept()` overrides the class's own priority.
 - Global interceptors also run for not-found handlers via `getGlobalInterceptorHandler()`.
-- Interceptor factories (functions returning `TInterceptorDef`) are called once per event — each event gets a fresh def.
+- Only `TInterceptorDef` objects and `@Interceptor` classes can be registered — passing a bare factory function (`() => ({ before() {} })`) throws `Invalid interceptor ... must be TInterceptorDef or @Interceptor class` at bind time. `@Interceptor` classes ARE (re)instantiated per event internally, so each event gets fresh hook bindings.
+
+## Key imports
+
+```ts
+import { Intercept, Interceptor, Before, After, OnError, Overtake, Response,
+         defineBeforeInterceptor, defineAfterInterceptor, defineErrorInterceptor,
+         defineInterceptor, TInterceptorPriority, useControllerContext } from 'moost'
+import type { TInterceptorDef, TOvertakeFn } from 'moost'
+import { HttpError } from '@moostjs/event-http'
+import { useHeaders } from '@wooksjs/event-http'
+```
+
+## See also
+
+- [pipes.md](pipes.md) — arg resolution runs after `before`; pipe errors route to `onError`
+- [di.md](di.md) — class-based interceptors resolve through DI (scope `'SINGLETON' | 'FOR_EVENT'`)
+- [http-auth.md](http-auth.md) — ready-made HTTP auth guards
+- [http-response.md](http-response.md) — `HttpError` semantics

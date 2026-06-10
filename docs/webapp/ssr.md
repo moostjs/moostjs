@@ -92,8 +92,9 @@ With [local fetch](/webapp/fetch) enabled (default), `fetch('/api/...')` calls M
 <script setup lang="ts">
 import { ref, onServerPrefetch, onMounted, useSSRContext } from 'vue'
 
-const data = ref(null)
 const ssrState = import.meta.env.SSR ? useSSRContext()! : (window as any).__SSR_STATE__ || {}
+// Restore server-fetched data on the client so hydration matches the server HTML
+const data = ref(ssrState.data ?? null)
 
 // Server: in-process fetch via Moost (no network)
 onServerPrefetch(async () => {
@@ -102,7 +103,7 @@ onServerPrefetch(async () => {
   ssrState.state = { ...ssrState.state, data: data.value }
 })
 
-// Client fallback for SPA mode
+// Client fallback for SPA mode (no transferred state)
 onMounted(async () => {
   if (!data.value) {
     const res = await fetch('/api/hello/SSR')
@@ -111,6 +112,8 @@ onMounted(async () => {
 })
 </script>
 ```
+
+Initializing the ref from the transferred state is what makes the `window.__SSR_STATE__` transfer effective — without it the client hydrates with `null`, mismatches the server-rendered HTML, and refetches on every load.
 
 ## SSR vs SPA
 

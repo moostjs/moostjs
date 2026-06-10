@@ -7,13 +7,30 @@ Metadata is a foundational concept in Moost, enabling a declarative and extensib
 
 In Moost, metadata serves as a mechanism to enrich your code elements with supplementary information without cluttering your business logic. By using decorators, you can declaratively specify configurations, behaviors, and constraints directly within your codebase. This approach promotes cleaner, more maintainable, and highly customizable server-side applications.
 
+A quick taste — annotate a controller and read the metadata back at runtime:
+
+```ts
+import { Controller, Description, useControllerContext } from 'moost'
+import { Get } from '@moostjs/event-http'
+
+@Controller('api')
+@Description('Public API controller')
+export class ApiController {
+  @Get('about')
+  about() {
+    const { getControllerMeta } = useControllerContext()
+    return getControllerMeta()?.description // 'Public API controller'
+  }
+}
+```
+
 ## Core Capabilities
 
 - **Decorator-Driven Configuration:**  
   Attach metadata to classes, methods, properties, and parameters using decorators like `@Controller`, `@Get`, `@Injectable`, and more.
 
 - **Runtime Accessibility:**  
-  Access and manipulate metadata during runtime to dynamically influence application behavior based on the attached attributes.
+  Access and manipulate metadata during runtime to dynamically influence application behavior — the [`useControllerContext`](/moost/meta/controller) composable is the runtime-access API.
 
 - **Extensibility:**  
   Extend Moost’s functionality by creating custom decorators and metadata, tailored to your specific application needs.
@@ -33,7 +50,7 @@ In Moost, metadata serves as a mechanism to enrich your code elements with suppl
   Attach validation schemas to Data Transfer Objects (DTOs) using decorators such as `@UseValidatorPipe` from `@atscript/moost-validator`, ensuring data integrity before it reaches your handlers.
 
 - **Interceptors:**  
-  Apply cross-cutting concerns such as logging, authentication, or transformation logic around your handlers using decorators like `@Interceptor`.
+  Apply cross-cutting concerns such as logging, authentication, or transformation logic around your handlers — `@Intercept` attaches interceptors to controllers and handlers, while `@Interceptor` declares class-based interceptors.
 
 - **General-Purpose Metadata:**  
   Use decorators like `@Id`, `@Label`, and `@Description` to add descriptive metadata to various code elements, enhancing documentation and tooling support.
@@ -58,3 +75,4 @@ For deeper insights and practical guides, explore the following documentation pa
 - [General-Purpose Metadata](/moost/meta/common)
 - [Customizing Metadata](/moost/meta/custom)
 - [Metadata Inheritance](/moost/meta/inherit)
+- [Controller Metadata](/moost/meta/controller)

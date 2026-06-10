@@ -9,8 +9,8 @@ A step pauses the workflow by returning an object with `inputRequired`:
 ```ts
 @Step('collect-address')
 collectAddress(
-  @WorkflowParam('input') input?: TAddress,
   @WorkflowParam('context') ctx: TRegistrationContext,
+  @WorkflowParam('input') input?: TAddress,
 ) {
   if (!input) {
     return { inputRequired: true } // [!code focus] pauses the workflow
@@ -40,8 +40,7 @@ const result = await wf.start('registration', {
   address: null,
 })
 
-if (!result.finished) { // [!code focus]
-  console.log(result.interrupt)      // true
+if (!result.finished && result.inputRequired !== undefined) { // [!code focus]
   console.log(result.inputRequired)  // true (or whatever you returned)
   console.log(result.stepId)         // 'collect-address'
   console.log(result.state)          // serializable state
@@ -50,8 +49,7 @@ if (!result.finished) { // [!code focus]
 
 Key output fields when paused:
 - **`finished: false`** — workflow did not complete
-- **`interrupt: true`** — execution was paused (not failed)
-- **`inputRequired`** — the value returned by the step
+- **`inputRequired`** — the value returned by the step; its presence (together with `resume`) is what distinguishes a pause from a [retriable failure](/wf/errors)
 - **`state`** — full state needed to resume (schema ID, context, step position)
 - **`resume`** — convenience function to resume immediately
 
@@ -134,7 +132,7 @@ console.log(result.finished) // true
 
 ## Expiration
 
-Steps can set an expiration time (in milliseconds) for paused state:
+Steps can set an expiration deadline for paused state. `expires` is passed through to the output untouched — by convention it holds an **absolute epoch-ms timestamp** (`Date.now() + ttl`), not a duration:
 
 ```ts
 @Step('collect-payment')
@@ -142,12 +140,14 @@ collectPayment(@WorkflowParam('input') input?: TPayment) {
   if (!input) {
     return {
       inputRequired: { type: 'payment-form' },
-      expires: 15 * 60 * 1000, // [!code focus] 15 minutes
+      expires: Date.now() + 15 * 60 * 1000, // [!code focus] valid for 15 minutes
     }
   }
   // process payment...
 }
 ```
+
+The [`@StepTTL(ms)`](/wf/outlets#step-ttl) decorator is the built-in way to stamp this deadline — it takes a relative TTL and sets `expires: Date.now() + ttl` whenever the step pauses.
 
 The `expires` value appears in the output. It's up to your application to check it and reject stale resumes:
 

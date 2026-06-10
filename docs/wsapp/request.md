@@ -86,9 +86,9 @@ import { Controller } from 'moost'
 
 @Controller()
 export class LogController {
-  @Message('*', '/log')
-  onAny(@MessageType() event: string) { // [!code focus]
-    console.log('Event type:', event)
+  @Message('log', '/log')
+  onLog(@MessageType() event: string) { // [!code focus]
+    console.log('Event type:', event) // "log"
   }
 }
 ```

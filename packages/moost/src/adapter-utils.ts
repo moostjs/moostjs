@@ -21,6 +21,7 @@ export interface TMoostEventHandlerHookOptions<T> {
 
 /** Configuration for `defineMoostEventHandler`, describing how to resolve and invoke a handler. */
 export interface TMoostEventHandlerOptions<T> {
+  /** @deprecated unused since wooks v0.7 — the event kind comes from the wooks adapter */
   contextType?: string | string[]
   loggerTitle: string
   getIterceptorHandler: () => InterceptorHandler | undefined
@@ -82,9 +83,9 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
   return () => {
     const ctx = current()
     const scopeId = useScopeId(ctx)
-    const ctxLogger = useLogger(ctx)
-    const logger =
-      typeof ctxLogger.topic === 'function' ? ctxLogger.topic(options.loggerTitle) : ctxLogger
+    // useLogger(topic, ctx) derives a child logger via createTopic when supported,
+    // falling back to the base logger otherwise
+    const logger = useLogger(options.loggerTitle, ctx)
     const unscope = registerEventScope(scopeId)
 
     let response: unknown
@@ -132,9 +133,14 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
 
     function afterInstance(instance: T | undefined): unknown {
       if (instance) {
-        setControllerContext(instance, options.controllerMethod || ('' as keyof T), options.targetPath, {
-          prefix: options.controllerPrefix,
-        })
+        setControllerContext(
+          instance,
+          options.controllerMethod || ('' as keyof T),
+          options.targetPath,
+          {
+            prefix: options.controllerPrefix,
+          },
+        )
         ci?.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
       }
 
@@ -200,8 +206,15 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     function callHandler(instance: T | undefined, args: unknown[]): unknown {
       const invoke = options.callControllerMethod
         ? () => options.callControllerMethod?.(args)
-        : instance && options.controllerMethod && typeof instance[options.controllerMethod] === 'function'
-          ? () => (instance[options.controllerMethod as keyof T] as unknown as (...a: unknown[]) => unknown)(...args)
+        : instance &&
+            options.controllerMethod &&
+            typeof instance[options.controllerMethod] === 'function'
+          ? () =>
+              (
+                instance[options.controllerMethod as keyof T] as unknown as (
+                  ...a: unknown[]
+                ) => unknown
+              )(...args)
           : undefined
       try {
         const handlerResult = ci
@@ -248,6 +261,8 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     function cleanup(): unknown {
       // fire after interceptors
       if (interceptorHandler?.countAfter || interceptorHandler?.countOnError) {
+        // remember the raised error so we can detect recovery via reply() in onError phase
+        const raisedResponse = response
         const afterResult = ci
           ? ci.with('Interceptors:after', () => interceptorHandler?.fireAfter(response))
           : interceptorHandler?.fireAfter(response)
@@ -255,6 +270,10 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           return (afterResult as PromiseLike<unknown>).then(
             (r) => {
               response = r
+              if (raise && response !== raisedResponse) {
+                // an error interceptor recovered via reply() — return a clean response
+                raise = false
+              }
               return finalize()
             },
             (error: unknown) => {
@@ -269,6 +288,10 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           )
         }
         response = afterResult
+        if (raise && response !== raisedResponse) {
+          // an error interceptor recovered via reply() — return a clean response
+          raise = false
+        }
       }
 
       return finalize()

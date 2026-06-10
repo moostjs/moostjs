@@ -24,7 +24,7 @@ The callback `() => ServiceB` breaks the reference cycle — at decoration time,
 
 ## Limitations
 
-Dependencies involved in a circular relationship are **not fully available inside constructors**. Moost creates proxy placeholders during construction and resolves them afterward. Access circular dependencies in handler methods or lifecycle hooks, not in `constructor` bodies.
+Dependencies involved in a circular relationship are **not fully available inside constructors**. During construction Moost registers an empty placeholder object (sharing the class prototype) and fills in its properties only after both instances are built — until then the placeholder's properties are simply `undefined`. Access circular dependencies in handler methods or lifecycle hooks, not in `constructor` bodies.
 
 ## When to Refactor Instead
 

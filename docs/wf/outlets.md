@@ -29,7 +29,8 @@ The outlet APIs come from the underlying packages (`@prostojs/wf` v0.2.1+ and `@
 A login flow with an HTTP outlet that serves forms and collects user input:
 
 ```ts
-import { Controller, Post, Injectable } from 'moost'
+import { Controller, Injectable } from 'moost'
+import { Post } from '@moostjs/event-http'
 import {
   MoostWf,
   Workflow, WorkflowSchema, Step, WorkflowParam,
@@ -57,14 +58,15 @@ class AuthController {
     }) // [!code focus]
   }
 
-  @Workflow('auth/login')
+  // controller prefix 'auth' + workflow path 'login' = schema ID 'auth/login'
+  @Workflow('login')
   @WorkflowSchema(['credentials', 'create-session'])
   loginFlow() {}
 
   @Step('credentials')
   async credentials(
-    @WorkflowParam('input') input?: { username: string; password: string },
     @WorkflowParam('context') ctx: any,
+    @WorkflowParam('input') input?: { username: string; password: string },
   ) {
     if (input) {
       ctx.userId = await verifyCredentials(input.username, input.password)
@@ -90,7 +92,7 @@ class AuthController {
 1. Client sends `POST /auth/flow` with `{ "wfid": "auth/login" }`
 2. Workflow starts → `credentials` step returns `outletHttp(...)` → workflow pauses
 3. State is persisted by the strategy (server-side row for `HandleStateStrategy`, encrypted blob for `EncapsulatedStateStrategy`) → HTTP outlet returns the form payload + token (`wfs`) in the response
-4. Client renders the form, user fills it in, sends `POST /auth/flow` with `{ "wfs": "<token>", "username": "...", "password": "..." }`
+4. Client renders the form, user fills it in, sends `POST /auth/flow` with `{ "wfs": "<token>", "input": { "username": "...", "password": "..." } }` — step input must be nested under the `input` key
 5. State is retrieved via `consume()` (atomic mutex against concurrent resumes) → workflow resumes at `credentials` with input → `create-session` runs → workflow finishes
 6. Response includes the redirect and session cookie from `useWfFinished()`
 
@@ -307,8 +309,8 @@ In your step, return `outletHttp(payload)` to trigger the HTTP outlet:
 ```ts
 @Step('collect-address')
 async collectAddress(
-  @WorkflowParam('input') input?: TAddress,
   @WorkflowParam('context') ctx: TCheckoutContext,
+  @WorkflowParam('input') input?: TAddress,
 ) {
   if (input) {
     ctx.address = input
@@ -322,20 +324,21 @@ async collectAddress(
 }
 ```
 
-The response the client receives looks like:
+The response the client receives is the outlet payload itself (merged with the outlet context, if any) plus the `wfs` token at the top level:
 
 ```json
 {
-  "wfs": "<encrypted-or-handle-token>",
-  "inputRequired": {
-    "outlet": "http",
-    "payload": {
-      "type": "address-form",
-      "fields": ["street", "city", "zip", "country"],
-      "defaults": null
-    }
-  }
+  "type": "address-form",
+  "fields": ["street", "city", "zip", "country"],
+  "defaults": null,
+  "wfs": "<encrypted-or-handle-token>"
 }
+```
+
+To resume, the client posts the token back with the step input nested under `input`:
+
+```json
+{ "wfs": "<token>", "input": { "street": "123 Main St", "city": "Springfield", "zip": "62701", "country": "US" } }
 ```
 
 ### Email Outlet
@@ -367,7 +370,7 @@ async sendVerification(@WorkflowParam('context') ctx: TRegistrationContext) {
 }
 ```
 
-When the user clicks the link, the `wfs` token in the query string resumes the workflow.
+When the user clicks the link, the `wfs` token in the query string resumes the workflow — `token.read` includes `'query'` by default for exactly this case. Make sure the trigger endpoint also accepts GET requests (see the [complete example](#complete-example-auth-workflows)).
 
 ### Custom Outlets
 
@@ -445,14 +448,15 @@ async complete(@WorkflowParam('context') ctx: any) {
 }
 ```
 
-If no `useWfFinished()` is called, the outlet handler returns the raw workflow output.
+If neither `useWfFinished()` nor the trigger's `onFinished` callback is used, the outlet handler responds with the literal `{ finished: true }` — it does not expose the workflow context or state. Use `onFinished` (on the trigger config) or `useWfFinished()` (in a step) to return data from the workflow.
 
 ## Complete Example: Auth Workflows
 
 A real-world controller with login and password recovery flows sharing a single HTTP endpoint:
 
 ```ts
-import { Controller, Post, Injectable } from 'moost'
+import { Controller, Injectable } from 'moost'
+import { Get, Post } from '@moostjs/event-http'
 import {
   MoostWf,
   Workflow, WorkflowSchema, Step, WorkflowParam, StepTTL,
@@ -485,7 +489,9 @@ class AuthController {
   ) {}
 
   // --- Single HTTP endpoint for all auth workflows ---
+  // POST for form submissions, GET for magic links (token.read includes 'query' by default)
 
+  @Get('flow')
   @Post('flow')
   async flow() {
     return this.wf.handleOutlet({
@@ -496,8 +502,9 @@ class AuthController {
   }
 
   // --- Login workflow ---
+  // controller prefix 'auth' + workflow path 'login' = schema ID 'auth/login'
 
-  @Workflow('auth/login')
+  @Workflow('login')
   @WorkflowSchema([
     'login-form',
     { condition: (ctx) => ctx.mfaRequired, steps: ['mfa-verify'] },
@@ -507,8 +514,8 @@ class AuthController {
 
   @Step('login-form')
   async loginForm(
-    @WorkflowParam('input') input?: { username: string; password: string },
     @WorkflowParam('context') ctx: any,
+    @WorkflowParam('input') input?: { username: string; password: string },
   ) {
     if (input) {
       const user = await this.users.authenticate(input.username, input.password)
@@ -521,8 +528,8 @@ class AuthController {
 
   @Step('mfa-verify')
   async mfaVerify(
-    @WorkflowParam('input') input?: { code: string },
     @WorkflowParam('context') ctx: any,
+    @WorkflowParam('input') input?: { code: string },
   ) {
     if (input) {
       await this.users.verifyMfa(ctx.userId, input.code)
@@ -531,16 +538,16 @@ class AuthController {
     return outletHttp({ type: 'mfa', fields: ['code'] })
   }
 
-  // --- Recovery workflow ---
+  // --- Recovery workflow --- (effective schema ID: 'auth/recovery')
 
-  @Workflow('auth/recovery')
+  @Workflow('recovery')
   @WorkflowSchema(['recovery-email', 'send-link', 'reset-password', 'create-session'])
   recoveryFlow() {}
 
   @Step('recovery-email')
   async recoveryEmail(
-    @WorkflowParam('input') input?: { email: string },
     @WorkflowParam('context') ctx: any,
+    @WorkflowParam('input') input?: { email: string },
   ) {
     if (input) {
       const user = await this.users.findByEmail(input.email)
@@ -560,8 +567,8 @@ class AuthController {
 
   @Step('reset-password')
   async resetPassword(
-    @WorkflowParam('input') input?: { password: string },
     @WorkflowParam('context') ctx: any,
+    @WorkflowParam('input') input?: { password: string },
   ) {
     if (input) {
       await this.users.resetPassword(ctx.userId, input.password)
@@ -588,13 +595,13 @@ class AuthController {
 
 ```
 POST /auth/flow  { "wfid": "auth/login" }
-  ← 200  { "wfs": "T1", "inputRequired": { "outlet": "http", "payload": { "type": "login", ... } } }
+  ← 200  { "type": "login", "fields": ["username", "password"], "wfs": "T1" }
 
-POST /auth/flow  { "wfs": "T1", "username": "alice", "password": "s3cret" }
-  ← 200  { "wfs": "T1", "inputRequired": { "outlet": "http", "payload": { "type": "mfa", ... } } }
+POST /auth/flow  { "wfs": "T1", "input": { "username": "alice", "password": "s3cret" } }
+  ← 200  { "type": "mfa", "fields": ["code"], "wfs": "T1" }
   (or skip MFA if not required → redirect directly)
 
-POST /auth/flow  { "wfs": "T1", "code": "123456" }
+POST /auth/flow  { "wfs": "T1", "input": { "code": "123456" } }
   ← 302  Location: /dashboard   Set-Cookie: sid=...
 ```
 
@@ -602,15 +609,15 @@ POST /auth/flow  { "wfs": "T1", "code": "123456" }
 
 ```
 POST /auth/flow  { "wfid": "auth/recovery" }
-  ← 200  { "wfs": "T1", "inputRequired": { "outlet": "http", "payload": { "type": "email-form", ... } } }
+  ← 200  { "type": "email-form", "fields": ["email"], "wfs": "T1" }
 
-POST /auth/flow  { "wfs": "T1", "email": "alice@example.com" }
+POST /auth/flow  { "wfs": "T1", "input": { "email": "alice@example.com" } }
   ← 200  (email sent, workflow paused at email outlet — no wfs in response; tokenDelivery: 'out-of-band')
 
-GET /auth/flow?wfs=T1
-  ← 200  { "wfs": "T1", "inputRequired": { "outlet": "http", "payload": { "type": "password-form", ... } } }
+GET /auth/flow?wfs=T1            (magic link — handled by the @Get('flow') route)
+  ← 200  { "type": "password-form", "fields": ["password"], "wfs": "T1" }
 
-POST /auth/flow  { "wfs": "T1", "password": "n3wP@ss" }
+POST /auth/flow  { "wfs": "T1", "input": { "password": "n3wP@ss" } }
   ← 302  Location: /dashboard   Set-Cookie: sid=...
 ```
 

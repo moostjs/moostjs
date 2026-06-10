@@ -97,7 +97,7 @@ const toNumber = definePipeFn((value, metas, level) => {
     if (typeof value === 'string') {
         const num = Number(value)
         if (Number.isNaN(num)) {
-            throw new Error(`"${metas.paramName}" must be a number`)
+            throw new Error(`"${metas.targetMeta?.paramName || String(metas.key)}" must be a number`)
         }
         return num
     }
@@ -107,7 +107,7 @@ const toNumber = definePipeFn((value, metas, level) => {
 
 Arguments:
 - `value` — the current value (output of previous pipe)
-- `metas` — metadata about the parameter (name, type, decorators)
+- `metas` — metadata context (`TPipeMetas`): the parameter's own metadata lives in nested fields like `metas.targetMeta?.paramName` and `metas.paramMeta`; `metas.key` is the method/property name and `metas.type` the design type
 - `level` — decoration level (`'PARAM'` or `'PROP'`)
 
 ### Applying pipes
@@ -159,7 +159,7 @@ A pipe at `VALIDATE` priority can reject invalid values:
 ```ts
 const validatePositive = definePipeFn((value, metas) => {
     if (typeof value === 'number' && value <= 0) {
-        throw new HttpError(400, `"${metas.paramName}" must be positive`)
+        throw new HttpError(400, `"${metas.targetMeta?.paramName || String(metas.key)}" must be positive`)
     }
     return value
 }, TPipePriority.VALIDATE)

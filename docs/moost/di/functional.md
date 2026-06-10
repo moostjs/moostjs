@@ -7,7 +7,13 @@ Most dependencies are resolved via constructor injection. But sometimes you need
 The `useControllerContext()` composable provides an `instantiate` function that creates class instances through Moost's DI system, respecting scopes, provide registries, and replace registries:
 
 ```ts
-import { defineBeforeInterceptor, defineAfterInterceptor, useControllerContext } from 'moost'
+import { Injectable, defineBeforeInterceptor, defineAfterInterceptor, useControllerContext } from 'moost'
+
+@Injectable()
+class MetricsCollector {
+  startTimer() { /* ... */ }
+  record() { /* ... */ }
+}
 
 const startMetrics = defineBeforeInterceptor(async (reply) => {
   const { instantiate } = useControllerContext()
@@ -37,7 +43,8 @@ Beyond `instantiate`, the composable exposes the current controller's runtime co
 | `getPrefix()` | Controller's computed prefix (accumulated from all parents) |
 | `getControllerMeta()` | Class-level metadata |
 | `getMethodMeta(name?)` | Method-level metadata |
-| `getScope()` | Controller's injectable scope |
+| `getPropMeta(name)` | Property-level metadata (alias for `getMethodMeta(name)`) |
+| `getScope()` | Controller's injectable scope — `true \| 'SINGLETON' \| 'FOR_EVENT'` (plain `@Controller()`/`@Injectable()` classes yield `true`, which also means singleton — check `scope === 'FOR_EVENT'`, not `scope === 'SINGLETON'`) |
 | `getParamsMeta()` | Array of handler parameter metadata (always an array; empty when none) |
 | `getPropertiesList()` | Decorated property keys — `(string \| symbol)[]` |
 
@@ -48,3 +55,8 @@ Beyond `instantiate`, the composable exposes the current controller's runtime co
 - **Dynamic dispatch** — choose which class to instantiate based on runtime data
 
 For most cases, constructor injection is simpler and more predictable. Use `instantiate` when static injection patterns don't fit.
+
+## Gotchas
+
+- **The target class must be DI-visible.** `instantiate()` rejects classes without `@Injectable()` (or a matching provide-registry entry) with `Class is not Injectable and not Optional`.
+- **Requires an active event context.** `useControllerContext()` only works inside handlers and interceptors; calling it at module top level (or outside an event) throws `No active event context`.

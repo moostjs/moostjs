@@ -9,7 +9,7 @@ import {
 import { clearGlobalWooks, Controller, Moost } from 'moost'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Step, StepTTL, Workflow, WorkflowSchema } from './decorators'
+import { Step, StepTTL, Workflow, WorkflowParam, WorkflowSchema } from './decorators'
 import { MoostWf } from './event-wf'
 
 // Coverage for WF_UPDATE.md adoption: verify that MoostWf forwards the new
@@ -111,10 +111,14 @@ describe('MoostWf adapter — strategy + eventContext forwarding', () => {
 
     const wf = new MoostWf(wfApp)
 
-    await wf.start('flow-fwd', {}, {
-      input: 'hi',
-      strategy: { name: 'kv' },
-    })
+    await wf.start(
+      'flow-fwd',
+      {},
+      {
+        input: 'hi',
+        strategy: { name: 'kv' },
+      },
+    )
     expect(startSpy).toHaveBeenCalledWith(
       'flow-fwd',
       {},
@@ -183,6 +187,39 @@ describe('MoostWf adapter — strategy + eventContext forwarding', () => {
 // errors, keep the same wfs token" path). The wrapper must stamp the step's
 // TTL onto `output.expires` on BOTH paths — the engine forwards `expires`
 // through the error path identically to the return path.
+describe('MoostWf adapter — @WorkflowParam resolvers', () => {
+  it("@WorkflowParam('indexes') injects the indexes array, not the accessor function", async () => {
+    let seenIndexes: unknown
+    @Controller()
+    class WfIndexes {
+      @Step('capture')
+      capture(@WorkflowParam('indexes') indexes: number[]) {
+        seenIndexes = indexes
+        return outletHttp({})
+      }
+
+      @Workflow('flow-indexes')
+      @WorkflowSchema(['capture'])
+      flow() {}
+    }
+
+    const wf = await buildMoost(WfIndexes)
+    const paused = await wf.start('/flow-indexes', {})
+
+    // fresh start: indexes is undefined (not the accessor function)
+    expect(typeof seenIndexes).not.toBe('function')
+    expect(seenIndexes).toBeUndefined()
+
+    expect(paused.state).toBeDefined()
+    await wf.resume(paused.state as { schemaId: string; context: object; indexes: number[] }, {})
+
+    // on resume the step re-runs with its position in the schema
+    expect(typeof seenIndexes).not.toBe('function')
+    expect(Array.isArray(seenIndexes)).toBe(true)
+    expect(seenIndexes).toEqual([0])
+  })
+})
+
 describe('MoostWf adapter — @StepTTL on re-pause', () => {
   const HOUR = 60 * 60 * 1000
   const MONTH = 30 * 24 * HOUR

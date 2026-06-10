@@ -10,11 +10,15 @@ The return value of a handler determines the response:
 |---|---|---|
 | `string` | `text/plain` | Sent as plain text |
 | object / array | `application/json` | JSON-serialized |
-| `boolean` | `application/json` | JSON-serialized |
-| `ReadableStream` | streamed | Piped to response |
+| `boolean` / `number` | `text/plain` | Stringified (`'true'`, `'42'`) |
+| Node `Readable` stream | streamed | Piped to response (e.g. `fs.createReadStream()`) |
 | fetch `Response` | forwarded | Status, headers, and body preserved |
 
 `content-length` is set automatically for non-streamed responses.
+
+::: warning
+Web `ReadableStream` is not special-cased — it would be JSON-serialized like a plain object. Wrap it with `Readable.fromWeb()` from `node:stream` or return it inside a fetch `Response`.
+:::
 
 ## Setting status codes
 

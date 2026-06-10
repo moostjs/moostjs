@@ -51,15 +51,13 @@ export class GameController {
 }
 ```
 
-Nested controllers with `@ImportController` also compose prefixes:
+Nested controllers with `@ImportController` (a class decorator) also compose prefixes:
 
 ```ts
 @Controller('v2')
-export class V2Controller {
-  @ImportController(() => GameController)
-  game!: GameController
-  // GameController routes become /v2/game/board/:id
-}
+@ImportController(() => GameController)
+export class V2Controller {}
+// GameController routes become /v2/game/board/:id
 ```
 
 ## Parametric Routes
@@ -126,3 +124,10 @@ export class ApiController {
   }
 }
 ```
+
+## Gotchas
+
+- **Unmatched fire-and-forget messages are dropped silently.** When no handler matches the `event` + `path` pair and the message carries no `id`, there is no log and no reply — a typo in `event` or a missing controller prefix in `path` produces zero feedback.
+- **Unmatched RPC messages get a 404 error reply.** When the message carries a correlation `id`, the server replies with `{ "id": ..., "error": { "code": 404, "message": "Not found" } }`.
+- **The `event` field must match the registered event exactly.** There is no wildcard matching on the event dimension — only paths support `:param` and `*` patterns.
+- **Paths are matched against the full prefixed route.** Clients must send the path including the `@Controller` prefix (e.g. `/chat/general`, not `general`).

@@ -50,7 +50,7 @@ Because a new `GreetController` is created for each request, `this.name` safely 
 
 ## Property-level resolvers
 
-In `FOR_EVENT` controllers, all resolver decorators (`@Param`, `@Query`, `@Header`, `@Cookie`, `@Body`, etc.) can be used on class properties instead of handler arguments:
+In `FOR_EVENT` controllers, resolver decorators (`@Param`, `@Header`, `@Cookie`, `@Body`, etc.) can be used on class properties instead of handler arguments:
 
 ```ts
 import { Get, Post, Header, Body, Cookie } from '@moostjs/event-http'
@@ -75,6 +75,12 @@ export class ApiController {
     }
 }
 ```
+
+::: info
+`@Query` is the exception — it is typed as a parameter decorator only, so use it in handler signatures, not on class properties.
+:::
+
+See [Custom Resolvers & Pipes](./resolvers) for building your own property/parameter resolvers.
 
 ## Response refs as properties
 
@@ -152,6 +158,7 @@ For interface-based injection or when you need custom factories:
 
 ```ts
 import { Provide, Inject, Controller } from 'moost'
+import { Get } from '@moostjs/event-http'
 
 // Register a factory for a token
 @Provide('CONFIG', () => ({ apiUrl: 'https://api.example.com' }))
@@ -165,6 +172,8 @@ export class AppController {
     }
 }
 ```
+
+Token registration scopes, app-level `provide()`, and replacement patterns are covered in depth in [Provide & Inject](/moost/di/provide-inject).
 
 ## Scope rules
 
@@ -182,3 +191,9 @@ SINGLETON → FOR_EVENT    ❌ will not work correctly
 ```
 
 When in doubt, keep your controllers as singletons and use handler parameters for request-specific data. Switch to `FOR_EVENT` only when property-level resolvers or per-request state provide a clear benefit.
+
+## Further reading
+
+- [DI fundamentals](/moost/di/) — scopes, the Infact container, and injection mechanics
+- [Provide & Inject](/moost/di/provide-inject) — token-based injection in depth
+- [Custom Resolvers & Pipes](./resolvers) — write your own resolver decorators

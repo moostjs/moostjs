@@ -5,7 +5,7 @@
 ## Quick setup
 
 ```bash
-npm install @moostjs/swagger swagger-ui-dist
+npm install @moostjs/swagger
 ```
 
 ```ts
@@ -14,9 +14,11 @@ import { MoostHttp } from '@moostjs/event-http'
 import { SwaggerController } from '@moostjs/swagger'
 
 const app = new Moost()
-app.adapter(new MoostHttp())
+const http = new MoostHttp()
+app.adapter(http)
 app.registerControllers(SwaggerController)
 await app.init()
+await http.listen(3000)
 ```
 
 Open <http://localhost:3000/api-docs> to see the Swagger UI.

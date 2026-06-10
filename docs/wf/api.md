@@ -64,9 +64,9 @@ Parameter and property decorator that injects workflow runtime values.
 | `'input'` | `I \| undefined` | Input passed to `start()` or `resume()` |
 | `'stepId'` | `string \| null` | Current step ID (`null` in entry point) |
 | `'schemaId'` | `string` | Active workflow schema identifier |
-| `'indexes'` | `number[] \| undefined` | Current position in nested schemas |
+| `'indexes'` | `number[] \| undefined` | Position in nested schemas |
 | `'resume'` | `boolean` | `true` when resuming, `false` on first run |
-| `'state'` | `object` | Full state object from `useWfState()` |
+| `'state'` | `object` | The full accessor object from [`useWfState()`](#usewfstate) |
 
 ```ts
 // As method parameter:
@@ -114,6 +114,11 @@ new MoostWf<T, IR>(opts?: WooksWf<T, IR> | TWooksWfOptions, debug?: boolean)
 | `logger` | `TConsoleBase` | Custom logger instance |
 | `eventOptions` | `EventContextOptions` | Event context configuration |
 | `router` | `TWooksOptions['router']` | Router configuration |
+| `strictStepIds` | `boolean` | When `true`, registering a duplicate step ID throws instead of warning |
+
+::: warning Duplicate step IDs
+By default (`strictStepIds: false`), registering a `@Step` ID that already exists logs a warning and the **first** registration wins — later registrations are silently ignored. Set `strictStepIds: true` (e.g. in CI) to fail loudly on step-id collisions.
+:::
 
 ### `start<I>(schemaId, initialContext, opts?)`
 
@@ -144,7 +149,7 @@ const result = await wf.start('process-order', { orderId: '123' }, { input: { so
 ```
 
 ::: warning Breaking change in 0.6.18
-Prior versions accepted `input` as a positional third argument. Wrap it in `{ input }`. See [`WF_UPDATE.md`](https://github.com/moostjs/moostjs) for migration details.
+Prior versions accepted `input` as a positional third argument. Wrap it in `{ input }`.
 :::
 
 ### `resume<I>(state, opts?)`
@@ -253,27 +258,47 @@ async sendEmail(@WorkflowParam('context') ctx: any) {
 
 ### `TFlowOutput<T, I, IR>`
 
-Returned by `start()` and `resume()`. Describes the workflow's current state.
+Returned by `start()` and `resume()`. A discriminated union of three shapes — finished, paused, or failed:
 
 ```ts
-interface TFlowOutput<T, I, IR> {
-  state: {
-    schemaId: string      // workflow identifier
-    context: T            // current context (with all mutations)
-    indexes: number[]     // position in schema (for resume)
-  }
-  finished: boolean       // true if workflow completed all steps
-  stepId: string          // last executed step ID
-  inputRequired?: IR      // present when a step needs input
-  interrupt?: boolean     // true when paused (input or retriable error)
-  break?: boolean         // true if a break condition ended the flow
-  resume?: (input: I) => Promise<TFlowOutput<T, unknown, IR>>   // resume convenience function
-  retry?: (input?: I) => Promise<TFlowOutput<T, unknown, IR>>   // retry convenience function
-  error?: Error           // error if step threw (retriable or regular)
-  errorList?: unknown     // structured error details from StepRetriableError
-  expires?: number        // TTL in ms (if set by the step)
+type TFlowOutput<T, I, IR> = TFlowFinished<T, IR> | TFlowPaused<T, I, IR> | TFlowFailed<T, I, IR>
+
+// shared by all three:
+state: {
+  schemaId: string      // workflow identifier
+  context: T            // current context (with all mutations)
+  indexes: number[]     // position in schema ([] on completion)
+}
+stepId: string          // last executed step ID
+
+// finished — workflow completed all steps
+{ finished: true, state, stepId }
+
+// paused — a step returned { inputRequired }
+{
+  finished: false, state, stepId,
+  inputRequired: IR     // the value the step returned
+  resume: (input: I) => Promise<TFlowOutput<T, unknown, IR>>
+  expires?: number      // absolute epoch-ms deadline (Date.now() + ttl)
+  errorList?: unknown
+}
+
+// failed — a step threw StepRetriableError
+{
+  finished: false, state, stepId,
+  error: Error          // the original error
+  retry: (input?: I) => Promise<TFlowOutput<T, unknown, IR>>
+  inputRequired?: IR
+  expires?: number
+  errorList?: unknown
 }
 ```
+
+Notes:
+
+- `error` implies `finished: false` — a **regular** (non-retriable) error makes `start()`/`resume()` reject instead of returning an output.
+- `resume` exists only on paused outputs; `retry` only on failed ones. Both are in-process closures that re-enter through the workflow engine (with a fresh event context) — equivalent to calling `wf.resume(result.state, { input })`. For retries that cross process boundaries, serialize `result.state` and call `wf.resume()` — see [Error Handling](/wf/errors#retrying).
+- `expires` is an absolute timestamp, conventionally stamped via [`@StepTTL`](#stepttl-ttlms).
 
 ### `TWorkflowSchema<T>`
 
@@ -316,10 +341,12 @@ type TWorkflowSpy<T, I, IR> = (
     fn: string | ((ctx: T) => boolean | Promise<boolean>)
     result: boolean
   },
-  flowOutput: TFlowOutput<T, I, IR>,
+  flowOutput: TFlowSpyData<T, IR>,
   ms?: number,
 ) => void
 ```
+
+`flowOutput` is a `TFlowSpyData` snapshot (`state`, `finished`, `stepId`, `inputRequired?`, `interrupt?`, `error?`, `expires?`, `errorList?`) — unlike `TFlowOutput`, it carries **no** `resume`/`retry` functions. See [Spies & Observability](/wf/spies).
 
 ### `StepRetriableError<IR>`
 
@@ -331,7 +358,7 @@ class StepRetriableError<IR> extends Error {
     originalError: Error,
     errorList?: unknown,
     inputRequired?: IR,
-    expires?: number,
+    expires?: number, // absolute deadline: Date.now() + ttlMs
   )
 
   readonly originalError: Error
@@ -360,6 +387,10 @@ interface WfOutletTriggerConfig {
 }
 ```
 
+### `WfOutletTriggerDeps`
+
+The `{ start, resume }` dependency callbacks consumed by [`handleWfOutletRequest()`](#handlewfoutletrequest-config-deps). Provided automatically by `MoostWf.handleOutlet()` / `createOutletHandler()` — implement it only for custom trigger wiring.
+
 ### `WfOutletTokenConfig`
 
 Token read/write configuration:
@@ -381,7 +412,7 @@ interface WfStateStrategy {
   persist(
     state: WfState,
     options?: { ttl?: number },
-    overrides?: { handle?: string }, // since @wooksjs/event-wf 0.7.14 — hint to reuse a handle so the wfs stays stable across resumes
+    overrides?: { handle?: string }, // hint to reuse a handle so the wfs stays stable across resumes
   ): Promise<string>
   retrieve(token: string): Promise<WfState | null>          // no invalidation
   consume(token: string): Promise<WfState | null>           // atomic retrieve + invalidate (mutex against concurrent resumes)
@@ -397,9 +428,12 @@ Delivery channel interface:
 ```ts
 interface WfOutlet {
   readonly name: string
+  readonly tokenDelivery?: 'caller' | 'out-of-band' // default 'caller'
   deliver(request: WfOutletRequest, token: string): Promise<WfOutletResult | void>
 }
 ```
+
+`tokenDelivery` controls whether the state token is returned to the HTTP caller or only delivered through the outlet's own channel — security-critical for custom outlets. See [Outlets — Out-of-Band Outlets](/wf/outlets#out-of-band-outlets).
 
 ### `WfOutletRequest`
 
@@ -480,6 +514,20 @@ const emailOutlet = createEmailOutlet(async ({ target, template, context, token 
 })
 ```
 
+### `createOutletHandler(wfApp)`
+
+Lower-level building block: binds an outlet trigger to anything exposing `start`/`resume` (a `WooksWf` instance or a `MoostWf`). Returns a `(config) => Promise<unknown>` handler. `MoostWf.handleOutlet()` is this, pre-bound — use it unless you are wiring a raw `WooksWf` app.
+
+```ts
+const handler = createOutletHandler(wf.getWfApp())
+// later, inside an HTTP handler:
+return handler({ allow: ['auth/login'], state, outlets: [httpOutlet] })
+```
+
+### `handleWfOutletRequest(config, deps)`
+
+The lowest-level trigger function: `createOutletHandler` and `MoostWf.handleOutlet` both delegate here. `deps` is a `WfOutletTriggerDeps` object — `{ start, resume }` callbacks the trigger uses to run the workflow. Only needed when you must intercept or wrap start/resume yourself.
+
 ### `EncapsulatedStateStrategy`
 
 Stateless strategy — encrypts workflow state into the token (AES-256-GCM).
@@ -516,10 +564,10 @@ import { useWfState } from '@moostjs/event-wf'
 const state = useWfState()
 state.ctx<TMyContext>()      // workflow context
 state.input<TMyInput>()     // step input (or undefined)
-state.schemaId              // workflow schema ID
+state.schemaId              // workflow schema ID (property)
 state.stepId()              // current step ID (or null)
-state.indexes               // position in nested schemas
-state.resume                // boolean: is this a resume?
+state.indexes()             // position in nested schemas (accessor function)
+state.resume                // boolean: is this a resume? (property)
 ```
 
 ::: info

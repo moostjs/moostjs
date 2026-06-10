@@ -23,8 +23,8 @@ Four auth transports are supported, each mapping to an OpenAPI security scheme:
 ## Example
 
 ```ts
-import { Controller } from 'moost'
-import { Authenticate, defineAuthGuard, Get, Param } from '@moostjs/event-http'
+import { Controller, Param } from 'moost'
+import { Authenticate, defineAuthGuard, Get } from '@moostjs/event-http'
 import { SwaggerPublic } from '@moostjs/swagger'
 
 const jwtGuard = defineAuthGuard(
@@ -60,7 +60,7 @@ Generated spec excerpt:
     }
   },
   "paths": {
-    "/users": {
+    "/users/list": {
       "get": { "security": [] }
     },
     "/users/{id}": {
@@ -206,6 +206,10 @@ export class DataController {
   create(@Body() dto: CreateDataDto) { /* ... */ }
 }
 ```
+
+::: info Stacked guards are AND-combined
+Stacked `@Authenticate()` decorators accumulate in metadata, and the generated spec AND-combines their schemes into a single security requirement (e.g. `security: [{ bearerAuth: [], apiKeyAuth: [] }]`) — matching the runtime behavior where all guards must pass. Multiple transports declared within a single guard remain OR-alternatives.
+:::
 
 ::: warning Runtime vs docs
 `@SwaggerSecurity` and `@SwaggerSecurityAll` only affect the OpenAPI spec — they do not add runtime guards. To enforce authentication, always use `@Authenticate()`. Use the swagger decorators when you need to override or fine-tune the generated security section (e.g. adding OAuth2 scopes).

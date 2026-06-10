@@ -96,7 +96,7 @@ export const WorkflowParam = (
       return Resolve(() => useWfState().resume, 'Workflow-Resume')
     }
     case 'indexes': {
-      return Resolve(() => useWfState().indexes, 'Workflow-Indexes')
+      return Resolve(() => useWfState().indexes(), 'Workflow-Indexes')
     }
     case 'schemaId': {
       return Resolve(() => useWfState().schemaId, 'Workflow-SchemaId')

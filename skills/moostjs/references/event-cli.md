@@ -39,7 +39,7 @@ new CliApp()
 | `.useOptions(opts)` | global CLI options for help |
 | `.start()` | creates MoostCli, attaches adapter, applies help interceptor (if `useHelp`), awaits `init()` |
 
-Handler return → stdout (string = plain, object/array = JSON).
+Handler return → stdout: string = plain; array = one line per element (strings plain, non-strings JSON); other objects = pretty 2-space JSON; returned `Error` → onError (red `ERROR:` + exit 1 by default).
 
 ## Commands
 
@@ -69,12 +69,12 @@ class AppController {
 
 ### `@CliAlias(alias)` / `@CliExample(cmd, desc?)`
 
-Stack multiples.
+Stack multiples. Aliases are command names only — positional args from the `@Cli` path are auto-appended to every alias (`@CliAlias('i/:package')` would register `i/:package/:package` and break).
 
 ```ts
 @Cli('install/:package')
-@CliAlias('i/:package')
-@CliAlias('add/:package')
+@CliAlias('i')
+@CliAlias('add')
 @CliExample('install lodash', 'Install lodash')
 install(@Param('package') pkg: string) {}
 ```
@@ -159,16 +159,19 @@ Unknown command + `lookupLevel > 0` → "did you mean?" via `useCommandLookupHel
 
 Use helpers from `moost` (some re-exported by `@moostjs/event-cli`).
 
-| Factory | Re-exported by event-cli? |
+| Symbol | Re-exported by event-cli? |
 |---|---|
 | `defineBeforeInterceptor(fn, priority?)` | yes |
 | `defineAfterInterceptor(fn, priority?)` | yes |
 | `defineInterceptor(hooks, priority?)` | yes |
 | `defineErrorInterceptor(fn, priority?)` | **no — import from `moost`** |
+| `TInterceptorPriority` | **type-only — import the enum value from `moost`** |
 
-Priority: `BEFORE_ALL` < `BEFORE_GUARD` < `GUARD` < `AFTER_GUARD` < `INTERCEPTOR` < `CATCH_ERROR` < `AFTER_ALL`. Typical CLI use: help at `BEFORE_ALL`, env/permission checks at `GUARD`, error formatting at `CATCH_ERROR`.
+Priority order: see [interceptors.md](./interceptors.md). Typical CLI use: help at `BEFORE_ALL`, env/permission checks at `GUARD`, error formatting at `CATCH_ERROR`.
 
 ```ts
+import { defineBeforeInterceptor, defineErrorInterceptor, TInterceptorPriority } from 'moost'
+
 const envGuard = defineBeforeInterceptor(() => {
   if (!process.env.CI_TOKEN) { console.error('CI_TOKEN required'); process.exit(1) }
 }, TInterceptorPriority.GUARD)
@@ -251,4 +254,10 @@ class HealthController {
 - Help interceptor runs at `BEFORE_ALL` — before guards.
 - `CliApp.start()` calls `init()` internally — don't call it again.
 - `defineErrorInterceptor` is **not** re-exported from `@moostjs/event-cli` — import from `moost`.
-- Passing options (not a `WooksCli` instance) to `MoostCli`: the adapter overrides `onNotFound`.
+- `TInterceptorPriority` is a **type-only** re-export from `@moostjs/event-cli`; using it as a value (`TInterceptorPriority.GUARD`) requires importing the enum from `moost`.
+- Passing options (not a `WooksCli` instance) to `MoostCli`: the adapter overrides `onNotFound`. Passing a pre-built `WooksCli` instance: no `onNotFound` is installed — interceptor-driven unmatched-command handling (lookup help) won't run unless you wire it yourself.
+
+## See also
+
+- [interceptors.md](./interceptors.md) — priority order, phases, functional vs class-based API
+- [core.md](./core.md) — Moost app setup, controllers, DI registration

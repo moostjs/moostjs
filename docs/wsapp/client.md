@@ -10,11 +10,7 @@ For the full API reference, see the [Wooks WS Client Documentation](https://wook
 npm install @wooksjs/ws-client
 ```
 
-For Node.js, you also need the `ws` package:
-
-```bash
-npm install @wooksjs/ws-client ws
-```
+No extra dependency is needed in browsers or Node.js >= 22 — the client uses the global `WebSocket`. Only on Node.js < 22 do you need a polyfill such as the `ws` package.
 
 ## Quick Overview
 
@@ -24,16 +20,6 @@ import { createWsClient } from '@wooksjs/ws-client'
 const client = createWsClient('ws://localhost:3000/ws', {
   reconnect: true,
   rpcTimeout: 5000,
-})
-```
-
-For Node.js, pass the `ws` constructor via the `_WebSocket` option:
-
-```ts
-import WebSocket from 'ws'
-
-const client = createWsClient('ws://localhost:3000/ws', {
-  _WebSocket: WebSocket as unknown as typeof globalThis.WebSocket,
 })
 ```
 

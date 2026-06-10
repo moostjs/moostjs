@@ -149,7 +149,7 @@ getAsset(@Params() params: { type: string[], id: string }) {
 
 ## Wildcards
 
-An asterisk (`*`) matches zero or more characters within a path segment.
+An asterisk (`*`) matches zero or more characters, **including `/`** — `@Get('*')` on a controller prefixed `static` matches everything under `/static/`, however deep.
 
 ```ts
 @Controller('static')
@@ -193,37 +193,24 @@ Use `@Query()` without arguments to get all query parameters as an object:
 
 ```ts
 @Get('search')
-search(@Query() params: Record<string, string>) {
+search(@Query() params: Record<string, string | string[]>) {
     return params
 }
 ```
 
 ::: info
-Query values are always strings. Use [pipes](./resolvers) to transform them to numbers or other types.
+Query values arrive as strings (or string arrays). Use [pipes](./resolvers) to transform them to numbers or other types.
+:::
+
+::: warning Gotchas for `@Query()`
+- Keys ending in `[]` become arrays: `?tags[]=a&tags[]=b` → `{ 'tags[]': ['a', 'b'] }`.
+- Repeating a plain key (`?q=a&q=b`) triggers an automatic `400 Duplicate key` response.
+- When there are no query parameters at all, `@Query()` resolves to `undefined`, not `{}`.
 :::
 
 ## Handler return values
 
-Whatever your handler returns becomes the response body. Moost automatically sets `content-type` and `content-length`:
-
-| Return type | Content-Type |
-|---|---|
-| `string` | `text/plain` |
-| object / array | `application/json` |
-| `ReadableStream` | streamed |
-| `Response` (fetch) | forwarded as-is |
-
-```ts
-@Get('text')
-getText() {
-    return 'Hello!' // → text/plain
-}
-
-@Get('json')
-getJson() {
-    return { message: 'Hello!' } // → application/json
-}
-```
+Whatever your handler returns (or resolves to) becomes the response body — strings go out as `text/plain`, objects as `application/json`, Node `Readable` streams are piped. See [Responses & Errors](./response) for the full return-type table, status codes, headers, and cookies.
 
 Async handlers work the same way — return a promise:
 

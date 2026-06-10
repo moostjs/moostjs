@@ -48,7 +48,7 @@ export default defineConfig({
 moostVite({ entry: '/src/api/main.ts', middleware: true, prefix: '/api' })
 ```
 
-Moost handles requests matching `prefix`; everything else falls through to Vite (frontend, static, HMR). `prefix` is normalized to leading-slash / no-trailing-slash and adds a fast-path skip for non-API requests.
+Moost handles requests matching `prefix`; everything else falls through to Vite (frontend, static, HMR). `prefix` is normalized to leading-slash / no-trailing-slash and adds a fast-path skip for non-API requests. Omitting `prefix` diverges dev from prod: dev routes every request through Moost first, while the built prod server bakes `/api` as the prefix — always set it explicitly.
 
 ## SSR / SPA mode
 
@@ -87,7 +87,7 @@ await app.listen()
 moostVite({ entry: '/src/main.ts', middleware: true, prefix: '/api', serverEntry: './server.ts' })
 ```
 
-`createSSRServer` handles dev/prod automatically. `serverEntry` is used only during `vite build`. `createSSRServer({ entry: () => import('./src/main') })` is an escape hatch that bundles the entry via the function instead of the baked define.
+`createSSRServer` handles dev/prod automatically. Optional `TSSRServerOptions` override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `clientDir`, `ssrOutlet`, `ssrState` (prod falls back to build-time baked values). The returned `TSSRServer` exposes `use(middleware)` (Connect-style) and `listen(port?)`. `serverEntry` is used only during `vite build`. `createSSRServer({ entry: () => import('./src/main') })` is an escape hatch that bundles the entry via the function instead of the baked define.
 
 ## SSR externalization & single-instance guard
 
@@ -105,14 +105,15 @@ The moost/wooks runtime relies on per-module `Symbol` slot keys (`cached()`/`key
 |---|---|---|---|
 | `entry` | `string` | — | required; Moost app entry. `/src/...` (root-rel) or `./src/...` |
 | `middleware` | `boolean` | `false` | run Moost as Connect middleware behind Vite |
-| `prefix` | `string` | — | URL prefix filter for middleware mode |
+| `prefix` | `string` | `'/api'` in prod build | URL prefix for middleware mode; prod server defaults to `/api` when omitted — set explicitly so dev/prod route the same |
 | `ssrEntry` | `string` | — | Vue/React SSR entry (e.g. `/src/entry-server.ts`) |
 | `ssrOutlet` / `ssrState` | `string` | `<!--ssr-outlet-->` / `<!--ssr-state-->` | HTML placeholders |
 | `serverEntry` | `string` | — | custom prod server entry; auto-generated when omitted |
 | `ssrExternal` | `string[]` | — | packages to keep external in middleware SSR build (≡ `ssr.external`) |
 | `ssrFetch` | `boolean` | `true` | in-process `fetch('/api/...')` during SSR |
-| `port`/`host`/`outDir`/`format`/`sourcemap`/`externals` | — | — | **backend mode only**; middleware mode uses `vite.config` |
-| `onEject` | `function` | — | per-instance hook during HMR DI cleanup |
+| `sourcemap` | `boolean` | `true` | both modes; in middleware mode controls the `dist/server` SSR build sourcemaps |
+| `port`/`host`/`outDir`/`format`/`externals` | — | — | **backend mode only**; middleware mode uses `vite.config` |
+| `onEject` | `function` | — | veto hook per HMR ejection candidate `(instance, depClass)`; ejection only when absent or returning `true` — return `false` to keep the instance |
 
 ## Key imports
 
@@ -127,7 +128,7 @@ import { createSSRServer } from '@moostjs/vite/server' // custom dev/prod server
 - Under an explicit `noExternal` list, **never** externalize `@wooksjs/*` / `moost` piecemeal — the guard force-bundles them; a partial external split makes `useRequest()` etc. read `undefined` in prod only (dev dedupes via the SSR module runner, so it passes locally).
 - `serverEntry` is build-only. For custom middleware in dev, run `tsx server.ts` instead of `vite`.
 - `ssrEntry` forces `appType: 'custom'` (Vite stops serving HTML; the plugin's SSR fallback takes over).
-- Backend-mode-only options (`port`, `host`, `outDir`, `format`, `sourcemap`, `externals`) are ignored in middleware mode.
+- Backend-mode-only options (`port`, `host`, `outDir`, `format`, `externals`) are ignored in middleware mode — but `sourcemap` is NOT backend-only: in middleware mode it sets the `dist/server` SSR build's sourcemaps (default `true`).
 - HMR is scoped to the **Moost entry graph** (any file type the server imports, not just `.ts`): an entry-graph edit ejects the affected DI instances + Wooks router/Mate caches (tracked via `__vite_id` decorators) and re-imports the entry, re-initializing the whole app on the next request — one mechanism for controllers, data-models and providers alike. No restart.
 - Files **outside** the entry graph never reload Moost: client-only modules keep Vite's regular browser HMR; `ssrEntry` render-graph modules get Vite's default invalidation so the next SSR render is fresh. Versions ≤ 0.6.25 hijacked ANY `.ts` change — editing a client-only `.ts` in middleware+SSR mode killed `/api/*` (served `index.html`) until the next server-graph edit or a restart, and also suppressed the browser HMR update for that file; diagnose those symptoms as an out-of-date plugin.
 - A server edit that fails to load (syntax error, bad import) makes requests matching `prefix` (all requests when no `prefix` is set) answer `502` with the error message (instead of falling through to the SPA/SSR fallback); the next edit retries.

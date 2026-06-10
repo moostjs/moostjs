@@ -158,7 +158,6 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
     const targetPath = `${`${opts.prefix || ''}/${path}`.replaceAll(/\/\/+/g, '/')}`
 
     const fn = defineMoostEventHandler({
-      contextType: 'WS_MESSAGE',
       loggerTitle: LOGGER_TITLE,
       getIterceptorHandler: opts.getIterceptorHandler,
       getControllerInstance: opts.getInstance,
@@ -178,7 +177,6 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
 
   protected bindConnectHandler<T extends object>(opts: TMoostAdapterOptions<TWsHandlerMeta, T>) {
     const fn = defineMoostEventHandler({
-      contextType: 'WS_CONNECT',
       loggerTitle: LOGGER_TITLE,
       getIterceptorHandler: opts.getIterceptorHandler,
       getControllerInstance: opts.getInstance,
@@ -196,7 +194,6 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
 
   protected bindDisconnectHandler<T extends object>(opts: TMoostAdapterOptions<TWsHandlerMeta, T>) {
     const fn = defineMoostEventHandler({
-      contextType: 'WS_DISCONNECT',
       loggerTitle: LOGGER_TITLE,
       getIterceptorHandler: opts.getIterceptorHandler,
       getControllerInstance: opts.getInstance,

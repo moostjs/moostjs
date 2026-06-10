@@ -24,7 +24,7 @@ export interface CreateUserDto {
     city: string
 
     @meta.example "62704"
-    @expect.pattern /^\d{5}$/
+    @expect.pattern "^\\d{5}$"
     zip: string
   }
 }

@@ -35,7 +35,7 @@ A link must reference a target operation. Three modes are supported:
 })
 ```
 
-**By `handler` reference** — type-safe, resolved to the actual `operationId` at mapping time:
+**By `handler` reference** — resolved to the actual `operationId` at mapping time:
 
 ```ts
 @SwaggerLink('GetUser', {
@@ -44,7 +44,7 @@ A link must reference a target operation. Three modes are supported:
 })
 ```
 
-This is the recommended approach within a Moost application. If the target handler is renamed or moved, TypeScript flags the reference at compile time.
+This is the recommended approach within a Moost application: the link survives `operationId` changes because it is resolved from the controller at mapping time. Note that only the controller class reference is checked by TypeScript — the method name is a plain string, and a stale name causes the link to be silently omitted from the spec (see [Options reference](#options-reference)).
 
 **By `operationRef`** — JSON pointer for cross-document or non-standard references:
 
@@ -90,6 +90,8 @@ By default, a link attaches to the default success status code for the HTTP meth
 
 ### Options reference
 
+The options object is exported as `TSwaggerLinkOptions`:
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `operationId` | `string` | Target operation by operationId |
@@ -100,7 +102,7 @@ By default, a link attaches to the default success status code for the HTTP meth
 | `description` | `string` | Human-readable description of the link |
 | `server` | `{ url, description? }` | Alternative server for the link target |
 
-Exactly one of `operationId`, `operationRef`, or `handler` must be provided. If `handler` cannot be resolved (e.g., the target controller is not registered), the link is silently skipped.
+Exactly one of `operationId`, `operationRef`, or `handler` must be provided. If `handler` cannot be resolved (e.g., the target controller is not registered, or the method name no longer matches a handler), the link is silently skipped.
 
 ---
 
@@ -160,6 +162,8 @@ subscribe(@Body() dto: SubscribeDto) { /* ... */ }
 ```
 
 ### Options reference
+
+The options object is exported as `TSwaggerCallbackOptions`:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|

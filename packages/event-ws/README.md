@@ -95,24 +95,10 @@ await app.init()
 
 ## AI Agent Skills
 
-This package ships skills for AI coding agents (Claude Code, Cursor, Windsurf, Codex, OpenCode). After installing `@moostjs/event-ws`, set up the skills:
+A unified Moost skill for AI coding agents (Claude Code, Cursor, Windsurf, Codex, OpenCode) covers this package along with the rest of the framework:
 
 ```bash
-# Project-local (recommended — version-locked, commits with your repo)
-npx moostjs-event-ws-skill
-
-# Global (available across all your projects)
-npx moostjs-event-ws-skill --global
-```
-
-To auto-install skills on `npm install`, add to your `package.json`:
-
-```json
-{
-  "scripts": {
-    "postinstall": "moostjs-event-ws-skill --postinstall"
-  }
-}
+npx skills add moostjs/moostjs
 ```
 
 ## Contributing

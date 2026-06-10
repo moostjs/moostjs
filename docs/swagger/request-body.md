@@ -17,6 +17,21 @@ The content type is selected automatically based on the parameter type:
 - **Objects and arrays** → `application/json`
 - **Primitives and strings** → `text/plain`
 
+### Optional request body
+
+The emitted `requestBody` carries `required: true` by default. Decorate the `@Body()` parameter with `@Optional()` (from `moost`) to emit `required: false`:
+
+```ts
+import { Optional } from 'moost'
+
+@Post()
+create(@Optional() @Body() dto?: CreateUserDto) {
+  // requestBody.required: false
+}
+```
+
+The TypeScript `?` modifier alone has no effect on the spec.
+
 ## Explicit request body
 
 Use `@SwaggerRequestBody` when you need to specify the content type or override the inferred schema:

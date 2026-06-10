@@ -8,7 +8,10 @@ Pipes transform/resolve/validate each parameter and property during argument res
 - [Built-in param decorators](#built-in-param-decorators)
 - [TPipeFn & TPipeMetas](#tpipefn--tpipemetas)
 - [Patterns](#patterns)
+- [Integration](#integration)
 - [Gotchas](#gotchas)
+- [Key imports](#key-imports)
+- [See also](#see-also)
 
 ## Pipeline order
 
@@ -51,41 +54,36 @@ class ApiController {
 }
 ```
 
-## Built-in param decorators (in `moost`)
+## Built-in param decorators
 
 | Decorator | Returns | paramSource |
 |---|---|---|
 | `@Param(name)` | route param | `'ROUTE'` |
-| `@Params()` | all route params | `'ROUTE'` |
-| `@Const(value, label?)` | a constant | `'CONST'` |
-| `@ConstFactory(fn, label?)` | factory result (sync/async) | `'CONST'` |
+| `@Params()` | all route params | (none) |
+| `@Const(value, label?)` | a constant | (none) |
+| `@ConstFactory(fn, label?)` | factory result (sync/async) | (none) |
+
+All from `moost`. Only `@Param` sets `paramSource` (`'ROUTE'`); the others are plain `Resolve(...)` wrappers with no `paramSource`. The only `paramSource` values set anywhere are `'ROUTE'`, `'QUERY'`, `'QUERY_ITEM'`, `'BODY'` (the latter three by HTTP decorators).
 
 HTTP/CLI/WS/WF packages add adapter-specific ones (`@Body`, `@Query`, `@CliOption`, `@MessageData`, `@WorkflowParam`, …).
 
 ## TPipeFn & TPipeMetas
 
-```ts
-interface TPipeFn<T = {}> {
-  (value: unknown, metas: TPipeMetas<T>, level: TDecoratorLevel): unknown | Promise<unknown>
-  priority?: TPipePriority
-}
+`import type { TPipeFn, TPipeMetas, TPipeData } from 'moost'`. A pipe is `(value, metas, level) => newValue | Promise<newValue>` with an optional `priority` field (stamp it via `definePipeFn`). `level` is `'PARAM' | 'PROP' | 'CLASS' | 'METHOD'`.
 
-interface TPipeMetas<T = {}> {
-  classMeta?: TMoostMetadata & T
-  methodMeta?: TMoostMetadata & T
-  propMeta?: TMoostMetadata & T
-  paramMeta?: TMoostParamsMetadata & T
-  targetMeta?: TMoostParamsMetadata & T   // the resolve target
-  instance?: TObject                       // controller (undefined during ctor param resolution)
-  scopeId?: string | symbol
-  type: TFunction                          // class constructor
-  index?: number
-  key: string | symbol                     // method or property name
-  instantiate: <X>(c: Ctor<X>) => Promise<X>  // DI instantiation inside pipes
-}
-```
+What to read from `metas`, by resolution context:
 
-`level` = `'PARAM' | 'PROP' | 'CLASS' | 'METHOD'`.
+| Field | Handler method params | Constructor params | Properties |
+|---|---|---|---|
+| `targetMeta` | the param's meta (same object as `paramMeta`) | the param's meta | the prop's meta (same as `propMeta`) |
+| `paramMeta` / `propMeta` | `paramMeta` set | `paramMeta` set | `propMeta` set |
+| `classMeta` / `methodMeta` | both set | `classMeta` only (`key` = `'constructor'`) | `classMeta` set |
+| `instance` | **undefined** | **undefined** | set (the instance under construction) |
+| `scopeId` | undefined | set when scoped | set when scoped |
+| `type` / `key` / `index` | controller class / method name / param index | class / `'constructor'` / index | class / prop name / — |
+| `instantiate(Class)` | DI instantiation inside pipes — always available | available | available |
+
+To reach the controller instance from a handler-param pipe, use `useControllerContext().getController()` — `metas.instance` is only populated during property resolution.
 
 ### `definePipeFn(fn, priority?)` — helper
 
@@ -98,15 +96,27 @@ const uppercase = definePipeFn((v) => typeof v === 'string' ? v.toUpperCase() : 
 
 ### Validation pipe
 
+`validationSchema` is NOT built-in metadata — store it with a custom decorator and type the pipe with a matching meta extension:
+
 ```ts
-const zodValidate = definePipeFn((value, metas) => {
-  const schema = metas.paramMeta?.validationSchema
+import type { ZodType } from 'zod'
+import { getMoostMate, definePipeFn, TPipePriority } from 'moost'
+import { HttpError } from '@moostjs/event-http'
+
+// custom param decorator writing the schema into metadata
+const Validate = (schema: ZodType) =>
+  getMoostMate<{}, {}, { validationSchema?: ZodType }>().decorate('validationSchema', schema)
+
+const zodValidate = definePipeFn<{ validationSchema?: ZodType }>((value, metas) => {
+  const schema = metas.targetMeta?.validationSchema
   if (!schema) return value
   const r = schema.safeParse(value)
   if (!r.success) throw new HttpError(400, r.error.message)
   return r.data
 }, TPipePriority.VALIDATE)
 app.applyGlobalPipes(zodValidate)
+
+// usage: handler(@Validate(userSchema) @Body() body: unknown)
 ```
 
 ### Type coercion
@@ -143,7 +153,23 @@ Pipes also run during DI construction (Infact `resolveParam`/`resolveProp` hooks
 - Declaration order within the same priority is preserved after the priority sort.
 - The built-in resolve pipe calls `metas.targetMeta.resolver()`; removing it breaks `@Param`/`@Body`/etc.
 - Any async pipe makes the whole arg resolution async.
-- `metas.instance` is `undefined` while resolving constructor params (instance doesn't exist yet).
+- `metas.instance` is set ONLY during property resolution — it is `undefined` for constructor params AND handler method params. Use `useControllerContext().getController()` inside a pipe to reach the controller.
 - Pipe errors during arg resolution are caught by the event handler lifecycle and routed to `onError` interceptors.
-- Global pipes run across all adapters — filter by `metas.classMeta?.handlers` if adapter-specific.
+- Global pipes run across all adapters — filter by `metas.methodMeta?.handlers` (e.g. `metas.methodMeta?.handlers?.some(h => h.type === 'HTTP')`) if adapter-specific. `classMeta` never carries `handlers`.
 - `RESOLVE` priority is reserved for the built-in resolve pipe; custom resolvers go through `@Resolve()`.
+
+## Key imports
+
+```ts
+import { Pipe, Resolve, Param, Params, Const, ConstFactory,
+         definePipeFn, TPipePriority, getMoostMate, useControllerContext } from 'moost'
+import type { TPipeFn, TPipeMetas, TPipeData } from 'moost'
+import { HttpError } from '@moostjs/event-http'   // for validation errors over HTTP
+```
+
+## See also
+
+- [interceptors.md](interceptors.md) — pipes run between interceptor `before` and the handler; pipe errors route to `onError`
+- [di.md](di.md) — the same pipeline resolves constructor params and injected properties
+- [http-request.md](http-request.md) — HTTP param decorators (`@Body`, `@Query`, …) built on `@Resolve`
+- [http-response.md](http-response.md) — `HttpError` semantics

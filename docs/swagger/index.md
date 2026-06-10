@@ -1,14 +1,14 @@
 # @moostjs/swagger
 
-`@moostjs/swagger` generates an [OpenAPI 3](https://spec.openapis.org/oas/v3.0.3) document from your Moost controllers and serves a Swagger UI. It reads controller metadata, argument resolvers (`@Param`, `@Query`, `@Header`, `@Body`), and Atscript-annotated DTOs to produce accurate schemas with minimal manual annotation. Both OpenAPI 3.0 and 3.1 are supported — select the version via `openapiVersion` (see [Configuration](/swagger/configuration#openapi-version)).
+`@moostjs/swagger` generates an [OpenAPI 3](https://spec.openapis.org/oas/v3.0.3) document from your Moost controllers and serves a Swagger UI. It reads controller metadata, argument resolvers (`@Param`, `@Query`, `@Body`), and Atscript-annotated DTOs to produce accurate schemas with minimal manual annotation. Both OpenAPI 3.0 and 3.1 are supported — select the version via `openapiVersion` (see [Configuration](/swagger/configuration#openapi-version)).
 
 ## Installation
 
 ```bash
-npm install @moostjs/swagger swagger-ui-dist
+npm install @moostjs/swagger
 ```
 
-`swagger-ui-dist` provides the static UI assets. It is a peer dependency — install it alongside the main package.
+The static UI assets ship with the package (`swagger-ui-dist` is a regular dependency — no separate install needed). The package expects `moost`, `@moostjs/event-http`, and `@wooksjs/http-static` as peer dependencies; modern package managers install them automatically.
 
 ## Quick start
 
@@ -20,9 +20,11 @@ import { MoostHttp } from '@moostjs/event-http'
 import { SwaggerController } from '@moostjs/swagger'
 
 const app = new Moost()
-app.adapter(new MoostHttp())
+const http = new MoostHttp()
+app.adapter(http)
 app.registerControllers(SwaggerController)
 await app.init()
+await http.listen(3000)
 ```
 
 Open <http://localhost:3000/api-docs> to see the Swagger UI. The JSON spec is available at `/api-docs/spec.json` and YAML at `/api-docs/spec.yaml`.
@@ -30,8 +32,8 @@ Open <http://localhost:3000/api-docs> to see the Swagger UI. The JSON spec is av
 ### Adding a controller
 
 ```ts
-import { Controller, Description } from 'moost'
-import { Body, Get, Param, Post, Query } from '@moostjs/event-http'
+import { Controller, Description, Optional, Param } from 'moost'
+import { Body, Get, Post, Query } from '@moostjs/event-http'
 import { SwaggerTag } from '@moostjs/swagger'
 import { CreateUserDto, UserDto } from './types/User.as'
 
@@ -40,7 +42,7 @@ import { CreateUserDto, UserDto } from './types/User.as'
 export class UsersController {
   @Get(':id')
   @Description('Fetch a user by ID')
-  find(@Param('id') id: string, @Query('expand') expand?: string): UserDto {
+  find(@Param('id') id: string, @Optional() @Query('expand') expand?: string): UserDto {
     // ...
   }
 
@@ -90,17 +92,12 @@ Types are registered as named components in `#/components/schemas/` and reused v
 
 ## How it works
 
-```
-Decorators & metadata   ──>   mapToSwaggerSpec()   ──>   OpenAPI 3.0/3.1 JSON
-  @Controller, @Get,                                        served by
-  @Body, @Query,           reads controller overview,       SwaggerController
-  @SwaggerTag, ...         resolves schemas, builds         at /api-docs/
-                           paths + components
-```
+The decorators you already use (`@Controller`, `@Get`, `@Body`, `@Query`, `@SwaggerTag`, …) carry all the information needed to build the spec. What this means in practice:
 
-1. **Metadata collection** — Moost decorators and `@moostjs/swagger` decorators store metadata on controllers and handlers via the `Mate` system.
-2. **Spec mapping** — `mapToSwaggerSpec()` iterates all registered controllers, resolves types to JSON Schema, and builds the OpenAPI document.
-3. **Serving** — `SwaggerController` caches the spec and serves it alongside the Swagger UI assets.
+- The spec covers every controller registered on the app at the time of the first request to `/api-docs/spec.json` — it is generated lazily on that first request and **cached**; controllers added after that are not reflected.
+- Types are resolved to JSON Schema components — see [Schemas & Types](/swagger/schemas).
+- `SwaggerController` serves the cached spec alongside the Swagger UI assets.
+- You can also generate the spec programmatically with `mapToSwaggerSpec(app.getControllersOverview(), options)` (exported from `@moostjs/swagger`) — see [Generating the spec without serving](/swagger/configuration#generating-the-spec-without-serving).
 
 ## What to read next
 
@@ -110,7 +107,7 @@ Decorators & metadata   ──>   mapToSwaggerSpec()   ──>   OpenAPI 3.0/3.1
 | [Operations](/swagger/operations) | Tags, descriptions, operationId, deprecated, and external docs |
 | [Responses](/swagger/responses) | Status codes, content types, headers, examples, and return type inference |
 | [Request Body](/swagger/request-body) | Body schemas, content types, and discriminated unions |
-| [Parameters](/swagger/parameters) | Path, query, and header params — auto-inferred and manual |
+| [Parameters](/swagger/parameters) | Path and query params (auto-inferred), header params (manual via `@SwaggerParam`) |
 | [Schemas & Types](/swagger/schemas) | How types become JSON Schema components |
 | [Security](/swagger/security) | Auth scheme auto-discovery and security decorators |
 | [Links & Callbacks](/swagger/links-callbacks) | Response links and webhook documentation |

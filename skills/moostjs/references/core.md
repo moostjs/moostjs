@@ -13,19 +13,22 @@ Moost lifecycle, controller registration, adapter attachment.
 ## Scaffold
 
 ```sh
-npm create moost@latest [name] -- [flags]
+npm create moost@latest [name] -- [--http|--cli|--ws|--ssr] [--wf] [--oxc] [--force]
 ```
 
-Flags (from `create-moost/src/index.ts`):
+Project-type flags — pass at most ONE (passing several falls back to the interactive type select):
 - `--http` — HTTP server with `@moostjs/event-http`
 - `--cli` — CLI with `@moostjs/event-cli`
-- `--ws` — WebSocket with `@moostjs/event-ws`
-- `--ssr` — Vue SSR/SPA with `@moostjs/vite`
-- `--wf` — add `@moostjs/event-wf` workflow adapter (combines with `--http`)
-- `--oxc` — oxlint + oxfmt tooling
-- `--force` — overwrite existing directory
+- `--ws` — standalone WebSocket app with `@moostjs/event-ws` (combined with `--http` it means the WebSocket add-on instead, see below)
+- `--ssr` — Vue SSR/SPA with `@moostjs/vite` (the flag also enables SSR and skips the SSR/SPA toggle)
 
-Combinations (e.g. `--http --ws --wf`) produce one app with all adapters.
+Add-on / other flags — each pre-selects the answer and skips the matching interactive toggle:
+- `--ws` (with `--http`) — WebSocket add-on on top of the HTTP app
+- `--wf` — workflow example (applied for HTTP projects)
+- `--oxc` — oxlint + oxfmt tooling
+- `--force` — overwrite a non-empty target directory without asking
+
+Any prompt not answered by a flag is asked interactively; with all relevant flags passed the scaffold runs fully non-interactively.
 
 ## Mental model
 
@@ -75,8 +78,8 @@ class AuthController {
 | 1 | Runs after all `bindHandler` calls, before `adapter.onInit` — `getControllersOverview()` is complete (incl. `handlers[].registeredAs[].path`). A SINGLETON constructor runs *during* bind and sees a PARTIAL overview — use `@MoostInit` instead. |
 | 2 | Runs exactly once per `init()`. |
 | 3 | SINGLETON controllers only. `@MoostInit` on a `FOR_EVENT` controller throws at bind. |
-| 4 | Args resolve via the RESOLVE pipe ONLY — `@InjectMoost`/`@Inject`/`@Resolve`/`@Const` work; TRANSFORM/VALIDATE pipes and interceptors do NOT run. |
-| 5 | No event context — request composables (`useRequest`/`useHeaders`/`useRouteParams`/`useCookies`) fail. DI + `app.getLogger()` work. |
+| 4 | Args resolve via the RESOLVE pipe ONLY — resolver-based decorators (`@InjectMoost`/`@Resolve`/`@Const`/`@HandlerPaths`) work; `@Inject` is a no-op on method params (yields `undefined` — it works only on constructor params); TRANSFORM/VALIDATE pipes and interceptors do NOT run. |
+| 5 | Runs in a synthetic init context — kind-specific request composables (`useRequest`/`useHeaders`/`useRouteParams`/`useCookies`) fail (no request event data); context-based composables (`useLogger`, `useControllerContext`, `useHandlerPaths`) work, as do DI and `app.getLogger()`. |
 | 6 | Ordered by `priority` ascending (default 0) across ALL controllers, then registration order. |
 | 7 | Async hooks awaited; a throwing hook rejects `init()` (fail-fast). |
 
@@ -84,7 +87,7 @@ Key imports: `import { MoostInit, InjectMoost } from 'moost'`. `@InjectMoost` in
 
 ### Resolving a handler's mounted path
 
-Common `@MoostInit` task: get a handler's *actual* composed path (e.g. to scope a cookie). Don't hand-walk `getControllersOverview()` — use the helpers (all return **all distinct** paths as `string[]`):
+Common `@MoostInit` task: get a handler's *actual* composed path (e.g. to scope a cookie). Don't hand-walk `getControllersOverview()` — use the helpers (all yield **all distinct** paths; `getHandlerPaths` returns `string[]`, `useHandlerPaths` is async and must be awaited):
 
 ```ts
 import { getHandlerPaths, useHandlerPaths } from 'moost'
@@ -98,7 +101,7 @@ getHandlerPaths(moost, AuthController, 'refresh')                      // pure f
 |---|---|
 | 1 | Returns ALL distinct mounted paths — a method can resolve to several (multi-prefix `@ImportController`, multiple verbs, multiple `registeredAs`). Don't assume one. |
 | 2 | `[]` when nothing matches — check and warn at boot. |
-| 3 | `opts.type` filters by event type (`'HTTP'`); `opts.predicate(h)` narrows by transport detail (e.g. HTTP verb `h.handler.method`) without coupling core to a transport. |
+| 3 | `opts` is `TGetHandlerPathsOptions` (exported from `moost`): `opts.type` filters by event type (`'HTTP'`); `opts.predicate(h)` narrows by transport detail (e.g. HTTP verb `h.handler.method`) without coupling core to a transport. |
 | 4 | `@HandlerPaths(method?)`/`useHandlerPaths(method?)` default `method` to the current context method — in `@MoostInit` that's the init method, so pass the handler method name explicitly. |
 
 ## API
@@ -120,7 +123,7 @@ getHandlerPaths(moost, AuthController, 'refresh')                      // pure f
 | `setProvideRegistry(reg)` | merges DI providers |
 | `setReplaceRegistry(reg)` | DI class replacements |
 | `getLogger(topic?)` | scoped logger |
-| `getControllersOverview()` | introspection |
+| `getControllersOverview()` | introspection — returns `TControllerOverview[]` (type exported from `moost`) |
 | `getGlobalInterceptorHandler()` | for not-found paths in custom adapters |
 
 ### `@Controller(prefix?)`

@@ -62,6 +62,7 @@ When extending the Moost class, use the decorator:
 
 ```ts
 import { Moost, ImportController } from 'moost'
+import { Get } from '@moostjs/event-http'
 import { UserController } from './user.controller'
 
 @ImportController(UserController)

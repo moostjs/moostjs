@@ -28,14 +28,18 @@ The root span that wraps the entire event lifecycle. Created when an event enter
 
 | Property | Value |
 |----------|-------|
-| **Name** | Updated to `{METHOD} {route}` for HTTP (e.g. `GET /users/:id`), or `{EventType} {route}` for other event types |
+| **Name** | Updated to `{EventType} {route}` after the controller is resolved (see [span naming](#span-naming)) |
 | **Kind** | `INTERNAL` |
 | **Attributes** | See [controller attributes](#controller-attributes) below |
 | **Metrics** | Event duration histogram is recorded when this span ends |
 
-For HTTP events, the root span is typically created by the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`). The `SpanInjector` attaches to it rather than creating a duplicate.
+For HTTP events, the root span is designed to come from the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`), with the `SpanInjector` attaching to it rather than creating a duplicate.
 
 For non-HTTP events (CLI, Workflow), the `SpanInjector` creates a span named `"{EventType} Event"` (e.g. `CLI Event`, `WF Event`).
+
+::: info
+The `moost.event_type` attribute value for HTTP events is the lowercase `http`.
+:::
 
 ### Interceptors:before
 
@@ -105,8 +109,8 @@ When a controller and handler are resolved, the `SpanInjector` sets these attrib
 | `moost.handler_label` | From `@Label()` decorator | `'Get User'` |
 | `moost.handler_id` | From `@Id()` decorator | `'users.get'` |
 | `moost.route` | Resolved route path | `/users/:id` |
-| `moost.event_type` | Event type | `HTTP`, `CLI`, `WF` |
-| `moost.ignore` | Whether span is filtered | `true` / `false` |
+| `moost.event_type` | Event type | `http`, `CLI`, `WF` |
+| `moost.ignore` | Set by `@OtelIgnoreSpan()` | `true` (absent when not ignored) |
 
 ## Span naming
 
@@ -126,12 +130,12 @@ When an error occurs at any lifecycle phase:
 
 ## Skipped spans
 
-The following events do **not** produce spans:
+Span creation is skipped in these cases:
 
-- **`init` events** — Application initialization is not traced
-- **`WF_STEP` method** — Workflow steps are skipped to prevent interference with the parent `WF_FLOW` span
-- **`__SYSTEM__` method** — Internal system handlers (e.g. 404 fallback controllers) are skipped
-- **Handlers with `@OtelIgnoreSpan()`** — The lifecycle phase spans (`Interceptors:before`, `Handler:...`, etc.) are skipped entirely; the callback runs without wrapping
+- **`init` events** — Application initialization does not get a root event span
+- **Handlers with `@OtelIgnoreSpan()`** — The lifecycle phase spans (`Interceptors:before`, `Handler:...`, etc.) are skipped entirely; the callback runs without wrapping. The root event span is still created, tagged `moost.ignore: true`, and dropped by the [Moost span processors](/otel/setup#span-processors) before export
+
+For **`WF_STEP`** (workflow steps) and **`__SYSTEM__`** (internal handlers, e.g. the 404 fallback controller), the `SpanInjector` skips only the controller-registration processing — root span renaming and metric attribution — to prevent interference with the parent `WF_FLOW` span. Lifecycle spans are still emitted for them unless `@OtelIgnoreSpan()` applies.
 
 ## Example trace
 
@@ -149,4 +153,4 @@ GET /hello/world                              12.5ms
           └─ Arguments:resolve                 0.1ms
 ```
 
-Custom span attributes added via `customSpanAttr()` appear on the root event span alongside the controller attributes.
+Custom span attributes added via `customSpanAttr()` are applied to the Moost-created spans that end after the attribute is set — see [Composables](/otel/composables#customspanattrname-value) for details.

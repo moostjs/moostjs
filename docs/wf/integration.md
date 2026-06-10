@@ -68,8 +68,8 @@ The workflow state (`result.state`) is plain JSON. You can return it directly to
 Similarly, you can start workflows from CLI commands:
 
 ```ts
-import { Controller } from 'moost'
-import { Cli, CliOption } from '@moostjs/event-cli'
+import { Controller, Description } from 'moost'
+import { Cli, CliOption, Param } from '@moostjs/event-cli'
 import { MoostWf } from '@moostjs/event-wf'
 
 @Controller()
@@ -79,7 +79,8 @@ export class DeployCommand {
   @Cli('deploy :env')
   async deploy(
     @Param('env') env: string,
-    @CliOption('dry-run', 'Simulate without applying changes')
+    @Description('Simulate without applying changes')
+    @CliOption('dry-run', 'd')
     dryRun?: boolean,
   ) {
     const result = await this.wf.start('deploy', {

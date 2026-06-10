@@ -20,7 +20,7 @@ npm create moost@latest [name] -- --ws    # standalone
 pnpm add @moostjs/event-ws moost
 ```
 
-Peer deps (auto-installed with moost): `@wooksjs/event-core`, `@prostojs/infact`, `@wooksjs/event-ws`, `ws`.
+Dependencies: `@wooksjs/event-ws` is a direct dependency of `@moostjs/event-ws`; peers `moost`, `@wooksjs/event-core`, `@prostojs/infact` come with `moost`. `ws` is a peer of `@wooksjs/event-ws` — add it explicitly (`pnpm add ws`) if your package manager doesn't auto-install peers.
 
 ### Standalone — WsApp
 
@@ -66,6 +66,8 @@ await app.init()
 
 ### MoostWs constructor
 
+Options type: `TMoostWsOpts` (+ optional `httpApp`).
+
 ```ts
 new MoostWs()                                                    // standalone
 new MoostWs({ wooksWs: options | existingWooksWs })              // with config or instance
@@ -77,18 +79,18 @@ new MoostWs({ httpApp: http.getHttpApp(), wooksWs: { ... } })
 
 ### TWooksWsOptions
 
-```ts
-interface TWooksWsOptions {
-  heartbeatInterval?: number   // ms, default 30000 (0 disables)
-  heartbeatTimeout?:  number   // ms, default 5000
-  messageParser?:     (raw: Buffer|string) => WsClientMessage
-  messageSerializer?: (msg: WsReplyMessage|WsPushMessage) => string|Buffer
-  maxMessageSize?:    number   // bytes, default 1MB — oversized dropped
-  broadcastTransport?: WsBroadcastTransport  // see ws-rooms.md
-  wsServerAdapter?:   WsServerAdapter        // custom WS engine (defaults to `ws`)
-  logger?:            TConsoleBase
-}
-```
+Type importable from `@moostjs/event-ws`. Pass via `new MoostWs({ wooksWs: { ... } })` or `new WsApp().useWsOptions({ ws: { ... } })`.
+
+| Key | Default | Effect |
+|---|---|---|
+| `heartbeatInterval` | 30000 ms | ping cadence; `0` disables. Standalone `listen()` only — inert in HTTP-integrated mode |
+| `heartbeatTimeout` | — | declared in the type but a **no-op** in 0.7.x; effective pong deadline = `heartbeatInterval` (closed at next tick) |
+| `messageParser` | `JSON.parse` | `(raw) => WsClientMessage` — custom decode (e.g. MessagePack) |
+| `messageSerializer` | `JSON.stringify` | `(msg) => string \| Buffer` — custom encode for replies/pushes |
+| `maxMessageSize` | 1 MB | oversized inbound messages dropped silently |
+| `broadcastTransport` | — | cross-instance pub/sub — see [ws-rooms.md](ws-rooms.md) |
+| `wsServerAdapter` | wraps `ws` | factory for a custom WS engine in noServer mode |
+| `logger` | console | `TConsoleBase` |
 
 ### MoostWs methods
 
@@ -180,26 +182,19 @@ Two-dimensional: `event` (first arg of `@Message`) + `path`. Both must match. `@
 
 HTTP-integrated mode: WS connection context has HTTP context as parent. `@wooksjs/event-http` composables can read HTTP headers/cookies via the parent chain.
 
+### Re-exports
+
+For convenience `@moostjs/event-ws` re-exports from `moost`: `Param`, `Controller`, `Intercept`, `Description`, `defineBeforeInterceptor`, `defineAfterInterceptor`, `defineInterceptor` (see [interceptors.md](interceptors.md)). It also re-exports the `EventKind` descriptors `wsConnectionKind` / `wsMessageKind` — use them in custom composables, e.g. `ctx.get(wsConnectionKind.keys.id)` or `ctx.get(wsMessageKind.keys.data)`.
+
 ## Wire protocol
 
-```ts
-interface WsClientMessage {
-  event: string          // 'message', 'rpc', 'subscribe', …
-  path: string           // '/chat/rooms/lobby'
-  data?: unknown
-  id?: string | number   // present = RPC (expect reply)
-}
-interface WsReplyMessage {
-  id: string | number
-  data?: unknown
-  error?: { code: number; message: string }
-}
-interface WsPushMessage {
-  event: string; path: string
-  params?: Record<string, string>
-  data?: unknown
-}
-```
+JSON text frames. Types importable from `@moostjs/event-ws`:
+
+| Type | Fields | Rule |
+|---|---|---|
+| `WsClientMessage` (client → server) | `event`, `path`, `data?`, `id?` | `id` present ⇒ RPC, server replies; absent ⇒ fire-and-forget, never any reply |
+| `WsReplyMessage` (server → client) | `id`, then `data?` or `error?: { code, message }` | exactly one per RPC request; `error` set when handler threw |
+| `WsPushMessage` (server → client) | `event`, `path`, `params?`, `data?` | server-initiated (broadcast / `send`); no `id` |
 
 ### RPC vs fire-and-forget
 
@@ -211,18 +206,17 @@ interface WsPushMessage {
 ```ts
 throw new WsError(403, 'Forbidden')
 ```
-Works in `@Message`, `@Connect` (closes connection), `@Disconnect`. Uncaught → code 500.
+RPC messages get an `error` reply (uncaught non-`WsError` → 500 "Internal Error"; unmatched route → 404). Fire-and-forget: never any reply — thrown `WsError` is silently dropped (non-`WsError` is logged server-side). Throwing in `@Connect` closes the socket: close code 1008 for `WsError(401/403)`, else 1011, message = close reason. Throwing in `@Upgrade` destroys the socket with no HTTP response — code/message stay server-side.
 
 Codes follow HTTP: 400, 401, 403, 404, 409, 429, 500, 503.
 
 ## Heartbeat & serialization
 
+Heartbeat (ping/pong) runs **only in standalone mode** (`listen()`); HTTP-integrated mode starts no ping timer. A connection that misses a pong is closed at the next tick, so the effective timeout equals `heartbeatInterval`.
+
 ```ts
-new MoostWs({ wooksWs: {
-  heartbeatInterval: 30_000,   // default
-  heartbeatTimeout:  5_000,    // default
-}})
-new MoostWs({ wooksWs: { heartbeatInterval: 0 } })  // disable
+new MoostWs({ wooksWs: { heartbeatInterval: 30_000 } })  // default
+new MoostWs({ wooksWs: { heartbeatInterval: 0 } })       // disable
 ```
 
 Custom serializer (e.g. MessagePack):
@@ -236,19 +230,22 @@ new MoostWs({ wooksWs: {
 
 ## Client library
 
-`@wooksjs/ws-client` — browser/Node client with reconnect + RPC.
+`@wooksjs/ws-client` — browser/Node client with reconnect + RPC. Uses the global `WebSocket` (built into browsers and Node >= 22); only Node < 22 needs the `ws` polyfill.
 
 ```ts
 const client = createWsClient('ws://localhost:3000/ws', {
   reconnect: true, rpcTimeout: 10_000,
-  // _WebSocket: WebSocket,  // for Node, pass ws WebSocket
 })
 
 client.send('message', '/chat/rooms/lobby', { text: 'hi' })    // queued if reconnecting
 const r = await client.call<{ id: string }>('rpc', '/users/123')
 
-const off = client.on('notification', '/alerts', (msg) => {})           // not auto-resub
-const unsub = client.subscribe('subscribe', '/chat/rooms/lobby', (m) => {}) // auto-resub on reconnect
+// push listener — client-side registration only, supports :params and * patterns
+const off = client.on('message', '/chat/rooms/:roomId', ({ data, params }) => {})
+// server-side subscription: sends RPC call('subscribe', path, data) —
+// pair with a @Message('subscribe', ...) handler that joins the room.
+// Auto-resubscribes on reconnect. Returns Promise<() => void>.
+const unsub = await client.subscribe('/chat/rooms/lobby')
 
 client.onOpen(()=>{}); client.onClose(()=>{}); client.onError(()=>{}); client.onReconnect(()=>{})
 ```
@@ -258,9 +255,11 @@ client.onOpen(()=>{}); client.onClose(()=>{}); client.onError(()=>{}); client.on
 - Return values sent only when client message has `id` (RPC).
 - `@MessageData`, `@RawMessage`, `@MessageId`, `@MessageType`, `@MessagePath` throw if used outside `@Message`.
 - `@Message()` without `path` uses **method name**.
-- `@Param`/`@Params` from `moost`, not `@moostjs/event-ws`.
+- `Param` is re-exported by `@moostjs/event-ws`; `Params` must be imported from `moost`.
 - Route params are strings — coerce via pipes.
 - `useWsRooms()` only in message context (not `@Connect`/`@Disconnect`).
 - `ws` is a peer dep of `@wooksjs/event-ws` — install it.
-- Heartbeat default 30s; set 0 only for short-lived connections.
+- Only ONE `@Connect` and one `@Disconnect` handler per app — a second registration silently replaces the first.
+- Heartbeat runs only in standalone `listen()` mode (default 30s; 0 disables) — no pings in HTTP-integrated mode.
+- Unmatched messages: fire-and-forget dropped silently (no log); RPC gets a 404 error reply.
 - In HTTP-integrated mode, connection context parent = HTTP context.

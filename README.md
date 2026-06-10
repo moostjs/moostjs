@@ -18,7 +18,7 @@ Here's what sets Moost apart from NestJS:
 1. Abstraction of `modules` is not used, promoting a simpler architecture.
 2. Utilizes the reusable dependency injection framework [@prostojs/infact](https://github.com/prostojs/infact).
 3. Uses a metadata layer powered by [@prostojs/mate](https://github.com/prostojs/mate).
-4. Supports DTOs and validations powered by [@prostojs/valido](https://github.com/prostojs/valido).
+4. Supports DTOs and validations via the [pipes pipeline](https://moost.org/moost/pipes/) and the [Atscript](https://atscript.moost.org/) integration.
 5. Does not use Express or Fastify, but these can be employed with an adapter.
 6. Currently, Moost does not support additional techniques like ORMs, Queues, etc.
 

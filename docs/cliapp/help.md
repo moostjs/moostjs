@@ -7,7 +7,7 @@ A well-built CLI is self-documenting. Moost provides decorators that generate ri
 Use `@Description()` on a method to explain what a command does:
 
 ```ts
-import { Cli, Controller, Description } from '@moostjs/event-cli'
+import { Cli, Controller, Description, Param } from '@moostjs/event-cli'
 
 @Controller()
 export class AppController {
@@ -96,6 +96,10 @@ Running `my-cli deploy --help` produces:
 </pre>
 </div>
 
+::: info
+The `--help` row appears in OPTIONS only because the app registers it as a global option — e.g. `.useOptions([{ keys: ['help'], description: 'Display instructions for the command.' }])`. The `--help` flag itself works without registration; registering it just documents it in the output. See [Global options](#global-options).
+:::
+
 ## Sample values
 
 Use `@Value()` to display a placeholder next to options in help. This is purely cosmetic — it doesn't set a default:
@@ -114,7 +118,7 @@ test(
 }
 ```
 
-In help output, the option renders as `--target <staging>`.
+In help output, the option renders as `--target=<staging>`.
 
 ## Global options
 
@@ -168,7 +172,7 @@ new CliApp()
   .useHelp({
     name: 'my-cli',       // shown in usage examples: "$ my-cli ..."
     colors: true,          // colored output (default: true)
-    lookupLevel: 3,        // fuzzy command lookup depth (default: 3)
+    lookupLevel: 3,        // command suggestion lookup depth (default: 3)
   })
   .start()
 ```
@@ -180,28 +184,29 @@ new CliApp()
 | `name` | — | CLI app name shown in usage examples |
 | `title` | — | Title displayed at the top of help |
 | `colors` | `true` | Enable colored terminal output |
-| `lookupLevel` | `3` | Depth for fuzzy "did you mean?" suggestions |
+| `lookupLevel` | `3` | Depth for command suggestions on unknown commands |
 | `maxWidth` | — | Maximum width of help output |
 | `maxLeft` | — | Maximum width of the left column |
 | `mark` | — | Prefix marker for help sections |
 
 ## Unknown command handling
 
-When `lookupLevel` is set, typing a wrong command triggers a "did you mean?" suggestion:
+When `lookupLevel` is set, typing an unknown command prints suggestions of valid commands and exits with code 1:
 
 ```bash
 $ my-cli depoly
-Did you mean "deploy"?
+ERROR: Wrong command, did you mean:
+  $ my-cli deploy
 ```
 
-The lookup searches through registered commands up to the specified depth.
+This is not fuzzy typo correction — the lookup strips trailing segments from what was typed (up to `lookupLevel` levels) and suggests registered commands that start with the remaining prefix, listing up to 7 matches. Typing a valid prefix like `my-cli depl` or an incomplete command like `my-cli config` yields the closest matching commands.
 
 ## Decorator form
 
 You can also apply the help interceptor as a decorator on a controller or method using `@CliHelpInterceptor()`:
 
 ```ts
-import { CliHelpInterceptor } from '@moostjs/event-cli'
+import { Cli, CliHelpInterceptor, Controller } from '@moostjs/event-cli'
 
 @CliHelpInterceptor({ colors: true, lookupLevel: 3 })
 @Controller()

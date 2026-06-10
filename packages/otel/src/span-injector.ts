@@ -75,7 +75,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     }
     const { registerSpan } = useOtelContext()
     let span = trace.getActiveSpan()
-    if (eventType === 'HTTP') {
+    if (eventType === httpKind.kind) {
       // http span is expected to be created by http instrumentation
       this.patchRsponse()
     } else {
@@ -85,7 +85,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       registerSpan(span)
       return this.withSpan(span, cb, {
         withMetrics: true,
-        endSpan: eventType !== 'HTTP',
+        endSpan: eventType !== httpKind.kind,
       })
     }
     return cb()
@@ -146,7 +146,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       const span = getSpan()
       if (span) {
         const eventType = this.getEventType()
-        if (eventType === 'HTTP') {
+        if (eventType === httpKind.kind) {
           const req = this.getRequest()
           span.updateName(`${req?.method || ''} ${req?.url}`)
         }
@@ -161,7 +161,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       const span = getSpan()
       if (span) {
         span.setAttributes(chm.attrs)
-        if (chm.attrs['moost.event_type'] === 'HTTP') {
+        if (chm.attrs['moost.event_type'] === httpKind.kind) {
           span.updateName(`${this.getRequest()?.method || ''} ${_route || '<unresolved>'}`)
         } else {
           span.updateName(`${chm.attrs['moost.event_type']} ${_route || '<unresolved>'}`)
@@ -220,7 +220,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       'moost.event_type': a['moost.event_type'],
       'moost.is_error': error ? 1 : 0,
     } as Record<string, string | number>
-    if (a['moost.event_type'] === 'HTTP') {
+    if (a['moost.event_type'] === httpKind.kind) {
       if (!attrs.route) {
         attrs.route = this.getRequest()?.url || ''
       }

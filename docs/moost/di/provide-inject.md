@@ -27,6 +27,7 @@ Here `UserService` and anything `UserService` depends on will all get the `Logge
 **String key** — differentiate multiple instances of the same type:
 
 ```ts
+@Controller()
 @Provide('primary-db', () => new Database(primaryConfig))
 @Provide('analytics-db', () => new Database(analyticsConfig))
 class ReportController {
@@ -39,17 +40,21 @@ class ReportController {
 
 ## @Inject
 
-Explicitly specify which dependency to inject by class type or string key:
+Explicitly specify which provide entry to inject — by string key or by class:
 
 ```ts
-import { Inject } from 'moost'
+import { Inject, Controller } from 'moost'
 
+@Controller()
 class MyController {
-  constructor(@Inject('cache-store') private cache: CacheStore) {}
+  constructor(
+    @Inject('cache-store') private cache: CacheStore,
+    @Inject(EmailService) private email: EmailService,
+  ) {}
 }
 ```
 
-Use `@Inject` when the constructor parameter type alone isn't enough to identify the dependency — typically with string-keyed provides.
+Use `@Inject` when the constructor parameter type alone isn't enough to identify the dependency. For class-keyed provides `@Inject` is optional: declaring the parameter with the class type (`private email: EmailService`) picks up the matching `@Provide(EmailService, ...)` entry automatically, and `@Inject(EmailService)` makes the same lookup explicit.
 
 ## Global Provide Registry
 
@@ -68,20 +73,9 @@ This keeps configuration in one place, making it easier to swap implementations 
 
 ## @Replace
 
-Override one class with another globally. Every injection point expecting the original class receives the replacement instead.
+Override one class with another, so injection points expecting the original class receive the replacement instead.
 
-**Via decorator:**
-
-```ts
-import { Replace } from 'moost'
-
-@Replace(EmailService, MockEmailService)
-class TestController {
-  // EmailService injections now resolve to MockEmailService
-}
-```
-
-**Via registry:**
+**Via registry (global):**
 
 ```ts
 import { createReplaceRegistry } from 'moost'
@@ -91,6 +85,26 @@ app.setReplaceRegistry(createReplaceRegistry(
   [PaymentGateway, TestPaymentGateway],
 ))
 ```
+
+Every injection point in the app expecting `EmailService` now resolves to `MockEmailService`. This is the mechanism to reach for in tests and feature toggles.
+
+**Via decorator (scoped to imported sub-controllers):**
+
+```ts
+import { Replace, Controller, ImportController } from 'moost'
+
+@Controller()
+@Replace(EmailService, MockEmailService)
+@ImportController(UsersController)
+class TestController {
+  // EmailService injections inside UsersController (and its own imports)
+  // resolve to MockEmailService
+}
+```
+
+::: warning
+The `@Replace` decorator does **not** redirect the decorated class's own constructor injections — the replacement registry it declares only applies to controllers imported from it via `@ImportController`. To replace a class app-wide, use `app.setReplaceRegistry()` (or decorate your custom `Moost` app subclass).
+:::
 
 This is especially useful for:
 - **Testing** — inject mocks without changing consumer code
@@ -113,6 +127,8 @@ defineInfactScope('tenant', {
   region: 'eu-west-1',
 })
 ```
+
+You can read a scope's vars programmatically with `getInfactScopeVars('tenant')` (also exported from `moost`).
 
 ### @InjectFromScope
 
@@ -158,3 +174,10 @@ class TenantService {
   ) {}
 }
 ```
+
+## Gotchas
+
+- **`@Provide`/`@Inject` don't make a class injectable.** The class still needs `@Controller()` or `@Injectable()` — otherwise the DI container rejects it with `Class is not Injectable and not Optional`.
+- **A missing provide entry throws at instantiation.** If `@Inject('key')` has no matching entry anywhere up the tree, instance creation fails (unless the parameter is marked `@Optional()`).
+- **Provide factories run once per registry entry.** The result is cached and shared by every consumer in the subtree — a factory is *not* called once per consumer.
+- **Register custom scopes before they are used.** `@InjectFromScope('name')` throws if `defineInfactScope('name', ...)` was not called first.

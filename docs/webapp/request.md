@@ -54,7 +54,7 @@ export class ExampleController {
 }
 ```
 
-Header names are case-insensitive, matching standard HTTP behavior.
+Pass the header name in **lowercase** — Node.js normalizes incoming header names to lowercase, and the lookup is an exact key match. `@Header('Content-Type')` returns `undefined`.
 
 ## Cookies
 
@@ -160,9 +160,9 @@ import { Get, Ip, IpList } from '@moostjs/event-http'
 client(
     @Ip() ip: string,                          // direct client IP
     @Ip({ trustProxy: true }) realIp: string,  // considers x-forwarded-for
-    @IpList() allIps: string[],                // full IP chain
+    @IpList() ips: { remoteIp: string, forwarded: string[] }, // remote IP + x-forwarded-for chain
 ) {
-    return { ip, realIp, allIps }
+    return { ip, realIp, ips }
 }
 ```
 
@@ -196,7 +196,7 @@ raw(@Req() request: IncomingMessage) {
 | `@Method()` | HTTP method string | `@moostjs/event-http` |
 | `@ReqId()` | Request UUID | `@moostjs/event-http` |
 | `@Ip(opts?)` | Client IP address | `@moostjs/event-http` |
-| `@IpList()` | All IP addresses | `@moostjs/event-http` |
+| `@IpList()` | `{ remoteIp, forwarded }` IP object | `@moostjs/event-http` |
 | `@Req()` | Raw `IncomingMessage` | `@moostjs/event-http` |
 
 All resolver decorators can also be used as **property decorators** on `FOR_EVENT`-scoped controllers. See [Dependency Injection](./di) for details.

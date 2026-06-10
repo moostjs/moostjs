@@ -16,12 +16,12 @@ For the complete guide — installation, configuration, and all available option
 
 ```ts
 import { Moost } from 'moost'
-import { MoostHttp, Body, Post } from '@moostjs/event-http'
+import { MoostHttp } from '@moostjs/event-http'
 import { validatorPipe, validationErrorTransform } from '@atscript/moost-validator'
 import { UsersController } from './users.controller'
 
 const app = new Moost()
-app.adapter(new MoostHttp())
+void app.adapter(new MoostHttp()).listen(3000)
 app.applyGlobalPipes(validatorPipe())
 app.applyGlobalInterceptors(validationErrorTransform())
 app.registerControllers(UsersController)
@@ -33,18 +33,18 @@ With this setup every request body, query param, or DI value whose type exposes 
 ## Example DTO
 
 ```atscript
-@label "Create User"
+@meta.label "Create User"
 export interface CreateUserDto {
-  @label "Display name"
+  @meta.label "Display name"
   name: string
 
   @expect.pattern "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", "u", "Invalid email"
   email: string
 
-  @label "Password"
+  @meta.label "Password"
   password: string
 
-  @labelOptional
+  @meta.description "Optional role list"
   roles?: string[]
 }
 ```
@@ -72,9 +72,9 @@ export class UsersController {
 }
 ```
 
-### Per-parameter configuration
+### Configuring the validator
 
-`validatorPipe(opts)` accepts any subset of [`TValidatorOptions`](https://github.com/moostjs/atscript/blob/main/packages/typescript/src/validator.ts). For instance, to allow unknown properties and collect all errors:
+`validatorPipe(opts)` accepts any subset of [`TValidatorOptions`](https://github.com/moostjs/atscript/blob/main/packages/typescript/src/runtime/validator.ts) — the same options work in `@UseValidatorPipe(opts)` for per-controller/per-method scoping. For instance, to allow unknown properties and collect up to 50 errors (the default limit is 10):
 
 ```ts
 app.applyGlobalPipes(
@@ -94,13 +94,16 @@ When validation fails `validator.validate()` throws `ValidatorError`. Without th
 ```json
 {
   "statusCode": 400,
-  "message": "Validation failed",
-  "errors": [
+  "message": "email: Invalid email",
+  "error": "Bad Request",
+  "_body": [
     { "path": "email", "message": "Invalid email" },
     { "path": "password", "message": "Length must be >= 12" }
   ]
 }
 ```
+
+The `message` is the first failing rule (`"<path>: <message>"`), and the full error list is exposed under the `_body` key.
 
 Adapters such as `@moostjs/event-http` serialise that object as JSON automatically.
 

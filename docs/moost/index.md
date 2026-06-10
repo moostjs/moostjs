@@ -9,9 +9,8 @@ Moost is event-agnostic by design. The core — controllers, DI, interceptors, p
 Build REST APIs and web servers with decorator-based routing, automatic parameter extraction, and the full Wooks HTTP composable set.
 
 ```ts
-import { MoostHttp, Get, Post } from '@moostjs/event-http'
+import { MoostHttp, Get, Post, Body } from '@moostjs/event-http'
 import { Moost, Controller, Param } from 'moost'
-import { useBody } from '@wooksjs/event-http'
 
 @Controller('api')
 class ApiController {
@@ -21,9 +20,7 @@ class ApiController {
   }
 
   @Post('users')
-  async createUser() {
-    const { parseBody } = useBody()
-    const user = await parseBody<{ name: string }>()
+  createUser(@Body() user: { name: string }) {
     return { created: user.name }
   }
 }
@@ -35,7 +32,7 @@ app.registerControllers(ApiController).init()
 http.listen(3000)
 ```
 
-Supports Express and Fastify adapters, Swagger generation, static file serving, and reverse proxy.
+Comes with Swagger generation, body parsing, static file serving, and reverse proxy support.
 
 [Get started with HTTP &rarr;](/webapp/)
 
@@ -43,37 +40,7 @@ Supports Express and Fastify adapters, Swagger generation, static file serving, 
 
 **Package:** `@moostjs/event-ws`
 
-Build real-time WebSocket servers with routed message handlers, rooms, broadcasting, and composable state. Integrates with HTTP for upgrade handling.
-
-```ts
-import { MoostHttp, Upgrade } from '@moostjs/event-http'
-import { MoostWs, Message, Connect, MessageData, ConnectionId } from '@moostjs/event-ws'
-import { Moost, Controller, Param } from 'moost'
-import { useWsRooms } from '@wooksjs/event-ws'
-
-@Controller('chat')
-class ChatController {
-  @Connect()
-  onConnect(@ConnectionId() id: string) {
-    console.log(`Connected: ${id}`)
-  }
-
-  @Message('message', ':room')
-  onMessage(@Param('room') room: string, @MessageData() data: { text: string }) {
-    const { broadcast } = useWsRooms()
-    broadcast('message', { from: room, text: data.text })
-  }
-}
-
-const app = new Moost()
-const http = new MoostHttp()
-const ws = new MoostWs({ httpApp: http.getHttpApp() })
-app.adapter(http).adapter(ws)
-app.registerControllers(ChatController).init()
-http.listen(3000)
-```
-
-Available composables: `useWsConnection()`, `useWsMessage()`, `useWsRooms()`, `useWsServer()`. HTTP composables work transparently via the upgrade request context.
+Build real-time WebSocket servers with routed message handlers (`@Message`, `@Connect`, `@Disconnect`), rooms, broadcasting, and composable state. Integrates with the HTTP adapter for upgrade handling — declare an `@Upgrade()` handler to control where connections are accepted, and HTTP composables keep working inside WS handlers via the upgrade request context.
 
 [Get started with WebSocket &rarr;](/wsapp/)
 
@@ -81,29 +48,7 @@ Available composables: `useWsConnection()`, `useWsMessage()`, `useWsRooms()`, `u
 
 **Package:** `@moostjs/event-cli`
 
-Build command-line applications with decorator-based command routing, typed options, and auto-generated help.
-
-```ts
-import { MoostCli, Cli, CliOption } from '@moostjs/event-cli'
-import { Moost, Controller, Param } from 'moost'
-
-@Controller()
-class DeployController {
-  @Cli('deploy/:env')
-  deploy(
-    @Param('env') env: string,
-    @CliOption('verbose', 'v', { description: 'Verbose output' }) verbose: boolean,
-  ) {
-    return `Deploying to ${env}${verbose ? ' (verbose)' : ''}...`
-  }
-}
-
-const app = new Moost()
-app.adapter(new MoostCli())
-app.registerControllers(DeployController).init()
-```
-
-Commands use the same route-style patterns as HTTP. Options are parsed automatically. Help output is generated from decorator metadata.
+Build command-line applications with decorator-based command routing (`@Cli`), typed options (`@CliOption`), and auto-generated help. Commands use the same route-style patterns as HTTP, and options are parsed automatically.
 
 [Get started with CLI &rarr;](/cliapp/)
 
@@ -111,59 +56,27 @@ Commands use the same route-style patterns as HTTP. Options are parsed automatic
 
 **Package:** `@moostjs/event-wf`
 
-Build multi-step pipelines with decorator-based step definitions, state management, pause/resume support, and conditional branching.
-
-```ts
-import { MoostWf, WfStep, WfFlow, WfInput } from '@moostjs/event-wf'
-import { Moost, Controller } from 'moost'
-import { useWfState } from '@wooksjs/event-wf'
-
-@Controller()
-class ApprovalWorkflow {
-  @WfStep('review')
-  @WfInput('approval')
-  review() {
-    const { ctx, input } = useWfState()
-    ctx<{ approved: boolean }>().approved = input<boolean>() ?? false
-  }
-
-  @WfFlow('approval-process', [
-    'validate',
-    'review',
-    { condition: 'approved', steps: ['notify-success'] },
-    { condition: '!approved', steps: ['notify-rejection'] },
-  ])
-  approvalFlow() {}
-}
-```
-
-Workflows are **interruptible** — when a step needs input, the workflow pauses and returns serializable state. Resume it later with the input, minutes or days later.
+Build multi-step pipelines with decorator-based step definitions (`@Step`), flow schemas (`@Workflow` + `@WorkflowSchema`), state management, and conditional branching. Workflows are **interruptible** — when a step needs input, the workflow pauses and returns serializable state; resume it with the input minutes or days later.
 
 [Get started with Workflows &rarr;](/wf/)
 
 ## Multiple Adapters
 
-Moost supports registering multiple adapters at once. Each adapter operates independently — controllers are registered once and each adapter picks up only the decorators it understands:
+Moost supports registering multiple adapters at once. Each adapter operates independently — controllers are registered once and each adapter picks up only the decorators it understands, so one controller class can serve both an HTTP route and a CLI command.
+
+Register each adapter with its own `app.adapter()` call:
 
 ```ts
-import { Moost, Controller, Param } from 'moost'
-import { MoostHttp, Get } from '@moostjs/event-http'
-import { MoostCli, Cli } from '@moostjs/event-cli'
-
-@Controller()
-class AppController {
-  @Get('status')
-  httpStatus() { return { ok: true } }
-
-  @Cli('status')
-  cliStatus() { return 'OK' }
-}
-
 const app = new Moost()
-app.adapter(new MoostHttp()).adapter(new MoostCli())
+app.adapter(new MoostHttp())
+app.adapter(new MoostCli())
 app.registerControllers(AppController).init()
 ```
 
+::: warning
+`app.adapter()` returns the **adapter instance**, not the Moost app — so you can chain adapter methods like `app.adapter(new MoostHttp()).listen(3000)`, but you cannot chain a second `.adapter()` call onto it.
+:::
+
 ## Custom Adapters
 
-You can build your own adapter for any event-driven scenario — job queues, message brokers, custom protocols. All adapters implement the `TMoostAdapter` interface and share the same controller, DI, interceptor, and pipe infrastructure.
+You can build your own adapter for any event-driven scenario — job queues, message brokers, custom protocols. All adapters implement the `TMoostAdapter` interface and share the same controller, DI, interceptor, and pipe infrastructure. Inside `bindHandler()`, adapters wrap each event with the `defineMoostEventHandler()` helper from `moost`, which runs the full lifecycle — DI scope, interceptors, argument pipes, and handler invocation.

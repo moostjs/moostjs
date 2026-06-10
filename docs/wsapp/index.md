@@ -45,117 +45,15 @@ new WsApp()
   .start(3000)
 ```
 
-`WsApp` is a convenience class that extends `Moost` and sets up a standalone `MoostWs` adapter for you.
+`WsApp` is a convenience class that extends `Moost` and sets up a standalone `MoostWs` adapter for you. Clients connect to `ws://localhost:3000` and send JSON messages routed by `event` and `path` fields — see the [wire protocol](./protocol) for the message format.
 
 ## HTTP-Integrated Mode
 
-The recommended approach for production. The WebSocket server shares the HTTP port and requires an explicit upgrade route, giving you full control over which paths accept WebSocket connections and how they are authenticated.
-
-### main.ts
-
-```ts
-import { MoostHttp } from '@moostjs/event-http'
-import { MoostWs } from '@moostjs/event-ws'
-import { Moost } from 'moost'
-
-import { AppController } from './app.controller'
-import { ChatController } from './chat.controller'
-
-const app = new Moost()
-const http = new MoostHttp()
-const ws = new MoostWs({ httpApp: http.getHttpApp() })
-
-app.adapter(http)
-app.adapter(ws)
-app.registerControllers(AppController, ChatController)
-
-await http.listen(3000)
-await app.init()
-```
-
-### app.controller.ts
-
-```ts
-import { Get, Upgrade } from '@moostjs/event-http'
-import type { WooksWs } from '@moostjs/event-ws'
-import { Controller, Inject } from 'moost'
-
-@Controller()
-export class AppController {
-  constructor(@Inject('WooksWs') private ws: WooksWs) {}
-
-  @Get('health')
-  health() {
-    return { status: 'ok' }
-  }
-
-  @Upgrade('ws')
-  upgrade() {
-    return this.ws.upgrade()
-  }
-}
-```
-
-### chat.controller.ts
-
-```ts
-import { Message, MessageData, ConnectionId, useWsRooms } from '@moostjs/event-ws'
-import { Controller, Param } from 'moost'
-
-@Controller('chat')
-export class ChatController {
-  @Message('join', ':room')
-  join(
-    @Param('room') room: string,
-    @ConnectionId() id: string,
-    @MessageData() data: { name: string },
-  ) {
-    const { join, broadcast } = useWsRooms()
-    join()
-    broadcast('system', { text: `${data.name} joined` })
-    return { joined: true, room }
-  }
-
-  @Message('message', ':room')
-  onMessage(@MessageData() data: { from: string; text: string }) {
-    const { broadcast } = useWsRooms()
-    broadcast('message', data)
-  }
-}
-```
-
-Clients connect to `ws://localhost:3000/ws` and send JSON messages routed by `event` and `path` fields. See the [wire protocol](./protocol) for message format details.
+The recommended approach for production: create the adapter with `new MoostWs({ httpApp: http.getHttpApp() })` so the WebSocket server shares the HTTP port, and accept connections through an explicit `@Upgrade` route. This gives you full control over which paths accept WebSocket connections and lets you authenticate during the upgrade handshake. See [HTTP Integration](./integration) for the complete setup, upgrade routes, and authentication recipes.
 
 ## Connecting a Client
 
-Use `@wooksjs/ws-client` for a type-safe client with RPC support, reconnection, and push event handling:
-
-```bash
-npm install @wooksjs/ws-client
-```
-
-```ts
-import { createWsClient } from '@wooksjs/ws-client'
-
-const client = createWsClient('ws://localhost:3000/ws', {
-  reconnect: true,
-  rpcTimeout: 5000,
-})
-
-// RPC call — returns a promise with the server response
-const result = await client.call('join', '/chat/general', { name: 'Alice' })
-console.log(result) // { joined: true, room: 'general' }
-
-// Listen for push messages
-client.on('message', '/chat/general', ({ data }) => {
-  console.log(`${data.from}: ${data.text}`)
-})
-
-// Fire-and-forget
-client.send('message', '/chat/general', { from: 'Alice', text: 'Hello!' })
-```
-
-See the full [client documentation](./client) for details.
+Use [`@wooksjs/ws-client`](./client) for a type-safe client with RPC calls (`call`), fire-and-forget sends (`send`), push listeners (`on`), and automatic reconnection.
 
 ## AI Agent Skill
 

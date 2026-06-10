@@ -9,7 +9,7 @@ Set status, headers, cookies, body limits, errors. Setup/routing: [event-http.md
 - [Types](#types)
 - [Gotchas](#gotchas)
 
-Static decorators register `AFTER_ALL`-priority interceptors. Refs are Proxy-based reactive bindings — set at runtime. Ref decorators work as parameter, property (on `FOR_EVENT`), or method decorator.
+Static decorators register `AFTER_ALL`-priority interceptors. Refs are Proxy-based reactive bindings — set at runtime. Ref decorators work as parameter or property (on `FOR_EVENT`) decorators.
 
 ## Static decorators
 
@@ -18,7 +18,7 @@ Static decorators register `AFTER_ALL`-priority interceptors. Refs are Proxy-bas
 ```ts
 @Post('users') @SetStatus(201)
 create() { return { created: true } }
-@SetStatus(200, { force: true })   // override status set by a prior `after` hook
+@SetStatus(200, { force: true })   // override any status already set (handler or after hooks)
 ```
 
 ### `@SetHeader(name, value, opts?)`
@@ -31,7 +31,7 @@ create() { return { created: true } }
 @SetHeader('x-request-id', 'abc',        { when: 'always' })
 ```
 
-Options: `force?: boolean`, `status?: number` (only set when response has this status), `when?: 'always' | 'error' | 'ok'` (default `'ok'` = success-only).
+Options: `force?: boolean` (by default `@SetHeader` skips headers already present in the response — pass `force: true` to overwrite), `status?: number` (only set when response has this status), `when?: 'always' | 'error' | 'ok'` (default `'ok'` = success-only).
 
 ### `@SetCookie(name, value, attrs?)`
 
@@ -111,17 +111,12 @@ Uncaught exceptions → HTTP 500. Format (JSON vs HTML) adapts to the `Accept` h
 
 ## Types
 
-```ts
-interface TStatusRef { value: number }
-interface THeaderRef { value: string | string[] | undefined }
-interface TCookieRef { value: string; attrs?: TCookieAttributes }
-type TCookieAttributes = Partial<TCookieAttributesRequired>
-```
+`TStatusRef` / `THeaderRef` / `TCookieRef` / `TCookieAttributes` are exported from `@moostjs/event-http`; mutate `.value` (value shapes shown inline in [Refs](#refs-dynamic)).
 
 ## Gotchas
 
-- `@SetStatus` registers an `after` hook only — never applied to error responses regardless of `force`. `force` only overrides a status set by a prior `after` hook.
-- `@SetCookie` won't overwrite a cookie already set in the response.
-- `@SetHeader` default `when` is `'ok'` (success-only); use `'always'` or `'error'` to run on errors.
-- Ref decorators return Proxy objects — mutate `.value`, not a plain field.
-- Global limit interceptors apply to every handler.
+1. `@SetStatus` registers an `after` hook only — never applied to error responses regardless of `force`. With `force` it overrides any status already set (by the handler via `@StatusRef`/`useResponse()` or by earlier after hooks); without `force` it is a no-op once any status is set.
+2. `@SetCookie` won't overwrite a cookie already set in the response.
+3. `@SetHeader` won't overwrite a header already set (e.g. via `@HeaderRef`) unless `force: true`; default `when` is `'ok'` (success-only) — use `'always'` or `'error'` to run on errors.
+4. Ref decorators return Proxy objects — mutate `.value`, not a plain field.
+5. Global limit interceptors apply to every handler.

@@ -90,7 +90,7 @@ my-cli build                     # → watch=false, minify=false
 Mark a parameter as optional with `@Optional()`. Without it, a missing argument may result in `undefined`:
 
 ```ts
-import { Cli, CliOption, Controller, Optional } from '@moostjs/event-cli'
+import { Cli, CliOption, Controller, Description, Optional } from '@moostjs/event-cli'
 
 @Controller()
 export class BuildController {
@@ -106,14 +106,14 @@ export class BuildController {
 }
 ```
 
-`@Optional()` also signals intent to readers of your code and integrates with the help system.
+`@Optional()` records metadata only — it signals intent to readers of your code but does not change CLI parsing or help output. It does not set a default either; use `??` for fallback values.
 
 ## Sample values
 
 Use `@Value()` to show a placeholder in help output. This doesn't set a default — it only affects `--help` display:
 
 ```ts
-import { Cli, CliOption, Controller, Description } from '@moostjs/event-cli'
+import { Cli, CliOption, Controller, Description, Param } from '@moostjs/event-cli'
 import { Value } from 'moost'
 
 @Controller()
@@ -139,7 +139,7 @@ export class TestController {
 }
 ```
 
-In `--help`, the options section shows `--target <staging>` and `--project <my-app>`.
+In `--help`, the options section shows `--target=<staging>` and `--project=<my-app>`.
 
 ## Decorator summary
 
@@ -150,6 +150,13 @@ In `--help`, the options section shows `--target <staging>` and `--project <my-a
 | `@Description('...')` | parameter, method | Document for help output |
 | `@Optional()` | parameter | Mark as not required |
 | `@Value('...')` | parameter | Show sample value in help |
+
+## Gotchas
+
+1. **Boolean detection needs the literal `boolean` type.** A flag is parsed as boolean only when the parameter is typed exactly `boolean` (the type is read via `emitDecoratorMetadata`). Union types like `boolean | undefined` or `string | boolean` are not detected.
+2. **One option key, one type — app-wide.** Option types are aggregated across all commands. A key is parsed as boolean only if *every* command using it types it `boolean`. Declaring `--verbose` as `boolean` in one command and `string` in another silently changes parsing for both.
+3. **Boolean flags are presence-only.** `--watch` sets `true`; there is no `--watch=false`. A missing boolean flag resolves to `false`.
+4. **Non-boolean options consume the next token.** `my-cli build --out dist` assigns `'dist'` to `--out`. If you forget the value, the next positional argument is swallowed as the option value instead of reaching your `@Param()`.
 
 ## What's next
 

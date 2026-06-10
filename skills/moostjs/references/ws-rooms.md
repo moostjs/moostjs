@@ -16,9 +16,9 @@ Room-based connection grouping and local / multi-instance broadcasting. Core set
 Rooms = named `Map<string, Set<WsConnection>>` on `WsRoomManager`. A connection may join multiple rooms. Broadcast sends a push to all connections in a room (default: exclude sender).
 
 On broadcast:
-1. Local connections in the room receive directly.
+1. Local connections in the room receive directly (sender excluded by default).
 2. If a `WsBroadcastTransport` is configured, the message is published to `ws:room:{roomName}` for other instances.
-3. Other instances forward to their local connections (`excludeId` prevents echo on the origin instance by connection ID).
+3. Each subscribed instance forwards the published message to its local room members, skipping only the connection whose id equals `excludeId` (the sender). There is **no instance-level filter** — see the loopback gotcha below.
 
 Three composables:
 
@@ -79,13 +79,13 @@ Returns the connection `EventContext` regardless of which handler:
 
 ## Multi-instance: WsBroadcastTransport
 
-```ts
-interface WsBroadcastTransport {
-  publish(channel: string, payload: string): void | Promise<void>
-  subscribe(channel: string, handler: (payload: string) => void): void | Promise<void>
-  unsubscribe(channel: string): void | Promise<void>
-}
-```
+Pluggable pub/sub contract for cross-instance broadcasting; type importable from `@moostjs/event-ws`. Three methods, each may return `void` or a `Promise`:
+
+| Method | Called when | Semantics |
+|---|---|---|
+| `publish(channel, payload)` | every room broadcast | deliver `payload` (string) to all subscribed instances |
+| `subscribe(channel, handler)` | first connection joins a room on this instance | invoke `handler(payload)` for every published message |
+| `unsubscribe(channel)` | last connection leaves the room on this instance | stop delivering for that channel |
 
 Channel format: `ws:room:{roomName}`. Payload = JSON-stringified `{ event, path, data, params, excludeId }`.
 
@@ -151,6 +151,7 @@ for (const c of conns) c.send('notification', '/chat/rooms/lobby', { text: 'New 
 - Default `excludeSelf: true` — sender doesn't get their own broadcast.
 - Transport channel is `ws:room:{roomName}` — don't collide in your Redis key space.
 - `excludeId` only excludes by connection ID — a user with multiple connections will still see their other sockets receive the broadcast.
+- **Loopback transports cause duplicate delivery**: the origin instance is subscribed to its own room channels, and only the sender connection is filtered. If your transport delivers published messages back to the publisher (Redis pub/sub does), every other local room member receives the broadcast twice. Include an instance id in the payload and filter it in the transport, or skip self-published messages.
 - Connections are removed from all rooms on disconnect (`leaveAll` is automatic).
 - Empty rooms are auto-cleaned from the Map.
 - `useWsServer()` reads module-level adapter state — works anywhere, but requires adapter init first.

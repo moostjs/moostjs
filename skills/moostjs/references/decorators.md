@@ -29,53 +29,31 @@ Decorators run through `getMoostMate()` — singleton `Mate` in the `'moost'` wo
 
 ## TMoostMetadata
 
-```ts
-interface TMoostMetadata<H = {}> {
-  // identity
-  id?: string; label?: string; description?: string
-  value?: unknown; optional?: boolean; required?: boolean
-  requiredProps?: (string | symbol)[]
-  // controller
-  controller?: { prefix?: string }
-  importController?: { prefix?: string; typeResolver?: Ctor | (() => Ctor); provide?: TProvideRegistry }[]
-  // DI
-  injectable?: true | 'FOR_EVENT' | 'SINGLETON'
-  provide?: TProvideRegistry
-  replace?: TReplaceRegistry
-  inject?: string | symbol | TClassConstructor  // (on params)
-  fromScope?: string | symbol                    // (on params)
-  circular?: () => unknown                       // (on params)
-  // handlers
-  handlers?: TMoostHandler<H>[]
-  // interceptors / pipes
-  interceptor?: { priority: TInterceptorPriority }  // set by @Interceptor class
-  interceptorHook?: 'before' | 'after' | 'error'    // set by @Before/@After/@OnError
-  interceptors?: TInterceptorData[]
-  pipes?: TPipeData[]
-  // resolution
-  resolver?: (metas, level) => unknown
-  paramSource?: string; paramName?: string
-  type?: TFunction; returnType?: TFunction
-  // misc
-  inherit?: boolean
-  properties?: (string | symbol)[]       // collected by Mate `collectPropKeys`
-  loggerTopic?: string
-  moostInit?: { priority: number }       // set by @MoostInit (method)
-  params: (TMateParamMeta & TMoostParamsMetadata)[]
-}
-```
+`import type { TMoostMetadata, TMoostParamsMetadata, TMoostHandler } from 'moost'` — the shapes returned by `mate.read(...)`. Read fields by purpose, not by re-deriving the interface:
 
-`getMoostMate()` is typed with class/prop/param extensions:
-```ts
-const mate = getMoostMate<ClassExt, PropExt, ParamExt>()
-```
+| Field(s) | Written by | Read where |
+|---|---|---|
+| `id`, `label`, `description`, `value`, `optional`, `required`, `requiredProps` | `@Id`/`@Label`/`@Description`/`@Value`/`@Optional`/`@Required` | adapters, swagger, validation tooling |
+| `controller.prefix`, `importController[]` | `@Controller`/`@ImportController` | controller binding (prefix composition) |
+| `injectable`, `provide`, `replace` | `@Injectable`/`@Provide`/`@Replace` | DI (Infact) |
+| `handlers` (`TMoostHandler[]`) | handler decorators (`@Get`, `@Cli`, …) — METHOD meta only | adapters filter by `handler.type` |
+| `interceptor`, `interceptorHook`, `interceptors` | `@Interceptor` (class), `@Before`/`@After`/`@OnError` (methods), `@Intercept` | interceptor chain assembly |
+| `pipes` | `@Pipe` | pipe chain assembly |
+| `resolver` | `@Resolve` and everything built on it (`@Param`, `@Body`, …) | the built-in resolve pipe |
+| `type`, `returnType` | TS `emitDecoratorMetadata` (automatic) | pipes (type coercion), swagger |
+| `inherit` | `@Inherit` | Mate inheritance policy |
+| `properties` | Mate `collectPropKeys` (automatic) | DI property resolution |
+| `loggerTopic` | `@LoggerTopic` | `@InjectMoostLogger` |
+| `moostInit` | `@MoostInit` | init-hook collection |
+| `params` | param decorators (sparse array, index = param position) | argument/constructor resolution |
+
+**Param-only fields live on `TMoostParamsMetadata`**, accessed via `meta.params[index]` (NOT on class/method meta): `inject` (`@Inject`), `fromScope` (`@InjectFromScope`), `circular` (`@Circular`), `paramSource`/`paramName` (set by `@Param` to `'ROUTE'`; HTTP decorators set `'QUERY'`/`'QUERY_ITEM'`/`'BODY'`).
+
+`getMoostMate()` is typed with class/prop/param extensions: `getMoostMate<ClassExt, PropExt, ParamExt>()`.
 
 ## TMoostHandler
 
-```ts
-type TMoostHandler<T> = { type: string; path?: string } & T
-```
-Adapter-specific shapes:
+One entry per handler decorator on a method: a `type` discriminator plus an optional `path`, extended with adapter-specific fields. Adapter-specific shapes:
 - HTTP: `{ type: 'HTTP', method, path }`
 - CLI:  `{ type: 'CLI', path }`
 - WF:   `{ type: 'WF_STEP' | 'WF_FLOW', path }`
@@ -184,17 +162,20 @@ import { Mate } from '@prostojs/mate'
 const myMate = new Mate<TMyAdapterMeta, TMyAdapterMeta>('my-adapter')
 ```
 
-Tradeoff: invisible to anything reading via `getMoostMate()` (other moost-aware tooling, swagger, otel, arbac).
+Tradeoff: invisible to anything reading via `getMoostMate()` (other moost-aware tooling, swagger, otel, @aooth/arbac-moost).
 
 ### Inheritance
 
-Default is opt-in: `@Inherit()` on class enables for all members; on method/prop enables just that one.
+Opt-in, and the flag goes on the **inheriting subclass** (the class whose metadata is being read), NOT on the base class. `@Inherit()` on the subclass enables inheritance of class meta and of members that have no own metadata; on a subclass method/prop it enables just that member.
 
 ```ts
-@Inherit()
 class Base { @Get('health') health() { return 'ok' } }
+
+@Inherit()
 class App extends Base {}  // inherits @Get('health')
 ```
+
+`@Inherit()` on only the base class does nothing — the subclass's own meta stays `undefined` and no route is bound.
 
 ## Gotchas
 

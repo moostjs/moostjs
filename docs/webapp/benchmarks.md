@@ -138,7 +138,7 @@ Moost and NestJS share the same programming model (decorators, DI, controllers),
 
 | Framework | HTTP Layer | Router | DI System |
 |---|---|---|---|
-| **Moost** | Wooks (@wooksjs/event-http) | @prostojs/router | @prostojs/mate + functional DI |
+| **Moost** | Wooks (@wooksjs/event-http) | @prostojs/router | @prostojs/infact (DI container) + @prostojs/mate (metadata) |
 | **NestJS (Fastify)** | Fastify | find-my-way | @nestjs/core DI container |
 | **NestJS (Express)** | Express | Express router | @nestjs/core DI container |
 
@@ -230,7 +230,7 @@ All three options are fast enough for production. Choose your framework for **de
 - **Less DI overhead** — roughly half the cost of NestJS's DI layer
 - **Built on Wooks** — lazy evaluation, typed context, composable functions
 - **One architecture for everything** — HTTP, CLI, WebSocket, and Workflows
-- **Powerful router** — regex constraints, multiple wildcards, optional params, case-insensitive matching via [@prostojs/router](https://github.com/niciam/router)
+- **Powerful router** — regex constraints, multiple wildcards, optional params, case-insensitive matching via [@prostojs/router](https://github.com/prostojs/router)
 
 See also: [Router benchmark](https://wooks.moost.org/benchmarks/router) | [Wooks HTTP benchmark](https://wooks.moost.org/benchmarks/wooks-http)
 

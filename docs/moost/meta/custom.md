@@ -164,7 +164,7 @@ decorate<
   T = TClass & TProp & TCommonMateWithParam<TProp['params'][0]>,
   K extends keyof T = keyof T
 >(
-  key: K | ((meta: T, level: TLevels, propKey?: string | symbol, index?: number) => T),
+  key: K | ((meta: T, level: TLevels, propKey?: string, index?: number) => T),
   value?: T[K],
   isArray?: boolean,
   level?: TLevels,
@@ -203,7 +203,7 @@ read<
 >(
   target: TFunction | TObject,
   propKey?: PK,
-): PK extends PropertyKey ? (TClass & TProp & TCommonMate<TProp['params'][0]> | undefined) : TClass | undefined
+): PK extends string ? (TClass & TProp & TCommonMate<TProp['params'][0]> | undefined) : TClass | undefined
 ```
 
 **Parameters:**
@@ -238,6 +238,17 @@ apply(
 ```ts
 mate.apply(Uppercase(), AnotherDecorator())(target, propKey, descriptor);
 ```
+
+::: tip
+For the common case of bundling several decorators into one reusable decorator, `moost` exports a ready-made helper: `ApplyDecorators(...decorators)`.
+
+```ts
+import { ApplyDecorators, Label, Description } from 'moost'
+
+const Documented = (label: string, text: string) =>
+  ApplyDecorators(Label(label), Description(text))
+```
+:::
 
 ### `decorateConditional`
 

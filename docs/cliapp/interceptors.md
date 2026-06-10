@@ -68,7 +68,7 @@ const requireEnvGuard = defineBeforeInterceptor(() => {
 Apply it to a specific command:
 
 ```ts
-import { Cli, Controller, Intercept } from '@moostjs/event-cli'
+import { Cli, Controller, Intercept, Param } from '@moostjs/event-cli'
 
 @Controller()
 export class DeployController {
@@ -157,22 +157,19 @@ const timingInterceptor = defineInterceptor({
     const ms = (performance.now() - start).toFixed(1)
     console.log(`Completed in ${ms}ms`)
   },
-}, TInterceptorPriority.AFTER_ALL)
+}, TInterceptorPriority.BEFORE_ALL)
 ```
+
+::: tip Why `BEFORE_ALL`?
+Priority defines an onion: `before` hooks run lowest-priority-first, while `after`/`error` hooks run in reverse. `BEFORE_ALL` makes the timing interceptor the outermost layer, so it measures the whole pipeline (other interceptors included). An `AFTER_ALL` timing interceptor would be the innermost layer and measure roughly just the handler.
+:::
 
 ## Priority levels
 
-Interceptors run in priority order. Lower numbers run first:
+Priorities range from `BEFORE_ALL` (0, outermost) to `AFTER_ALL` (6, innermost) — see the canonical [priority table](/moost/interceptors#key-concepts) in the Moost interceptors guide. CLI-specific notes:
 
-| Priority | Value | Typical use |
-|----------|-------|-------------|
-| `BEFORE_ALL` | 0 | Help interceptor, early logging |
-| `BEFORE_GUARD` | 1 | Setup before guards |
-| `GUARD` | 2 | Permission checks, env validation |
-| `AFTER_GUARD` | 3 | Post-auth setup |
-| `INTERCEPTOR` | 4 | General-purpose (default) |
-| `CATCH_ERROR` | 5 | Error formatting |
-| `AFTER_ALL` | 6 | Timing, cleanup |
+- `cliHelpInterceptor` runs at `BEFORE_ALL`, so `--help` is handled before any guards run
+- use `GUARD` for env/permission checks and `CATCH_ERROR` for terminal error formatting
 
 ## Applying interceptors
 

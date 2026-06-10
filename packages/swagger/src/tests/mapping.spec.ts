@@ -31,6 +31,7 @@ import {
   PrimitiveController,
   RequiredBodyController,
   SecuredController,
+  StackedAuthController,
   StatusCodeController,
   SwaggerControllerTest,
   TaggedController,
@@ -584,6 +585,7 @@ describe('security schemes', () => {
     SecuredController,
     AllPublicController,
     MultiAuthController,
+    StackedAuthController,
     ControllerSecurityController,
   )
   let spec: ReturnType<typeof mapToSwaggerSpec>
@@ -633,6 +635,16 @@ describe('security schemes', () => {
   it('must emit multiple security requirements for multi-transport guard', () => {
     const security = spec.paths['/multi-auth/multi'].get.security
     expect(security).toEqual([{ bearerAuth: [] }, { apiKeyAuth: [] }])
+  })
+
+  it('must AND-combine security requirements for stacked guards', () => {
+    const security = spec.paths['/stacked-auth/both'].get.security
+    expect(security).toEqual([{ bearerAuth: [], apiKeyAuth: [] }])
+  })
+
+  it('must discover securitySchemes from every stacked guard', () => {
+    expect(spec.components.securitySchemes!.bearerAuth).toBeDefined()
+    expect(spec.components.securitySchemes!.apiKeyAuth).toBeDefined()
   })
 
   it('must use controller-level @SwaggerSecurity', () => {
@@ -974,6 +986,18 @@ describe('discriminator ($defs hoisting)', () => {
     expect(response.content['*/*'].schema).toEqual({
       $ref: '#/components/schemas/CatOrDog',
     })
+  })
+
+  it('must rewrite refs to sibling defs inside hoisted defs', () => {
+    const root = spec.components.schemas['OwnerWithAddress']
+    expect(root.$defs).toBeUndefined()
+    expect(root.properties!.owner).toEqual({ $ref: '#/components/schemas/Owner' })
+    const owner = spec.components.schemas['Owner']
+    expect(owner).toBeDefined()
+    // Owner has no own $defs but references the sibling def Address —
+    // the ref must point to the final hoisted location, not '#/$defs/Address'
+    expect(owner.properties!.address).toEqual({ $ref: '#/components/schemas/Address' })
+    expect(spec.components.schemas['Address']).toBeDefined()
   })
 
   it('must hoist $defs from array items (nested)', () => {

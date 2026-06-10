@@ -37,12 +37,13 @@ Use decorators to set limits on specific handlers or controllers:
 
 ```ts
 import {
+    Body,
     BodySizeLimit,
     CompressedBodySizeLimit,
     BodyReadTimeoutMs,
     Post,
 } from '@moostjs/event-http'
-import { Controller, Body } from 'moost'
+import { Controller } from 'moost'
 
 @Controller('upload')
 export class UploadController {

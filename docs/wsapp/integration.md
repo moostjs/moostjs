@@ -118,8 +118,8 @@ import { useCookies } from '@wooksjs/event-http'
 
 @Upgrade('ws/session')
 sessionUpgrade() {
-  const cookies = useCookies()
-  const sessionId = cookies.get('session_id')
+  const { getCookie } = useCookies()
+  const sessionId = getCookie('session_id')
 
   if (!sessionId || !isValidSession(sessionId)) {
     throw new WsError(401, 'Invalid session')

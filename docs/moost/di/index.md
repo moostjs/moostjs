@@ -1,6 +1,6 @@
 # Dependency Injection
 
-Moost provides dependency injection through [`@prostojs/infact`](https://github.com/prostojs/infact). There are no modules, no providers arrays, no `forRoot()` — mark a class `@Injectable()` and Moost manages its lifecycle.
+Moost provides dependency injection through [`@prostojs/infact`](https://github.com/prostojs/infact). There are no modules, no providers arrays, no `forRoot()` — mark a class `@Injectable()` and Moost manages its lifecycle. (Advanced users can access the shared Infact container directly via `getMoostInfact()` from `moost`.)
 
 ## Injectable Classes
 
@@ -19,7 +19,7 @@ By default, injectable classes are **singletons** — a single instance shared f
 
 ## Scopes
 
-Moost supports two scopes:
+Moost has two built-in scopes (custom named scopes are covered in [Dependency Substitution](/moost/di/provide-inject#custom-scopes)):
 
 | Scope | Behavior |
 |-------|----------|
@@ -63,3 +63,9 @@ class SessionController {
 ## Integration with Pipes
 
 When a constructor parameter or property has metadata (e.g., `@Param()`, `@Resolve()`), the [pipes pipeline](/moost/pipes/) processes the value before injection — resolving, transforming, and validating it.
+
+## In This Section
+
+- [Dependency Substitution](/moost/di/provide-inject) — `@Provide`/`@Inject`, global provide/replace registries, `@Replace`, and custom named scopes
+- [Circular Dependencies](/moost/di/circular) — breaking dependency cycles with `@Circular(() => Type)`
+- [Functional Instantiation](/moost/di/functional) — creating DI-resolved instances on demand with `useControllerContext().instantiate()`

@@ -171,22 +171,28 @@ Apply identically:
 export class UsersController { /* ... */ }
 ```
 
-## Handler-level overrides
+## Stacking guards
 
-When `@Authenticate` is applied at both controller and handler level, the handler-level guard wins:
+When `@Authenticate` is applied at both controller and handler level, **both guards run** — they are merged, not overridden. The request must satisfy every guard in the chain:
 
 ```ts
 @Authenticate(apiKeyGuard)
 @Controller('products')
 export class ProductsController {
     @Get('')
-    list() { /* uses apiKeyGuard */ }
+    list() { /* requires API key */ }
 
     @Authenticate(basicGuard)
     @Post('')
-    create() { /* uses basicGuard instead */ }
+    create() { /* requires API key AND basic credentials */ }
 }
 ```
+
+To use a *different* guard for one endpoint, don't apply `@Authenticate` at the controller level — apply the right guard on each handler instead.
+
+::: info
+The generated OpenAPI spec is the one place where handler-level wins: when a handler declares its own `@Authenticate`, only its transports appear as the operation's security requirement. This affects documentation only, not runtime enforcement.
+:::
 
 ## Credential extraction
 

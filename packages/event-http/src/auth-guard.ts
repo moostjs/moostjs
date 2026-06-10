@@ -221,7 +221,7 @@ export abstract class AuthGuard<
  * class-based guard extending `AuthGuard`.
  */
 export function Authenticate(handler: TAuthGuardHandler): ClassDecorator & MethodDecorator {
-  const mate = getMoostMate<{ authTransports: TAuthTransportDeclaration }>()
+  const mate = getMoostMate<{ authTransports: TAuthTransportDeclaration[] }>()
   const isClass = typeof handler === 'function'
   const transports: TAuthTransportDeclaration = isClass
     ? (handler as TAuthGuardClass).transports
@@ -232,6 +232,6 @@ export function Authenticate(handler: TAuthGuardHandler): ClassDecorator & Metho
   const name = isClass ? handler.name : 'AuthGuard'
   return mate.apply(
     mate.decorate('interceptors', { handler, priority, name }, true),
-    mate.decorate('authTransports', transports),
+    mate.decorate('authTransports', transports, true),
   )
 }

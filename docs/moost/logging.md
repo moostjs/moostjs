@@ -8,8 +8,6 @@ provides a convenient way to manage and track log messages.
 
 The following options can be configured for the logger:
 
-- `topic` (optional): Specifies a topic or category for log messages to help
-  organize and categorize the logs based on different topics.
 - `persistLevel` (optional): Defines the maximum log level that will be
   persisted in the logger instance. Messages above this level will not be
   persisted.
@@ -25,14 +23,27 @@ The following options can be configured for the logger:
   `fatal`, `error`, `warn`, `log`, `info`, `debug`, and `trace`. This list can
   be customized to meet specific logging requirements.
 
-# Logger and EventLogger
-In Wooks, you have two options for configuring logging: `logger` and `eventLogger`.
+::: tip Topics
+`topic` is not a logger option. To scope log messages by topic, derive a topic
+logger from an existing one: `app.getLogger('my-topic')` on the Moost instance,
+or `logger.createTopic('my-topic')` on a `ProstoLogger`.
+:::
 
--  `logger`: This option allows you to define a single logger for the entire Wooks instance.
-It provides a unified logging experience across all events and commands.
--  `eventLogger`: With the eventLogger option, you can customize the logging behavior for each event in Wooks.
-Each event will have its own logger instance, identified by an `eventId`.
-This allows you to have granular control over event-specific logging and even persist log messages during the execution of an event using the `persistLevel` option.
+## App Logger and Event Logger
+
+There is one **app-level logger** — pass it as a logger *instance* via Moost or
+adapter options (`new Moost({ logger })`, `new MoostHttp({ logger })`; see the
+`TMoostOptions` interface for the Moost constructor options: `logger`,
+`globalPrefix`). Inside event handlers and interceptors, the **event-scoped
+logger** is obtained with the `useLogger()` composable (re-exported from
+`moost`) or injected with `@InjectEventLogger()`.
+
+::: tip DI logging
+Moost also logs dependency-injection events (instance creation, warnings,
+errors) through this logger. Tune the verbosity with
+`setInfactLoggingOptions({ newInstance: 'FOR_EVENT', warn: true, error: true })`
+from `moost`.
+:::
 
 ## Usage
 
@@ -50,7 +61,7 @@ import { Moost, createLogger, loggerConsoleTransport } from 'moost';
 import { MoostHttp } from '@moostjs/event-http';
 
 const logger = createLogger({
-  level: 2, // Allow only fatal and error logs
+  level: 1, // Allow only fatal and error logs
   transports: [loggerConsoleTransport],
 });
 
@@ -65,7 +76,9 @@ await app.init();
 The example above demonstrates the configuration of a Moost HTTP adapter. The
 `logger` option is a logger instance that defines the logging behavior for the
 adapter. In this case, log messages at the `fatal` and `error` levels are
-allowed, and the log messages are sent to the console.
+allowed (`level` is the index of the last allowed level in the `levels` list:
+`fatal` = 0, `error` = 1, `warn` = 2, ...), and the log messages are sent to
+the console.
 
 To use the event logger within a controller, you can inject it using the
 `@InjectEventLogger` decorator. Here's an example:
@@ -80,7 +93,7 @@ class MyController {
   @Get('endpoint')
   handleRequest(@InjectEventLogger() logger: Logger) {
     // Controller logic for handling the request
-    logger.log('...')
+    logger.info('...')
   }
 }
 ```
@@ -106,7 +119,7 @@ class NotificationService {
 }
 ```
 
-The optional `topic` argument sets the logger's topic (banner). If omitted, the topic falls back to the class-level `@LoggerTopic` value, or the class `@Id` metadata.
+The optional `topic` argument sets the logger's topic (banner). Resolution order: the explicit argument wins; if no argument is passed, the class-level `@LoggerTopic` value is used; if neither is set, the class `@Id` metadata is used.
 
 ### @LoggerTopic
 
@@ -125,7 +138,9 @@ class MailerController {
 }
 ```
 
-An explicit topic in `@InjectMoostLogger('override')` takes precedence over the class-level `@LoggerTopic`.
+::: tip
+An explicit topic passed to `@InjectMoostLogger('...')` takes precedence over the class-level `@LoggerTopic` — the class-level value is the fallback when no argument is passed.
+:::
 
 For more details on logging in Moost, please refer to the
 [Logging in Wooks](https://wooks.moost.org/wooks/advanced/logging.html) page as

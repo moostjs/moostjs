@@ -29,7 +29,9 @@ Moost pipelines operate at various stages:
 
 ## The Resolve Pipe
 
-Moost includes a default **resolve pipe** that’s always enabled. This pipe handles data extraction (e.g., `@Param` decorators) and ensures arguments are properly resolved before your handler runs. You don’t need to configure this pipe — it just works out of the box.
+Moost includes a default **resolve pipe** (exported as `resolvePipe`) that’s always enabled. This pipe handles data extraction (e.g., `@Param` decorators) and ensures arguments are properly resolved before your handler runs. You don’t need to configure this pipe — it just works out of the box.
+
+Learn how resolvers work and how to build your own in [Resolve Pipe](/moost/pipes/resolve).
 
 ## Enabling Other Pipes
 
@@ -48,17 +50,7 @@ const app = new Moost()
 app.applyGlobalPipes(validatorPipe())
 ```
 
-**Simplified Example `@Pipe`:**
-```ts
-import { UseValidatorPipe } from '@atscript/moost-validator'
-
-@UseValidatorPipe() // Apply the pipe at the class level
-class MyController {
-  myMethod(@Param('data') data: DTOClass) {
-    // `data` will be validated by the Atscript pipe before myMethod is called
-  }
-}
-```
+Validation setup, DTO authoring, scoping the pipe with `@UseValidatorPipe()` / `@Pipe(validatorPipe())`, and error handling are covered in [Validation Pipe with Atscript](/moost/pipes/validate).
 
 ## Custom Pipes
 
@@ -69,4 +61,4 @@ For example, you might create a custom pipe to:
 - Strip HTML tags from user-generated content.
 - Perform custom authorization checks before the handler executes.
 
-We’ll cover writing custom pipes in more detail in a dedicated guide.
+See [Custom Pipes](/moost/pipes/custom) for the full guide.

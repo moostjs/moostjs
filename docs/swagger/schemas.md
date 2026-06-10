@@ -4,7 +4,7 @@ The generator converts TypeScript types into JSON Schema components for the Open
 
 ## Resolution pipeline
 
-When the generator encounters a type (from `@SwaggerResponse`, `@Body()`, `@SwaggerRequestBody`, etc.), it resolves it through the following pipeline:
+When the generator encounters a type (from `@SwaggerResponse`, `@Body()`, `@SwaggerRequestBody`, etc. — the accepted union is exported as `TSwaggerConfigType`), it resolves it through the following pipeline:
 
 | Input | Result |
 |-------|--------|
@@ -18,6 +18,10 @@ When the generator encounters a type (from `@SwaggerResponse`, `@Body()`, `@Swag
 | `[SomeType]` (array literal) | `{ type: 'array', items: <resolved SomeType> }` |
 | Literal string/number/boolean | `{ type, const: value }` |
 | Zero-arg function | Invoked; the return value is resolved recursively |
+
+::: info Type-name strings are a shorthand
+The string literals `'string'`, `'number'`, `'boolean'`, `'integer'`, `'object'`, and `'array'` resolve to `{ type: <value> }` (a type shorthand) — not to a const literal. Any other string becomes `{ const: value, type: 'string' }`.
+:::
 
 ## Atscript types
 
@@ -117,7 +121,11 @@ The generator transforms this into:
 - `#/components/schemas/Dog` — hoisted from `$defs`
 - `#/components/schemas/Cat` — hoisted from `$defs`
 
-This works at any nesting depth — array items, object properties, etc. — so `Pet[]` correctly references the same component schemas.
+Refs are rewritten at any nesting depth **within the root schema tree** — array items, object properties, `oneOf`/`allOf`/`anyOf` branches, `discriminator.mapping` — so `Pet[]` correctly references the same component schemas.
+
+::: warning Sibling refs inside hoisted defs
+Refs are not rewritten *inside* a hoisted definition: if `Dog` itself contained `$ref: '#/$defs/Cat'`, that ref would remain as a dangling `#/$defs/Cat` in the hoisted `Dog` component. Keep cross-references in the root schema tree, or pre-resolve them in your `toJsonSchema()` output.
+:::
 
 ## Auto-generated examples
 
@@ -171,7 +179,7 @@ With this enabled, every `.as` type with `@meta.example` annotations exposes `to
 When multiple sources provide an example, this priority order applies:
 
 1. `example` field already present in `toJsonSchema()` output (highest)
-2. `@SwaggerExample` decorator
+2. `@SwaggerExample` decorator on the DTO class
 3. `toExampleData()` method (lowest — auto-generation fallback)
 
 ## Metadata on schemas

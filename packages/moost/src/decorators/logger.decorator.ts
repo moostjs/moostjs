@@ -10,22 +10,21 @@ import { Resolve } from './resolve.decorator'
  * @returns Resolver to '@wooksjs/event-core' (Logger)
  */
 export function InjectEventLogger(topic?: string) {
-  return Resolve(() => {
-    const l = useLogger()
-    return topic && typeof l.topic === 'function' ? l.topic(topic) : l
-  })
+  // useLogger(topic) derives a child logger via createTopic when supported,
+  // falling back to the base logger otherwise
+  return Resolve(() => (topic ? useLogger(topic) : useLogger()))
 }
 
 /**
  * Resolves app-level logger
- * @param topic - logger topic (can be overrided by @LoggerTopic)
+ * @param topic - logger topic (falls back to @LoggerTopic, then to class @Id)
  * @returns
  */
 export function InjectMoostLogger(topic?: string) {
   return Resolve(async (metas) => {
     const moostApp = await resolveMoost()
     const meta = metas.classMeta
-    return moostApp.getLogger(meta?.loggerTopic || topic || meta?.id)
+    return moostApp.getLogger(topic || meta?.loggerTopic || meta?.id)
   })
 }
 

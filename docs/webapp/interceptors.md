@@ -23,9 +23,10 @@ Use `defineBeforeInterceptor` to run logic before the handler. Call `reply(value
 
 ```ts
 import { defineBeforeInterceptor, TInterceptorPriority } from 'moost'
+import { useRequest } from '@wooksjs/event-http'
 
 const cacheInterceptor = defineBeforeInterceptor((reply) => {
-    const cached = cache.get(currentUrl())
+    const cached = cache.get(useRequest().url)
     if (cached) {
         reply(cached) // skip handler, respond with cached value
     }
@@ -50,11 +51,12 @@ Use `defineErrorInterceptor` to handle errors. Receives the thrown error; call `
 
 ```ts
 import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
+import { HttpError } from '@moostjs/event-http'
 
 const errorFormatter = defineErrorInterceptor((error, reply) => {
     reply({
         error: error.message,
-        code: error.statusCode || 500,
+        code: error instanceof HttpError ? error.body.statusCode : 500,
     })
 }, TInterceptorPriority.CATCH_ERROR)
 ```
@@ -71,7 +73,7 @@ import { useLogger } from '@wooksjs/event-core'
 const requestLogger = defineInterceptor({
     after() {
         const { url, method } = useRequest()
-        useLogger('http').log(`${method} ${url} OK`)
+        useLogger('http').info(`${method} ${url} OK`)
     },
     error(error) {
         const { url, method } = useRequest()
@@ -102,6 +104,10 @@ Each helper uses a sensible default:
 | `defineAfterInterceptor` | `AFTER_ALL` |
 | `defineErrorInterceptor` | `CATCH_ERROR` |
 | `defineInterceptor` | `INTERCEPTOR` |
+
+::: warning Unwind order
+Only the **before** hooks run in ascending priority order. **After/error** hooks unwind in reverse (onion model): the after hook of a higher-priority interceptor runs *closer to the handler*, so a `BEFORE_ALL` interceptor's after hook fires last — wrapping everything else.
+:::
 
 ## Applying interceptors
 
@@ -152,6 +158,7 @@ For cleaner syntax, wrap an interceptor with `Intercept` to create a reusable de
 
 ```ts
 import { Intercept, defineBeforeInterceptor, TInterceptorPriority } from 'moost'
+import { HttpError } from '@moostjs/event-http'
 
 const guardFn = defineBeforeInterceptor((reply) => {
     if (!isAuthorized()) {
@@ -197,6 +204,7 @@ import {
     Overtake, Response, TInterceptorPriority,
 } from 'moost'
 import type { TOvertakeFn } from 'moost'
+import { HttpError } from '@moostjs/event-http'
 
 @Interceptor(TInterceptorPriority.GUARD)
 export class AuthInterceptor {
@@ -248,7 +256,7 @@ export class RequestLogger {
     @After()
     logSuccess() {
         const { url, method } = useRequest()
-        useLogger('http').log(`${method} ${url} OK`)
+        useLogger('http').info(`${method} ${url} OK`)
     }
 
     @OnError()
@@ -263,11 +271,12 @@ export class RequestLogger {
 
 ```ts
 import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
+import { HttpError } from '@moostjs/event-http'
 import { useResponse } from '@wooksjs/event-http'
 
 export const errorHandler = defineErrorInterceptor((error, reply) => {
     const response = useResponse()
-    const status = error.statusCode || 500
+    const status = error instanceof HttpError ? error.body.statusCode : 500
     response.status = status
     reply({
         error: error.message,

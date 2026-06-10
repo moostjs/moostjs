@@ -18,7 +18,6 @@ export interface TWfHandlerMeta {
 }
 
 const LOGGER_TITLE = 'moost-wf'
-const CONTEXT_TYPE = 'WF'
 
 /**
  * Moost adapter for workflow events. Wraps `@wooksjs/event-wf` to register
@@ -172,7 +171,6 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
       }` // explicit double slash "//" -> force url to end with slash
 
       fn = defineMoostEventHandler({
-        contextType: CONTEXT_TYPE,
         loggerTitle: LOGGER_TITLE,
         getIterceptorHandler: opts.getIterceptorHandler,
         getControllerInstance: opts.getInstance,

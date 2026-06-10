@@ -17,6 +17,10 @@
 npm install @moostjs/otel @opentelemetry/api @opentelemetry/sdk-trace-base
 ```
 
+::: warning
+`@moostjs/event-http` is a required peer dependency of `@moostjs/otel` — install it even if your app only handles CLI or workflow events, otherwise importing `@moostjs/otel` fails.
+:::
+
 You will also need an exporter for your tracing backend (Jaeger, Zipkin, OTLP, etc.):
 
 ```bash

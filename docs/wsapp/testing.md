@@ -12,21 +12,28 @@ Two context factories match the two context layers:
 1. **`prepareTestWsConnectionContext`** — for testing `@Connect`/`@Disconnect` handler logic
 2. **`prepareTestWsMessageContext`** — for testing `@Message` handler logic (includes a parent connection context)
 
-Both return a **runner function** `<T>(cb: () => T) => T` that executes a callback inside a fully initialized event context.
+Both return a **runner function** `<T>(cb: () => T) => T` that executes a callback inside a fully initialized event context. Internally the helpers seed the context with the `wsConnectionKind` / `wsMessageKind` event-kind descriptors (re-exported by `@moostjs/event-ws`), so composables read the same slots as in production.
 
 ## Testing Message Handlers
 
 Use `prepareTestWsMessageContext` to create a mock message context with event, path, data, and optional route parameters:
 
 ```ts
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import {
+  MoostWs,
   prepareTestWsMessageContext,
   useWsMessage,
   useWsConnection,
 } from '@moostjs/event-ws'
 
 describe('ChatController', () => {
+  // useWsConnection() reads module-level adapter state —
+  // constructing the adapter once initializes it (not needed for useWsMessage)
+  beforeAll(() => {
+    new MoostWs()
+  })
+
   it('should access message data', () => {
     const runInCtx = prepareTestWsMessageContext({
       event: 'message',
@@ -62,6 +69,10 @@ describe('ChatController', () => {
 })
 ```
 
+::: warning
+`useWsConnection()` requires a live adapter in the process (see the `beforeAll` above) — without it, the composable throws `[event-ws] No active WooksWs adapter`. Even with the adapter constructed, the test connection is not registered in the adapter's connections map, so `id` and `close()` work but `send()` does not.
+:::
+
 ### Options
 
 ```ts
@@ -82,13 +93,18 @@ interface TTestWsMessageContext {
 Use `prepareTestWsConnectionContext` for connection lifecycle handler logic:
 
 ```ts
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import {
+  MoostWs,
   prepareTestWsConnectionContext,
   useWsConnection,
 } from '@moostjs/event-ws'
 
 describe('LifecycleController', () => {
+  beforeAll(() => {
+    new MoostWs() // initializes adapter state for useWsConnection()
+  })
+
   it('should access connection info', () => {
     const runInCtx = prepareTestWsConnectionContext({
       id: 'conn-456',
@@ -162,34 +178,34 @@ it('should have access to parent HTTP context', () => {
 
 ## Testing Handler Functions Directly
 
-You can test your handler methods by calling them inside the test context:
+You can test your handler logic by calling it inside the test context. Keep the logic on adapter-state-free composables (`useWsMessage`, `useRouteParams`) so the test is self-contained:
 
 ```ts
-import { prepareTestWsMessageContext, useWsRooms } from '@moostjs/event-ws'
+import { prepareTestWsMessageContext, useWsMessage } from '@moostjs/event-ws'
+import { useRouteParams } from '@wooksjs/event-core'
 
-// Your handler function (extracted from controller for testing)
-function handleJoin(room: string, name: string) {
-  const { join, broadcast, rooms } = useWsRooms()
-  join()
-  broadcast('system', { text: `${name} joined` })
-  return { joined: true, room, rooms: rooms() }
+// Your handler logic (extracted from controller for testing)
+function handleChatMessage() {
+  const { data } = useWsMessage<{ text: string }>()
+  const { get } = useRouteParams<{ room: string }>()
+  return { room: get('room'), echoed: data.text }
 }
 
-it('should join a room and return room list', () => {
+it('should handle a chat message', () => {
   const runInCtx = prepareTestWsMessageContext({
-    event: 'join',
+    event: 'message',
     path: '/chat/general',
-    data: { name: 'Alice' },
+    params: { room: 'general' },
+    data: { text: 'Hello!' },
   })
 
-  const result = runInCtx(() => handleJoin('general', 'Alice'))
-  expect(result.joined).toBe(true)
-  expect(result.room).toBe('general')
+  const result = runInCtx(() => handleChatMessage())
+  expect(result).toEqual({ room: 'general', echoed: 'Hello!' })
 })
 ```
 
-::: warning
-Testing composables that depend on adapter state (`useWsRooms`, `useWsServer`) requires the adapter state to be initialized. For full integration testing with rooms and broadcasting, consider using the `WsRoomManager` class and setting up adapter state manually. See the [Wooks testing documentation](https://wooks.moost.org/wsapp/testing.html) for advanced patterns.
+::: warning Adapter-state-dependent composables
+`useWsConnection()`, `useWsRooms()`, and `useWsServer()` read module-level adapter state and throw `[event-ws] No active WooksWs adapter` unless an adapter exists in the process. The only public way to initialize that state is to construct an adapter in test setup (e.g. `new MoostWs()`). Even then, the test connection is not registered with the adapter, so room operations (`join`, `broadcast`, `rooms`) and `useWsConnection().send()` still fail — test room and broadcast logic through a real running server instead.
 :::
 
 ## Best Practices

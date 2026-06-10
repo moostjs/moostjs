@@ -875,17 +875,17 @@ function ensureComponentName(typeRef: object, schema: TSwaggerSchema, suggestedN
  * Removes the `$defs` property from the schema after hoisting.
  */
 function hoistDefs(schema: TSwaggerSchema) {
-  if (!schema.$defs) {
-    return
-  }
-  for (const [name, def] of Object.entries(schema.$defs)) {
-    if (!globalSchemas[name]) {
-      globalSchemas[name] = cloneSchema(def)
-      // Recurse: the hoisted def may itself contain $defs
-      hoistDefs(globalSchemas[name])
+  if (schema.$defs) {
+    for (const [name, def] of Object.entries(schema.$defs)) {
+      if (!globalSchemas[name]) {
+        globalSchemas[name] = cloneSchema(def)
+        // Recurse: the hoisted def may itself contain $defs.
+        // This also rewrites '#/$defs/X' refs to sibling defs inside the hoisted def.
+        hoistDefs(globalSchemas[name])
+      }
     }
+    delete schema.$defs
   }
-  delete schema.$defs
   rewriteDefsRefs(schema)
 }
 
@@ -1263,7 +1263,38 @@ function transportsToSecurityRequirement(
   return requirements
 }
 
-type TMetaWithSecurity = TSwaggerMate & { authTransports?: TAuthTransportDeclaration }
+type TMetaWithSecurity = TSwaggerMate & {
+  authTransports?: TAuthTransportDeclaration | TAuthTransportDeclaration[]
+}
+
+/**
+ * Collects schemes and builds the security requirement for one or more
+ * `@Authenticate` guards. Multiple stacked guards are AND-combined
+ * (merged into a single requirement object via cross-product), while
+ * multiple transports within a single guard remain OR-alternatives.
+ */
+function applyAuthTransports(
+  transports: TAuthTransportDeclaration | TAuthTransportDeclaration[],
+  schemes: Record<string, TSwaggerSecurityScheme>,
+): TSwaggerSecurityRequirement[] {
+  const list = Array.isArray(transports) ? transports : [transports]
+  let combined: TSwaggerSecurityRequirement[] = [{}]
+  for (const entry of list) {
+    collectSchemesFromTransports(entry, schemes)
+    const requirements = transportsToSecurityRequirement(entry)
+    if (requirements.length === 0) {
+      continue
+    }
+    const next: TSwaggerSecurityRequirement[] = []
+    for (const base of combined) {
+      for (const requirement of requirements) {
+        next.push({ ...base, ...requirement })
+      }
+    }
+    combined = next
+  }
+  return combined.filter((requirement) => Object.keys(requirement).length > 0)
+}
 
 function resolveOperationSecurity(
   cmeta: TMetaWithSecurity | undefined,
@@ -1278,8 +1309,7 @@ function resolveOperationSecurity(
     return hmeta.swaggerSecurity
   }
   if (hmeta?.authTransports) {
-    collectSchemesFromTransports(hmeta.authTransports, schemes)
-    return transportsToSecurityRequirement(hmeta.authTransports)
+    return applyAuthTransports(hmeta.authTransports, schemes)
   }
 
   // Controller-level
@@ -1290,8 +1320,7 @@ function resolveOperationSecurity(
     return cmeta.swaggerSecurity
   }
   if (cmeta?.authTransports) {
-    collectSchemesFromTransports(cmeta.authTransports, schemes)
-    return transportsToSecurityRequirement(cmeta.authTransports)
+    return applyAuthTransports(cmeta.authTransports, schemes)
   }
 
   return undefined

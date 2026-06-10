@@ -2,6 +2,8 @@
 
 Declarative auth guards with credential extraction and Swagger security-scheme auto-discovery.
 
+Key imports: `defineAuthGuard`, `AuthGuard`, `Authenticate`, `extractTransports`, `HttpError` ← `@moostjs/event-http`; `Injectable`, `Intercept`, `defineBeforeInterceptor`, `TInterceptorPriority` ← `moost`. See also: [event-http.md](event-http.md) (adapter/routing), [http-request.md](http-request.md) (`@Authorization` for raw header parts).
+
 - [Concepts](#concepts)
 - [defineAuthGuard](#defineauthguard)
 - [AuthGuard (class)](#authguard-class)
@@ -61,14 +63,16 @@ Accepts either a `defineAuthGuard` result or an `AuthGuard` subclass.
 @Controller('users')
 class UsersController {}
 
-// Handler-level override
+// Handler-level ADDS a second guard — both must pass
 @Authenticate(apiKeyGuard)
 @Controller('products')
 class ProductsController {
   @Get('') list() { /* apiKeyGuard */ }
-  @Authenticate(basicGuard) @Post('') create() { /* basicGuard */ }
+  @Authenticate(basicGuard) @Post('') create() { /* apiKeyGuard AND basicGuard */ }
 }
 ```
+
+Guards stack — they never replace each other. For a different guard per endpoint, apply `@Authenticate` only at the handler level. (Exception: the generated OpenAPI security requirement uses only the handler-level transports when present.)
 
 ## Transports
 
@@ -139,25 +143,13 @@ const values = extractTransports({ bearer: { format: 'JWT' } })  // { bearer: 'e
 
 ## Types
 
-```ts
-interface TAuthTransportDeclaration {
-  bearer?: { format?: string; description?: string }
-  basic?:  { description?: string }
-  apiKey?: { name: string; in: 'header' | 'query' | 'cookie'; description?: string }
-  cookie?: { name: string; description?: string }
-}
-
-type TAuthTransportValues<T> = {
-  [K in keyof T]: K extends 'basic' ? { username: string; password: string } : string
-}
-
-type TAuthGuardHandler = TAuthGuardDef | TAuthGuardClass
-```
+`TAuthTransportDeclaration`, `TAuthTransportValues`, `TAuthGuardDef`, `TAuthGuardClass`, `TAuthGuardHandler` and the per-transport option interfaces (`TAuthTransportBearer`/`Basic`/`ApiKey`/`Cookie`) are exported from `@moostjs/event-http`. The exact declaration/value shapes are shown in [Transports](#transports).
 
 ## Gotchas
 
-- Missing all declared transports → `extractTransports` throws 401 automatically; handler is never called.
-- Class-based guards: `static transports` is read at runtime — the generic alone is not enough.
-- Guard's `handle` returning a value short-circuits with that value (useful for redirects / custom auth responses). `undefined` continues.
-- Guards run at `GUARD` priority — execute before `INTERCEPTOR` priority.
-- Transport declarations feed `@moostjs/swagger` — keep them accurate.
+1. Missing all declared transports → `extractTransports` throws 401 automatically; handler is never called.
+2. Controller-level + handler-level `@Authenticate` are additive — both guards run; there is no runtime override.
+3. Class-based guards: `static transports` is read at runtime — the generic alone is not enough.
+4. Guard's `handle` returning a value short-circuits with that value (useful for redirects / custom auth responses). `undefined` continues.
+5. Guards run at `GUARD` priority — execute before `INTERCEPTOR` priority.
+6. Transport declarations feed `@moostjs/swagger` — keep them accurate.

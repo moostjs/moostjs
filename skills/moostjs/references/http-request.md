@@ -1,6 +1,6 @@
 # HTTP Request Data — @moostjs/event-http
 
-Resolver decorators for incoming HTTP requests. All usable as **parameter** or **property** decorator (property form requires `@Injectable('FOR_EVENT')`). Setup/routing: [event-http.md](event-http.md).
+Resolver decorators for incoming HTTP requests. Usable as **parameter** or **property** decorator (property form requires `@Injectable('FOR_EVENT')`) — except `@Query`, which is typed as a parameter decorator only. Setup/routing: [event-http.md](event-http.md).
 
 - [Table](#table)
 - [@Query](#query)
@@ -19,7 +19,7 @@ Resolver decorators for incoming HTTP requests. All usable as **parameter** or *
 | `@Param(name)` | route param | `moost` |
 | `@Params()` | all route params | `moost` |
 | `@Query(name?)` | query value / all | `@moostjs/event-http` |
-| `@Header(name)` | header (case-insensitive) | `@moostjs/event-http` |
+| `@Header(name)` | header (name must be lowercase) | `@moostjs/event-http` |
 | `@Cookie(name)` | cookie value | `@moostjs/event-http` |
 | `@Body()` | parsed body (JSON/form/text) | `@moostjs/event-http` |
 | `@RawBody()` | raw `Buffer` | `@moostjs/event-http` |
@@ -28,7 +28,7 @@ Resolver decorators for incoming HTTP requests. All usable as **parameter** or *
 | `@Method()` | HTTP method | `@moostjs/event-http` |
 | `@ReqId()` | request UUID | `@moostjs/event-http` |
 | `@Ip(opts?)` | client IP (`{ trustProxy }` for `x-forwarded-for`) | `@moostjs/event-http` |
-| `@IpList()` | full IP chain | `@moostjs/event-http` |
+| `@IpList()` | `{ remoteIp: string; forwarded: string[] }` | `@moostjs/event-http` |
 | `@Req()` | Node `IncomingMessage` | `@moostjs/event-http` |
 | `@Res(opts?)` | Node `ServerResponse` | `@moostjs/event-http` |
 
@@ -38,7 +38,7 @@ Resolver decorators for incoming HTTP requests. All usable as **parameter** or *
 @Get('search')
 search(
   @Query('q') q: string,                    // single
-  @Query() all: Record<string,string>,      // all (undefined if no query present)
+  @Query() all: Record<string, string | string[]>, // all (undefined if no query present)
 ) {}
 // GET /search?q=moost&limit=10 → q='moost', all={q:'moost',limit:'10'}
 ```
@@ -95,13 +95,15 @@ upload(@RawBody() raw: Buffer) {}
 ```ts
 @Ip() ip: string
 @Ip({ trustProxy: true }) realIp: string   // considers x-forwarded-for
-@IpList() all: string[]
+@IpList() ips: { remoteIp: string; forwarded: string[] }  // remote IP + x-forwarded-for chain
 ```
 
 ## Gotchas
 
-- `@Query('name')` → `undefined` when missing (not `null` / empty string).
-- `@Res()` without `passthrough` suppresses handler-return processing entirely.
-- Query / param / header values are always strings — coerce via pipes.
-- `@Param` / `@Params` are from `moost`, the rest from `@moostjs/event-http`.
-- Property-form resolvers require `@Injectable('FOR_EVENT')` (or a `FOR_EVENT` controller).
+1. `@Query('name')` → `undefined` when missing (not `null` / empty string); `@Query()` → `undefined` (not `{}`) when the query string is empty.
+2. `@Query()` values: keys ending in `[]` become `string[]` (`?tags[]=a&tags[]=b` → `{ 'tags[]': ['a','b'] }`); repeating a plain key (`?q=a&q=b`) throws an automatic 400 `Duplicate key`.
+3. `@Header(name)` is an exact key lookup; Node lowercases incoming header names — `@Header('Content-Type')` returns `undefined`. Always pass lowercase names.
+4. `@Res()` without `passthrough` suppresses handler-return processing entirely.
+5. Query / param / header values arrive as strings (or string arrays) — coerce via pipes.
+6. `@Param` / `@Params` are from `moost`, the rest from `@moostjs/event-http`.
+7. Property-form resolvers require `@Injectable('FOR_EVENT')` (or a `FOR_EVENT` controller); `@Query` is parameter-only.

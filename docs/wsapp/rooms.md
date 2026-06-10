@@ -202,6 +202,12 @@ const ws = new MoostWs({
 
 Channels follow the pattern `ws:room:<room-path>`.
 
+::: warning Loopback transports
+The origin instance is subscribed to its own room channels, and only the sending connection is filtered out of re-delivery. If your transport delivers published messages back to the publisher (Redis pub/sub does), every other local room member receives the broadcast twice. Include an instance ID in your payload and skip self-published messages inside the transport.
+:::
+
+Under the hood rooms are managed by the `WsRoomManager` class (re-exported by `@moostjs/event-ws`). The composables above cover typical needs — reach for the manager class only when building custom tooling.
+
 ## Composable Reference
 
 | Composable | Method | Description |

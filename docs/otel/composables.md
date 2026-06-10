@@ -15,8 +15,10 @@ async getUser(@Param('id') id: string) {
     trace,                 // OpenTelemetry trace API
     getSpan,               // Get the current event span
     getSpanContext,         // Get span context (traceId, spanId)
-    getPropagationHeaders,  // Get W3C headers for outgoing requests
-    customSpanAttr,        // Add attribute to the event span
+    getPropagationHeaders,  // Get trace-context headers for outgoing requests
+    registerSpan,          // Set the root span for the current event
+    pushSpan,              // Make a span the active span (auto-restores on end)
+    customSpanAttr,        // Add attribute to Moost-created spans
     customMetricAttr,      // Add attribute to event metrics
   } = useOtelContext()
 
@@ -27,7 +29,7 @@ async getUser(@Param('id') id: string) {
 
 ### `customSpanAttr(name, value)`
 
-Adds a custom attribute to the root event span. Attributes are applied when the span ends, so you can call this at any point during the handler lifecycle.
+Adds a custom attribute to the spans created by the `SpanInjector`. The attributes are applied to each Moost-created span that ends **after** the call — the handler span, the after-phase spans, and the root event span when the injector ends it — so call it as early as possible to cover more spans. Spans created by external instrumentation (e.g. an HTTP server span from `@opentelemetry/instrumentation-http`) do not receive these attributes.
 
 ```ts
 const { customSpanAttr } = useOtelContext()
@@ -77,12 +79,23 @@ console.log(`Trace: ${ctx?.traceId}, Span: ${ctx?.spanId}`)
 
 ### `getPropagationHeaders()`
 
-Returns W3C trace-context headers (`traceparent`, `tracestate`) for propagating traces to downstream services.
+Returns trace-context headers (`traceparent`, `tracestate`) for propagating traces to downstream services.
 
 ```ts
 const { getPropagationHeaders } = useOtelContext()
 
 const headers = getPropagationHeaders()
+```
+
+::: warning Not strictly W3C-compliant
+The returned values deviate from the W3C trace-context spec: `traceparent` renders the trace flags as a plain decimal number without zero-padding (e.g. `00-…-1` instead of `00-…-01`), and `tracestate` is the OpenTelemetry `TraceState` object, not a serialized header string — spreading it into request headers produces `[object Object]`. Strict parsers may reject these values. For spec-compliant propagation, use the standard OpenTelemetry API instead:
+
+```ts
+import { context, propagation } from '@opentelemetry/api'
+
+const headers: Record<string, string> = {}
+propagation.inject(context.active(), headers)
+
 const response = await fetch('http://user-service/api/users', {
   headers: {
     ...headers,
@@ -90,6 +103,7 @@ const response = await fetch('http://user-service/api/users', {
   },
 })
 ```
+:::
 
 ## `useTrace()`
 
@@ -117,20 +131,12 @@ span?.addEvent('checkpoint', { step: 'validation-complete' })
 
 ## `useOtelPropagation()`
 
-Returns trace propagation data including the span context fields and ready-to-use HTTP headers.
+Returns trace propagation data including the span context fields and trace-context headers.
 
 ```ts
 import { useOtelPropagation } from '@moostjs/otel'
 
 const { traceId, spanId, traceFlags, traceState, headers } = useOtelPropagation()
-
-// Pass headers to downstream HTTP calls
-const response = await fetch('http://downstream-service/api', {
-  headers: {
-    ...headers,
-    'Content-Type': 'application/json',
-  },
-})
 ```
 
 | Field | Type | Description |
@@ -139,7 +145,7 @@ const response = await fetch('http://downstream-service/api', {
 | `spanId` | `string?` | 16-character hex span ID |
 | `traceFlags` | `number?` | Trace flags (sampled, etc.) |
 | `traceState` | `TraceState?` | Vendor-specific trace state |
-| `headers` | `object` | `{ traceparent?, tracestate? }` — W3C headers |
+| `headers` | `object` | `{ traceparent?, tracestate? }` — same values and [compliance caveats](#getpropagationheaders) as `getPropagationHeaders()` |
 
 ## `withSpan()`
 
@@ -180,6 +186,10 @@ withSpan(
 |-----------|------|-------------|
 | `span` | `TSpanInput \| Span` | Span name + options, or an existing span |
 | `cb` | `() => T` | Callback to execute (sync or async) |
-| `postProcess?` | `(span, error?, result?) => void` | Post-processing callback. **You must call `span.end()`** when using this. |
+| `postProcess?` | `TPostSpanProcessFn` — `(span, error?, result?) => void` | Post-processing callback. **You must call `span.end()`** when using this. |
 
 Without `postProcess`, the span is ended automatically after the callback completes (or the returned promise resolves).
+
+## Advanced: context keys
+
+`@moostjs/otel` also exports the event-context keys it stores its state under: `otelSpanKey` (root span), `otelRouteKey` (resolved route path), `otelStartTimeKey` (event start time in epoch ms), `customSpanAttrsKey` and `customMetricAttrsKey` (custom attribute maps). They allow advanced integrations to read or seed these values directly via `current()` from `moost` — for normal use, prefer the composables above.

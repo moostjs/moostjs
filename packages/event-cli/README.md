@@ -15,6 +15,44 @@ Welcome to `@moostjs/event-cli`, a Moostjs library designed to handle CLI events
 
 The `@moostjs/event-cli` module is crucial for making Moost applications responsive to CLI events. By leveraging this module, you can create handlers for these events in a structured, and clear manner.
 
+## Installation
+
+```bash
+npm install @moostjs/event-cli
+```
+
+## Quick Start
+
+```ts
+import { CliApp, Cli, CliOption, Controller, Param } from '@moostjs/event-cli'
+
+@Controller()
+class Commands {
+  @Cli('hello/:name')
+  greet(
+    @Param('name') name: string,
+    @CliOption('uppercase', 'u') uppercase: boolean,
+  ) {
+    const output = `Hello, ${name}!`
+    return uppercase ? output.toUpperCase() : output
+  }
+}
+
+new CliApp()
+  .controllers(Commands)
+  .useHelp({ name: 'my-cli' })
+  .useOptions([{ keys: ['help'], description: 'Display instructions for the command.' }])
+  .start()
+```
+
+```bash
+my-cli hello World        # → Hello, World!
+my-cli hello World -u     # → HELLO, WORLD!
+my-cli hello --help       # → generated help output
+```
+
+See the [official documentation](https://moost.org/cliapp/) for commands, options, controllers, the help system, and interceptors.
+
 ## Getting Started
 
 To start a new Moost CLI project, you can run the following command:
@@ -32,30 +70,16 @@ npm create moost my-cli-app -- --cli
 This command will initiate a setup tool that will guide you through the project initialization process. It will prompt you to configure:
 
 - Project and package name.
-- Whether to add do-me-lint (smart eslint installer).
+- Whether to add OXC lint and formatter (oxlint + oxfmt).
 
 ## [Official Documentation](https://moost.org/cliapp/)
 
 ## AI Agent Skills
 
-This package ships with structured skill files for AI coding agents (Claude Code, Cursor, Windsurf, Codex, etc.).
+A unified Moost skill for AI coding agents (Claude Code, Cursor, Windsurf, Codex, etc.) is available:
 
 ```bash
-# Project-local (recommended — version-locked, commits with your repo)
-npx moostjs-event-cli-skill
-
-# Global (available across all your projects)
-npx moostjs-event-cli-skill --global
-```
-
-To keep skills automatically up-to-date, add a postinstall script to your `package.json`:
-
-```json
-{
-  "scripts": {
-    "postinstall": "moostjs-event-cli-skill --postinstall"
-  }
-}
+npx skills add moostjs/moostjs
 ```
 
 ## Contributing

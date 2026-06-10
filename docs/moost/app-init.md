@@ -67,7 +67,7 @@ Both inject the running `Moost` instance:
 Deriving a handler's *actual* mounted path is common enough that Moost ships a helper for it, so you don't navigate `getControllersOverview()` by hand (and don't trip over the multiplicities below). Three forms, smallest first:
 
 ```ts
-import { getHandlerPaths, useHandlerPaths } from 'moost'
+import { getHandlerPaths, useHandlerPaths, HandlerPaths } from 'moost'
 
 // 1. Param decorator — inject directly into a @MoostInit method
 @MoostInit()

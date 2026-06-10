@@ -83,7 +83,11 @@ export default defineConfig({
 })
 ```
 
-The entry file is a standard Moost app (same as backend mode). The `prefix` option is optional — it adds a fast-path filter so requests not matching the prefix skip Moost entirely.
+The entry file is a standard Moost app (same as backend mode). The `prefix` option adds a fast-path filter so requests not matching the prefix skip Moost entirely.
+
+::: warning Set `prefix` explicitly
+In dev, omitting `prefix` sends every request through Moost first (unmatched ones fall through to Vite). In production, the generated server defaults the prefix to `'/api'` — only `/api/*` requests reach Moost, everything else goes to static/SSR. Always set `prefix` in middleware mode so dev and prod route the same way.
+:::
 
 ## SSR Mode
 
@@ -133,7 +137,7 @@ const app = await createSSRServer()
 await app.listen()
 ```
 
-`createSSRServer` handles dev/prod automatically.
+`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `clientDir`, `ssrOutlet`, `ssrState` — in production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?)`.
 
 ::: tip
 `serverEntry` is only used during `vite build`. In dev, the plugin handles SSR/SPA fallback directly. If you need custom middleware in dev too, run `tsx server.ts` instead of `vite`.
@@ -164,7 +168,7 @@ If a server edit breaks the app (e.g. a syntax error), requests matching `prefix
 | `onEject` | `function` | — | Hook to control DI instance ejection during HMR |
 | `ssrFetch` | `boolean` | `true` | Enable [SSR local fetch](/webapp/fetch) interception |
 | `middleware` | `boolean` | `false` | Run Moost as Connect middleware |
-| `prefix` | `string` | — | URL prefix filter for middleware mode |
+| `prefix` | `string` | `'/api'` (prod server) | URL prefix filter for middleware mode; the production server defaults to `'/api'` when omitted — set explicitly so dev and prod match |
 | `ssrEntry` | `string` | — | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`) |
 | `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
 | `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |
@@ -172,7 +176,7 @@ If a server edit breaks the app (e.g. a syntax error), requests matching `prefix
 | `ssrExternal` | `string[]` | — | Packages to keep external in the middleware-mode SSR build (concatenated with `cfg.ssr.external`). See [SSR Bundle Size](#ssr-bundle-size). |
 
 ::: tip
-Options `port`, `host`, `outDir`, `format`, `sourcemap`, and `externals` are only used in backend mode. In middleware mode, your `vite.config.ts` controls build and server configuration.
+Options `port`, `host`, `outDir`, `format`, and `externals` are only used in backend mode — in middleware mode, your `vite.config.ts` controls build and server configuration. The exception is `sourcemap`: it applies in both modes (in middleware mode it controls source maps for the `dist/server/` SSR build, default `true`).
 :::
 
 ## SSR Bundle Size
@@ -200,7 +204,7 @@ export default defineConfig({
 
 **Don't externalize:** workspace packages, anything that uses `Symbol()` as a public slot key (Moost, wooks), anything not reliably hoisted by pnpm.
 
-You can also opt out of bundle-everything entirely by setting `ssr.noExternal` to an explicit list — the plugin honors it literally and only appends `/^@moostjs\/vite($|\/)/` (so its `define:` substitutions still land):
+You can also opt out of bundle-everything entirely by setting `ssr.noExternal` to an explicit list — the plugin honors it, appending `/^@moostjs\/vite($|\/)/` (so its `define:` substitutions still land) plus, unless you externalize the runtime yourself, the moost/wooks runtime patterns described below:
 
 ```ts
 ssr: {

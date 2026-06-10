@@ -37,12 +37,13 @@ export class StaticController {
 |---|---|---|
 | `baseDir` | `string` | Base directory for resolving file paths |
 | `cacheControl` | `object` (`TCacheControl`) | Cache-Control header value |
-| `expires` | `string` | Expires header value |
+| `expires` | `Date \| string \| number` | Expires header value |
 | `pragmaNoCache` | `boolean` | Add `Pragma: no-cache` header |
 | `headers` | `object` | Additional response headers |
 | `defaultExt` | `string` | Default extension when none is provided |
 | `index` | `string` | Index file to serve from directories |
 | `listDirectory` | `boolean` | List files if path is a directory |
+| `allowDotDot` | `boolean` | Allow `../` parent traversal in file paths — leave off unless you fully control the path (directory-traversal risk) |
 
 ## Proxy
 
@@ -107,6 +108,7 @@ async proxyData() {
 ```ts
 proxy('https://target.com/path', {
     method: 'GET',                              // override HTTP method
+    allowedHosts: ['target.com', /\.target\.com$/], // upstream hostname allowlist
     reqHeaders: { block: ['referer'] },         // block request headers
     reqCookies: { allow: ['session'] },         // allow specific cookies
     resHeaders: { overwrite: { 'x-proxy': 'moost' } }, // add response headers
@@ -114,3 +116,7 @@ proxy('https://target.com/path', {
     debug: true,                                // log proxy details
 })
 ```
+
+::: warning SSRF protection
+If the proxy target incorporates request data (path segments, query values), always set `allowedHosts` — hosts not matching the allowlist are rejected with `502`. Without it, an attacker-controlled URL can make your server fetch arbitrary internal endpoints.
+:::

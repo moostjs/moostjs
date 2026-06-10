@@ -47,7 +47,11 @@ export function Replace(type: TClassConstructor, newType: TClassConstructor): Cl
  * @param type - string or class constructor
  */
 export function Inject(type: string | TClassConstructor): ParameterDecorator & PropertyDecorator {
-  return getMoostMate().decorate('inject', type)
+  // Class keys must be normalized to the same `Symbol.for(...)` key that
+  // `createProvideRegistry` stores them under, otherwise the provide-registry
+  // lookup (a plain property access in @prostojs/infact) never matches.
+  const key = typeof type === 'string' ? type : Symbol.for(String(type))
+  return getMoostMate().decorate('inject', key)
 }
 
 /**

@@ -28,7 +28,7 @@ The spy function receives four arguments:
 type TWorkflowSpy<T, I, IR> = (
   event: string,
   eventOutput: string | undefined | { fn: string | Function, result: boolean },
-  flowOutput: TFlowOutput<T, I, IR>,
+  flowOutput: TFlowSpyData<T, IR>,
   ms?: number,
 ) => void
 ```
@@ -36,24 +36,33 @@ type TWorkflowSpy<T, I, IR> = (
 | Argument | Description |
 |----------|-------------|
 | `event` | Event name (e.g., `'step'`, `'workflow-start'`, `'eval-condition-fn'`) |
-| `eventOutput` | Event-specific data — step ID for steps, condition result for conditions |
-| `flowOutput` | Current workflow output snapshot (context, finished, stepId, etc.) |
-| `ms` | Elapsed time in milliseconds (from workflow start) |
+| `eventOutput` | Event-specific data — step ID for steps, condition result for conditions, schema ID for workflow/resume lifecycle events |
+| `flowOutput` | Current workflow snapshot (`state`, `finished`, `stepId`, `inputRequired?`, `interrupt?`, `error?`) — unlike `TFlowOutput`, it has no `resume`/`retry` functions |
+| `ms` | Duration of the individual step execution or condition evaluation — present only on `'step'` and `'eval-*'` events |
 
 ## Spy Events
 
 | Event | When it fires | `eventOutput` |
 |-------|--------------|---------------|
-| `'workflow-start'` | Workflow begins | `undefined` |
-| `'subflow-start'` | Nested sub-workflow begins | `undefined` |
+| `'workflow-start'` | Fresh workflow run begins (`start()`) | Schema ID (string) |
+| `'workflow-end'` | Fresh run completes normally | Schema ID (string) |
+| `'workflow-interrupt'` | Fresh run pauses (input required or retriable error) | Schema ID (string) |
+| `'resume-start'` | Resumed run begins (`resume()` / `result.resume()`) | Schema ID (string) |
+| `'resume-end'` | Resumed run completes normally | Schema ID (string) |
+| `'resume-interrupt'` | Resumed run pauses | Schema ID (string) |
+| `'subflow-start'` | Nested sub-workflow begins | `''` (empty string) |
+| `'subflow-end'` | Nested sub-workflow completes | `''` (empty string) |
+| `'subflow-interrupt'` | Nested sub-workflow pauses | `''` (empty string) |
 | `'step'` | A step finishes executing | Step ID (string) |
 | `'eval-condition-fn'` | A step condition is evaluated | `{ fn, result: boolean }` |
 | `'eval-while-cond'` | A `while` loop condition is evaluated | `{ fn, result: boolean }` |
 | `'eval-break-fn'` | A `break` condition is evaluated | `{ fn, result: boolean }` |
 | `'eval-continue-fn'` | A `continue` condition is evaluated | `{ fn, result: boolean }` |
-| `'workflow-end'` | Workflow completes normally | `undefined` |
-| `'workflow-interrupt'` | Workflow pauses (input required or retriable error) | `undefined` |
-| `'subflow-end'` | Nested sub-workflow completes | `undefined` |
+| `'error'` | A step throws a non-retriable error (the run then rejects) | Error message (string) |
+
+::: warning Resumed runs use the `resume-*` events
+A resumed workflow emits `resume-start` / `resume-end` / `resume-interrupt`, **not** `workflow-*`. Code that filters only on `'workflow-interrupt'` misses every pause that happens during a resume.
+:::
 
 ## Practical Examples
 

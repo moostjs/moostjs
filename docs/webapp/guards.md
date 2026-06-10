@@ -80,9 +80,13 @@ export class ArticleController {
 
     @RequireRole('admin')
     @Delete(':id')
-    remove() { /* admins only — overrides controller-level guard */ }
+    remove() { /* requires BOTH roles: editor AND admin */ }
 }
 ```
+
+::: warning Guards are additive
+Controller-level and method-level guards are **merged, not overridden** — every guard in the chain runs. `remove()` above requires the `editor` role (from the controller) *and* the `admin` role (from the method). To make a route require a different role than its controller, move it to a controller without the class-level guard.
+:::
 
 ## Permission-based guard
 
@@ -174,4 +178,4 @@ const app = new Moost()
 app.applyGlobalInterceptors(adminGuard)
 ```
 
-For per-controller or per-handler exceptions to a global guard, you'll need a guard that checks metadata or route info to decide whether to enforce. Consider the [Authentication](./auth) system with handler-level overrides for this pattern.
+There is no built-in way to exempt individual routes from a global guard — guards stack, they never replace each other. For per-controller or per-handler exceptions, write the guard so it decides internally whether to enforce, e.g. by consulting route info (`useRequest().url`) or custom metadata set by a marker decorator.

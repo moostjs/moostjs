@@ -14,9 +14,51 @@ The `useControllerContext` composable serves to:
 - **Understand Parameter Metadata:** Gain insights into the metadata of method parameters.
 - **Determine Execution Context:** Identify the current method’s name and the controller’s scope.
 
+## Quick Start
+
+Call the composable inside a handler or interceptor and destructure the helpers you need:
+
+```ts
+import { Controller, useControllerContext } from 'moost'
+import { Get } from '@moostjs/event-http'
+
+@Controller('api')
+export class ApiController {
+  @Get('info')
+  info() {
+    const { getMethod, getRoute, getControllerMeta } = useControllerContext()
+    return {
+      method: getMethod(), // 'info'
+      route: getRoute(), // '/api/info'
+      label: getControllerMeta()?.label,
+    }
+  }
+}
+```
+
+The snippets below assume the helpers were destructured from a `useControllerContext()` call like this one. The composable also accepts an optional `EventContext` argument — `useControllerContext(ctx)` — to read another event's context instead of the current one.
+
 ## Available Methods
 
 The `useControllerContext` composable provides several methods to access different aspects of controller metadata:
+
+### `getController<T>(): T`
+
+**Description:**
+Returns the current controller instance — the most basic accessor, used internally by `getControllerMeta`, `getMethodMeta`, and `instantiate`.
+
+**Parameters:**
+None
+
+**Returns:**
+The controller instance handling the current event.
+
+**Usage Example:**
+
+```ts
+const { getController } = useControllerContext<ApiController>()
+const controller = getController()
+```
 
 ### `getPrefix(): string | undefined`
 
@@ -58,7 +100,7 @@ const { getRoute } = useControllerContext()
 console.log(getRoute()) // e.g., '/api/v2/users'
 ```
 
-### `getPropMeta(propName: string | symbol): TMoostMetadata | undefined`
+### `getPropMeta(propName: string): TMoostMetadata | undefined`
 
 **Description:**  
 Retrieves the metadata associated with a specific property of the current controller.
@@ -152,7 +194,7 @@ const methodName = getMethod();
 console.log(`Current method: ${methodName}`);
 ```
 
-### `getScope(): 'SINGLETON' | 'FOR_EVENT' | undefined`
+### `getScope(): true | 'SINGLETON' | 'FOR_EVENT'`
 
 **Description:**  
 Determines the scope of the current controller, indicating whether it is a singleton or scoped per event.
@@ -161,13 +203,17 @@ Determines the scope of the current controller, indicating whether it is a singl
 None
 
 **Returns:**  
-The scope of the controller (`'SINGLETON'` or `'FOR_EVENT'`) or `undefined` if not set.
+The controller's injectable metadata value: `'FOR_EVENT'`, `'SINGLETON'`, or literal `true`. Defaults to `'SINGLETON'` when no injectable metadata exists.
+
+::: warning
+A plain `@Controller()` / `@Injectable()` class (without an explicit scope) stores `injectable = true`, so `getScope()` returns `true` — which also means singleton. Check `scope === 'FOR_EVENT'` rather than `scope === 'SINGLETON'`.
+:::
 
 **Usage Example:**
 
 ```ts
 const scope = getScope();
-console.log(`Controller scope: ${scope}`);
+const isEventScoped = scope === 'FOR_EVENT';
 ```
 
 ### `instantiate<T>(Class): Promise<T>`

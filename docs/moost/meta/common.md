@@ -39,7 +39,8 @@ These decorators can be applied to **classes**, **methods**, **parameters**, or 
 ### Example: Annotating a Controller
 
 ```ts
-import { Controller, Get, Id, Label, Description, Param, Required } from 'moost';
+import { Controller, Id, Label, Description, Param, Required } from 'moost';
+import { Get } from '@moostjs/event-http';
 
 @Controller('api/users')
 @Id('UserController')

@@ -48,8 +48,9 @@ This replaces Moost's default context injector with the `SpanInjector`. Call it 
 Regardless of how you configure the SDK, the order matters:
 
 1. **Register the tracer provider** (so the global tracer is available)
-2. **Call `enableOtelForMoost()`** (replaces Moost's context injector)
-3. **Create and start your Moost app**
+2. **Register the global meter provider** if you export [metrics](/otel/metrics#metrics-sdk-setup) — a meter created before registration never records anything
+3. **Call `enableOtelForMoost()`** (replaces Moost's context injector and creates the meter)
+4. **Create and start your Moost app**
 
 ```ts
 import { Moost } from 'moost'
@@ -117,11 +118,13 @@ Use this for development or debugging when you want to see spans in real time.
 `@OtelIgnoreSpan()` only works with `MoostBatchSpanProcessor` or `MoostSimpleSpanProcessor`. If you use the standard OpenTelemetry processors directly, ignored spans will still be exported.
 :::
 
+If you build a custom span processor, use the exported `shouldSpanBeIgnored(span)` predicate in its `onEnd()` to apply the same filtering — it returns `true` for spans tagged by `@OtelIgnoreSpan()`.
+
 ## Filtering with decorators
 
 ### `@OtelIgnoreSpan()`
 
-Prevents spans from being exported for the decorated controller or handler. The spans are still created internally (so child spans can reference a parent), but they are dropped by the Moost span processors before export.
+Prevents spans from being exported for the decorated controller or handler. The lifecycle phase spans (`Interceptors:before`, `Handler:...`, etc.) are not created at all — the callbacks run without span wrapping. The root event span is still created, tagged with `moost.ignore: true`, and dropped by the Moost span processors before export.
 
 ```ts
 import { Controller } from 'moost'
@@ -175,12 +178,14 @@ class InternalController {
 ```
 
 ::: tip
-Handler-level decorators override controller-level decorators. If a controller has `@OtelIgnoreSpan()` but a specific handler does not, that handler's spans will still be filtered because it inherits the controller's setting.
+Controller-level and handler-level decorators are additive: if either the controller or the handler is decorated, the setting applies to that handler. There is no way to opt a single handler back in when its controller is decorated.
 :::
+
+For custom tooling that needs to read these flags, `getOtelMate()` returns the shared Moost metadata instance typed with the `TOtelMate` fields (`otelIgnoreSpan`, `otelIgnoreMeter`).
 
 ## HTTP instrumentation
 
-For HTTP events, `@moostjs/otel` expects the root span to be created by the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`). The `SpanInjector` attaches to the existing HTTP span rather than creating a new one, and patches the response to capture status codes for metrics.
+For HTTP events, `@moostjs/otel` is designed to have the root span created by the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`): the `SpanInjector` attaches to the existing HTTP span rather than creating a new one, and patches the response to capture status codes for metrics.
 
 ```ts
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http'
@@ -192,6 +197,10 @@ registerInstrumentations({
 ```
 
 For non-HTTP event types (CLI, Workflow, custom), the `SpanInjector` creates the root span itself (named `"{EventType} Event"`).
+
+::: info
+The `moost.event_type` attribute value for HTTP events is the lowercase `http`.
+:::
 
 ## Exporter examples
 

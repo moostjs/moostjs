@@ -54,6 +54,14 @@ const res = await fetch('https://api.example.com/data')
 teardown()
 ```
 
+::: warning What counts as "local"
+- **String inputs** are only intercepted when they start with `/` (relative paths).
+- **`URL` and `Request` inputs** are intercepted when the hostname is `localhost` or `127.0.0.1`.
+- An **absolute URL string** like `fetch('http://localhost:3000/api/x')` is NOT intercepted — it goes out over real HTTP (and fails in dev SSR, where no real server is listening).
+
+Always use relative paths (`fetch('/api/...')`) in universal code.
+:::
+
 ### Automatic setup with Vite
 
 When using `@moostjs/vite`, local fetch is enabled automatically (controlled by the `ssrFetch` option, default `true`). No manual setup needed — any `fetch('/api/...')` call during SSR goes through Moost in-process.

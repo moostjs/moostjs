@@ -126,23 +126,20 @@ Every `start()` or `resume()` call returns a `TFlowOutput` object:
 
 ```ts
 {
-  state: {
-    schemaId: 'process-order',
-    context: { orderId: 'ORD-001', validated: true, charged: true, shipped: true },
-    indexes: [3],
-  },
   finished: true,        // workflow completed all steps
+  state: {
+    schemaId: '/process-order', // flows register under the controller prefix + path
+    context: { orderId: 'ORD-001', validated: true, charged: true, shipped: true },
+    indexes: [],         // [] on completion; mid-schema position when paused
+  },
   stepId: 'ship',        // last executed step
-  interrupt: undefined,  // not paused
-  inputRequired: undefined,
 }
 ```
 
 Key fields:
 - **`finished`** — `true` if the workflow ran to completion
 - **`state`** — serializable snapshot (schema ID, context, step position)
-- **`interrupt`** — `true` if the workflow paused (waiting for input or after a retriable error)
-- **`inputRequired`** — present when a step needs input before it can proceed
+- **`inputRequired`** — present when the workflow paused because a step needs input (`finished` is `false` and a `resume` function is attached) — see [Pause & Resume](/wf/pause-resume)
 
 ## What's Next?
 

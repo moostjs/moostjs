@@ -36,6 +36,7 @@ Runs before the handler. Call `reply(value)` to skip the handler entirely:
 
 ```ts
 import { defineBeforeInterceptor, TInterceptorPriority } from 'moost'
+import { HttpError } from '@moostjs/event-http'
 
 const authGuard = defineBeforeInterceptor((reply) => {
   if (!isAuthenticated()) {
@@ -62,14 +63,19 @@ Runs when the handler throws. Receives the error; call `reply(value)` to recover
 
 ```ts
 import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
+import { HttpError } from '@moostjs/event-http'
 
 const errorFormatter = defineErrorInterceptor((error, reply) => {
   reply({
     error: error.message,
-    code: error.statusCode || 500,
+    code: error instanceof HttpError ? error.body.statusCode : 500,
   })
 }, TInterceptorPriority.CATCH_ERROR)
 ```
+
+::: warning
+The error parameter is typed `Error`. `HttpError` does **not** expose a `statusCode` property on the instance — the status code lives in its `body` getter (`error.body.statusCode`), so narrow with `instanceof HttpError` first.
+:::
 
 ### Full interceptor
 
@@ -110,6 +116,7 @@ When you need dependency injection, define interceptors as classes using the `@I
 
 ```ts
 import { Interceptor, Before, TInterceptorPriority } from 'moost'
+import { HttpError } from '@moostjs/event-http'
 
 @Interceptor(TInterceptorPriority.GUARD)
 class AuthInterceptor {
@@ -157,6 +164,10 @@ class ErrorHandler {
 }
 ```
 
+::: tip Composable counterparts
+Anywhere inside the event scope you can also reach these values without decorators: `useOvertake()` (from `moost`) returns the reply function, and `useInterceptResult()` returns the current handler result or error.
+:::
+
 ### DI scopes
 
 By default, `@Interceptor` makes the class injectable as a singleton. Pass a scope to change this:
@@ -174,6 +185,7 @@ class RequestScopedInterceptor {
 
 ```ts
 import { Intercept, Controller } from 'moost'
+import { Get } from '@moostjs/event-http'
 
 @Controller()
 export class ExampleController {
@@ -223,6 +235,7 @@ Wrap an interceptor with `Intercept` to create a reusable decorator:
 
 ```ts
 import { Intercept, defineBeforeInterceptor, TInterceptorPriority } from 'moost'
+import { HttpError } from '@moostjs/event-http'
 
 const guardFn = defineBeforeInterceptor((reply) => {
   if (!isAuthorized()) {
@@ -271,7 +284,7 @@ export const requestLogger = defineInterceptor({
   after() {
     const { url, method } = useRequest()
     const logger = useLogger('http')
-    logger.log(`${method} ${url} OK`)
+    logger.info(`${method} ${url} OK`)
   },
   error(error) {
     const { url, method } = useRequest()
@@ -285,11 +298,11 @@ export const requestLogger = defineInterceptor({
 
 ```ts
 import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
-import { useResponse } from '@wooksjs/event-http'
+import { useResponse, HttpError } from '@wooksjs/event-http'
 
 export const errorHandler = defineErrorInterceptor((error, reply) => {
   const response = useResponse()
-  const status = error.statusCode || 500
+  const status = error instanceof HttpError ? error.body.statusCode : 500
   response.status = status
   reply({
     error: error.message,

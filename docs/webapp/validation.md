@@ -39,7 +39,7 @@ import {
   UseValidatorPipe,
   UseValidationErrorTransform,
 } from '@atscript/moost-validator'
-import type { CreateUserDto } from './create-user.as'
+import { CreateUserDto } from './create-user.as'
 
 @UseValidatorPipe()
 @UseValidationErrorTransform()
@@ -53,13 +53,18 @@ export class UsersController {
 }
 ```
 
-That's it. When a request arrives with an invalid body, the validator pipe rejects it before your handler runs and returns a structured `400` response:
+::: warning Import the DTO as a value, not a type
+`import type { CreateUserDto }` is erased at compile time, so the runtime annotated type never reaches the decorator metadata and validation is **silently skipped**. Always use a value import for `.as` types used in validated parameters.
+:::
+
+That's it. When a request arrives with an invalid body, the validator pipe rejects it before your handler runs and returns a structured `400` response. `message` is the first failure as `"<path>: <message>"`, and the full error list is under `_body`:
 
 ```json
 {
   "statusCode": 400,
-  "message": "Validation failed",
-  "errors": [
+  "message": "email: Must be a valid email",
+  "error": "Bad Request",
+  "_body": [
     { "path": "email", "message": "Must be a valid email" },
     { "path": "password", "message": "Length must be >= 8" }
   ]
@@ -112,5 +117,5 @@ Atscript eliminates the gap between the type you write and the validation that r
 
 - [Atscript documentation](https://atscript.moost.org/) — language reference, CLI, IDE support
 - [`@atscript/moost-validator`](https://atscript.moost.org/packages/moost-validator/) — pipe and interceptor API
-- [Validation pipe deep dive](/moost/pipes/validate) — priority ordering, per-parameter config, non-HTTP usage
+- [Validation pipe deep dive](/moost/pipes/validate) — priority ordering, validator configuration, non-HTTP usage
 - [Custom resolvers & pipes](/webapp/resolvers) — writing your own transform and validation pipes

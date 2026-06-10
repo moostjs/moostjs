@@ -111,9 +111,7 @@ describe('defineMoostEventHandler', () => {
         },
       })
 
-      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow(
-        'hook init failed',
-      )
+      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow('hook init failed')
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
@@ -246,6 +244,97 @@ describe('defineMoostEventHandler', () => {
     })
   })
 
+  describe('error interceptor recovery', () => {
+    it('must resolve with replied value when onError interceptor recovers (sync)', async () => {
+      const def: TInterceptorDef = {
+        error: (_error, reply) => {
+          reply('recovered')
+        },
+      }
+
+      const instance = {
+        fail() {
+          throw new Error('handler failed')
+        },
+      }
+
+      const handler = defineMoostEventHandler({
+        loggerTitle: 'test',
+        targetPath: '/fail',
+        handlerType: 'HTTP',
+        controllerMethod: 'fail' as keyof typeof instance,
+        getControllerInstance: () => instance,
+        getIterceptorHandler: () =>
+          new InterceptorHandler([
+            { handler: def, name: 'Recover', spanName: 'Interceptor:Recover' },
+          ]),
+      })
+
+      const result = await createEventContext({ logger: testLogger }, handler)
+
+      expect(result).toBe('recovered')
+    })
+
+    it('must resolve with replied value when onError interceptor recovers (async)', async () => {
+      const def: TInterceptorDef = {
+        error: async (_error, reply) => {
+          await Promise.resolve()
+          reply({ status: 'fallback' })
+        },
+      }
+
+      const instance = {
+        async fail() {
+          throw new Error('async handler failed')
+        },
+      }
+
+      const handler = defineMoostEventHandler({
+        loggerTitle: 'test',
+        targetPath: '/fail-async',
+        handlerType: 'HTTP',
+        controllerMethod: 'fail' as keyof typeof instance,
+        getControllerInstance: () => instance,
+        getIterceptorHandler: () =>
+          new InterceptorHandler([
+            { handler: def, name: 'Recover', spanName: 'Interceptor:Recover' },
+          ]),
+      })
+
+      const result = await createEventContext({ logger: testLogger }, handler)
+
+      expect(result).toEqual({ status: 'fallback' })
+    })
+
+    it('must still throw when onError interceptor does not reply', () => {
+      const def: TInterceptorDef = {
+        error: vi.fn(),
+      }
+
+      const handlerError = new Error('not recovered')
+      const instance = {
+        fail() {
+          throw handlerError
+        },
+      }
+
+      const handler = defineMoostEventHandler({
+        loggerTitle: 'test',
+        targetPath: '/fail-no-reply',
+        handlerType: 'HTTP',
+        controllerMethod: 'fail' as keyof typeof instance,
+        getControllerInstance: () => instance,
+        getIterceptorHandler: () =>
+          new InterceptorHandler([
+            { handler: def, name: 'NoReply', spanName: 'Interceptor:NoReply' },
+          ]),
+      })
+
+      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow('not recovered')
+      expect(def.error).toHaveBeenCalledWith(handlerError, expect.any(Function))
+    })
+  })
+
   describe('CI instrumentation', () => {
     let spyCi: ReturnType<typeof createSpyCi>
 
@@ -278,9 +367,7 @@ describe('defineMoostEventHandler', () => {
         controllerName: 'TestCtrl',
         getControllerInstance: () => instance,
         getIterceptorHandler: () =>
-          new InterceptorHandler([
-            { handler: def, name: 'Guard', spanName: 'Interceptor:Guard' },
-          ]),
+          new InterceptorHandler([{ handler: def, name: 'Guard', spanName: 'Interceptor:Guard' }]),
         resolveArgs: () => ['a', 'b'],
       })
 
@@ -290,9 +377,7 @@ describe('defineMoostEventHandler', () => {
       expect(beforeFn).toHaveBeenCalledOnce()
       expect(afterFn).toHaveBeenCalledOnce()
 
-      expect(spyCi.hookCalls).toEqual([
-        { method: 'HTTP', name: 'Controller:registered' },
-      ])
+      expect(spyCi.hookCalls).toEqual([{ method: 'HTTP', name: 'Controller:registered' }])
 
       expect(spyCi.withCalls).toEqual([
         { name: 'Interceptors:before' },
@@ -488,9 +573,7 @@ describe('defineMoostEventHandler', () => {
         controllerName: 'Ctrl',
         getControllerInstance: () => instance,
         getIterceptorHandler: () =>
-          new InterceptorHandler([
-            { handler: def, name: 'Guard', spanName: 'Interceptor:Guard' },
-          ]),
+          new InterceptorHandler([{ handler: def, name: 'Guard', spanName: 'Interceptor:Guard' }]),
         resolveArgs: () => ['arg1'],
       })
 

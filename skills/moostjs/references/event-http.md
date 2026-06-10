@@ -90,7 +90,7 @@ Valid methods: `GET`, `PUT`, `POST`, `PATCH`, `DELETE`, `HEAD`, `OPTIONS`, `UPGR
 
 ### Route params
 
-`@Param(name)` / `@Params()` are imported from **`moost`**, not from `@moostjs/event-http`.
+Import sources per decorator: see the [http-request.md table](http-request.md#table).
 
 ```ts
 @Get('users/:id')
@@ -136,10 +136,11 @@ Whatever the handler returns becomes the response:
 |---|---|
 | `string` | `text/plain` |
 | object / array | `application/json` |
-| `ReadableStream` | streamed |
+| `boolean` / `number` | `text/plain` (stringified) |
+| Node `Readable` (e.g. `fs.createReadStream(...)`) | streamed |
 | fetch `Response` | forwarded as-is |
 
-Async works. Uncaught errors → HTTP 500 (JSON or HTML based on `Accept`).
+Web `ReadableStream` is NOT supported — it falls into the object branch and gets JSON.stringify'd to `{}`. Wrap with `Readable.fromWeb()` or return inside a fetch `Response`. Async works. Uncaught errors → HTTP 500 (JSON or HTML based on `Accept`).
 
 ## DI-exposed services
 
@@ -166,7 +167,7 @@ await http.request('/api/users', { method: 'GET' })            // convenience
 // returns null if no route matches
 ```
 
-When called from within an HTTP context, `authorization` and `cookie` headers are auto-forwarded from the parent context.
+When called from within an HTTP context, identity headers are auto-forwarded from the parent context (default set: `authorization`, `cookie`, `accept-language`, `x-forwarded-for`, `x-request-id`). Customize via the `forwardHeaders` option (`string[]` or `false` to disable) in `new MoostHttp(wooksHttpOptions)`. Headers already set on the programmatic request are never overwritten.
 
 ### `enableLocalFetch(http)` — patch `globalThis.fetch`
 
@@ -180,13 +181,13 @@ teardown()  // restore original fetch
 
 ## Re-exports
 
-From `@moostjs/event-http`: `httpKind`, `HttpError`, `useHttpContext` (re-exported from `@wooksjs/event-http`).
+From `@moostjs/event-http`: `httpKind`, `HttpError`, `useHttpContext` (re-exported from `@wooksjs/event-http`). `MoostHttp` implements `TMoostAdapter<THttpHandlerMeta>` — `THttpHandlerMeta` (`{ method, path }`) is exported for code that inspects or extends the adapter.
 
 ## Gotchas
 
-- `@Get()` (no arg) uses the **method name** as path. `@Get('')` is the controller root.
-- `listen()` before `init()` is fine — adapter buffers.
-- Route params are always strings; use pipes to coerce.
-- Trailing `//` in a path forces a trailing slash in the URL.
-- `@Param`/`@Params` come from `moost`, query/body/etc. come from `@moostjs/event-http`.
-- Default 404 handler runs through the global interceptor chain.
+1. `@Get()` (no arg) uses the **method name** as path. `@Get('')` is the controller root.
+2. `listen()` before `init()` is fine — the server starts immediately and routes attach during `init()`; requests arriving before `init()` get 404s.
+3. Route params are always strings; use pipes to coerce.
+4. Trailing `//` in a path forces a trailing slash in the URL.
+5. Decorator import sources (`moost` vs `@moostjs/event-http`): see [http-request.md](http-request.md#table).
+6. Default 404 handler runs through the global interceptor chain — but only when `MoostHttp` creates its own Wooks app; when you pass a pre-built `WooksHttp` instance, configure `onNotFound` on it yourself.

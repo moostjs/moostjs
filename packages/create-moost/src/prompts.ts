@@ -11,6 +11,24 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
     projectName: inputs.name || '',
     packageName: inputs.name || '',
   }
+  // CLI flags pre-select answers and skip their prompts; seed them into
+  // `predefined` so they survive the final merge with interactive results
+  // (skipped prompts are omitted from the prompts() result object)
+  if (inputs.ws) {
+    predefined.ws = true
+  }
+  if (inputs.wf) {
+    predefined.wf = true
+  }
+  if (inputs.ssr) {
+    predefined.ssr = true
+  }
+  if (inputs.oxc) {
+    predefined.oxc = true
+  }
+  if (inputs.force) {
+    predefined.overwrite = true
+  }
   try {
     const results = await prompts<keyof TPrompts | 'overwriteChecker'>(
       [
@@ -47,7 +65,8 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
           name: 'type',
           type: () => {
             const typeFlags = ['http', 'cli', 'ws', 'ssr'] as const
-            const selected = typeFlags.filter((t) => inputs[t])
+            // `--ws` combined with `--http` means the WebSocket add-on, not the ws app type
+            const selected = typeFlags.filter((t) => inputs[t] && !(t === 'ws' && inputs.http))
             if (selected.length === 1) {
               predefined.type = selected[0]
               return null
@@ -73,7 +92,7 @@ export async function getPrompts(inputs: Partial<TInputs>): Promise<TPrompts> {
           name: 'ssr',
           type: (prev, values) => {
             const type = values.type || predefined.type
-            if (type !== 'ssr') {
+            if (type !== 'ssr' || inputs.ssr) {
               return null
             }
             return 'toggle'

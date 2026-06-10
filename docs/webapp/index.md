@@ -4,7 +4,7 @@ Build an HTTP server with Moost in under a minute.
 
 ## Prerequisites
 
-- Node.js 18 or higher
+- Node.js 20.19+ (or 22.12+) — required by Vite, which powers the dev server
 - npm, pnpm, or yarn
 
 ## Scaffold a project
@@ -33,7 +33,9 @@ my-web-app/
 │   │   └── app.controller.ts
 │   └── main.ts
 ├── package.json
-└── tsconfig.json
+├── tsconfig.json
+├── vite.config.ts
+└── README.md
 ```
 
 ## What you get
@@ -46,13 +48,12 @@ import { AppController } from './controllers/app.controller'
 
 const app = new Moost()
 
-void app.adapter(new MoostHttp()).listen(3000, () => {
-    app.getLogger('moost-app').info('Up on port 3000')
+const http = new MoostHttp()
+app.adapter(http).listen(3000, () => {
+    app.getLogger('[my-web-app]').info('Server started on port 3000')
 })
 
-void app
-    .registerControllers(AppController)
-    .init()
+app.registerControllers(AppController).init()
 ```
 
 **app.controller.ts** — your first handler:
@@ -63,8 +64,8 @@ import { Controller, Param } from 'moost'
 @Controller()
 export class AppController {
     @Get('hello/:name')
-    greet(@Param('name') name: string) {
-        return `Hello, ${name}!`
+    hello(@Param('name') name: string): string {
+        return `Hello ${name}`
     }
 }
 ```
@@ -75,7 +76,7 @@ export class AppController {
 npm install && npm run dev
 ```
 
-Open [http://localhost:3000/hello/World](http://localhost:3000/hello/World) — you'll see `Hello, World!`.
+Open [http://localhost:3000/hello/World](http://localhost:3000/hello/World) — you'll see `Hello World`.
 
 ## How it works
 

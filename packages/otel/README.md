@@ -8,6 +8,8 @@ OpenTelemetry integration for [Moost](https://moost.org). Provides automatic tra
 npm install @moostjs/otel @opentelemetry/api @opentelemetry/sdk-trace-base
 ```
 
+Note: `@moostjs/event-http` is a required peer dependency — install it even if your app only handles CLI or workflow events.
+
 ## Quick Start
 
 ```ts
@@ -22,7 +24,7 @@ enableOtelForMoost()
 - `useOtelContext()` — Access tracing utilities (span, propagation headers, custom attributes).
 - `useTrace()` — Get the OpenTelemetry `trace` API.
 - `useSpan()` — Get the current event's root span.
-- `useOtelPropagation()` — Get W3C trace-context headers for outgoing requests.
+- `useOtelPropagation()` — Get trace-context propagation data (span context + headers) for outgoing requests.
 
 ## Decorators
 

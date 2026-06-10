@@ -50,12 +50,16 @@ For more dynamic scenarios, `@ImportController` can accept a factory function th
 import { ImportController } from 'moost';
 import { DbCollection } from './controllers/DbCollection';
 
-@ImportController(() => new DbCollection('users'))
-@ImportController(() => new DbCollection('roles'))
+@ImportController('users', () => new DbCollection('users'))
+@ImportController('roles', () => new DbCollection('roles'))
 class MyServer extends Moost {
-  // Two DbCollection controllers registered under their respective prefixes
+  // Two DbCollection instances, mounted under /users and /roles
 }
 ```
+
+::: warning
+The prefix always comes from the class-level `@Controller(prefix)` metadata or the `@ImportController(prefix, ...)` override — never from constructor arguments. Without the explicit prefix override above, both instances would register under the **same** prefix, duplicating every route.
+:::
 
 ### Using `registerControllers`
 

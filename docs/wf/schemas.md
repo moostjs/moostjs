@@ -21,6 +21,7 @@ interface TCampaignContext {
   audienceSize: number
   approved: boolean
   sent: boolean
+  retries: number
 }
 
 @Workflow('email-campaign')
@@ -141,6 +142,7 @@ interface TCampaignContext {
   maxAttempts: number
 }
 
+@Injectable('FOR_EVENT')
 @Controller()
 export class CampaignController {
   @WorkflowParam('context')

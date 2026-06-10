@@ -4,7 +4,7 @@
 
 ## Basic usage
 
-Pass a type or configuration object. When no status code is given, the generator uses the default for the HTTP method:
+Pass a type or configuration object (the union is exported as `TSwaggerResponseOpts`). When no status code is given, the generator uses the default for the HTTP method:
 
 | HTTP method | Default status |
 |-------------|----------------|
@@ -13,6 +13,10 @@ Pass a type or configuration object. When no status code is given, the generator
 | DELETE | 204 |
 
 ```ts
+import { Param } from 'moost'
+import { Body, Get, Post } from '@moostjs/event-http'
+import { SwaggerResponse } from '@moostjs/swagger'
+
 // Type shorthand — uses the method's default status code
 @SwaggerResponse(UserDto)
 @Get(':id')
@@ -98,7 +102,7 @@ Document response headers (pagination, rate-limiting, etc.) with the `headers` f
 list() { /* ... */ }
 ```
 
-Each header entry supports:
+Each header entry (exported as `TSwaggerResponseHeader`) supports:
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -112,7 +116,7 @@ Each header entry supports:
 Examples can be attached in several ways. The priority order (highest first):
 
 1. **Inline in `toJsonSchema()` output** — `example` field in the schema itself
-2. **`@SwaggerExample` decorator** — explicit example on the handler
+2. **`@SwaggerExample` decorator** — explicit example on the DTO class
 3. **`toExampleData()` method** — auto-generated from the type
 
 ### Positional argument
@@ -138,14 +142,18 @@ Include `example` in the configuration:
 
 ### `@SwaggerExample` decorator
 
-Attach an example to the handler's default response:
+`@SwaggerExample` is a **class decorator for DTO types** — it attaches an `example` to the component schema generated from the class:
 
 ```ts
+import { SwaggerExample } from '@moostjs/swagger'
+
 @SwaggerExample({ id: '1', name: 'Alice', email: 'alice@example.com' })
-@SwaggerResponse(UserDto)
-@Get(':id')
-find(@Param('id') id: string) { /* ... */ }
+class UserDto {
+  static toJsonSchema() { /* ... */ }
+}
 ```
+
+Placing `@SwaggerExample` on a handler method has no effect — for a per-handler example use the positional argument or the `example` config field of `@SwaggerResponse` (see above).
 
 ### Auto-generated via `toExampleData()`
 

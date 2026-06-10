@@ -7,30 +7,48 @@
 </a>
 </p>
 
-`create-moost` is an npm initializer module that allows you to quickly set up new Moost applications. It provides a simple command-line interface to create Moost applications, either as a HTTP app or a CLI app.
+`create-moost` is an npm initializer that scaffolds new Moost applications. It supports four project types: HTTP (Web) application, Vue + Moost (SSR/SPA), WebSocket application, and CLI application.
 
 ## Getting Started
 
-To use `create-moost`, make sure you have Node.js (version 14 or above) and npm (Node Package Manager) installed on your machine. Then, follow the steps below to create your Moost application.
-
-### Creating a HTTP App
-
-To create a Moost HTTP app, use the following command in your terminal:
+Make sure you have Node.js 20.19+ (or 22.12+) installed — the scaffolded projects rely on Vite/Rolldown, which require it. Then run:
 
 ```bash
-npm create moost -- --http
+npm create moost
 ```
 
-This command will initiate the creation of a new Moost HTTP app. It will prompt you to configure the project name, whether to include a Moost Workflows example, and whether to add do-me-lint (smart eslint installer).
+Without flags the CLI runs in interactive mode: it prompts for the project name, the Moost adapter (HTTP, Vue + Moost SSR/SPA, WebSocket, or CLI), and the type-specific options below.
 
-### Creating a CLI App
-
-To create a Moost CLI app, use the following command in your terminal:
+You can pass a project name and a type flag to skip the corresponding prompts:
 
 ```bash
-npm create moost -- --cli
+npm create moost my-app -- --http
 ```
 
-This command will start the creation process for a new Moost CLI app. It will prompt you to configure the project name and whether to add do-me-lint (smart eslint installer).
+### Flags
+
+| Flag      | Effect                                                            |
+| --------- | ----------------------------------------------------------------- |
+| `--http`  | Scaffold an HTTP (Web) application                                |
+| `--ssr`   | Scaffold a Vue + Moost (SSR/SPA) application                      |
+| `--ws`    | Scaffold a WebSocket application (with `--http`: add WebSockets to the HTTP app) |
+| `--cli`   | Scaffold a CLI application                                        |
+| `--wf`    | Include the Moost Workflows example (applied to HTTP projects)    |
+| `--oxc`   | Add OXC lint and formatter (oxlint + oxfmt)                       |
+| `--force` | Overwrite a non-empty target directory without asking             |
+
+### Prompts
+
+Depending on the chosen project type, the CLI asks:
+
+- **Project name** and **package name** — skipped when a valid name is passed as an argument
+- **Enable SSR (Server-Side Rendering)?** — `ssr` projects only (answering No produces an SPA-only setup); skipped when `--ssr` is passed
+- **Add WebSockets?** — `http` projects only; skipped when `--ws` is passed
+- **Add Moost Workflows Example?** — skipped for `cli` and `ws` projects, and when `--wf` is passed
+- **Add OXC lint and formatter (oxlint + oxfmt)?** — asked for every project type unless `--oxc` is passed
+
+Each flag pre-selects its answer and skips the matching prompt, so passing all relevant flags scaffolds fully non-interactively, e.g. `npm create moost my-app -- --http --ws --wf --oxc --force`.
+
+After scaffolding, the CLI prints the next steps (install dependencies and start the dev server).
 
 ## [Official Documentation](https://moost.org/)

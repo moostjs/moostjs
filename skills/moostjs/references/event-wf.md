@@ -23,7 +23,12 @@ Moost adapter over `@wooksjs/event-wf` + `@prostojs/wf` for multi-step workflows
 
 Use workflows for multi-stage processes needing branching, pause for external input, auditability, or time-spanning execution.
 
+**Key imports.** Every symbol in this file is exported from `'@moostjs/event-wf'` — the single entry point. That includes the outlet toolkit re-exported from `@wooksjs/event-wf` (`createHttpOutlet`, `createEmailOutlet`, `createOutletHandler`, `handleWfOutletRequest`, `useWfOutlet`, `useWfFinished`, `useWfStrategy`, `swapStrategy`, `useWfState`, `wfKind`) and the outlet primitives re-exported from `@prostojs/wf/outlets` (`outlet`, `outletHttp`, `outletEmail`, `EncapsulatedStateStrategy`, `HandleStateStrategy`, `WfStateStoreMemory`, plus their types). Do NOT import these from `@wooksjs/event-wf` or `@prostojs/wf` directly — they are not direct dependencies of the app, and cross-package class identity (e.g. `StepRetriableError`) is not guaranteed.
+
 ```ts
+import { Controller, Injectable, Moost } from 'moost'
+import { MoostWf, Step, Workflow, WorkflowParam, WorkflowSchema } from '@moostjs/event-wf'
+
 interface TOrderCtx { orderId: string; validated: boolean; charged: boolean }
 
 @Injectable('FOR_EVENT')
@@ -51,7 +56,7 @@ const result = await wf.start('process-order', { orderId: 'ORD-001', validated: 
 new MoostWf<T, IR>(opts?: WooksWf<T, IR> | TWooksWfOptions, debug?: boolean)
 ```
 
-`TWooksWfOptions`: `onError`, `onNotFound`, `onUnknownFlow`, `logger`, `eventOptions`, `router`.
+`TWooksWfOptions`: `onError`, `onNotFound`, `onUnknownFlow`, `logger`, `eventOptions`, `router`, `strictStepIds` (`true` = duplicate `@Step` id registration throws instead of warning).
 
 Adapter name is `'workflow'`.
 
@@ -73,7 +78,7 @@ Workflow entry. Effective schema ID = controller prefix + workflow path (e.g. `@
 
 ### `@StepTTL(ttlMs)`
 
-Set TTL for paused state when this step returns `inputRequired`. Adapter wraps the step handler to set `expires` on the outlet signal (passed to `strategy.persist(state, { ttl })`).
+Set TTL for paused state when this step pauses — on BOTH pause paths: returning an `inputRequired` object and throwing a `StepRetriableError`/`requireInput()` (since 0.6.23). The adapter stamps `expires: Date.now() + ttlMs` on the signal (an `expires` already set on a thrown error is respected); the outlet trigger converts it back to `strategy.persist(state, { ttl })`.
 
 ### `WorkflowParam(name)` (param or property)
 
@@ -83,15 +88,15 @@ Set TTL for paused state when this step returns `inputRequired`. Adapter wraps t
 | `'input'` | `I \| undefined` — from `start()`/`resume()` |
 | `'stepId'` | `string \| null` (null in entry) |
 | `'schemaId'` | `string` |
-| `'indexes'` | `number[] \| undefined` |
+| `'indexes'` | `number[] \| undefined` — position in nested schemas |
 | `'resume'` | `boolean` (true when resuming) |
-| `'state'` | full `useWfState()` object |
+| `'state'` | full `useWfState()` accessor object |
 
 Property form requires `@Injectable('FOR_EVENT')`.
 
 ### `useWfState()`
 
-Alternative to `@WorkflowParam`: returns `{ ctx<T>(), input<I>(), schemaId, stepId(), indexes, resume }`.
+Alternative to `@WorkflowParam`: returns `{ ctx<T>(), input<I>(), schemaId, stepId(), indexes(), resume }` — `schemaId` and `resume` are plain properties; `ctx`, `input`, `stepId`, `indexes` are functions you must call.
 
 ### `wfKind`
 
@@ -149,71 +154,35 @@ Function condition (type-safe) or string condition (serializable). String condit
 ])
 ```
 
-### Schema types
+### Schema item forms
 
-```ts
-type TWorkflowSchema<T> = TWorkflowItem<T>[]
-type TWorkflowItem<T> = string
-  | TWorkflowStepSchemaObj<T, any>
-  | TSubWorkflowSchemaObj<T>
-  | TWorkflowControl<T>
+`TWorkflowSchema<T>` (exported from `@moostjs/event-wf`) is an array; each item is one of:
 
-interface TWorkflowStepSchemaObj<T, I> {
-  id: string
-  condition?: string | ((ctx: T) => boolean | Promise<boolean>)
-  input?: I
-}
-interface TSubWorkflowSchemaObj<T> {
-  steps: TWorkflowSchema<T>
-  condition?: string | ((ctx: T) => boolean | Promise<boolean>)
-  while?:     string | ((ctx: T) => boolean | Promise<boolean>)
-}
-type TWorkflowControl<T> =
-  | { break:    string | ((ctx: T) => boolean | Promise<boolean>) }
-  | { continue: string | ((ctx: T) => boolean | Promise<boolean>) }
-```
+1. `'step-id'` — run unconditionally (step objects use `id`, NOT `step`)
+2. `{ id, condition?, input? }` — step with optional condition / inline input
+3. `{ steps: [...], condition? }` — nested group; `{ steps: [...], while: cond }` — loop
+4. `{ break: cond }` / `{ continue: cond }` — loop control (only inside `steps`)
+
+All conditions accept a `(ctx) => boolean | Promise<boolean>` function or a serializable string.
 
 ## Start / resume / TFlowOutput
 
 ```ts
 wf.start<I>(schemaId, initialContext, opts?): Promise<TFlowOutput<T, I, IR>>
 wf.resume<I>(state, opts?):                    Promise<TFlowOutput<T, I, IR>>
-
-interface TWfRunOptions<I> {
-  input?: I
-  eventContext?: EventContext            // parent ctx for composable inheritance
-  strategy?: { name: string }            // initial state strategy name (named-registry mode)
-}
 ```
+
+Opts bag (`TWfRunOptions`): `input?` (step input), `eventContext?` (parent ctx for composable inheritance, e.g. `current()` from an HTTP handler), `strategy?: { name }` (initial state strategy in named-registry mode).
 
 **Breaking in 0.6.18.** Both methods used to take `input` as a positional arg; now it lives on the opts bag. `wf.start('flow', ctx, val)` → `wf.start('flow', ctx, { input: val })`.
 
-```ts
-type TFlowOutput<T, I, IR> =
-  | TFlowFinished<T, IR>
-  | TFlowPaused<T, I, IR>
-  | TFlowFailed<T, I, IR>
+`TFlowOutput` (exported from `@moostjs/event-wf`) is a discriminated union — switch on `finished` then `error`:
 
-interface TFlowState<T> {
-  schemaId: string; context: T; indexes: number[]; meta?: Record<string, unknown>
-}
-interface TFlowFinished<T, _IR> {
-  finished: true; state: TFlowState<T>; stepId: string
-}
-interface TFlowPaused<T, I, IR> {
-  finished: false; state: TFlowState<T>; stepId: string
-  inputRequired: IR
-  resume: (input: I) => Promise<TFlowOutput<T, unknown, IR>>
-  expires?: number
-  errorList?: unknown
-}
-interface TFlowFailed<T, I, IR> {
-  finished: false; state: TFlowState<T>; stepId: string
-  error: Error
-  retry: (input?: I) => Promise<TFlowOutput<T, unknown, IR>>
-  inputRequired?: IR; expires?: number; errorList?: unknown
-}
-```
+- **finished**: `{ finished: true, state, stepId }` — nothing else; no error/resume/retry.
+- **paused** (step returned `{ inputRequired }`): `finished: false` + `inputRequired` + `resume(input)` + optional `expires`/`errorList`. No `error`.
+- **failed** (step threw `StepRetriableError`): `finished: false` + `error` + `retry(input?)` + optional `inputRequired`/`expires`/`errorList`. No `resume`.
+
+There is NO `interrupt` or `break` field on any variant. `state` is `{ schemaId, context, indexes, meta? }` — plain JSON, safe to persist; pass it back to `wf.resume()`.
 
 ### Pause & resume
 
@@ -221,7 +190,7 @@ Return `{ inputRequired: ... }` from a step to pause (value is anything — form
 
 ```ts
 @Step('collect-address')
-collectAddress(@WorkflowParam('input') input?: TAddr, @WorkflowParam('context') ctx: TCtx) {
+collectAddress(@WorkflowParam('context') ctx: TCtx, @WorkflowParam('input') input?: TAddr) {
   if (!input) return { inputRequired: { fields: ['street', 'city'] } }
   ctx.address = input
 }
@@ -268,7 +237,7 @@ const detach = wf.attachSpy((event, eventOutput, spyData, ms) => {
 })
 ```
 
-Events: `workflow-start`, `workflow-end`, `workflow-interrupt`, `subflow-start`, `subflow-end`, `step` (eventOutput = stepId), `eval-condition-fn` / `eval-while-cond` / `eval-break-fn` / `eval-continue-fn` (eventOutput = `{ fn, result }`).
+Events: `workflow-start` / `workflow-end` / `workflow-interrupt` (fresh runs, eventOutput = schemaId), `resume-start` / `resume-end` / `resume-interrupt` (resumed runs use the `resume` base event, NOT `workflow`), `subflow-start` / `subflow-end` / `subflow-interrupt` (eventOutput = `''`), `step` (eventOutput = stepId, `ms` = step duration), `eval-condition-fn` / `eval-while-cond` / `eval-break-fn` / `eval-continue-fn` (eventOutput = `{ fn, result }`, `ms` = eval duration), `error` (non-retriable throw, eventOutput = error message). `ms` is present only on `step`/`eval-*`. The third arg is a `TFlowSpyData` snapshot (has `interrupt?`, no `resume`/`retry`).
 
 ## Outlets
 
@@ -349,62 +318,18 @@ async triggerWorkflow() {
 - **`useWfStrategy()`** — `current(): string` (active strategy name) / `swap(name)` (apply to next pause). `swapStrategy(name)` is sugar for `swap`.
 - **`useWfFinished()`** — `.set({ type: 'redirect', value: '/dashboard' })` / `.set({ type: 'data', value, status })` / `.get(): WfFinishedResponse | undefined`.
 
-### Outlet types
+### Outlet types — usage rules
 
-```ts
-interface WfOutletTriggerConfig {
-  allow?: string[]; block?: string[]
-  state: WfStateStrategy | {
-    strategies: Record<string, WfStateStrategy>     // names: /^[A-Za-z0-9_-]+$/
-    default: string | ((wfid: string) => string)    // name on workflow start
-  }
-  outlets: WfOutlet[]
-  token?: WfOutletTokenConfig
-  wfidName?: string  // default 'wfid'
-  initialContext?: (body: Record<string, unknown> | undefined, wfid: string) => unknown
-  onFinished?: (ctx: { context: unknown; schemaId: string }) => unknown
-}
-type WfPauseRequest<P = unknown> = WfOutletRequest<P> & { stateStrategy?: string }
-interface WfOutletTokenConfig {
-  read?: Array<'body'|'query'|'cookie'>  // default ['body','query','cookie']
-  write?: 'body' | 'cookie'              // default 'body'
-  name?: string                          // default 'wfs'
-}
-interface WfOutlet {
-  readonly name: string
-  readonly tokenDelivery?: 'caller' | 'out-of-band'  // default 'caller'
-  deliver(req: WfOutletRequest, token: string): Promise<WfOutletResult | void>
-}
-interface WfOutletRequest<P = unknown> {
-  outlet: string; payload?: P; target?: string; template?: string
-  context?: Record<string, unknown>
-}
-interface WfOutletResult {
-  response?: unknown; status?: number
-  headers?: Record<string, string>
-  cookies?: Record<string, { value: string; options?: Record<string, unknown> }>
-}
-interface WfStateStrategy {
-  persist(
-    state: WfState,
-    options?: { ttl?: number },
-    overrides?: { handle?: string }, // 0.7.14+: hint to reuse a handle so wfs stays stable across resumes
-  ): Promise<string>
-  retrieve(token: string): Promise<WfState | null>
-  consume(token: string):  Promise<WfState | null> // atomic retrieve+invalidate — used as concurrent-resume mutex by the engine
-}
-interface WfStateStore {
-  set(handle: string, state: WfState, expiresAt?: number): Promise<void>
-  get(handle: string): Promise<{ state: WfState; expiresAt?: number } | null>
-  delete(handle: string): Promise<void>
-  getAndDelete(handle: string): Promise<{ state: WfState; expiresAt?: number } | null>
-  cleanup?(): Promise<number>
-}
-interface WfFinishedResponse {
-  type: 'redirect' | 'data'; value: unknown; status?: number
-  cookies?: Record<string, { value: string; options?: Record<string, unknown> }>
-}
-```
+All exported from `@moostjs/event-wf` (do not import from `@wooksjs/event-wf` / `@prostojs/wf`):
+
+- **`WfOutletTriggerConfig`** (the `handleOutlet` arg): `state` (strategy or named registry — required), `outlets: WfOutlet[]` (required), `allow?`/`block?` (wfid white/blacklist; empty allow = all), `token?: WfOutletTokenConfig`, `wfidName?` (default `'wfid'`), `initialContext?: (body, wfid) => ctx`, `onFinished?: ({ context, schemaId }) => response`.
+- **`WfOutletTokenConfig`**: `read` (default `['body','query','cookie']`), `write` (`'body'` default | `'cookie'`), `name` (default `'wfs'`).
+- **`WfOutlet`** (implement for custom channels): `name`, optional `tokenDelivery: 'caller' | 'out-of-band'` (default `'caller'`), `deliver(req, token)` returning `WfOutletResult | void`. `WfOutletResult` carries `response`/`status`/`headers`/`cookies`; return `void` for out-of-band channels.
+- **`WfOutletRequest`** (what `deliver` receives, what `outlet()` produces): `{ outlet, payload?, target?, template?, context? }`. `WfPauseRequest` = same + `stateStrategy?` (set when a step swapped strategy).
+- **`WfStateStrategy`** (implement for custom persistence): `persist(state, { ttl? }, { handle? })` → token, `retrieve(token)`, `consume(token)` (atomic retrieve+invalidate — used as concurrent-resume mutex). The `handle` override is the hint to reuse a storage key so `wfs` stays stable; `HandleStateStrategy` honors it, `EncapsulatedStateStrategy` ignores it.
+- **`WfStateStore`** (backend for `HandleStateStrategy`): `set(handle, state, expiresAt?)`, `get`, `delete`, `getAndDelete`, optional `cleanup()`. `WfState` is the persisted flow-state record.
+- **`WfFinishedResponse`** (set via `useWfFinished().set(...)`): `{ type: 'redirect' | 'data', value, status?, cookies? }`.
+- **`WfOutletTriggerDeps`** (`{ start, resume }` callbacks): only needed with the low-level `handleWfOutletRequest(config, deps)`; `wf.handleOutlet()` / `createOutletHandler()` supply it for you.
 
 ### Full outlet example
 
@@ -471,7 +396,8 @@ Standard Moost features work on steps (interceptors, pipes, DI).
 - `@WorkflowParam('resume')` is a **boolean**, not a function. Resume *function* is on `TFlowOutput`.
 - Regular errors reject the promise (not captured in output). Only `StepRetriableError` produces `finished: false` + `retry()`.
 - `expires` is informational — engine doesn't enforce.
-- `result.resume` / `result.retry` are in-process only. For cross-process: `wf.resume(state, { input })`.
+- `result.resume` / `result.retry` are in-process closures (re-enter the engine with a fresh event context, equivalent to `wf.resume(result.state, { input })`). Across process boundaries, serialize `result.state` and call `wf.resume()`.
+- Duplicate `@Step` ids warn and the FIRST registration wins by default; set `strictStepIds: true` (e.g. in CI) to fail loudly.
 - `MoostWf.start` / `.resume` take an opts bag since 0.6.18 (`{ input, eventContext, strategy }`). Calling with a positional `input` arg silently passes the value as the opts object — the step will read `undefined` for input. Always wrap: `{ input }`.
 - String conditions use `new Function()` + `with(ctx)`; only context props are in scope.
 - Step IDs are router paths: `'process/items'` = two segments.
@@ -480,3 +406,9 @@ Standard Moost features work on steps (interceptors, pipes, DI).
 - Controllers holding per-workflow state MUST be `@Injectable('FOR_EVENT')`; otherwise class properties leak between concurrent workflows.
 - `app.init()` must complete before calling `wf.start()` — steps are registered during init.
 - `state` object is plain JSON — safe to serialize/store.
+
+## See also
+
+- [event-http.md](./event-http.md) — HTTP handlers that trigger/resume workflows (outlet endpoints)
+- [interceptors.md](./interceptors.md) — cross-cutting concerns around steps and workflow entry
+- [di.md](./di.md) — `FOR_EVENT` scoping for per-workflow controller state

@@ -20,7 +20,8 @@ At the Resolve Pipe stage, Moost reads a resolver function defined for a given p
 
 **Example:**
 ```ts
-import { Controller, Param, Get } from 'moost';
+import { Controller, Param } from 'moost';
+import { Get } from '@moostjs/event-http';
 
 @Controller('api')
 class MyController {
@@ -40,8 +41,8 @@ Moost provides a `@Resolve` decorator, the foundational API for building custom 
 
 **Example:**
 ```ts
-import { Controller, Get } from 'moost';
-import { Resolve } from 'moost'; // Base decorator for custom resolvers
+import { Controller, Resolve } from 'moost'; // Resolve is the base decorator for custom resolvers
+import { Get } from '@moostjs/event-http';
 
 function CurrentDate() { // [!code hl]
   return Resolve(() => new Date().toISOString()); // [!code hl]

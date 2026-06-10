@@ -133,6 +133,21 @@ The generator recognizes several framework-level decorators from `moost`, so you
 | `@Label()` | Operation `summary` and schema `title` |
 | `@Description()` | Operation `description` and schema `description` |
 | `@Id()` | Fallback for `operationId` |
-| `@Optional()` / `@Required()` | Parameter requirement flags |
+| `@Optional()` | Clears the `required` flag on parameters and the request body (params are required by default; `@Required()` has no swagger effect) |
 
 By reusing these generic decorators, your validation, documentation, and other modules stay aligned without duplicating annotations.
+
+## Custom decorators with `getSwaggerMate()`
+
+All swagger decorators write structured metadata (the `TSwaggerMate` shape) that the generator reads back at mapping time. The exported `getSwaggerMate()` returns the shared metadata instance, so you can compose your own project-wide decorators that fill the same fields — they are picked up by the generator automatically:
+
+```ts
+import { getSwaggerMate } from '@moostjs/swagger'
+
+// Equivalent of @SwaggerTag('Admin') + @SwaggerDeprecated()
+export const AdminLegacy = () =>
+  getSwaggerMate().apply(
+    getSwaggerMate().decorate('swaggerTags', 'Admin', true),
+    getSwaggerMate().decorate('swaggerDeprecated', true),
+  )
+```

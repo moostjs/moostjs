@@ -69,25 +69,41 @@ export class ChatController {
 
 ## Connection Handler
 
-The `@Connect` decorator runs when a new WebSocket connection is established. It executes inside the connection context, where you can access the connection ID and HTTP upgrade headers.
+The `@Connect` decorator runs when a new WebSocket connection is established. It executes inside the connection context, where you can access the connection ID.
 
 ```ts
 import { Connect, ConnectionId } from '@moostjs/event-ws'
-import { useHeaders } from '@wooksjs/event-http'
 import { Controller } from 'moost'
 
 @Controller()
 export class LifecycleController {
   @Connect()
   onConnect(@ConnectionId() id: string) {
-    const headers = useHeaders()
-    console.log(`New connection ${id} from ${headers['user-agent']}`)
+    console.log(`New connection ${id}`)
   }
 }
 ```
 
+In [HTTP-integrated mode](./integration) the connection context has the HTTP upgrade context as its parent, so you can also read the upgrade request via HTTP composables:
+
+```ts
+import { useHeaders } from '@wooksjs/event-http'
+
+@Connect()
+onConnect(@ConnectionId() id: string) {
+  const headers = useHeaders() // HTTP-integrated mode only
+  console.log(`New connection ${id} from ${headers['user-agent']}`)
+}
+```
+
+In standalone mode there is no HTTP upgrade context, so HTTP composables like `useHeaders()` throw — see [HTTP Context in WebSocket Handlers](./request#http-context-in-websocket-handlers).
+
 ::: warning
 If the `@Connect` handler throws an error or returns a rejected promise, the connection is closed immediately.
+:::
+
+::: warning One handler per application
+Only one `@Connect` and one `@Disconnect` handler can be active per application — registering a second one (e.g. in another controller) silently replaces the first. Centralize connection lifecycle logic in a single controller.
 :::
 
 ## Disconnection Handler
@@ -127,18 +143,21 @@ This means you can use all standard Moost features with WebSocket handlers:
 
 ```ts
 import { Message, MessageData } from '@moostjs/event-ws'
-import { Controller, Intercept, Validate } from 'moost'
+import { Controller, Intercept } from 'moost'
 import { AuthGuard } from './auth.guard'
+import type { AnnounceDto } from './dto'
 
 @Controller('admin')
 @Intercept(AuthGuard)
 export class AdminController {
   @Message('broadcast', '/announce')
-  announce(@MessageData() @Validate() data: AnnounceDto) {
-    // protected by AuthGuard and validated
+  announce(@MessageData() data: AnnounceDto) {
+    // protected by AuthGuard; data goes through the pipes pipeline
   }
 }
 ```
+
+Validation runs through the same pipeline — e.g. register `validatorPipe()` from `@atscript/moost-validator` as a global pipe. See [Validation](/moost/pipes/validate).
 
 ## One Controller, Multiple Handler Types
 

@@ -74,6 +74,10 @@ Below is a representative diagram illustrating the lifecycle of a Moost event.
 12. **Return Response to Event Origin**
     Finally, the processed (or error) response is returned to the event’s origin, concluding the event lifecycle.
 
+## Event Context API
+
+`moost` re-exports the core event-context API from `@wooksjs/event-core`, so you can build custom composables without adding a direct dependency: `current()` (returns the active `EventContext`), `key()` and `cached()` (typed context slots), `run()` and `createEventContext()` (execute code inside a given/new context), `eventTypeKey` (the slot holding the current event type), and `useLogger()` (the event-scoped logger). See the [Wooks documentation](https://wooks.moost.org/) for the full API.
+
 ## Summary
 
 Whether you’re validating input data, enforcing security policies, logging metrics, or formatting output, understanding and leveraging these lifecycle stages ensures that your Moost application remains maintainable, testable, and adaptable to evolving requirements.

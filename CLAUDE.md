@@ -24,7 +24,7 @@ To run a single test file: `pnpm vitest run -c ./vitest.config.js <path-to-spec>
 
 ## Monorepo Structure
 
-pnpm workspace with all packages under `packages/`. All packages share the same version number (currently 0.5.33), use `"type": "module"`, and ship dual ESM/CJS outputs.
+pnpm workspace with all packages under `packages/`. All packages share the same version number, use `"type": "module"`, and ship dual ESM/CJS outputs.
 
 | Package folder | npm name              | Purpose                                                          |
 | -------------- | --------------------- | ---------------------------------------------------------------- |
@@ -35,7 +35,6 @@ pnpm workspace with all packages under `packages/`. All packages share the same 
 | `event-ws`     | `@moostjs/event-ws`   | WebSocket adapter wrapping `@wooksjs/event-ws`                   |
 | `swagger`      | `@moostjs/swagger`    | Swagger/OpenAPI integration                                      |
 | `otel`         | `@moostjs/otel`       | OpenTelemetry tracing                                            |
-| `arbac`        | `@moostjs/arbac`      | RBAC/ABAC access control                                         |
 | `vite`         | `@moostjs/vite`       | Vite dev plugin                                                  |
 | `create-moost` | `create-moost`        | CLI scaffolding tool                                             |
 

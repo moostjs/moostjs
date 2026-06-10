@@ -13,37 +13,38 @@ Build an adapter for a new event source (queue, Kafka, MQTT, GraphQL sub, schedu
 - [Custom metadata extension](#custom-metadata-extension)
 - [Not-found handler](#not-found-handler)
 - [Real-world adapter sketches](#real-world-adapter-sketches)
+- [Utility exports](#utility-exports-from-moost)
 - [Gotchas](#gotchas)
 
 Adapter flow: `app.adapter(a)` registers → during `app.init()` Moost calls `a.bindHandler(opts)` per controller method → `a.onInit(moost)` at the end → adapter starts receiving events → each event runs inside a Wooks event context, calling the function returned by `defineMoostEventHandler()`.
 
 ## TMoostAdapter
 
-```ts
-interface TMoostAdapter<H> {
-  name: string
-  bindHandler<T extends object>(opts: TMoostAdapterOptions<H, T>): void | Promise<void>
-  onInit?(moost: Moost): void | Promise<void>
-  getProvideRegistry?(): TProvideRegistry
-}
-```
+`import type { TMoostAdapter, TMoostAdapterOptions } from 'moost'`. An adapter implements four members:
+
+| Member | What you implement |
+|---|---|
+| `name` (required) | identifying label for the adapter (not currently consumed by the runtime — still required by the interface) |
+| `bindHandler(opts)` | called once per controller method during `init()` — filter `opts.handlers` by your type and register routes with your engine (may be async) |
+| `onInit?(moost)` | called after ALL controllers are bound and `@MoostInit` hooks ran — start servers/engines here |
+| `getProvideRegistry?()` | provide-registry entries merged into DI before binding (expose your engine instances) |
 
 ## TMoostAdapterOptions
 
-```ts
-interface TMoostAdapterOptions<H, T> {
-  prefix: string                                     // computed from controller hierarchy
-  fakeInstance: T                                    // Object.create(ctor.prototype) — metadata only
-  getInstance: () => Promise<T> | T                  // real DI-resolved instance (may be async)
-  method: keyof T
-  handlers: TMoostHandler<H>[]                       // ALL handler entries on method — filter!
-  getIterceptorHandler: () => InterceptorHandler | undefined
-  resolveArgs?: () => Promise<unknown[]> | unknown[]
-  controllerName?: string
-  logHandler: (eventName: string) => void
-  register: (handler: TMoostHandler<any>, path: string, args: string[]) => void
-}
-```
+What `bindHandler(opts)` gives you, and what to do with each field:
+
+| Field | Use |
+|---|---|
+| `prefix` | computed path prefix from the controller hierarchy — prepend to handler paths |
+| `fakeInstance` | `Object.create(ctor.prototype)` — for reading metadata only, never invoke methods |
+| `getInstance()` | real DI-resolved controller instance — may return a Promise (`FOR_EVENT`) |
+| `method` | the controller method name being bound |
+| `handlers` | ALL handler entries on the method (every decorator) — filter by your `handler.type`! |
+| `getIterceptorHandler()` | pass through to `defineMoostEventHandler` |
+| `resolveArgs?` | pass through to `defineMoostEventHandler`; `undefined` for no-arg methods |
+| `controllerName?` | controller class name — feeds tracing span attributes |
+| `logHandler(eventName)` | call once per registered route for the init-time route-mapping log |
+| `register(handler, path, args)` | report the final mounted path back to the controllers overview (`registeredAs`) |
 
 ## defineMoostEventHandler
 
@@ -51,7 +52,8 @@ Returns a function that, when called inside a Wooks event context, runs the full
 
 ```ts
 const fn = defineMoostEventHandler({
-  contextType: 'MY_EVENT',                 // string | string[] — used by composables to type-guard
+  // contextType is deprecated — unused since wooks v0.7; the event kind comes
+  // from the wooks adapter (eventTypeKey/defineEventKind). Do not pass it.
   loggerTitle: 'my-adapter',               // required
   getIterceptorHandler: opts.getIterceptorHandler,
   getControllerInstance: opts.getInstance,
@@ -81,17 +83,17 @@ scope register (useScopeId + registerEventScope) → logger setup → hooks.init
 
 ## Hook options
 
-```ts
-interface TMoostEventHandlerHookOptions<T> {
-  scopeId: string
-  logger: Logger
-  unscope: () => void
-  instance?: T           // in `end` only
-  method?: keyof T       // in `end` only
-  getResponse: () => unknown
-  reply: (r: unknown) => void
-}
-```
+`hooks.init` and `hooks.end` receive the same `TMoostEventHandlerHookOptions<T>` object (`import type { TMoostEventHandlerHookOptions } from 'moost'`):
+
+| Field | Notes |
+|---|---|
+| `scopeId` | the event's DI scope ID |
+| `logger` | event logger |
+| `unscope()` | cleans up the DI scope — call it yourself when `manualUnscope: true` |
+| `method?` | the controller method name — available in BOTH `init` and `end` |
+| `instance?` | exists on the type but is NEVER populated by `defineMoostEventHandler` — to reach the controller instance in `hooks.end`, capture it via `getControllerInstance()` or `useControllerContext().getController()` |
+| `getResponse()` | current response value (set after the handler/interceptors ran) |
+| `reply(r)` | overwrite the response |
 
 ## Minimal adapter
 
@@ -112,7 +114,6 @@ class MyAdapter implements TMoostAdapter<TMyHandlerMeta> {
       const targetPath = `${opts.prefix}/${h.path || (opts.method as string)}`.replaceAll(/\/\/+/g, '/')
 
       const fn = defineMoostEventHandler({
-        contextType: 'MY_EVENT',
         loggerTitle: 'my-adapter',
         getIterceptorHandler: opts.getIterceptorHandler,
         getControllerInstance: opts.getInstance,
@@ -140,15 +141,24 @@ class MyAdapter implements TMoostAdapter<TMyHandlerMeta> {
 
 ## Handler decorators
 
+Type the mate with your handler meta — with bare `getMoostMate()` the extra fields (`eventName` here) fail TS excess-property checking:
+
 ```ts
+import type { TEmpty, TMoostMetadata } from 'moost'
+import { getMoostMate } from 'moost'
+
+interface TMyHandlerMeta { eventName: string }
+
 function MyEvent(name: string): MethodDecorator {
-  return getMoostMate().decorate('handlers', {
+  return getMoostMate<TEmpty, TMoostMetadata<TMyHandlerMeta>>().decorate('handlers', {
     type: 'MY_EVENT',
     path: name,
     eventName: name,
   }, true)  // true = push to array
 }
 ```
+
+(This mirrors `@moostjs/event-http`'s `HttpMethod` decorator.)
 
 ## Scope management
 
@@ -261,12 +271,22 @@ class MyAdapter implements TMoostAdapter<TMeta> {
   })
   ```
 
+## Utility exports (from `moost`)
+
+Small helpers adapter authors may need:
+
+- `getInstanceOwnMethods(instance)` / `getInstanceOwnProps(instance)` — enumerate a controller's method/property names including inherited ones (what Moost itself scans during binding)
+- `isThenable(v)` — type guard for `PromiseLike`; use it to keep your dispatch sync-first like `defineMoostEventHandler` does
+- `mergeSorted(a, b)` — merges arrays of `{ priority }` items into one priority-sorted list (how pipe/interceptor levels combine)
+- `getGlobalWooks()` / `clearGlobalWooks()` — access/reset the global Wooks app registry (re-exported from `wooks`; `clearGlobalWooks` is useful between tests or on HMR cleanup)
+- `ContextInjector`, `getContextInjector()`, `replaceContextInjector()`, `resetContextInjector()` — the tracing hook (re-exported from `@wooksjs/event-core`); `defineMoostEventHandler` wraps lifecycle stages through the active injector, and `@moostjs/otel` installs its span injector via `replaceContextInjector`
+
 ## Gotchas
 
 - `opts.fakeInstance` is `Object.create(ctor.prototype)` — read metadata only, don't invoke methods.
 - `opts.getInstance()` may return a Promise for `FOR_EVENT` controllers.
 - `bindHandler()` fires per method regardless of handler type — always filter by `handler.type`.
-- `hooks.init` runs before controller resolution — `instance` is not available there; it is in `hooks.end`.
+- Hook options never carry the controller instance — `instance` exists on the type but is not populated in either hook; `method` IS available in both. Capture the instance via `getControllerInstance()`/`useControllerContext()` if a hook needs it.
 - If `callControllerMethod` is set, it replaces the default method invocation entirely — `resolveArgs` still runs, but the method isn't called.
 - Scope ID is a monotonic counter, not a UUID — deterministic within a process.
 - `opts.resolveArgs` may be `undefined` if the method has no parameters.

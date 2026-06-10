@@ -29,7 +29,6 @@ export interface THttpHandlerMeta {
 }
 
 const LOGGER_TITLE = 'moost-http'
-const CONTEXT_TYPE = 'HTTP'
 
 /**
  * ## Moost HTTP Adapter
@@ -196,7 +195,6 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
       }` // explicit double slash "//" -> force url to end with slash
 
       fn = defineMoostEventHandler({
-        contextType: CONTEXT_TYPE,
         loggerTitle: LOGGER_TITLE,
         getIterceptorHandler: opts.getIterceptorHandler,
         getControllerInstance: opts.getInstance,

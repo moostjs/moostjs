@@ -21,9 +21,11 @@ import { MoostHttp } from '@moostjs/event-http'
 import { SwaggerController } from '@moostjs/swagger'
 
 const app = new Moost()
-app.adapter(new MoostHttp())
+const http = new MoostHttp()
+app.adapter(http)
 app.registerControllers(SwaggerController)
 await app.init()
+await http.listen(3000)
 ```
 
 Open <http://localhost:3000/api-docs> to view the UI. The controller generates the spec on the first request and caches it for subsequent requests.
@@ -44,7 +46,7 @@ The endpoints shift accordingly: `/docs/swagger`, `/docs/swagger/spec.json`, etc
 To set a title, version, CORS policy, or other options, instantiate `SwaggerController` yourself and expose it through the provide registry:
 
 ```ts
-import { createProvideRegistry } from '@prostojs/infact'
+import { createProvideRegistry } from 'moost'
 import { SwaggerController } from '@moostjs/swagger'
 
 const swagger = new SwaggerController({
@@ -73,7 +75,7 @@ You can serve several swagger UIs from different paths — for example, side-by-
 Create distinct instances with their own options and register each under a different prefix:
 
 ```ts
-import { createProvideRegistry } from '@prostojs/infact'
+import { createProvideRegistry } from 'moost'
 import { SwaggerController } from '@moostjs/swagger'
 
 // OpenAPI 3.0 instance
@@ -131,17 +133,25 @@ This is useful when the spec is consumed by tools hosted on a different domain (
 
 ## Programmatic access
 
-If you host the UI elsewhere or need the spec for code generation, call `mapToSwaggerSpec()` directly:
+If you host the UI elsewhere or need the spec for code generation, request `spec.json` in-process through the HTTP adapter — no port needs to be bound:
 
 ```ts
-import { mapToSwaggerSpec } from '@moostjs/swagger'
+import { createProvideRegistry, Moost } from 'moost'
+import { MoostHttp } from '@moostjs/event-http'
+import { SwaggerController } from '@moostjs/swagger'
 
-const spec = mapToSwaggerSpec(app.getControllersOverview(), {
-  title: 'External Docs',
-  version: '2025.1',
-})
+const app = new Moost()
+const http = new MoostHttp()
+app.adapter(http)
+const swagger = new SwaggerController({ title: 'External Docs', version: '2025.1' })
+app.setProvideRegistry(createProvideRegistry([SwaggerController, () => swagger]))
+app.registerControllers(SwaggerController /* , ...your controllers */)
+await app.init()
+
+const res = await http.request('/api-docs/spec.json')
+const spec = await res!.json()
 ```
 
-The function returns a plain object matching the OpenAPI 3.0 / 3.1 structure. It accepts the same options as `SwaggerController`.
+`MoostHttp.request()` runs the route through the full dispatch pipeline without starting a server, so this works in build scripts and CI. The result is a plain object matching the OpenAPI 3.0 / 3.1 structure (use `/api-docs/spec.yaml` for YAML).
 
-The generator reuses component schemas, so repeated types appear as `$ref`s automatically. You can serialize the result to JSON or YAML and serve it however you need.
+The generator reuses component schemas, so repeated types appear as `$ref`s automatically. You can serialize the result and serve it however you need.

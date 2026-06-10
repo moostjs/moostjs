@@ -23,21 +23,21 @@ Each metric data point includes these attributes:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `route` | `string` | The matched route (e.g. `/users/:id`). For HTTP events that don't match a route, falls back to the raw URL. |
-| `moost.event_type` | `string` | Event type: `HTTP`, `CLI`, `WF`, etc. |
+| `route` | `string` | The matched route (e.g. `/users/:id`) |
+| `moost.event_type` | `string` | Event type: `http`, `CLI`, `WF`, etc. |
 | `moost.is_error` | `number` | `1` if the event resulted in an error, `0` otherwise |
 
 ### HTTP-specific attributes
 
-For HTTP events, two additional attributes are recorded:
+For HTTP events, two additional attributes are recorded (the status code is captured automatically — no extra setup), and `route` falls back to the raw URL when no route matched:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `http.status_code` | `number` | Response status code (e.g. `200`, `404`, `500`) |
 | `moost.is_error` | `number` | Also set to `1` if `http.status_code > 399` |
 
-::: tip
-The status code is captured by patching the response's `writeHead()` method internally. This works automatically — no additional setup is needed.
+::: info
+For HTTP events, `moost.event_type` is the lowercase `http`.
 :::
 
 ## Custom metric attributes
@@ -109,6 +109,7 @@ To export metrics, configure the OpenTelemetry Metrics SDK alongside the tracing
 
 ```ts
 // Example — adjust for your metrics backend
+import { metrics } from '@opentelemetry/api'
 import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics'
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http'
 
@@ -122,18 +123,21 @@ const meterProvider = new MeterProvider({
     }),
   ],
 })
+
+// Register globally BEFORE calling enableOtelForMoost()
+metrics.setGlobalMeterProvider(meterProvider)
 ```
 
-The `moost-meter` meter is created lazily on the first event, using OpenTelemetry's global meter provider. See the [OpenTelemetry Metrics SDK docs](https://opentelemetry.io/docs/languages/js/instrumentation/#metrics) for other configuration options.
+The `moost-meter` meter and the duration histogram are created when `enableOtelForMoost()` runs, using OpenTelemetry's **global** meter provider. Register the global meter provider first: unlike the tracing API, the metrics API has no proxy provider, so a meter created before registration stays a no-op and no metrics are ever exported. See the [OpenTelemetry Metrics SDK docs](https://opentelemetry.io/docs/languages/js/instrumentation/#metrics) for other configuration options.
 
 ## Example: Grafana dashboard query
 
 With metrics exported to Prometheus (via OTLP), you can query event durations:
 
 ```txt
-# Average request duration by route
+# p95 request duration by route
 histogram_quantile(0.95,
-  sum(rate(moost_event_duration_bucket{moost_event_type="HTTP"}[5m])) by (le, route)
+  sum(rate(moost_event_duration_bucket{moost_event_type="http"}[5m])) by (le, route)
 )
 
 # Error rate by route

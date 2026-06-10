@@ -1,3 +1,4 @@
+import { Injectable } from '../injectable.decorator'
 import { Inject, Provide } from '../provide.decorator'
 
 export class ToInjectTestClass {
@@ -8,4 +9,14 @@ export class ToInjectTestClass {
 @Provide('to-inject', () => new ToInjectTestClass('via string'))
 export class ProvideTestClass {
   constructor(@Inject(ToInjectTestClass) public a: ToInjectTestClass) {}
+}
+
+export class EmailService {
+  constructor(public transport: string) {}
+}
+
+@Injectable()
+@Provide(EmailService, () => new EmailService('smtp'))
+export class NotificationService {
+  constructor(@Inject(EmailService) public email: EmailService) {}
 }

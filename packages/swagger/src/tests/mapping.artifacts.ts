@@ -26,7 +26,7 @@ import { getSwaggerMate } from '../swagger.mate'
  * (published moost@0.5.33 doesn't have the Authenticate decorator yet).
  */
 function AuthTransports(transports: Record<string, unknown>) {
-  return getSwaggerMate().decorate('authTransports' as 'swaggerTags', transports as never)
+  return getSwaggerMate().decorate('authTransports' as 'swaggerTags', transports as never, true)
 }
 
 @Label('Type Definition')
@@ -510,6 +510,17 @@ export class MultiAuthController {
   }
 }
 
+// Two stacked guards (AND) — both must be satisfied
+@AuthTransports({ bearer: { format: 'JWT' } })
+@AuthTransports({ apiKey: { name: 'X-API-Key', in: 'header' } })
+@Controller('stacked-auth')
+export class StackedAuthController {
+  @Get('both')
+  bothEndpoint() {
+    return 'ok'
+  }
+}
+
 @SwaggerSecurity('oauth2', ['read'])
 @Controller('ctrl-security')
 export class ControllerSecurityController {
@@ -674,6 +685,34 @@ class CatOrDogList {
   }
 }
 
+// A schema whose $defs reference each other (sibling refs):
+// Owner (no own $defs) references Address via '#/$defs/Address'
+class OwnerWithAddress {
+  static toJsonSchema() {
+    return {
+      type: 'object',
+      properties: {
+        owner: { $ref: '#/$defs/Owner' },
+      },
+      $defs: {
+        Owner: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            address: { $ref: '#/$defs/Address' },
+          },
+        },
+        Address: {
+          type: 'object',
+          properties: {
+            street: { type: 'string' },
+          },
+        },
+      },
+    }
+  }
+}
+
 @Controller('discriminator')
 export class DiscriminatorController {
   @Get('pet')
@@ -686,6 +725,12 @@ export class DiscriminatorController {
   @SwaggerResponse(200, CatOrDogList)
   getPets() {
     return []
+  }
+
+  @Get('owner')
+  @SwaggerResponse(200, OwnerWithAddress)
+  getOwner() {
+    return {}
   }
 }
 

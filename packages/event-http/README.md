@@ -32,8 +32,9 @@ npm create moost my-web-app -- --http
 This command will initiate a setup tool that will guide you through the project initialization process. It will prompt you to configure:
 
 - Project and package name.
+- Whether to add WebSockets.
 - Whether to include a Moost Workflows example.
-- Whether to add do-me-lint (smart eslint installer).
+- Whether to add OXC lint and formatter (oxlint + oxfmt).
 
 ## Auth Guards
 
@@ -121,26 +122,12 @@ This is wired up automatically by `@moostjs/vite` (see `ssrFetch` option).
 
 ## [Official Documentation](https://moost.org/webapp/)
 
-## AI Agent Skills
+## AI Agent Skill
 
-This package ships skills for AI coding agents (Claude Code, Cursor, Windsurf, Codex, OpenCode). After installing `@moostjs/event-http`, set up the skills:
+A unified Moost skill for AI coding agents (Claude Code, Cursor, Windsurf, Codex, OpenCode) covers this package along with the rest of the framework:
 
 ```bash
-# Project-local (recommended — version-locked, commits with your repo)
-npx moostjs-event-http-skill
-
-# Global (available across all your projects)
-npx moostjs-event-http-skill --global
-```
-
-To auto-install skills on `npm install`, add to your `package.json`:
-
-```json
-{
-  "scripts": {
-    "postinstall": "moostjs-event-http-skill --postinstall"
-  }
-}
+npx skills add moostjs/moostjs
 ```
 
 ## Contributing

@@ -112,24 +112,28 @@ When a handler throws an error, the server replies with an error object (only fo
 { "id": 1, "error": { "code": 404, "message": "Not found" } }
 ```
 
-For fire-and-forget messages (no `id`), errors are logged server-side but not sent to the client.
+For fire-and-forget messages (no `id`), no error is ever sent to the client. Unexpected (non-`WsError`) exceptions are logged server-side, while thrown `WsError` instances are silently discarded — no reply, no log.
 
 ## Heartbeat
 
-The server sends periodic WebSocket `ping` frames to detect stale connections. Clients that don't respond with a `pong` within the timeout are disconnected.
+In standalone mode the server sends periodic WebSocket `ping` frames to detect stale connections. A connection that hasn't responded with a `pong` by the next heartbeat tick is disconnected — so the effective timeout equals the interval.
 
 Configure the heartbeat interval:
 
 ```ts
 const ws = new MoostWs({
-  httpApp: http.getHttpApp(),
   wooksWs: {
     heartbeatInterval: 30000, // milliseconds (default: 30000)
   },
 })
+await ws.listen(3000)
 ```
 
 Set to `0` to disable heartbeat.
+
+::: warning Standalone mode only
+The heartbeat timer starts in `listen()` — it does not run in [HTTP-integrated mode](./integration) (`httpApp` option), where the `heartbeatInterval` option is currently inert and no ping frames are sent.
+:::
 
 ## Custom Serialization
 

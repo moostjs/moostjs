@@ -9,6 +9,8 @@ Powered by `@prostojs/infact`. Scopes, providers, replacements, circular refs, l
 - [Logger decorators](#logger-decorators)
 - [Patterns](#patterns)
 - [Gotchas](#gotchas)
+- [Key imports](#key-imports)
+- [See also](#see-also)
 
 ## Scopes
 
@@ -28,18 +30,22 @@ Powered by `@prostojs/infact`. Scopes, providers, replacements, circular refs, l
 @Injectable('FOR_EVENT') // per-event
 ```
 
-### `@Inject(key)` — param / prop
+### `@Inject(key)` — constructor params only
 
-Resolve by string key or class constructor from the provide registry.
+Resolve a **string key or class** from the provide registry — on **constructor parameters only**.
 
 ```ts
 constructor(
   @Inject('DATABASE_URL') private url: string,
-  @Inject(ConfigService) private cfg: ConfigService,
+  private cfg: ConfigService,  // class-typed deps resolve by TYPE — no @Inject needed
 ) {}
-// property
-@Inject('CONFIG') config!: AppConfig
 ```
+
+| # | Invariant |
+|---|---|
+| 1 | `@Inject(SomeClass)` matches class-keyed provide entries (the key is normalized to the registry's symbol). It is usually redundant: class-typed constructor params resolve automatically by type, consulting the provide registry. |
+| 2 | `@Inject` on handler/`@MoostInit` method params or on properties is a no-op — yields `undefined` regardless of registration (only Infact's constructor path consumes `inject` meta). Use constructor injection or `@Resolve`-based decorators instead. |
+| 3 | A missing key on a non-`@Optional()` constructor param throws `Could not inject ...` at instantiation. |
 
 ### `@Provide(type, factory)` — class / param / prop
 
@@ -54,7 +60,7 @@ class ApiController {}
 
 ### `@Replace(from, to)` — class
 
-Substitute one class with another in the subtree. Shorthand for `createReplaceRegistry([from, to])` applied to this class.
+Substitute one class with another. Scope is narrow: `@Replace` on a controller applies to its **directly imported** `@ImportController` children (and their DI graphs) — not grandchildren, and not the decorated controller's own constructor. For app-wide or deep-tree replacement use `app.setReplaceRegistry(...)`.
 
 ### `@Circular(() => Type)` — param only
 
@@ -77,10 +83,13 @@ Registries merge — later entries override earlier ones with the same key.
 
 ## Scoped injection
 
-`defineInfactScope(name, vars)` defines a named scope with variables. `@InjectFromScope(name)` pulls an instance from that scope; `@InjectScopeVars(name?)` reads its variables (without name = full vars object).
+`defineInfactScope(name, vars)` defines a named scope with variables. `@InjectFromScope(scopeName)` pulls an instance from that scope. `@InjectScopeVars(varName?)` injects **one variable by key** from the *current* scope's vars (no arg = the full vars object) — the argument is a variable name like `'tenantId'`, NOT a scope name. It only resolves on instances created within a registered scope (e.g. via `@InjectFromScope`); otherwise it yields `undefined`.
 
 ```ts
 defineInfactScope('tenant', { tenantId: 'abc', region: 'us-east' })
+class TenantService {
+  constructor(@InjectScopeVars('tenantId') private tenantId: string) {}
+}
 class Handler {
   constructor(@InjectFromScope('tenant') private svc: TenantService) {}
 }
@@ -89,12 +98,17 @@ class Handler {
 ## Logger decorators
 
 ```ts
-@LoggerTopic('orders')   // class-level default topic for @InjectMoostLogger
+@Injectable('FOR_EVENT')  // REQUIRED for per-event property injection
+@LoggerTopic('orders')    // class-level topic for @InjectMoostLogger
+@Controller('orders')
 class OrderController {
-  @InjectEventLogger('orders') logger!: Logger   // per-event (useLogger under the hood)
-  @InjectMoostLogger()         appLogger!: Logger // app-level (uses @LoggerTopic or class @Id)
+  @InjectEventLogger() logger!: Logger            // per-event (useLogger under the hood)
+  @InjectMoostLogger() appLogger!: Logger         // app-level (topic: arg, else @LoggerTopic, else class @Id)
 }
 ```
+
+- Property resolvers run once at DI instantiation — on a SINGLETON class `@InjectEventLogger` captures the boot-context logger, not a per-event one. Mark the class `@Injectable('FOR_EVENT')` (or use `useLogger()` inside the handler).
+- The `topic` argument of `@InjectEventLogger(topic?)` is currently a no-op with `@wooksjs/event-core` >= 0.7.16 (moost still checks the removed `.topic` function; topic scoping moved to `createTopic`). Use `useLogger('topic')` for working topic scoping.
 
 ## Patterns
 
@@ -128,11 +142,34 @@ const unscope = registerEventScope(scopeId)
 unscope()   // cleans up FOR_EVENT instances
 ```
 
+### Container utilities
+
+- `getMoostInfact()` — the shared Infact container Moost uses (e.g. `unregisterScope` in workflow adapters)
+- `getNewMoostInfact()` — a fresh, isolated container configured for moost metadata (useful in tests)
+- `setInfactLoggingOptions({ newInstance?, warn?, error? })` — controls which DI events are logged (`newInstance` accepts `true`/`false`/`'SINGLETON'`/`'FOR_EVENT'`)
+- `getInfactScopeVars(scopeName)` — reads the vars object registered with `defineInfactScope` (what `@InjectScopeVars` uses under the hood)
+
 ## Gotchas
 
 - `@Injectable()` with no arg = SINGLETON, not FOR_EVENT.
 - SINGLETON constructors run in a synthetic context during `init()` — composables reading event data (`useRequest`, etc.) don't work there.
 - FOR_EVENT requires an active event context — cannot be instantiated outside one.
 - `@Circular` works on params only, not properties.
-- Provide registries merge; replace registries apply tree-wide — use sparingly.
+- Provide registries merge down the `@ImportController` chain; `@Replace` reaches only direct children — `app.setReplaceRegistry()` is the app-wide mechanism.
 - The DI container runs pipes when resolving constructor params/properties, so the resolve pipe must be in the pipeline (it is, by default via `sharedPipes`).
+
+## Key imports
+
+```ts
+import { Injectable, Inject, Provide, Replace, Circular, Optional,
+         InjectFromScope, InjectScopeVars, defineInfactScope,
+         InjectEventLogger, InjectMoostLogger, LoggerTopic,
+         createProvideRegistry, createReplaceRegistry,
+         useScopeId, registerEventScope, getMoostInfact } from 'moost'
+```
+
+## See also
+
+- [pipes.md](pipes.md) — the same pipe pipeline resolves constructor params and properties
+- [interceptors.md](interceptors.md) — class-based interceptors are DI-instantiated (`@Interceptor(priority, scope)`)
+- [core.md](core.md#app-init-moostinit) — boot-time setup with `@MoostInit`

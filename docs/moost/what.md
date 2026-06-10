@@ -72,8 +72,8 @@ export class AppController {
   @Get('profile')
   profile() {
     const { method, url } = useRequest()
-    const cookies = useCookies()
-    return { method, url, session: cookies.get('session') }
+    const { getCookie } = useCookies()
+    return { method, url, session: getCookie('session') }
   }
 }
 ```
@@ -91,3 +91,7 @@ Moost adds structure on top; Wooks provides the composable runtime underneath. Y
 | `@moostjs/event-wf` | Workflow adapter (wraps `@wooksjs/event-wf`) |
 | `@moostjs/swagger` | Swagger / OpenAPI generation |
 | `@moostjs/otel` | OpenTelemetry tracing |
+| `@moostjs/vite` | Vite dev plugin (HMR for Moost apps) |
+| `create-moost` | Project scaffolding CLI (`npm create moost`) |
+
+For authentication and RBAC/ABAC access control, use the [Aooth](https://aooth.moost.org) packages — `@aooth/auth-moost` and `@aooth/arbac-moost` integrate directly with Moost controllers and guards.

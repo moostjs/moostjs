@@ -1,7 +1,11 @@
 # Error Handling
 
 
-Moost WS uses `WsError` for structured error responses. When a handler throws a `WsError`, the server sends an error reply to the client with the specified code and message.
+Moost WS uses `WsError` for structured error responses. When a message handler throws a `WsError` while processing an RPC message (a message sent with a correlation `id`), the server sends an error reply to the client with the specified code and message.
+
+::: warning Replies require an `id`
+Error replies — including the automatic 404/500 ones — are only delivered for RPC messages. A `WsError` thrown while handling a fire-and-forget message (no `id`) is silently dropped: no reply, no server log.
+:::
 
 [[toc]]
 
@@ -51,7 +55,7 @@ When the client sent the message with an `id` (RPC), they receive:
 
 ### In Upgrade Handlers
 
-`WsError` can also be thrown in `@Upgrade` handlers to reject WebSocket connections:
+Throwing in an `@Upgrade` handler rejects the WebSocket connection:
 
 ```ts
 import { Upgrade } from '@moostjs/event-http'
@@ -68,15 +72,20 @@ upgradeAdmin() {
 }
 ```
 
+::: warning
+When an upgrade handler throws, the raw socket is destroyed without an HTTP response — the client sees a failed WebSocket handshake, not the error code or message. The `WsError` code/message are server-side only here. To send the client a structured close reason, throw in a `@Connect` handler instead.
+:::
+
 ### In Connect Handlers
 
-Throwing in a `@Connect` handler closes the connection:
+Throwing in a `@Connect` handler closes the connection with a WebSocket close frame — close code `1008` for `WsError(401)`/`WsError(403)`, `1011` otherwise, with the error message as the close reason:
 
 ```ts
 @Connect()
 onConnect(@ConnectionId() id: string) {
   if (tooManyConnections()) {
     throw new WsError(503, 'Server at capacity') // [!code focus]
+    // client receives close code 1011, reason "Server at capacity"
   }
 }
 ```
@@ -113,7 +122,7 @@ The actual error details are **not** exposed to the client for security.
 You can use Moost's interceptor system to create centralized error handling:
 
 ```ts
-import { defineErrorInterceptor, TInterceptorPriority } from 'moost'
+import { Controller, defineErrorInterceptor, Intercept, TInterceptorPriority } from 'moost'
 
 const wsErrorHandler = defineErrorInterceptor((error, reply) => {
   // log, transform, or suppress errors
@@ -126,6 +135,8 @@ export class ChatController {
   // ...
 }
 ```
+
+For convenience, `@moostjs/event-ws` re-exports `defineInterceptor`, `defineBeforeInterceptor`, and `defineAfterInterceptor` from `moost`, so WS-focused modules can define interceptors without an extra import. See [Interceptors](/moost/interceptors) for the full guide.
 
 ## Client-Side Error Handling
 
@@ -143,4 +154,4 @@ try {
 }
 ```
 
-See the [client documentation](./client#error-handling) for more details.
+See the [client documentation](./client) and the [Wooks WS client reference](https://wooks.moost.org/wsapp/client.html) for more details.

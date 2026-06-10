@@ -20,17 +20,12 @@ const distAvailable = existsSync(distPath)
 describe.runIf(distAvailable)('event-wf dist externalization', () => {
   const dist = distAvailable ? readFileSync(distPath, 'utf8') : ''
 
-  it('does not inline classes re-exported from @prostojs/wf/outlets', () => {
-    for (const name of [
-      'HandleStateStrategy',
-      'EncapsulatedStateStrategy',
-      'WfStateStoreMemory',
-    ]) {
-      expect(dist, `'${name}' class body was inlined into the bundle`).not.toMatch(
-        new RegExp(`var ${name} = class`),
-      )
-    }
-  })
+  it.each(['HandleStateStrategy', 'EncapsulatedStateStrategy', 'WfStateStoreMemory'])(
+    'does not inline class %s re-exported from @prostojs/wf/outlets',
+    (name) => {
+      expect(dist).not.toMatch(new RegExp(`var ${name} = class`))
+    },
+  )
 
   it('imports subpath symbols from @prostojs/wf/outlets at runtime', () => {
     expect(dist).toMatch(/from ["']@prostojs\/wf\/outlets["']/)

@@ -100,13 +100,13 @@ my-cli status
 Use `@CliAlias()` to define alternative names for a command. Stack multiple decorators for multiple aliases:
 
 ```ts
-import { Cli, CliAlias, Controller } from '@moostjs/event-cli'
+import { Cli, CliAlias, Controller, Param } from '@moostjs/event-cli'
 
 @Controller()
 export class AppController {
   @Cli('install/:package')
-  @CliAlias('i/:package')
-  @CliAlias('add/:package')
+  @CliAlias('i')
+  @CliAlias('add')
   install(@Param('package') pkg: string) {
     return `Installing ${pkg}...`
   }
@@ -121,9 +121,18 @@ my-cli i lodash
 my-cli add lodash
 ```
 
+::: warning
+An alias contains only the alternative command name — the positional arguments from the `@Cli()` path are appended to every alias automatically. Writing `@CliAlias('i/:package')` would register the route `i/:package/:package` (the `:package` arg is appended again), and `my-cli i lodash` would fail as an unknown command.
+:::
+
 ## Return values
 
-Whatever a command handler returns is printed to stdout. Return a string for plain text, or an object/array for JSON output:
+Whatever a command handler returns is printed to stdout:
+
+- a **string** prints as-is
+- an **array** prints one element per line (string elements as-is, other elements as JSON)
+- any other **object** prints as pretty 2-space-indented JSON
+- a returned **Error** is not printed — it goes to the error handler (by default a red `ERROR:` message and `process.exit(1)`)
 
 ```ts
 @Cli('info')
@@ -134,7 +143,10 @@ info() {
 
 ```bash
 my-cli info
-# → {"name":"my-app","version":"1.0.0"}
+# → {
+#     "name": "my-app",
+#     "version": "1.0.0"
+#   }
 ```
 
 ## What's next

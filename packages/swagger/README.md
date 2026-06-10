@@ -5,8 +5,10 @@ Swagger/OpenAPI integration for [Moost](https://moost.org). Automatically genera
 ## Installation
 
 ```bash
-npm install @moostjs/swagger swagger-ui-dist
+npm install @moostjs/swagger
 ```
+
+The Swagger UI assets ship with the package (`swagger-ui-dist` is a regular dependency). `moost`, `@moostjs/event-http`, and `@wooksjs/http-static` are peer dependencies.
 
 ## Quick Start
 
@@ -18,9 +20,10 @@ import { SwaggerController } from '@moostjs/swagger'
 const app = new Moost()
 const http = new MoostHttp()
 
-app.adapter(http).controllers(SwaggerController).init()
-
-http.listen(3000)
+app.adapter(http)
+app.registerControllers(SwaggerController)
+await app.init()
+await http.listen(3000)
 // Swagger UI available at http://localhost:3000/api-docs/
 // JSON spec at http://localhost:3000/api-docs/spec.json
 // YAML spec at http://localhost:3000/api-docs/spec.yaml
@@ -33,7 +36,7 @@ http.listen(3000)
 - `@SwaggerResponse(opts)` / `@SwaggerResponse(code, opts)` — Define response schemas. Supports optional `description` to document the status code; when omitted, a standard HTTP reason phrase is used automatically.
 - `@SwaggerRequestBody(opts)` — Define request body schema.
 - `@SwaggerParam(opts)` — Define a parameter.
-- `@SwaggerExample(example)` — Attach an example value.
+- `@SwaggerExample(example)` — Attach an example value to a DTO class (its component schema).
 - `@SwaggerOperationId(id)` — Override the auto-generated operationId. Falls back to `@Id()` from moost core, then to the auto-generated value.
 - `@SwaggerDeprecated()` — Mark a controller or handler as deprecated.
 - `@SwaggerExclude()` — Exclude a controller or handler from the spec.
@@ -52,7 +55,8 @@ When no `@SwaggerResponse` is declared for the success status code, the generato
 Security schemes are auto-discovered from `@Authenticate()` guards (provided by `@moostjs/event-http`). All four OpenAPI transport types are supported: bearer, basic, apiKey, and cookie.
 
 ```ts
-import { Authenticate, defineAuthGuard } from '@moostjs/event-http'
+import { Controller, Param } from 'moost'
+import { Authenticate, defineAuthGuard, Get } from '@moostjs/event-http'
 import { SwaggerPublic } from '@moostjs/swagger'
 
 const jwtGuard = defineAuthGuard({ bearer: { format: 'JWT' } }, (transports) => {

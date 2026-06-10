@@ -17,43 +17,35 @@ import { Controller, Moost } from 'moost'
 @Controller()
 class MyWorkflows {
   @Step('greet')
-  greet(@WorkflowParam('input') input: string) {
-    return `Hello, ${input}!`
+  greet(
+    @WorkflowParam('context') ctx: { greeting: string },
+    @WorkflowParam('input') input?: string,
+  ) {
+    ctx.greeting = `Hello, ${input}!`
   }
 
   @Workflow('my-flow')
-  @WorkflowSchema([{ step: 'greet' }])
+  @WorkflowSchema(['greet'])
   myFlow() {}
 }
 
 const app = new Moost()
 const wf = new MoostWf()
-app.adapter(wf).controllers(MyWorkflows).init()
+app.adapter(wf)
+app.registerControllers(MyWorkflows)
+await app.init()
 
 // Start a workflow
-const result = await wf.start('my-flow', {}, 'World')
+const result = await wf.start('my-flow', { greeting: '' }, { input: 'World' })
+console.log(result.state.context.greeting) // 'Hello, World!'
 ```
 
-## AI Agent Skills
+## AI Agent Skill
 
-This package includes skill files for AI coding agents (Claude Code, Cursor, Windsurf, Codex, OpenCode). Install them to give your agent deep knowledge of the `@moostjs/event-wf` API:
+Install the unified Moost skill for AI coding agents (Claude Code, Cursor, etc.):
 
 ```bash
-# Project-local (recommended — version-locked, commits with your repo)
-npx moostjs-event-wf-skill
-
-# Global (available across all your projects)
-npx moostjs-event-wf-skill --global
-```
-
-To auto-install on `npm install`, add a postinstall script to your `package.json`:
-
-```json
-{
-  "scripts": {
-    "postinstall": "moostjs-event-wf-skill --postinstall"
-  }
-}
+npx skills add moostjs/moostjs
 ```
 
 ## [Official Documentation](https://moost.org/wf/)

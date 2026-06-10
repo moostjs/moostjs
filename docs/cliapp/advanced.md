@@ -36,6 +36,8 @@ void app.init()
 
 ### MoostCli options
 
+The constructor accepts a `TMoostCliOpts` object:
+
 | Option | Type | Description |
 |--------|------|-------------|
 | `wooksCli` | `WooksCli \| object` | A WooksCli instance or configuration options |
@@ -182,6 +184,18 @@ void app.init()
 ```
 
 Now `my-cli health check` and `GET /health/check` both invoke the same handler.
+
+::: warning Every launch is parsed as a CLI command
+On `init()`, the CLI adapter immediately runs the command from `process.argv` — and the default unknown-command handler prints `ERROR: Unknown command` and calls `process.exit(1)`. Starting the combined app without a valid CLI command (the normal way to start an HTTP server) kills the process before any request is served. Either override the unknown-command behavior:
+
+```ts
+app.adapter(new MoostCli({
+  wooksCli: { onUnknownCommand: () => {} },
+}))
+```
+
+or attach the CLI adapter only when the process is actually invoked as a CLI (e.g. gate it behind a `process.argv` check).
+:::
 
 ## Event type identifier
 

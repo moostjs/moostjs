@@ -17,7 +17,8 @@ Moost supports inheriting metadata from superclasses, making it easier to reuse 
 
 Base class:
 ```ts
-import { Controller, Get } from 'moost';
+import { Controller } from 'moost';
+import { Get } from '@moostjs/event-http';
 
 @Controller('base')
 export class BaseController {
@@ -46,12 +47,14 @@ export class ExtendedController extends BaseController {
 
 Base interceptor:
 ```ts
-import { Intercept, Injectable } from 'moost';
+import { Interceptor, Before, TInterceptorPriority } from 'moost';
 
-@Injectable()
-@Intercept(myInterceptorFn)
+@Interceptor(TInterceptorPriority.GUARD)
 export class BaseInterceptor {
-  // Interceptor logic
+  @Before()
+  check() {
+    // guard logic
+  }
 }
 ```
 
@@ -61,7 +64,7 @@ import { Inherit } from 'moost';
 
 @Inherit()
 export class ExtendedInterceptor extends BaseInterceptor {
-  // Now inherits interceptor metadata from BaseInterceptor
+  // Now inherits the @Interceptor priority and @Before hook metadata
 }
 ```
 
@@ -92,6 +95,9 @@ export class ExtendedService extends BaseService {
 You can also apply `@Inherit()` to specific methods to inherit their metadata individually.
 
 ```ts
+import { Controller, Inherit } from 'moost';
+import { Get } from '@moostjs/event-http';
+
 @Controller()
 class BaseController {
   @Get('')
@@ -107,6 +113,12 @@ class AnotherController extends BaseController {
   }
 }
 ```
+
+## Gotchas
+
+1. **No `@Inherit`, no inheritance.** Overriding a decorated method in a subclass *without* `@Inherit` (method-level or class-level) silently drops the inherited decorators — the route/command simply disappears, with no warning.
+2. **Own metadata blocks method inheritance.** With class-level `@Inherit()`, a subclass method that carries *any* own decorator no longer inherits the parent's metadata for that method — add a method-level `@Inherit()` to combine both.
+3. **Class-level keys are shallow-merged.** Class-level `@Inherit()` merges the parent's class metadata (prefix, interceptors, etc.) under the subclass's own — e.g. a subclass without `@Controller(prefix)` keeps the parent's prefix.
 
 ## Summary
 
