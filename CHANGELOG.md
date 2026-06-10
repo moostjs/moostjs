@@ -1,3 +1,13 @@
+## [0.6.26](https://github.com/moostjs/moostjs/compare/v0.6.25...v0.6.26) (2026-06-10)
+
+
+### Bug Fixes
+
+* resolve framework bugs, bump wooks to 0.7.19, drop deprecated @moostjs/arbac, and overhaul docs/skill/wiki accuracy ([4dab182](https://github.com/moostjs/moostjs/commit/4dab182c8be980fda9d1d026fd223c59c91cbed8))
+* **vite:** scope dev hot reload to the Moost entry graph, keep Vite default HMR for client and SSR render modules ([33b5661](https://github.com/moostjs/moostjs/commit/33b56612e6fecaa9d0f902757a502cf117463bff))
+
+
+
 ## [0.6.25](https://github.com/moostjs/moostjs/compare/v0.6.24...v0.6.25) (2026-06-08)
 
 
