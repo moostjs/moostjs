@@ -13,6 +13,39 @@ export function entryBasename(entry: string): string {
 }
 
 /**
+ * Normalizes the `prefix` option (single mount or list of mounts) into a list of
+ * normalized entries: leading slash ensured, trailing slash stripped.
+ * Returns `undefined` when no prefix is configured (empty input included) —
+ * the "route everything through Moost first" mode.
+ */
+export function normalizePrefixes(prefix?: string | string[] | null): string[] | undefined {
+  if (!prefix) {
+    return undefined
+  }
+  const normalized = (Array.isArray(prefix) ? prefix : [prefix]).filter(Boolean).map((entry) => {
+    let value = entry
+    if (!value.startsWith('/')) {
+      value = `/${value}`
+    }
+    if (value.endsWith('/')) {
+      value = value.slice(0, -1)
+    }
+    return value
+  })
+  return normalized.length > 0 ? normalized : undefined
+}
+
+/**
+ * Checks whether a request url falls under any of the normalized prefix mounts:
+ * exact match, a path segment below it, or the mount itself with a query string.
+ */
+export function matchesPrefix(url: string, prefixes: string[]): boolean {
+  return prefixes.some(
+    (prefix) => url === prefix || url.startsWith(`${prefix}/`) || url.startsWith(`${prefix}?`),
+  )
+}
+
+/**
  * Recursively gathers all importer modules upstream from a given module.
  *
  * @param {EnvironmentModuleNode | undefined} moduleNode - The starting module node.
@@ -39,9 +72,7 @@ export function gatherAllImporters(
   return visited
 }
 
-const logger = createLogger({ level: 99 }).createTopic(
-  __DYE_DIM__ + __DYE_CYAN__ + PLUGIN_NAME,
-)
+const logger = createLogger({ level: 99 }).createTopic(__DYE_DIM__ + __DYE_CYAN__ + PLUGIN_NAME)
 export function getLogger() {
   return logger
 }
@@ -59,9 +90,7 @@ export function getExternals({ node, workspace }: { node: boolean; workspace: bo
     : Object.entries(pkg.dependencies || {})
         .filter(([key, ver]) => !ver.startsWith('workspace:'))
         .map((i) => i[0])
-  const externals: RegExp[] = packageNames.map(
-    (name) => new RegExp(`^${escapeRegex(name)}(/|$)`),
-  )
+  const externals: RegExp[] = packageNames.map((name) => new RegExp(`^${escapeRegex(name)}(/|$)`))
   if (node) {
     externals.push(
       ...builtinModules.map((m) => new RegExp(`^${escapeRegex(m)}(/|$)`)),

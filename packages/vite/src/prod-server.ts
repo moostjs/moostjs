@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { DEFAULT_SSR_OUTLET, DEFAULT_SSR_STATE } from './utils'
+import { DEFAULT_SSR_OUTLET, DEFAULT_SSR_STATE, matchesPrefix, normalizePrefixes } from './utils'
 
 type TMiddleware = (req: IncomingMessage, res: ServerResponse, next: () => void) => void
 
@@ -8,8 +8,13 @@ export interface TSSRServerOptions {
   entry?: (() => Promise<unknown>) | string
   /** Override: SSR entry module path (e.g., '/src/entry-server.ts') */
   ssrEntry?: string
-  /** Override: URL prefix for API routes (e.g., '/api') */
-  prefix?: string
+  /**
+   * Override: URL mount(s) for Moost routes (e.g., '/api' or ['/api', '/.well-known']).
+   * Requests outside every mount skip the Moost router (optimization/guard).
+   * When omitted (and not baked by the plugin), every request enters Moost first
+   * and unmatched routes fall through to static/SSR — same as dev.
+   */
+  prefix?: string | string[]
   /** Override: port number (default: process.env.PORT || 3000) */
   port?: number
   /** Override: client build directory (default: 'dist/client') */
@@ -31,7 +36,7 @@ export interface TSSRServer {
 // In dev mode these are never evaluated (inside `if (isProd)` block).
 declare const __MOOST_ENTRY__: string
 declare const __MOOST_SSR_ENTRY__: string
-declare const __MOOST_PREFIX__: string
+declare const __MOOST_PREFIX__: string | string[] | null
 declare const __MOOST_SSR_OUTLET__: string
 declare const __MOOST_SSR_STATE__: string
 
@@ -123,14 +128,11 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const ssrState =
     (opts.ssrState as string) ||
     (__MOOST_SSR_STATE__ !== undefined ? __MOOST_SSR_STATE__ : '<!--ssr-state-->')
-  let prefix = (opts.prefix as string) || __MOOST_PREFIX__
-  if (!prefix.startsWith('/')) {
-    prefix = `/${prefix}`
-  }
-  if (prefix.endsWith('/')) {
-    prefix = prefix.slice(0, -1)
-  }
-  const prefixSlash = `${prefix}/`
+  // `undefined` means no gate: every request enters Moost first and unmatched
+  // routes fall through to static/SSR — identical to the dev middleware contract.
+  const prefixes = normalizePrefixes(
+    (opts.prefix as string | string[] | undefined) ?? __MOOST_PREFIX__,
+  )
   const defaultPort = (opts.port as number) || Number(process.env.PORT) || 3000
 
   // Read HTML template once at startup
@@ -151,7 +153,10 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   let captured = false
   const origListen = MoostHttp.prototype.listen
   MoostHttp.prototype.listen = function (...args: any[]) {
-    moostHandler = this.getServerCb()
+    // No-match falls through to static/SSR — same contract as the dev
+    // middleware's onNoMatch → next(). serveStatic is assigned below, before
+    // any request can reach this callback.
+    moostHandler = this.getServerCb((req, res) => serveStatic(req, res))
     moostHttpRef.instance = this
     captured = true
     setTimeout(() => args.filter((a: any) => typeof a === 'function').forEach((a: any) => a()), 1)
@@ -199,6 +204,39 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const sirv = sirvModule.default
   const serve = sirv(path.resolve(clientDir), { extensions: [] })
 
+  // Static assets → sirv, then SSR render or SPA fallback
+  const serveStatic = (req: IncomingMessage, res: ServerResponse) => {
+    const url = req.url || '/'
+    serve(req, res, async () => {
+      if (req.method !== 'GET') {
+        res.statusCode = 404
+        res.end()
+        return
+      }
+      try {
+        if (render) {
+          const { html: appHtml, state } = await render(url)
+          res.statusCode = 200
+          res.setHeader('Content-Type', 'text/html')
+          res.end(
+            template
+              .replace(ssrOutlet, appHtml)
+              .replace(ssrState, state ? `<script>window.__SSR_STATE__=${state}</script>` : ''),
+          )
+        } else {
+          // SPA fallback — serve index.html for client-side routing
+          res.statusCode = 200
+          res.setHeader('Content-Type', 'text/html')
+          res.end(template)
+        }
+      } catch (error: any) {
+        console.error(error)
+        res.statusCode = 500
+        res.end(error.message)
+      }
+    })
+  }
+
   return {
     use(mw) {
       userMiddlewares.push(mw)
@@ -216,47 +254,16 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
             return
           }
 
-          // 2. API routes → moost
-          if (
-            moostHandler &&
-            (url.startsWith(prefixSlash) || url === prefix || url.startsWith(`${prefix}?`))
-          ) {
+          // 2. Moost first — gated to the configured mounts when prefix is set
+          //    (pure fast path); unmatched routes inside Moost fall through to
+          //    serveStatic via the no-match callback.
+          if (moostHandler && (!prefixes || matchesPrefix(url, prefixes))) {
             moostHandler(req, res)
             return
           }
 
           // 3. Static assets → sirv, then SSR render or SPA fallback
-          serve(req, res, async () => {
-            if (req.method !== 'GET') {
-              res.statusCode = 404
-              res.end()
-              return
-            }
-            try {
-              if (render) {
-                const { html: appHtml, state } = await render(url)
-                res.statusCode = 200
-                res.setHeader('Content-Type', 'text/html')
-                res.end(
-                  template
-                    .replace(ssrOutlet, appHtml)
-                    .replace(
-                      ssrState,
-                      state ? `<script>window.__SSR_STATE__=${state}</script>` : '',
-                    ),
-                )
-              } else {
-                // SPA fallback — serve index.html for client-side routing
-                res.statusCode = 200
-                res.setHeader('Content-Type', 'text/html')
-                res.end(template)
-              }
-            } catch (error: any) {
-              console.error(error)
-              res.statusCode = 500
-              res.end(error.message)
-            }
-          })
+          serveStatic(req, res)
         }
         runNext()
       }).listen(p, () => {

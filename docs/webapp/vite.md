@@ -83,10 +83,12 @@ export default defineConfig({
 })
 ```
 
-The entry file is a standard Moost app (same as backend mode). The `prefix` option adds a fast-path filter so requests not matching the prefix skip Moost entirely.
+The entry file is a standard Moost app (same as backend mode). The `prefix` option is a pure optimization/guard — a single mount or a list of mounts (`prefix: ['/api', '/.well-known']`); requests outside every mount skip the Moost router entirely, in dev and in the generated production server alike.
 
-::: warning Set `prefix` explicitly
-In dev, omitting `prefix` sends every request through Moost first (unmatched ones fall through to Vite). In production, the generated server defaults the prefix to `'/api'` — only `/api/*` requests reach Moost, everything else goes to static/SSR. Always set `prefix` in middleware mode so dev and prod route the same way.
+Omitting `prefix` sends every request through Moost first; unmatched routes fall through to the frontend (Vite in dev, static/SSR in prod). Dev and prod route identically either way.
+
+::: warning Version note
+Up to and including `0.6.26`, `prefix` accepted only a single string, and the generated production server silently defaulted an omitted `prefix` to `'/api'` — a config that worked in dev could lose root-mounted routes (e.g. `/.well-known/*`) in production. On those versions, always set `prefix` explicitly.
 :::
 
 ## SSR Mode
@@ -168,7 +170,7 @@ If a server edit breaks the app (e.g. a syntax error), requests matching `prefix
 | `onEject` | `function` | — | Hook to control DI instance ejection during HMR |
 | `ssrFetch` | `boolean` | `true` | Enable [SSR local fetch](/webapp/fetch) interception |
 | `middleware` | `boolean` | `false` | Run Moost as Connect middleware |
-| `prefix` | `string` | `'/api'` (prod server) | URL prefix filter for middleware mode; the production server defaults to `'/api'` when omitted — set explicitly so dev and prod match |
+| `prefix` | `string \| string[]` | — | URL mount(s) for middleware mode — requests outside every mount skip the Moost router (fast path); when omitted, every request enters Moost first and unmatched routes fall through to the frontend |
 | `ssrEntry` | `string` | — | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`) |
 | `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
 | `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |

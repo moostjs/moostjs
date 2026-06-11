@@ -48,7 +48,7 @@ export default defineConfig({
 moostVite({ entry: '/src/api/main.ts', middleware: true, prefix: '/api' })
 ```
 
-Moost handles requests matching `prefix`; everything else falls through to Vite (frontend, static, HMR). `prefix` is normalized to leading-slash / no-trailing-slash and adds a fast-path skip for non-API requests. Omitting `prefix` diverges dev from prod: dev routes every request through Moost first, while the built prod server bakes `/api` as the prefix — always set it explicitly.
+Moost handles requests matching `prefix`; everything else falls through to Vite (frontend, static, HMR). `prefix` is a single mount or a list (`['/api', '/.well-known']`), each entry normalized to leading-slash / no-trailing-slash; it is a pure fast-path skip, identical in dev and the built prod server. Omitting `prefix` routes every request through Moost first with unmatched routes falling through to the frontend — same contract in dev and prod. (Up to and including `0.6.26`: single string only, and the prod server silently defaulted an omitted `prefix` to `'/api'` — set it explicitly on those versions.)
 
 ## SSR / SPA mode
 
@@ -105,7 +105,7 @@ The moost/wooks runtime relies on per-module `Symbol` slot keys (`cached()`/`key
 |---|---|---|---|
 | `entry` | `string` | — | required; Moost app entry. `/src/...` (root-rel) or `./src/...` |
 | `middleware` | `boolean` | `false` | run Moost as Connect middleware behind Vite |
-| `prefix` | `string` | `'/api'` in prod build | URL prefix for middleware mode; prod server defaults to `/api` when omitted — set explicitly so dev/prod route the same |
+| `prefix` | `string \| string[]` | — | URL mount(s) for middleware mode (fast-path skip outside every mount); omitted → all requests enter Moost first, unmatched fall through (dev and prod alike) |
 | `ssrEntry` | `string` | — | Vue/React SSR entry (e.g. `/src/entry-server.ts`) |
 | `ssrOutlet` / `ssrState` | `string` | `<!--ssr-outlet-->` / `<!--ssr-state-->` | HTML placeholders |
 | `serverEntry` | `string` | — | custom prod server entry; auto-generated when omitted |

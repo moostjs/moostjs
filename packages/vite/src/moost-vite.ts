@@ -15,6 +15,8 @@ import {
   gatherAllImporters,
   getExternals,
   getLogger,
+  matchesPrefix,
+  normalizePrefixes,
   PLUGIN_NAME,
 } from './utils'
 
@@ -110,9 +112,10 @@ export interface TMoostViteDevOptions {
   ssrFetch?: boolean
   /**
    * Run Moost as Connect middleware instead of taking over the server.
-   * When enabled, Moost handles only matching routes (guarded by `prefix`),
-   * and unmatched requests fall through to Vite's default handler
-   * (static assets, Vue/React pages, HMR client).
+   * When enabled, Moost runs first and unmatched requests fall through to
+   * Vite's default handler (static assets, Vue/React pages, HMR client).
+   * With `prefix` configured, requests outside the mount(s) skip the Moost
+   * router entirely (fast path).
    *
    * Use this for fullstack apps where Vite serves the frontend (Vue, React, etc.)
    * and Moost handles API routes.
@@ -121,13 +124,16 @@ export interface TMoostViteDevOptions {
    */
   middleware?: boolean
   /**
-   * URL prefix for Moost API routes in middleware mode.
-   * Only requests starting with this prefix are dispatched to Moost.
+   * URL mount(s) for Moost routes in middleware mode — a single prefix or a
+   * list of prefixes. Requests outside every mount skip the Moost router and
+   * go straight to the frontend handler (an optimization/guard, in both dev
+   * and the generated prod server). When omitted, every request enters Moost
+   * first and unmatched routes fall through to the frontend.
    * Ignored when `middleware` is `false`.
    *
-   * Example: `'/api'`
+   * Example: `'/api'` or `['/api', '/.well-known']`
    */
-  prefix?: string
+  prefix?: string | string[]
   /**
    * Vue/React SSR entry module path. Used by the SSR server helper
    * (`@moostjs/vite/server`) for server-side rendering.
@@ -219,19 +225,8 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const isProd = process.env.NODE_ENV === 'production'
   const externals = options.externals ?? true
 
-  // Normalize prefix: ensure leading slash, strip trailing slash
-  let prefix = options.prefix
-  if (prefix) {
-    if (!prefix.startsWith('/')) {
-      prefix = `/${prefix}`
-    }
-    if (prefix.endsWith('/')) {
-      prefix = prefix.slice(0, -1)
-    }
-  }
-
-  const prefixSlash = prefix ? `${prefix}/` : undefined
-  const prefixQuery = prefix ? `${prefix}?` : undefined
+  // Normalize prefix entries: ensure leading slash, strip trailing slash
+  const prefixes = normalizePrefixes(options.prefix)
 
   let moostMiddleware: TMiddleware | null = null
   let localFetchTeardown: (() => void) | null = null
@@ -330,7 +325,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         const serverDefines: Record<string, string> = {
           'process.env.MOOST_DEFERRED_ENV': '"production"',
           __MOOST_ENTRY__: JSON.stringify(`./${entryKey}.js`),
-          __MOOST_PREFIX__: JSON.stringify(prefix || '/api'),
+          // `null` (not '/api') when omitted — the prod server must keep the
+          // dev contract: no prefix → everything routes through Moost first.
+          __MOOST_PREFIX__: JSON.stringify(prefixes ?? null),
         }
 
         // Build inputs: server entry + Moost backend entry are always included,
@@ -497,7 +494,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         entry: options.entry,
         ssrEntry: options.ssrEntry,
         serverEntry: options.serverEntry,
-        prefix,
+        prefix: prefixes,
         port: options.port,
         ssrOutlet: options.ssrOutlet,
         ssrState: options.ssrState,
@@ -655,11 +652,8 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         await drainReload()
 
         // In middleware mode with prefix: skip Moost for non-matching paths (fast path)
-        if (options.middleware && prefix) {
-          const url = req.url || ''
-          if (url !== prefix && !url.startsWith(prefixSlash!) && !url.startsWith(prefixQuery!)) {
-            return next()
-          }
+        if (options.middleware && prefixes && !matchesPrefix(req.url || '', prefixes)) {
+          return next()
         }
 
         if (moostMiddleware) {
