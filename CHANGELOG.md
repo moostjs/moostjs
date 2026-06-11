@@ -1,3 +1,13 @@
+## [0.6.27](https://github.com/moostjs/moostjs/compare/v0.6.26...v0.6.27) (2026-06-11)
+
+
+### Bug Fixes
+
+* optimization ([ae659f4](https://github.com/moostjs/moostjs/commit/ae659f40ca8983219dda8ab1c37a33c3cea8cfb4))
+* **vite:** accept multiple prefix mounts and keep omitted-prefix prod routing identical to dev ([71d7dd0](https://github.com/moostjs/moostjs/commit/71d7dd06a53a4c80a40220f67ab1d414063b987a))
+
+
+
 ## [0.6.26](https://github.com/moostjs/moostjs/compare/v0.6.25...v0.6.26) (2026-06-10)
 
 
