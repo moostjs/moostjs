@@ -40,9 +40,13 @@ export function normalizePrefixes(prefix?: string | string[] | null): string[] |
  * exact match, a path segment below it, or the mount itself with a query string.
  */
 export function matchesPrefix(url: string, prefixes: string[]): boolean {
-  return prefixes.some(
-    (prefix) => url === prefix || url.startsWith(`${prefix}/`) || url.startsWith(`${prefix}?`),
-  )
+  return prefixes.some((prefix) => {
+    if (!url.startsWith(prefix)) {
+      return false
+    }
+    const next = url[prefix.length]
+    return next === undefined || next === '/' || next === '?'
+  })
 }
 
 /**
