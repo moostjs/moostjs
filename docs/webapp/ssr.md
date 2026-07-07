@@ -115,6 +115,55 @@ onMounted(async () => {
 
 Initializing the ref from the transferred state is what makes the `window.__SSR_STATE__` transfer effective — without it the client hydrates with `null`, mismatches the server-rendered HTML, and refetches on every load.
 
+## The render contract
+
+`entry-server.ts` exports the `render(url)` function the server calls for every non-API request. Beyond the app HTML it can return per-page `<head>` tags and control the HTTP response — the whole point of SSR for a public, crawlable site:
+
+```ts
+// src/entry-server.ts
+import type { TSSRRenderResult } from '@moostjs/vite/server'
+
+export async function render(url: string): Promise<TSSRRenderResult> {
+  // ...render the app for `url`, collect head tags & state...
+  return {
+    html, // → replaces <!--ssr-outlet--> in the <body>
+    state, // → <script>window.__SSR_STATE__=…</script> at <!--ssr-state-->
+    head, // → per-page <title>/<meta>/canonical/OG/JSON-LD at <!--ssr-head-->
+    status, // → HTTP status code (default 200)
+    headers, // → extra response headers
+  }
+}
+```
+
+Only `html` is required — a render returning `{ html }` or `{ html, state }` keeps working unchanged. Every marker is a plain string replacement, so a marker missing from `index.html` is simply skipped.
+
+### Head tags for SEO
+
+Per-page `<title>`, `<meta name="description">`, canonical, Open Graph and JSON-LD are why you server-render a public site. Place the `<!--ssr-head-->` marker inside `<head>` in `index.html`:
+
+```html
+<!-- index.html -->
+<head>
+  <!--ssr-head-->
+</head>
+```
+
+Then return `head` as a ready-to-insert tag string — exactly what a head manager emits (e.g. unhead's `renderSSRHead(head).headTags`) — and those tags land in the crawler-visible initial HTML. Rename the marker with the [`ssrHead`](/webapp/vite#options) option if `<!--ssr-head-->` collides with your template.
+
+### Status & headers
+
+`status` and `headers` let a render drive the response:
+
+- Return `status: 404` for a deleted or unknown slug — crawlers and CDNs treat a real 404 far better than a soft-404 (a not-found page served with `200`).
+- Set `cache-control` (or any header) via `headers`.
+- Redirect with `status: 301` and `headers: { location: '/new-url' }`.
+
+Headers are applied after the default `Content-Type: text/html`, so a render may override it.
+
+::: tip Version
+On `@moostjs/vite` ≤ 0.6.28 `render()` honors only `{ html, state }` — `head` / `status` / `headers` and the `<!--ssr-head-->` marker are ignored. If you worked around the missing head seam by escaping the state `<script>` wrapper, drop that trick once upgraded and return `head` directly.
+:::
+
 ## SSR vs SPA
 
 The only difference between SSR and SPA mode is the `ssrEntry` option in `vite.config.ts`:

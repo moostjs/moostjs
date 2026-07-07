@@ -40,7 +40,7 @@ Powered by: `@prostojs/mate` (metadata), `@prostojs/infact` (DI), `@wooksjs/even
 | WebSocket core | [event-ws.md](references/event-ws.md) | MoostWs/WsApp, @Message/@Connect/@Disconnect, wire protocol |
 | WebSocket rooms | [ws-rooms.md](references/ws-rooms.md) | useWsRooms, broadcasting, WsBroadcastTransport |
 | WebSocket testing | [ws-testing.md](references/ws-testing.md) | prepareTestWsMessageContext / prepareTestWsConnectionContext |
-| Vite plugin: dev/build, middleware, SSR/SPA, deploy | [vite.md](references/vite.md) | `moostVite`, `vite.config.ts`, `createSSRServer`, `ssrEntry`/`serverEntry`, `ssr.noExternal`, `dist/server`, HMR, "undefined `useRequest()` in prod" |
+| Vite plugin: dev/build, middleware, SSR/SPA, deploy | [vite.md](references/vite.md) | `moostVite`, `vite.config.ts`, `createSSRServer`, `ssrEntry`/`serverEntry`, `ssr.noExternal`, `dist/server`, HMR, "undefined `useRequest()` in prod", SSR render contract / per-page head-SEO / status / `ssrHead` / `TSSRRenderResult` |
 | Swagger/OpenAPI | [swagger.md](references/swagger.md) | SwaggerController, Swagger* decorators, OpenAPI spec generation, spec.json/UI serving, securitySchemes |
 | OpenTelemetry | [otel.md](references/otel.md) | `enableOtelForMoost`, spans/tracing, `@OtelIgnoreSpan`/`@OtelIgnoreMeter`, span processors, `useOtelContext`/`useSpan`/`withSpan`, `moost.event.duration` metrics |
 | RBAC/ABAC access control | `@aooth/arbac-moost` ([aooth docs](https://aooth.moost.org)) | auth, roles/scopes, authorize guards — NOT part of this repo; `@moostjs/arbac` is deprecated, superseded by aooth |

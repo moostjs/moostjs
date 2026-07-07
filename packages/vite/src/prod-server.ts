@@ -1,5 +1,15 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { DEFAULT_SSR_OUTLET, DEFAULT_SSR_STATE, matchesPrefix, normalizePrefixes } from './utils'
+import type { TSSRRenderResult } from './utils'
+import {
+  DEFAULT_SSR_HEAD,
+  DEFAULT_SSR_OUTLET,
+  DEFAULT_SSR_STATE,
+  matchesPrefix,
+  normalizePrefixes,
+  sendSSRResponse,
+} from './utils'
+
+export type { TSSRRenderResult } from './utils'
 
 type TMiddleware = (req: IncomingMessage, res: ServerResponse, next: () => void) => void
 
@@ -23,6 +33,8 @@ export interface TSSRServerOptions {
   ssrOutlet?: string
   /** Override: HTML placeholder for SSR state */
   ssrState?: string
+  /** Override: HTML placeholder for SSR-rendered `<head>` tags */
+  ssrHead?: string
 }
 
 export interface TSSRServer {
@@ -39,6 +51,7 @@ declare const __MOOST_SSR_ENTRY__: string
 declare const __MOOST_PREFIX__: string | string[] | null
 declare const __MOOST_SSR_OUTLET__: string
 declare const __MOOST_SSR_STATE__: string
+declare const __MOOST_SSR_HEAD__: string
 
 function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined))
@@ -65,6 +78,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
     const ssrEntry = config.ssrEntry as string | undefined
     const ssrOutlet = (config.ssrOutlet as string) || DEFAULT_SSR_OUTLET
     const ssrState = (config.ssrState as string) || DEFAULT_SSR_STATE
+    const ssrHead = (config.ssrHead as string) || DEFAULT_SSR_HEAD
 
     let ssrFallback: TMiddleware | null = null
     if (ssrEntry) {
@@ -80,14 +94,8 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
           let template = await fs.readFile(path.resolve(vite.config.root, 'index.html'), 'utf8')
           template = await vite.transformIndexHtml(url, template)
           const { render } = await vite.ssrLoadModule(ssrEntry)
-          const { html: appHtml, state } = await render(url)
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'text/html')
-          res.end(
-            template
-              .replace(ssrOutlet, appHtml)
-              .replace(ssrState, state ? `<script>window.__SSR_STATE__=${state}</script>` : ''),
-          )
+          const result: TSSRRenderResult = await render(url)
+          sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
         } catch (error: any) {
           vite.ssrFixStacktrace(error)
           console.error(error)
@@ -124,10 +132,13 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const clientDir = (opts.clientDir as string) || path.resolve(import.meta.dirname, '../client')
   const ssrOutlet =
     (opts.ssrOutlet as string) ||
-    (__MOOST_SSR_OUTLET__ !== undefined ? __MOOST_SSR_OUTLET__ : '<!--ssr-outlet-->')
+    (__MOOST_SSR_OUTLET__ !== undefined ? __MOOST_SSR_OUTLET__ : DEFAULT_SSR_OUTLET)
   const ssrState =
     (opts.ssrState as string) ||
-    (__MOOST_SSR_STATE__ !== undefined ? __MOOST_SSR_STATE__ : '<!--ssr-state-->')
+    (__MOOST_SSR_STATE__ !== undefined ? __MOOST_SSR_STATE__ : DEFAULT_SSR_STATE)
+  const ssrHead =
+    (opts.ssrHead as string) ||
+    (__MOOST_SSR_HEAD__ !== undefined ? __MOOST_SSR_HEAD__ : DEFAULT_SSR_HEAD)
   // `undefined` means no gate: every request enters Moost first and unmatched
   // routes fall through to static/SSR — identical to the dev middleware contract.
   const prefixes = normalizePrefixes(
@@ -139,7 +150,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const template = await fs.readFile(path.resolve(clientDir, 'index.html'), 'utf8')
 
   // SSR render function (if ssrEntry is configured), otherwise SPA fallback
-  let render: ((url: string) => Promise<{ html: string; state?: string }>) | null = null
+  let render: ((url: string) => Promise<TSSRRenderResult>) | null = null
   const hasSsr = __MOOST_SSR_ENTRY__ !== undefined && !!__MOOST_SSR_ENTRY__
   if (hasSsr) {
     const ssrModule = await import(/* @vite-ignore */ __MOOST_SSR_ENTRY__)
@@ -215,14 +226,8 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
       }
       try {
         if (render) {
-          const { html: appHtml, state } = await render(url)
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'text/html')
-          res.end(
-            template
-              .replace(ssrOutlet, appHtml)
-              .replace(ssrState, state ? `<script>window.__SSR_STATE__=${state}</script>` : ''),
-          )
+          const result = await render(url)
+          sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
         } else {
           // SPA fallback — serve index.html for client-side routing
           res.statusCode = 200

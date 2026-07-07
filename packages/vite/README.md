@@ -122,6 +122,30 @@ In dev, the plugin adds an SSR fallback middleware that renders pages on the ser
 - **ssr** — server-side render function (`dist/server/ssr/`)
 - **server** — production Node.js server (`dist/server/server.js`)
 
+### Render Contract
+
+Your SSR entry exports a `render(url)` that returns HTML plus optional metadata. Only `html` is required — every other field is optional, so `{ html }` (or `{ html, state }`) keeps working unchanged:
+
+```ts
+// entry-server.ts
+import type { TSSRRenderResult } from '@moostjs/vite/server'
+
+export async function render(url: string): Promise<TSSRRenderResult> {
+  // ...render your app for `url`...
+  return {
+    html, // → substituted into `<!--ssr-outlet-->`
+    state, // → wrapped as <script>window.__SSR_STATE__=…</script> at `<!--ssr-state-->`
+    head, // → per-page <head> tags injected at `<!--ssr-head-->`
+    status, // → HTTP status code (default 200) — e.g. 404 for an unknown slug
+    headers, // → extra response headers — e.g. cache-control, or location with status: 301
+  }
+}
+```
+
+The three markers (`ssrOutlet`, `ssrState`, `ssrHead`) are plain string replacements — a marker missing from `index.html` is simply skipped. Put `<!--ssr-head-->` inside `<head>` to get crawler-visible per-page `<title>` / `<meta>` / canonical / Open Graph / JSON-LD tags. `head` is exactly the string a head manager emits (e.g. unhead's `renderSSRHead(head).headTags`).
+
+`status` and `headers` give the render control over the response: return `status: 404` for a real not-found (crawlers treat soft-404s worse), set `cache-control`, or redirect with `status: 301` + `headers: { location: '/new-url' }`. Headers are applied after the default `Content-Type: text/html`, so a render may override it.
+
 ### SPA Mode
 
 Omit `ssrEntry` and Vite serves the app as a standard SPA. The production build still generates a server that serves static files and API routes — it just skips server-side rendering.
@@ -236,6 +260,7 @@ The plugin injects a `__VITE_ID` decorator on `@Injectable` and `@Controller` cl
 | `ssrEntry` | `string` | — | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`) |
 | `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
 | `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |
+| `ssrHead` | `string` | `'<!--ssr-head-->'` | HTML placeholder for SSR-rendered `<head>` tags (place inside `<head>`) |
 | `serverEntry` | `string` | — | Custom production server entry file (e.g. `'./server.ts'`) |
 | `ssrExternal` | `string[]` | — | Packages to keep external in the SSR build (middleware mode, `vite build` only). Concatenated with `cfg.ssr.external`. See [SSR Bundle Size](#ssr-bundle-size). |
 

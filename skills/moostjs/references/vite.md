@@ -63,6 +63,20 @@ moostVite({
 
 `vite build` emits three bundles in one pass: **client** (`dist/client/`), **ssr** render fn (`dist/server/ssr/`), **server** (`dist/server/server.js`). With [SSR local fetch](event-http.md) (default), `fetch('/api/...')` during SSR calls Moost in-process — no loopback. SSR vs SPA differ only by the presence of `ssrEntry`.
 
+### Render contract
+
+`entry-server.ts` exports `render(url)` returning `TSSRRenderResult` (from `@moostjs/vite/server`) — `{ html, state?, head?, status?, headers? }`; only `html` required. Each field maps to a substitution or response step (every marker is a plain string-replace — a marker missing from `index.html` is a silent no-op):
+
+| Field | Effect |
+|---|---|
+| `html` | replaces `ssrOutlet` marker (`<!--ssr-outlet-->`) in `<body>` |
+| `state` | wrapped as `<script>window.__SSR_STATE__=…</script>` at `ssrState` marker |
+| `head` | inserted verbatim at `ssrHead` marker (`<!--ssr-head-->`) — put the marker in `<head>` for per-page `<title>`/meta/canonical/OG/JSON-LD SEO; pass a head-manager string (e.g. unhead `renderSSRHead(head).headTags`) |
+| `status` | `res.statusCode` (default `200`) — return `404` for an unknown slug (real 404 beats soft-404 for crawlers/CDNs), `301` for a redirect |
+| `headers` | extra response headers (`cache-control`; or `location` with `status: 301`) — applied **after** the default `Content-Type: text/html`, so a render can override it |
+
+`head`/`status`/`headers` + the `<!--ssr-head-->` marker/`ssrHead` option were added after `0.6.28`; `≤ 0.6.28` honors only `{ html, state }` (extra fields ignored — a soft-404 renders with `200`, no head seam). Backwards compatible: an old `{ html }` / `{ html, state }` render is unchanged.
+
 ## Production server
 
 ```bash
@@ -87,7 +101,7 @@ await app.listen()
 moostVite({ entry: '/src/main.ts', middleware: true, prefix: '/api', serverEntry: './server.ts' })
 ```
 
-`createSSRServer` handles dev/prod automatically. Optional `TSSRServerOptions` override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `clientDir`, `ssrOutlet`, `ssrState` (prod falls back to build-time baked values). The returned `TSSRServer` exposes `use(middleware)` (Connect-style) and `listen(port?)`. `serverEntry` is used only during `vite build`. `createSSRServer({ entry: () => import('./src/main') })` is an escape hatch that bundles the entry via the function instead of the baked define.
+`createSSRServer` handles dev/prod automatically. Optional `TSSRServerOptions` override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead` (prod falls back to build-time baked values). The returned `TSSRServer` exposes `use(middleware)` (Connect-style) and `listen(port?)`. `serverEntry` is used only during `vite build`. `createSSRServer({ entry: () => import('./src/main') })` is an escape hatch that bundles the entry via the function instead of the baked define.
 
 ## SSR externalization & single-instance guard
 
@@ -107,7 +121,7 @@ The moost/wooks runtime relies on per-module `Symbol` slot keys (`cached()`/`key
 | `middleware` | `boolean` | `false` | run Moost as Connect middleware behind Vite |
 | `prefix` | `string \| string[]` | — | URL mount(s) for middleware mode (fast-path skip outside every mount); omitted → all requests enter Moost first, unmatched fall through (dev and prod alike) |
 | `ssrEntry` | `string` | — | Vue/React SSR entry (e.g. `/src/entry-server.ts`) |
-| `ssrOutlet` / `ssrState` | `string` | `<!--ssr-outlet-->` / `<!--ssr-state-->` | HTML placeholders |
+| `ssrOutlet` / `ssrState` / `ssrHead` | `string` | `<!--ssr-outlet-->` / `<!--ssr-state-->` / `<!--ssr-head-->` | HTML placeholders (put the `ssrHead` marker in `<head>`; see [Render contract](#render-contract)) |
 | `serverEntry` | `string` | — | custom prod server entry; auto-generated when omitted |
 | `ssrExternal` | `string[]` | — | packages to keep external in middleware SSR build (≡ `ssr.external`) |
 | `ssrFetch` | `boolean` | `true` | in-process `fetch('/api/...')` during SSR |
@@ -120,6 +134,7 @@ The moost/wooks runtime relies on per-module `Symbol` slot keys (`cached()`/`key
 ```ts
 import { moostVite } from '@moostjs/vite'             // vite.config.ts plugin
 import { createSSRServer } from '@moostjs/vite/server' // custom dev/prod server entry
+import type { TSSRRenderResult } from '@moostjs/vite/server' // render(url) return type
 ```
 
 ## Gotchas
@@ -128,6 +143,7 @@ import { createSSRServer } from '@moostjs/vite/server' // custom dev/prod server
 - Under an explicit `noExternal` list, **never** externalize `@wooksjs/*` / `moost` piecemeal — the guard force-bundles them; a partial external split makes `useRequest()` etc. read `undefined` in prod only (dev dedupes via the SSR module runner, so it passes locally).
 - `serverEntry` is build-only. For custom middleware in dev, run `tsx server.ts` instead of `vite`.
 - `ssrEntry` forces `appType: 'custom'` (Vite stops serving HTML; the plugin's SSR fallback takes over).
+- SEO head tags need the `<!--ssr-head-->` marker **inside `<head>`** of `index.html`; without it `render().head` is silently dropped (string-replace no-op, no error). Same for a `status: 404`/redirect that never fires because you're on `≤ 0.6.28` — diagnose a soft-404-served-as-200 or missing `<title>`/meta as an out-of-date `@moostjs/vite`.
 - Backend-mode-only options (`port`, `host`, `outDir`, `format`, `externals`) are ignored in middleware mode — but `sourcemap` is NOT backend-only: in middleware mode it sets the `dist/server` SSR build's sourcemaps (default `true`).
 - HMR is scoped to the **Moost entry graph** (any file type the server imports, not just `.ts`): an entry-graph edit ejects the affected DI instances + Wooks router/Mate caches (tracked via `__vite_id` decorators) and re-imports the entry, re-initializing the whole app on the next request — one mechanism for controllers, data-models and providers alike. No restart.
 - Files **outside** the entry graph never reload Moost: client-only modules keep Vite's regular browser HMR; `ssrEntry` render-graph modules get Vite's default invalidation so the next SSR render is fresh. Versions ≤ 0.6.25 hijacked ANY `.ts` change — editing a client-only `.ts` in middleware+SSR mode killed `/api/*` (served `index.html`) until the next server-graph edit or a restart, and also suppressed the browser HMR update for that file; diagnose those symptoms as an out-of-date plugin.

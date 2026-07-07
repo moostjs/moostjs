@@ -9,6 +9,7 @@ import { createAdapterDetector } from './adapter-detector'
 import { patchMoostHandlerLogging } from './moost-logging'
 import { moostRestartCleanup } from './restart-cleanup'
 import {
+  DEFAULT_SSR_HEAD,
   DEFAULT_SSR_OUTLET,
   DEFAULT_SSR_STATE,
   entryBasename,
@@ -18,6 +19,7 @@ import {
   matchesPrefix,
   normalizePrefixes,
   PLUGIN_NAME,
+  sendSSRResponse,
 } from './utils'
 
 /** A simple request-response middleware type for Node’s http module. */
@@ -151,6 +153,12 @@ export interface TMoostViteDevOptions {
    * Default: `'<!--ssr-state-->'`
    */
   ssrState?: string
+  /**
+   * HTML placeholder for SSR-rendered `<head>` tags (`<title>`, `<meta>`,
+   * canonical, Open Graph, JSON-LD). Place the marker inside `<head>` and return
+   * `head` from `render()` to inject per-page tags. Default: `'<!--ssr-head-->'`
+   */
+  ssrHead?: string
   /**
    * Path to a custom server entry file (e.g., `'./server.ts'`).
    * When provided, this file is used as the production server build entry.
@@ -346,6 +354,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
             options.ssrOutlet || DEFAULT_SSR_OUTLET,
           )
           serverDefines.__MOOST_SSR_STATE__ = JSON.stringify(options.ssrState || DEFAULT_SSR_STATE)
+          serverDefines.__MOOST_SSR_HEAD__ = JSON.stringify(options.ssrHead || DEFAULT_SSR_HEAD)
         }
 
         // Nitro pattern: clean once upfront, emptyOutDir: false on all environments
@@ -498,6 +507,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         port: options.port,
         ssrOutlet: options.ssrOutlet,
         ssrState: options.ssrState,
+        ssrHead: options.ssrHead,
       }
     },
 
@@ -742,6 +752,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           async configureServer(server) {
             const ssrOutlet = options.ssrOutlet || DEFAULT_SSR_OUTLET
             const ssrState = options.ssrState || DEFAULT_SSR_STATE
+            const ssrHead = options.ssrHead || DEFAULT_SSR_HEAD
             const fs = await import('node:fs/promises')
             // Return post-hook so this runs AFTER Vite's internal middleware
             return () => {
@@ -760,17 +771,8 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
                   )
                   template = await server.transformIndexHtml(url, template)
                   const { render } = await server.ssrLoadModule(options.ssrEntry!)
-                  const { html: appHtml, state } = await render(url)
-                  res.statusCode = 200
-                  res.setHeader('Content-Type', 'text/html')
-                  res.end(
-                    template
-                      .replace(ssrOutlet, appHtml)
-                      .replace(
-                        ssrState,
-                        state ? `<script>window.__SSR_STATE__=${state}</script>` : '',
-                      ),
-                  )
+                  const result = await render(url)
+                  sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
                 } catch (error: any) {
                   server.ssrFixStacktrace(error)
                   console.error(error)

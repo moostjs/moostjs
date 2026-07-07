@@ -112,7 +112,7 @@ moostVite({
 
 Omit `ssrEntry` for SPA mode — the production build still generates a server for static files and API routes, just without server-side rendering.
 
-See [Vue + Moost (SSR)](/webapp/ssr) for the full guide.
+Your `entry-server.ts` `render(url)` can return per-page `<head>` tags plus an HTTP status and headers, not just HTML and state — see [the render contract](/webapp/ssr#the-render-contract). See [Vue + Moost (SSR)](/webapp/ssr) for the full guide.
 
 ## Custom Server Entry
 
@@ -139,7 +139,7 @@ const app = await createSSRServer()
 await app.listen()
 ```
 
-`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `clientDir`, `ssrOutlet`, `ssrState` — in production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?)`.
+`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead` — in production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?)`.
 
 ::: tip
 `serverEntry` is only used during `vite build`. In dev, the plugin handles SSR/SPA fallback directly. If you need custom middleware in dev too, run `tsx server.ts` instead of `vite`.
@@ -174,6 +174,7 @@ If a server edit breaks the app (e.g. a syntax error), requests matching `prefix
 | `ssrEntry` | `string` | — | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`) |
 | `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
 | `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |
+| `ssrHead` | `string` | `'<!--ssr-head-->'` | HTML placeholder for SSR-rendered `<head>` tags — place inside `<head>` (see [render contract](/webapp/ssr#the-render-contract)) |
 | `serverEntry` | `string` | — | Custom production server entry file (e.g. `'./server.ts'`) |
 | `ssrExternal` | `string[]` | — | Packages to keep external in the middleware-mode SSR build (concatenated with `cfg.ssr.external`). See [SSR Bundle Size](#ssr-bundle-size). |
 
