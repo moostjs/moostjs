@@ -1,3 +1,12 @@
+## [0.6.29](https://github.com/moostjs/moostjs/compare/v0.6.28...v0.6.29) (2026-07-07)
+
+
+### Features
+
+* **vite:** SSR render() may return head, status, and headers ([6b6cacb](https://github.com/moostjs/moostjs/commit/6b6cacbe6c06e9fc28de3d3a2438825cfa4f86e2))
+
+
+
 ## [0.6.28](https://github.com/moostjs/moostjs/compare/v0.6.27...v0.6.28) (2026-06-18)
 
 
