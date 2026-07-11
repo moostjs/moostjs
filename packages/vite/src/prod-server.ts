@@ -1,15 +1,16 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { TSSRRenderResult } from './utils'
+import type { TSSRHttpContextRunner, TSSRRender, TSSRRenderResult } from './utils'
 import {
   DEFAULT_SSR_HEAD,
   DEFAULT_SSR_OUTLET,
   DEFAULT_SSR_STATE,
   matchesPrefix,
   normalizePrefixes,
+  renderSSRPage,
   sendSSRResponse,
 } from './utils'
 
-export type { TSSRRenderResult } from './utils'
+export type { TSSRRender, TSSRRenderContext, TSSRRenderResult } from './utils'
 
 type TMiddleware = (req: IncomingMessage, res: ServerResponse, next: () => void) => void
 
@@ -35,6 +36,15 @@ export interface TSSRServerOptions {
   ssrState?: string
   /** Override: HTML placeholder for SSR-rendered `<head>` tags */
   ssrHead?: string
+  /**
+   * Override: run each SSR render inside an HTTP event context seeded from the
+   * incoming page request, so SSR-time `fetch('/api/...')` self-calls inherit
+   * the viewer's identity headers (authorization, cookie, accept-language,
+   * x-forwarded-for, x-request-id — see the adapter's `forwardHeaders` option)
+   * and their `Set-Cookie` headers land on the page response.
+   * Set to `false` to keep SSR self-calls anonymous. Default: `true`.
+   */
+  ssrFetchForwarding?: boolean
 }
 
 export interface TSSRServer {
@@ -52,6 +62,7 @@ declare const __MOOST_PREFIX__: string | string[] | null
 declare const __MOOST_SSR_OUTLET__: string
 declare const __MOOST_SSR_STATE__: string
 declare const __MOOST_SSR_HEAD__: string
+declare const __MOOST_SSR_FORWARDING__: boolean
 
 function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined))
@@ -79,6 +90,12 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
     const ssrOutlet = (config.ssrOutlet as string) || DEFAULT_SSR_OUTLET
     const ssrState = (config.ssrState as string) || DEFAULT_SSR_STATE
     const ssrHead = (config.ssrHead as string) || DEFAULT_SSR_HEAD
+    const ssrForwarding = (config.ssrFetchForwarding as boolean | undefined) !== false
+    // Live ref to the booted MoostHttp instance, exposed by the plugin's
+    // configResolved hook (survives HMR reboots — the plugin re-points it).
+    const httpRef = (vite.config as Record<string, any>).__moostViteHttpRef as
+      | { current: TSSRHttpContextRunner | null }
+      | undefined
 
     let ssrFallback: TMiddleware | null = null
     if (ssrEntry) {
@@ -94,7 +111,13 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
           let template = await fs.readFile(path.resolve(vite.config.root, 'index.html'), 'utf8')
           template = await vite.transformIndexHtml(url, template)
           const { render } = await vite.ssrLoadModule(ssrEntry)
-          const result: TSSRRenderResult = await render(url)
+          const result: TSSRRenderResult = await renderSSRPage({
+            render: render as TSSRRender,
+            url,
+            req,
+            res,
+            http: ssrForwarding ? httpRef?.current : null,
+          })
           sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
         } catch (error: any) {
           vite.ssrFixStacktrace(error)
@@ -144,13 +167,15 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const prefixes = normalizePrefixes(
     (opts.prefix as string | string[] | undefined) ?? __MOOST_PREFIX__,
   )
+  const ssrForwarding =
+    (opts.ssrFetchForwarding as boolean | undefined) ?? __MOOST_SSR_FORWARDING__ ?? true
   const defaultPort = (opts.port as number) || Number(process.env.PORT) || 3000
 
   // Read HTML template once at startup
   const template = await fs.readFile(path.resolve(clientDir, 'index.html'), 'utf8')
 
   // SSR render function (if ssrEntry is configured), otherwise SPA fallback
-  let render: ((url: string) => Promise<TSSRRenderResult>) | null = null
+  let render: TSSRRender | null = null
   const hasSsr = __MOOST_SSR_ENTRY__ !== undefined && !!__MOOST_SSR_ENTRY__
   if (hasSsr) {
     const ssrModule = await import(/* @vite-ignore */ __MOOST_SSR_ENTRY__)
@@ -226,7 +251,13 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
       }
       try {
         if (render) {
-          const result = await render(url)
+          const result = await renderSSRPage({
+            render,
+            url,
+            req,
+            res,
+            http: ssrForwarding ? (moostHttpRef.instance as TSSRHttpContextRunner | null) : null,
+          })
           sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
         } else {
           // SPA fallback — serve index.html for client-side routing

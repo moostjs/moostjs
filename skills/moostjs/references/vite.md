@@ -61,11 +61,11 @@ moostVite({
 })
 ```
 
-`vite build` emits three bundles in one pass: **client** (`dist/client/`), **ssr** render fn (`dist/server/ssr/`), **server** (`dist/server/server.js`). With [SSR local fetch](event-http.md) (default), `fetch('/api/...')` during SSR calls Moost in-process — no loopback. SSR vs SPA differ only by the presence of `ssrEntry`.
+`vite build` emits three bundles in one pass: **client** (`dist/client/`), **ssr** render fn (`dist/server/ssr/`), **server** (`dist/server/server.js`). With [SSR local fetch](event-http.md) (default), `fetch('/api/...')` during SSR calls Moost in-process — no loopback — and carries the page viewer's identity (`ssrFetchForwarding`, see [Options](#options)). SSR vs SPA differ only by the presence of `ssrEntry`.
 
 ### Render contract
 
-`entry-server.ts` exports `render(url)` returning `TSSRRenderResult` (from `@moostjs/vite/server`) — `{ html, state?, head?, status?, headers? }`; only `html` required. Each field maps to a substitution or response step (every marker is a plain string-replace — a marker missing from `index.html` is a silent no-op):
+`entry-server.ts` exports `render(url, ctx?)` returning `TSSRRenderResult` (types from `@moostjs/vite/server`) — `{ html, state?, head?, status?, headers? }`; only `html` required. `ctx` (`TSSRRenderContext`, added after `0.6.30`; optional — `render(url)` entries unchanged) describes the incoming page request: `ctx.headers` (raw request headers — locale, geo, A/B cookies), `ctx.method`, `ctx.req` (raw `IncomingMessage` escape hatch). Do NOT thread `ctx` headers into SSR fetches for auth — identity forwarding is automatic (see `ssrFetchForwarding` in [Options](#options)). Each field maps to a substitution or response step (every marker is a plain string-replace — a marker missing from `index.html` is a silent no-op):
 
 | Field | Effect |
 |---|---|
@@ -101,7 +101,7 @@ await app.listen()
 moostVite({ entry: '/src/main.ts', middleware: true, prefix: '/api', serverEntry: './server.ts' })
 ```
 
-`createSSRServer` handles dev/prod automatically. Optional `TSSRServerOptions` override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead` (prod falls back to build-time baked values). The returned `TSSRServer` exposes `use(middleware)` (Connect-style) and `listen(port?)`. `serverEntry` is used only during `vite build`. `createSSRServer({ entry: () => import('./src/main') })` is an escape hatch that bundles the entry via the function instead of the baked define.
+`createSSRServer` handles dev/prod automatically. Optional `TSSRServerOptions` override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead`, `ssrFetchForwarding` (prod falls back to build-time baked values). The returned `TSSRServer` exposes `use(middleware)` (Connect-style) and `listen(port?)`. `serverEntry` is used only during `vite build`. `createSSRServer({ entry: () => import('./src/main') })` is an escape hatch that bundles the entry via the function instead of the baked define.
 
 ## SSR externalization & single-instance guard
 
@@ -125,6 +125,7 @@ The moost/wooks runtime relies on per-module `Symbol` slot keys (`cached()`/`key
 | `serverEntry` | `string` | — | custom prod server entry; auto-generated when omitted |
 | `ssrExternal` | `string[]` | — | packages to keep external in middleware SSR build (≡ `ssr.external`) |
 | `ssrFetch` | `boolean` | `true` | in-process `fetch('/api/...')` during SSR |
+| `ssrFetchForwarding` | `boolean` | `true` | run each SSR render inside an HTTP context seeded from the page request (after `0.6.30`): SSR self-calls inherit viewer identity headers ([forwarding rules](event-http.md#local-fetch--ssr)) and their `Set-Cookie` reaches the page response; `false` → anonymous self-calls |
 | `sourcemap` | `boolean` | `true` | both modes; in middleware mode controls the `dist/server` SSR build sourcemaps |
 | `port`/`host`/`outDir`/`format`/`externals` | — | — | **backend mode only**; middleware mode uses `vite.config` |
 | `onEject` | `function` | — | veto hook per HMR ejection candidate `(instance, depClass)`; ejection only when absent or returning `true` — return `false` to keep the instance |
@@ -134,7 +135,7 @@ The moost/wooks runtime relies on per-module `Symbol` slot keys (`cached()`/`key
 ```ts
 import { moostVite } from '@moostjs/vite'             // vite.config.ts plugin
 import { createSSRServer } from '@moostjs/vite/server' // custom dev/prod server entry
-import type { TSSRRenderResult } from '@moostjs/vite/server' // render(url) return type
+import type { TSSRRender, TSSRRenderContext, TSSRRenderResult } from '@moostjs/vite/server' // render(url, ctx?) contract
 ```
 
 ## Gotchas
@@ -149,6 +150,7 @@ import type { TSSRRenderResult } from '@moostjs/vite/server' // render(url) retu
 - Files **outside** the entry graph never reload Moost: client-only modules keep Vite's regular browser HMR; `ssrEntry` render-graph modules get Vite's default invalidation so the next SSR render is fresh. Versions ≤ 0.6.25 hijacked ANY `.ts` change — editing a client-only `.ts` in middleware+SSR mode killed `/api/*` (served `index.html`) until the next server-graph edit or a restart, and also suppressed the browser HMR update for that file; diagnose those symptoms as an out-of-date plugin.
 - Root-mounted routes (e.g. `/.well-known/*` for OAuth discovery) registering fine but 404ing in prod while working in dev → out-of-date `@moostjs/vite` (≤ `0.6.26`: `prefix` was single-string only and the prod server silently defaulted an omitted `prefix` to `'/api'`). Current versions: use `prefix: ['/api', '/.well-known']` or omit `prefix`.
 - A server edit that fails to load (syntax error, bad import) makes requests matching `prefix` (all requests when no `prefix` is set) answer `502` with the error message (instead of falling through to the SPA/SSR fallback); the next edit retries.
+- SSR self-calls hitting per-IP rate limits / auth guards as `127.0.0.1`-anonymous → `@moostjs/vite` ≤ 0.6.30 (no `ssrFetchForwarding`). Worse: on those versions forwarding **accidentally** worked in dev and in prod-without-`prefix` (render ran inside the page's context via the no-match path) but broke once `prefix` was set — auth-aware SSR passing in dev and failing in prod is that version gap, not app code. Current versions forward deterministically in every mode.
 - Editing an entry-graph module in middleware+SSR dev re-imports the entry, which re-runs `app.listen()`; the plugin re-captures the patched `MoostHttp.listen()` on each reload so it never re-binds the dev port. Diagnose a dev `EADDRINUSE` on HMR as an out-of-date `@moostjs/vite` (versions ≤ 0.6.24 crashed here).
 
 ## See also

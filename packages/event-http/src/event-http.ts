@@ -112,6 +112,17 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     return this.httpApp.request(input, init)
   }
 
+  /**
+   * Runs `fn` inside an HTTP event context seeded from a real `(req, res)` pair,
+   * without route dispatch. Nested `fetch()`/`request()` calls made during `fn`
+   * see this context as their caller, so `forwardHeaders` and parent `Set-Cookie`
+   * propagation apply. Never writes to `res` — apply buffered response state
+   * (e.g. `response.getSetCookieStrings()`) yourself.
+   */
+  public withHttpContext<T>(req: IncomingMessage, res: ServerResponse, fn: () => T) {
+    return this.httpApp.withHttpContext(req, res, fn)
+  }
+
   public listen(
     port?: number,
     hostname?: string,

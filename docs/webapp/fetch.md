@@ -33,7 +33,21 @@ Convenience wrapper — accepts a URL string (relative paths auto-prefixed with 
 
 ### Header forwarding
 
-When called from within an existing HTTP context (e.g. during SSR rendering), identity headers (`authorization`, `cookie`, `accept-language`, `x-forwarded-for`, `x-request-id`) are automatically forwarded from the calling request to the programmatic request. Explicitly set headers take priority.
+When called from within an existing HTTP context (e.g. during SSR rendering), identity headers (`authorization`, `cookie`, `accept-language`, `x-forwarded-for`, `x-request-id`) are automatically forwarded from the calling request to the programmatic request. Explicitly set headers take priority. `Set-Cookie` headers produced by the inner call propagate back onto the calling request's response.
+
+The forwarded list is configurable via the adapter's `forwardHeaders` option:
+
+```ts
+import { DEFAULT_FORWARD_HEADERS } from '@wooksjs/event-http'
+
+const http = new MoostHttp({
+  forwardHeaders: [...DEFAULT_FORWARD_HEADERS, 'cloudfront-viewer-address'],
+})
+```
+
+::: warning `forwardHeaders` replaces the defaults
+A bare list like `forwardHeaders: ['cloudfront-viewer-address']` **replaces** the default set — you'd silently lose `authorization`/`cookie` forwarding. Always spread `DEFAULT_FORWARD_HEADERS` when you mean to extend it. Set `forwardHeaders: false` to disable forwarding entirely.
+:::
 
 ## SSR Local Fetch
 
@@ -67,6 +81,30 @@ Always use relative paths (`fetch('/api/...')`) in universal code.
 When using `@moostjs/vite`, local fetch is enabled automatically (controlled by the `ssrFetch` option, default `true`). No manual setup needed — any `fetch('/api/...')` call during SSR goes through Moost in-process.
 
 Set `ssrFetch: false` when running behind Nitro or another framework that manages fetch routing itself.
+
+## SSR viewer identity
+
+With `@moostjs/vite`, every SSR render runs inside an HTTP event context seeded from the incoming page request — in dev and in the generated production server alike. [Header forwarding](#header-forwarding) therefore applies to every SSR self-call with **zero app code**:
+
+- **Auth-aware SSR** — an SSR fetch to a cookie- or bearer-guarded endpoint authenticates as the page viewer, so pages can server-render user-specific data.
+- **Per-viewer rate limiting** — interceptors keying on IP or identity see the real viewer, not the synthetic in-process request. Without this, every SSR self-call across your whole fleet buckets under one `ip:127.0.0.1` subject — a single shared budget that a default per-IP rule turns into a site-wide SSR cap.
+- **Trace continuity** — `x-request-id` flows from the page request through every SSR self-call.
+- **`Set-Cookie` propagation** — cookies set by API handlers during the render (session touch/refresh) land on the page response.
+
+Opt out with `ssrFetchForwarding: false` in the [plugin options](/webapp/vite#options) (or in `createSSRServer()` options for a custom server entry) — SSR self-calls are then anonymous, as they were on `@moostjs/vite` ≤ 0.6.30.
+
+### Custom production servers
+
+If you run your own server (not the generated one), wrap the render call yourself with `withHttpContext` — it creates the HTTP context without route dispatch and hands back buffered cookies:
+
+```ts
+const { result, response } = await http.withHttpContext(req, res, () => render(url, ctx))
+for (const cookie of response.getSetCookieStrings()) {
+  res.appendHeader('set-cookie', cookie)
+}
+```
+
+Requires `@wooksjs/event-http` ≥ 0.7.20.
 
 ### Production usage
 

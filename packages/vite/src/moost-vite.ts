@@ -19,8 +19,10 @@ import {
   matchesPrefix,
   normalizePrefixes,
   PLUGIN_NAME,
+  renderSSRPage,
   sendSSRResponse,
 } from './utils'
+import type { TSSRHttpContextRunner, TSSRRender } from './utils'
 
 /** A simple request-response middleware type for Node’s http module. */
 type TMiddleware = (req: IncomingMessage, res: ServerResponse) => any
@@ -112,6 +114,20 @@ export interface TMoostViteDevOptions {
    * Default: `true`.
    */
   ssrFetch?: boolean
+  /**
+   * Run each SSR render inside an HTTP event context seeded from the incoming
+   * page request. SSR-time `fetch('/api/...')` self-calls then inherit the
+   * viewer's identity headers (authorization, cookie, accept-language,
+   * x-forwarded-for, x-request-id — see the HTTP adapter's `forwardHeaders`
+   * option) instead of arriving anonymous, and `Set-Cookie` headers they
+   * produce are drained onto the page response. Applies in dev and is baked
+   * into the generated production server.
+   *
+   * Set to `false` to keep SSR self-calls anonymous.
+   *
+   * Default: `true`.
+   */
+  ssrFetchForwarding?: boolean
   /**
    * Run Moost as Connect middleware instead of taking over the server.
    * When enabled, Moost runs first and unmatched requests fall through to
@@ -239,6 +255,15 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   let moostMiddleware: TMiddleware | null = null
   let localFetchTeardown: (() => void) | null = null
   /**
+   * Live ref to the booted MoostHttp instance (from Vite's SSR module graph).
+   * Used to run SSR renders inside an HTTP event context (`withHttpContext`)
+   * so SSR self-fetches inherit the page request's identity. Exposed on the
+   * resolved config for the `createSSRServer()` dev branch; re-pointed on every
+   * boot, cleared on eject.
+   */
+  const moostHttpRef: { current: TSSRHttpContextRunner | null } = { current: null }
+  const ssrForwarding = options.ssrFetchForwarding !== false
+  /**
    * Boot-identity stamps (dev-only "mongrel state" diagnostic — a stale pipeline
    * presents as security middleware silently switched off). `bootGeneration` is
    * bumped on every eject; `bootingGeneration` records which generation the
@@ -267,6 +292,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
               )
             }
             httpCaptured = true
+            moostHttpRef.current = this as unknown as TSSRHttpContextRunner
             if (options.middleware) {
               moostMiddleware = this.getServerCb((req: IncomingMessage) => {
                 pendingNextMap.get(req)?.()
@@ -329,6 +355,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const ejectApp = (cleanupInstances: Set<string>) => {
     bootGeneration++
     moostMiddleware = null
+    moostHttpRef.current = null
     if (localFetchTeardown) {
       localFetchTeardown()
       localFetchTeardown = null
@@ -369,6 +396,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           // `null` (not '/api') when omitted — the prod server must keep the
           // dev contract: no prefix → everything routes through Moost first.
           __MOOST_PREFIX__: JSON.stringify(prefixes ?? null),
+          // Baked unconditionally (unlike the ssrEntry-gated defines below):
+          // the prod server evaluates it at startup even when SSR is off.
+          __MOOST_SSR_FORWARDING__: JSON.stringify(ssrForwarding),
         }
 
         // Build inputs: server entry + Moost backend entry are always included,
@@ -541,7 +571,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         ssrOutlet: options.ssrOutlet,
         ssrState: options.ssrState,
         ssrHead: options.ssrHead,
+        ssrFetchForwarding: options.ssrFetchForwarding,
       }
+      ;(config as Record<string, unknown>).__moostViteHttpRef = moostHttpRef
     },
 
     /**
@@ -822,7 +854,13 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
                   )
                   template = await server.transformIndexHtml(url, template)
                   const { render } = await server.ssrLoadModule(options.ssrEntry!)
-                  const result = await render(url)
+                  const result = await renderSSRPage({
+                    render: render as TSSRRender,
+                    url,
+                    req,
+                    res,
+                    http: ssrForwarding ? moostHttpRef.current : null,
+                  })
                   sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
                 } catch (error: any) {
                   server.ssrFixStacktrace(error)

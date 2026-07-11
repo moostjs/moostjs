@@ -1,4 +1,4 @@
-import type { ServerResponse } from 'node:http'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { builtinModules } from 'node:module'
 
@@ -33,6 +33,71 @@ export interface TSSRRenderResult {
   status?: number
   /** Extra response headers — e.g. `cache-control`, or `location` alongside `status: 301`. */
   headers?: Record<string, string>
+}
+
+/**
+ * Context of the incoming page request, passed as the second argument to the
+ * SSR `render()` entry. Additive: entries typed `render(url)` keep working.
+ */
+export interface TSSRRenderContext {
+  /** Raw request headers of the page request (node `IncomingMessage.headers`). */
+  headers: IncomingMessage['headers']
+  /** HTTP method of the page request (the SSR fallbacks only render `GET` today). */
+  method: string
+  /** Escape hatch for everything else (socket address, etc.). */
+  req: IncomingMessage
+}
+
+/** The SSR entry contract: `render(url, ctx?)`. `ctx` is new and optional. */
+export type TSSRRender = (
+  url: string,
+  ctx?: TSSRRenderContext,
+) => Promise<TSSRRenderResult> | TSSRRenderResult
+
+/**
+ * The subset of `MoostHttp` (via `WooksHttp`, @wooksjs/event-http >= 0.7.20)
+ * that {@link renderSSRPage} needs to run a render inside an HTTP event context.
+ * Structural on purpose: in dev the instance comes from Vite's SSR module graph,
+ * not from this package's own import.
+ */
+export interface TSSRHttpContextRunner {
+  withHttpContext<T>(
+    req: IncomingMessage,
+    res: ServerResponse,
+    fn: () => T,
+  ): Promise<{ result: Awaited<T>; response: { getSetCookieStrings: () => string[] } }>
+}
+
+/**
+ * Invokes the SSR `render()` for a page request. Shared by all three render call
+ * sites so the render contract stays identical across them:
+ * - always passes the page request context ({@link TSSRRenderContext}) as the
+ *   second `render()` argument;
+ * - when a Moost HTTP adapter is provided (and supports it), runs the render
+ *   inside an HTTP event context seeded from the real `(req, res)` pair, so
+ *   SSR-time `fetch('/api/...')` self-calls inherit the viewer's identity
+ *   headers (`forwardHeaders`) instead of arriving anonymous, and `Set-Cookie`
+ *   headers from those self-calls are drained onto the page response;
+ * - degrades to a plain `render(url, ctx)` call when the adapter is absent or
+ *   predates `withHttpContext`.
+ */
+export async function renderSSRPage(opts: {
+  render: TSSRRender
+  url: string
+  req: IncomingMessage
+  res: ServerResponse
+  http?: TSSRHttpContextRunner | null
+}): Promise<TSSRRenderResult> {
+  const { render, url, req, res, http } = opts
+  const ctx: TSSRRenderContext = { headers: req.headers, method: req.method || 'GET', req }
+  if (http && typeof http.withHttpContext === 'function') {
+    const { result, response } = await http.withHttpContext(req, res, () => render(url, ctx))
+    for (const cookie of response.getSetCookieStrings()) {
+      res.appendHeader('set-cookie', cookie)
+    }
+    return result
+  }
+  return render(url, ctx)
 }
 
 /** The three HTML placeholders substituted by {@link sendSSRResponse}. */

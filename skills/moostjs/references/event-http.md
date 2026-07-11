@@ -53,6 +53,7 @@ new MoostHttp(existingWooksHttp)      // reuse an instance
 | `getServerCb(onNoMatch?)` | `RequestListener` | for custom HTTP/HTTPS servers |
 | `fetch(request)` | `Promise<Response \| null>` | in-process route invocation (SSR) |
 | `request(input, init?)` | `Promise<Response \| null>` | convenience fetch; relative paths prefixed with `http://localhost` |
+| `withHttpContext(req, res, fn)` | `Promise<{ result, response }>` | run `fn` inside an HTTP context seeded from a real `(req, res)`, no route dispatch — nested `fetch()` inherits identity; ≥ 0.7.20 wooks (see [Local fetch / SSR](#local-fetch--ssr)) |
 
 ### Integrating with existing server
 
@@ -167,7 +168,20 @@ await http.request('/api/users', { method: 'GET' })            // convenience
 // returns null if no route matches
 ```
 
-When called from within an HTTP context, identity headers are auto-forwarded from the parent context (default set: `authorization`, `cookie`, `accept-language`, `x-forwarded-for`, `x-request-id`). Customize via the `forwardHeaders` option (`string[]` or `false` to disable) in `new MoostHttp(wooksHttpOptions)`. Headers already set on the programmatic request are never overwritten.
+When called from within an HTTP context, identity headers are auto-forwarded from the parent context (default set: `authorization`, `cookie`, `accept-language`, `x-forwarded-for`, `x-request-id`), and `Set-Cookie` from the inner call propagates back onto the parent response. Customize via the `forwardHeaders` option (`string[]` or `false` to disable) in `new MoostHttp(wooksHttpOptions)`. Headers already set on the programmatic request are never overwritten.
+
+**`forwardHeaders` REPLACES the default list** — a bare `['my-header']` silently drops `authorization`/`cookie`. To extend: `forwardHeaders: [...DEFAULT_FORWARD_HEADERS, 'cloudfront-viewer-address']` (`DEFAULT_FORWARD_HEADERS` from `@wooksjs/event-http` ≥ 0.7.20).
+
+### `withHttpContext(req, res, fn)` — identity for non-routed work
+
+Runs `fn` inside an HTTP context seeded from a real `(req, res)` without route dispatch — the seam for SSR page renders and any other non-routed work whose nested `fetch()`/`request()` calls should carry the caller's identity. Never writes to `res`; drain buffered cookies yourself:
+
+```ts
+const { result, response } = await http.withHttpContext(req, res, () => render(url))
+for (const cookie of response.getSetCookieStrings()) res.appendHeader('set-cookie', cookie)
+```
+
+`@moostjs/vite` does this automatically for SSR renders ([vite.md](vite.md#render-contract), `ssrFetchForwarding` option) — reach for `withHttpContext` directly only in custom servers.
 
 ### `enableLocalFetch(http)` — patch `globalThis.fetch`
 
@@ -191,3 +205,5 @@ From `@moostjs/event-http`: `httpKind`, `HttpError`, `useHttpContext` (re-export
 4. Trailing `//` in a path forces a trailing slash in the URL.
 5. Decorator import sources (`moost` vs `@moostjs/event-http`): see [http-request.md](http-request.md#table).
 6. Default 404 handler runs through the global interceptor chain — but only when `MoostHttp` creates its own Wooks app; when you pass a pre-built `WooksHttp` instance, configure `onNotFound` on it yourself.
+7. `forwardHeaders: ['x']` replaces the default identity set (silent loss of `authorization`/`cookie` forwarding) — spread `DEFAULT_FORWARD_HEADERS` to extend.
+8. In-process calls with **no** caller HTTP context arrive anonymous from `127.0.0.1` — per-IP rate limiting then buckets every such call (e.g. all SSR renders fleet-wide) under one `ip:127.0.0.1` subject. Wrap the caller in `withHttpContext` (or upgrade `@moostjs/vite` past 0.6.30, which does it for SSR).

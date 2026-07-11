@@ -169,6 +169,7 @@ If a server edit breaks the app (e.g. a syntax error), requests matching `prefix
 | `externals` | `boolean \| object` | `true` | External dependencies config |
 | `onEject` | `function` | — | Hook to control DI instance ejection during HMR |
 | `ssrFetch` | `boolean` | `true` | Enable [SSR local fetch](/webapp/fetch) interception |
+| `ssrFetchForwarding` | `boolean` | `true` | Run each SSR render inside an HTTP context seeded from the page request — SSR self-calls inherit the [viewer's identity](/webapp/fetch#ssr-viewer-identity) and their `Set-Cookie` reaches the page response |
 | `middleware` | `boolean` | `false` | Run Moost as Connect middleware |
 | `prefix` | `string \| string[]` | — | URL mount(s) for middleware mode — requests outside every mount skip the Moost router (fast path); when omitted, every request enters Moost first and unmatched routes fall through to the frontend |
 | `ssrEntry` | `string` | — | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`) |

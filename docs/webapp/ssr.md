@@ -86,7 +86,7 @@ export class ApiController {
 
 ### SSR data fetching
 
-With [local fetch](/webapp/fetch) enabled (default), `fetch('/api/...')` calls Moost handlers in-process during SSR — no HTTP round-trip:
+With [local fetch](/webapp/fetch) enabled (default), `fetch('/api/...')` calls Moost handlers in-process during SSR — no HTTP round-trip. These self-calls carry the page viewer's identity (authorization, cookies, request id — see [SSR viewer identity](/webapp/fetch#ssr-viewer-identity)), so cookie-guarded endpoints, per-IP rate limits, and request tracing behave as if the browser called the API directly:
 
 ```vue
 <script setup lang="ts">
@@ -117,13 +117,13 @@ Initializing the ref from the transferred state is what makes the `window.__SSR_
 
 ## The render contract
 
-`entry-server.ts` exports the `render(url)` function the server calls for every non-API request. Beyond the app HTML it can return per-page `<head>` tags and control the HTTP response — the whole point of SSR for a public, crawlable site:
+`entry-server.ts` exports the `render(url, ctx?)` function the server calls for every non-API request. Beyond the app HTML it can return per-page `<head>` tags and control the HTTP response — the whole point of SSR for a public, crawlable site:
 
 ```ts
 // src/entry-server.ts
-import type { TSSRRenderResult } from '@moostjs/vite/server'
+import type { TSSRRenderContext, TSSRRenderResult } from '@moostjs/vite/server'
 
-export async function render(url: string): Promise<TSSRRenderResult> {
+export async function render(url: string, ctx?: TSSRRenderContext): Promise<TSSRRenderResult> {
   // ...render the app for `url`, collect head tags & state...
   return {
     html, // → replaces <!--ssr-outlet--> in the <body>
@@ -136,6 +136,16 @@ export async function render(url: string): Promise<TSSRRenderResult> {
 ```
 
 Only `html` is required — a render returning `{ html }` or `{ html, state }` keeps working unchanged. Every marker is a plain string replacement, so a marker missing from `index.html` is simply skipped.
+
+### The request context
+
+The second argument, `ctx`, describes the incoming page request. It's optional and additive — a `render(url)` entry keeps working untouched:
+
+- `ctx.headers` — raw request headers of the page request (`accept-language`, geo headers like `CloudFront-Viewer-*`, A/B or feature-flag cookies).
+- `ctx.method` — HTTP method (the SSR fallbacks only render `GET` today).
+- `ctx.req` — the raw Node `IncomingMessage`, as an escape hatch (socket address, etc.).
+
+Use `ctx` for **viewer-dependent rendering** — picking a locale from `accept-language`, branching on a feature-flag cookie. You do *not* need it to authenticate SSR data fetching: identity headers are forwarded to in-process `fetch('/api/...')` calls automatically (see [SSR viewer identity](/webapp/fetch#ssr-viewer-identity)).
 
 ### Head tags for SEO
 
@@ -162,6 +172,8 @@ Headers are applied after the default `Content-Type: text/html`, so a render may
 
 ::: tip Version
 On `@moostjs/vite` ≤ 0.6.28 `render()` honors only `{ html, state }` — `head` / `status` / `headers` and the `<!--ssr-head-->` marker are ignored. If you worked around the missing head seam by escaping the state `<script>` wrapper, drop that trick once upgraded and return `head` directly.
+
+On `@moostjs/vite` ≤ 0.6.30 `render()` receives only `url` (no `ctx`), and SSR self-calls run without [viewer identity](/webapp/fetch#ssr-viewer-identity) — they reach the API anonymous, from `127.0.0.1`.
 :::
 
 ## SSR vs SPA
