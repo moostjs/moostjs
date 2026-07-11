@@ -15,7 +15,7 @@ Decorators run through `getMoostMate()` — singleton `Mate` in the `'moost'` wo
 | `@Controller(prefix?)` | class | `controller: { prefix }`; auto-adds `injectable: true` |
 | `@ImportController(ctrl?, provide?)` / `(prefix, ctrl)` | class | `importController[]` |
 | `@Injectable(scope?)` | class | `injectable: true \| 'SINGLETON' \| 'FOR_EVENT'` (default `true` = SINGLETON) |
-| `@Inherit()` | class / method / prop | `inherit: true` — enable metadata inheritance from parent class |
+| `@Inherit(inherit = true)` | class / method / prop | `inherit: boolean` — enable metadata inheritance from the parent class; `@Inherit(false)` on an overridden member opts out of the merge |
 | `@Description(str)` | any | `description` |
 | `@Label(str)` | any | `label` |
 | `@Value(v)` | any | `value` |
@@ -166,7 +166,7 @@ Tradeoff: invisible to anything reading via `getMoostMate()` (other moost-aware 
 
 ### Inheritance
 
-Opt-in, and the flag goes on the **inheriting subclass** (the class whose metadata is being read), NOT on the base class. `@Inherit()` on the subclass enables inheritance of class meta and of members that have no own metadata; on a subclass method/prop it enables just that member.
+Opt-in, and the flag goes on the **inheriting subclass** (the class whose metadata is being read), NOT on the base class. `@Inherit()` on the subclass enables inheritance of class meta and of every member — inherited members, undecorated overrides, and decorated overrides alike; on a subclass method/prop it enables just that member.
 
 ```ts
 class Base { @Get('health') health() { return 'ok' } }
@@ -175,7 +175,14 @@ class Base { @Get('health') health() { return 'ok' } }
 class App extends Base {}  // inherits @Get('health')
 ```
 
-`@Inherit()` on only the base class does nothing — the subclass's own meta stays `undefined` and no route is bound.
+Merge rules (shallow, own keys win):
+
+1. **Decorated override under class-level `@Inherit()` MERGES** — parent method meta (route bindings, guards, descriptions) merged under the override's own, so adding e.g. a rate-limit decorator keeps the parent's `@Get`/`@Post` binding. *(Before 0.6.30: any own decorator silently dropped ALL parent method meta, route included.)*
+2. **Array fields replace wholesale** — an override with its own `@Get('x')` serves only `x`; `handlers`/`interceptors`/`pipes` are never concatenated with the parent's.
+3. **Params merge per index** — params with no own decorators inherit the parent's resolvers; a param that re-declares `@Body()` etc. keeps its own.
+4. **`@Inherit(false)` on an overridden member = full replacement** — only own metadata; the parent's route is NOT bound.
+5. **Ctor params**: subclass with NO declared constructor inherits the parent's ctor param meta (DI resolves it, no `@Inherit()` needed); a declared constructor uses own params only — re-declare `@Inject` there.
+6. **`@Inherit()` on only the base class does nothing** — the subclass's own meta stays `undefined` and no route is bound.
 
 ## Gotchas
 

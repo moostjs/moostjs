@@ -4,7 +4,7 @@ Moost supports inheriting metadata from superclasses, making it easier to reuse 
 
 ## Key Points
 
-- **Decorator:** `@Inherit()` marks a class or method to inherit metadata from its superclass.
+- **Decorator:** `@Inherit()` marks a class or method to inherit metadata from its superclass; `@Inherit(false)` on an overridden method opts back out (see [Gotchas](#gotchas)).
 - **Use Cases:**  
   - **Controllers:** Inherit routes, prefixes, and other controller-level metadata.  
   - **Class-Based Interceptors:** Inherit interceptor configurations defined in a base interceptor class.  
@@ -114,11 +114,34 @@ class AnotherController extends BaseController {
 }
 ```
 
+## Overriding Decorated Methods
+
+With class-level `@Inherit()`, an override that adds its own decorators **merges** the parent's method metadata under its own (own keys win):
+
+```ts
+@Inherit()
+@Controller('extended')
+export class ExtendedController extends BaseController {
+  @MyGuardDecorator() // adds a guard — the parent's @Get('') binding is kept
+  index() {
+    return 'guarded index';
+  }
+}
+```
+
+- **Array fields replace wholesale.** If the override declares its own `@Get('x')`, only `x` is served — routes, interceptors, and pipes are not concatenated with the parent's.
+- **Parameters follow the same rule.** Params with no own decorators keep the parent's `@Param()`/`@Body()` resolvers; a param that re-declares its decorators uses its own.
+- **`@Inherit(false)` opts out.** Put it on the override for a deliberate full replacement — the method keeps only its own metadata, and the parent's route is *not* bound.
+
+::: info Changed in 0.6.30
+Before 0.6.30, an override carrying *any* own decorator silently dropped **all** of the parent's method metadata — including the `@Get`/`@Post` binding, so the route disappeared with no warning. A method-level `@Inherit()` was required to combine both.
+:::
+
 ## Gotchas
 
 1. **No `@Inherit`, no inheritance.** Overriding a decorated method in a subclass *without* `@Inherit` (method-level or class-level) silently drops the inherited decorators — the route/command simply disappears, with no warning.
-2. **Own metadata blocks method inheritance.** With class-level `@Inherit()`, a subclass method that carries *any* own decorator no longer inherits the parent's metadata for that method — add a method-level `@Inherit()` to combine both.
-3. **Class-level keys are shallow-merged.** Class-level `@Inherit()` merges the parent's class metadata (prefix, interceptors, etc.) under the subclass's own — e.g. a subclass without `@Controller(prefix)` keeps the parent's prefix.
+2. **Class-level keys are shallow-merged.** Class-level `@Inherit()` merges the parent's class metadata (prefix, interceptors, etc.) under the subclass's own — e.g. a subclass without `@Controller(prefix)` keeps the parent's prefix.
+3. **Constructor params inherit only without a declared constructor.** A subclass with no constructor of its own inherits the parent's constructor param metadata (DI resolves it, no `@Inherit()` needed). A subclass that declares a constructor uses its own params only — re-apply `@Inject()` and friends there.
 
 ## Summary
 

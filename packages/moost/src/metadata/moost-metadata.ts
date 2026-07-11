@@ -3,10 +3,7 @@ import type { TMateParamMeta } from '@prostojs/mate'
 import { Mate } from '@prostojs/mate'
 
 import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from '../common-types'
-import type {
-  TInterceptorDef,
-  TInterceptorPriority,
-} from '../decorators/intercept.decorator'
+import type { TInterceptorDef, TInterceptorPriority } from '../decorators/intercept.decorator'
 import type { TDecoratorLevel } from '../decorators/types'
 import type { TPipeData, TPipeMetas } from '../pipes'
 
@@ -71,18 +68,38 @@ export interface TInterceptorData {
   name: string
 }
 
+/**
+ * A param entry is "bare" when it carries nothing but the design-time type
+ * (auto-captured from `design:paramtypes` the moment any decorator touches the
+ * method). Bare entries mean the override declared no param decorators of its
+ * own, so the parent's param metadata (resolvers, pipes, …) should survive.
+ */
+function isBareParam(param?: TMoostMetadata['params'][number]) {
+  return (
+    !param || Object.entries(param).every(([key, value]) => key === 'type' || value === undefined)
+  )
+}
+
 const moostMate = new Mate<TMoostMetadata, TMoostMetadata>(METADATA_WORKSPACE, {
   readType: true,
   readReturnType: true,
   collectPropKeys: true,
+  // Returning true makes Mate merge parent meta shallowly, own keys winning —
+  // so under class-level `@Inherit()` a decorated override keeps the parent's
+  // route/guard metadata instead of silently dropping it (see the `Inherit`
+  // decorator docs for the user-facing semantics). PARAM is evaluated per-index
+  // only after PROP inheritance applied.
   inherit(classMeta, targetMeta, level) {
+    if (targetMeta?.inherit === false) {
+      return false
+    }
     if (level === 'CLASS') {
       return !!classMeta?.inherit
     }
     if (level === 'PROP') {
-      return !!targetMeta?.inherit || !!(classMeta?.inherit && !targetMeta)
+      return !!targetMeta?.inherit || !!classMeta?.inherit
     }
-    return !!targetMeta?.inherit
+    return !!targetMeta?.inherit || isBareParam(targetMeta as TMoostMetadata['params'][number])
   },
 })
 
