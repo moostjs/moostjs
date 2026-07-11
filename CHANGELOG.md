@@ -1,3 +1,17 @@
+## [0.6.30](https://github.com/moostjs/moostjs/compare/v0.6.29...v0.6.30) (2026-07-11)
+
+
+### Bug Fixes
+
+* **vite:** run HMR DI cleanup under the reload lock, coalesce hot-update waves, add stale-boot diagnostics ([3524e33](https://github.com/moostjs/moostjs/commit/3524e337808fda7c58a4dcdce23901528901f0ee))
+
+
+### Features
+
+* **moost:** merge parent metadata into decorated overrides under @Inherit(), add @Inherit(false) opt-out and bare-param inheritance ([acf06b3](https://github.com/moostjs/moostjs/commit/acf06b370ff0d76abb2497f018d090dfac7b3c8e))
+
+
+
 ## [0.6.29](https://github.com/moostjs/moostjs/compare/v0.6.28...v0.6.29) (2026-07-07)
 
 
