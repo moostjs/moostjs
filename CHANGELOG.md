@@ -1,3 +1,12 @@
+## [0.6.31](https://github.com/moostjs/moostjs/compare/v0.6.30...v0.6.31) (2026-07-11)
+
+
+### Features
+
+* **vite:** pass page request into SSR render(url, ctx), run renders in an HTTP context so self-fetches carry viewer identity (wooks 0.7.20) ([3569a92](https://github.com/moostjs/moostjs/commit/3569a92d503796b79c1833bf690224ecd53a6c15))
+
+
+
 ## [0.6.30](https://github.com/moostjs/moostjs/compare/v0.6.29...v0.6.30) (2026-07-11)
 
 
