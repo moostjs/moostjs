@@ -214,6 +214,29 @@ try {
   const fixed = await pollUntil(getHealth, (h) => h.json?.value === 'v3')
   report.brokenThenFixed = { broken, fixed }
 
+  // 8. editor bulk-save storm: every server-graph file saved twice in rapid
+  // succession (mostly mtime churn) must coalesce into a single reload and a
+  // single healthy pipeline — the incident class where per-wave DI cleanup
+  // raced the lazy reload and left a stale pipeline serving with no limits.
+  const stormWave = () => {
+    editFile('src/value.ts', `export const VALUE = 'v4'\n`)
+    editFile('src/config.json', `{ "tag": "c" }\n`)
+    editFile('src/controller.ts', FIXTURE_FILES['src/controller.ts'])
+    editFile('src/main.ts', `${FIXTURE_FILES['src/main.ts']}\n// touched\n`)
+  }
+  stormWave()
+  await sleep(80)
+  stormWave()
+  // let the watcher deliver both waves before any request triggers the lazy reload
+  await sleep(600)
+  const stormHealth = await pollUntil(getHealth, (h) => h.json?.value === 'v4')
+  const hammer = await Promise.all(Array.from({ length: 8 }, getHealth))
+  report.storm = {
+    health: stormHealth,
+    boots: [...new Set(hammer.map((h) => h.json?.boot))],
+    hammerOk: hammer.every((h) => h.status === 200 && h.json?.value === 'v4'),
+  }
+
   console.log(`__RESULT__ ${JSON.stringify(report)}`)
 } finally {
   await server?.close()

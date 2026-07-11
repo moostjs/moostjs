@@ -31,6 +31,7 @@ interface TReport {
   jsonFile: { health: THealth }
   entryTouch: { health: THealth }
   brokenThenFixed: { broken: THealth; fixed: THealth }
+  storm: { health: THealth; boots: number[]; hammerOk: boolean }
 }
 
 const DRIVER = fileURLToPath(new URL('hot-update.driver.mjs', import.meta.url))
@@ -107,5 +108,14 @@ describe('moost-vite scoped hot reload', () => {
     // The failed boot does not increment the counter (imports fail before the
     // entry body runs); the recovery boot does.
     expect(report.brokenThenFixed.fixed.json).toMatchObject({ ok: true, boot: 5, value: 'v3' })
+  })
+
+  it('coalesces a bulk-save storm into one reload and one healthy pipeline', () => {
+    // Two waves of four files each → exactly one reload (per-wave ejects merge
+    // into one pending cleanup consumed under the reload lock).
+    expect(report.storm.health.json).toMatchObject({ ok: true, boot: 6, value: 'v4', tag: 'c' })
+    // Every subsequent request is served by that single new pipeline.
+    expect(report.storm.hammerOk).toBe(true)
+    expect(report.storm.boots).toEqual([6])
   })
 })

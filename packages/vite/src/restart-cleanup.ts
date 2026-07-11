@@ -74,7 +74,15 @@ export function moostRestartCleanup(
     infact.scopes = scopes
   }
 
-  // Clean up metadata and wooks
+  // Drop Mate's read cache and reset global wooks. NOTE: `Mate._cleanup()` does
+  // NOT wipe decorator metadata in Node — mate's reflect shim only carries a
+  // `_cleanup` implementation when it owns `globalThis.Reflect` (never true in
+  // Node), so the call below only resets the memoized read cache. That is the
+  // intended contract here: metadata storage is keyed by class object identity
+  // (WeakMap), re-imported modules produce NEW class objects that decorate
+  // themselves fresh, and OLD class objects must keep their metadata because
+  // ejected-but-still-referenced instances continue to read it until the old
+  // pipeline is fully released. Do not build on the assumption of a wipe.
   getMoostMate()._cleanup()
   clearGlobalWooks()
 }

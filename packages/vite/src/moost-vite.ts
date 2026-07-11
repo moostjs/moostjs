@@ -238,6 +238,20 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
 
   let moostMiddleware: TMiddleware | null = null
   let localFetchTeardown: (() => void) | null = null
+  /**
+   * Boot-identity stamps (dev-only "mongrel state" diagnostic — a stale pipeline
+   * presents as security middleware silently switched off). `bootGeneration` is
+   * bumped on every eject; `bootingGeneration` records which generation the
+   * in-flight/most recent boot belongs to (set by runReload). When listen()
+   * captures a middleware for a boot that is no longer current — e.g. a delayed
+   * listen() from a torn boot racing a newer eject — it logs loudly.
+   */
+  let bootGeneration = 0
+  let bootingGeneration = 0
+  /** Whether the HTTP listen() patch has ever captured a middleware (i.e. this is an HTTP app). */
+  let httpCaptured = false
+  /** Module IDs awaiting DI cleanup — consumed in runReload; see ejectApp. */
+  let pendingCleanup: Set<string> | null = null
   /** In middleware mode: maps req → next() for the onNoMatch callback */
   const pendingNextMap = new WeakMap<IncomingMessage, () => void>()
 
@@ -247,6 +261,12 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         createAdapterDetector('http', (MoostHttp, moduleExports) => {
           MoostHttp.prototype.listen = function (...args: any[]) {
             logger.log(`🔌 ${__DYE_DIM__}Overtaking HTTP.listen`)
+            if (bootingGeneration !== bootGeneration) {
+              logger.error(
+                `⚠️  A stale Moost boot captured the HTTP middleware (boot generation ${bootingGeneration}, latest ${bootGeneration}) — an HMR reload race; a follow-up reload will replace it.`,
+              )
+            }
+            httpCaptured = true
             if (options.middleware) {
               moostMiddleware = this.getServerCb((req: IncomingMessage) => {
                 pendingNextMap.get(req)?.()
@@ -297,16 +317,29 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
     moduleGraph.getModuleByUrl(options.entry)
   /**
    * Drops the captured Moost app so the next request triggers a full reload:
-   * releases the middleware + local fetch and ejects DI instances affected by
-   * the changed modules.
+   * releases the middleware + local fetch and queues the changed module IDs for
+   * DI cleanup. The cleanup itself (infact ejects, wooks reset) is deferred to
+   * runReload, under the reload lock: running it here, per hot-update wave,
+   * raced in-flight requests and mid-boot imports mutating the same global
+   * containers — ejected-but-still-referenced instances were lazily re-created
+   * into the OLD pipeline, producing a mongrel half-old/half-new app. Waves
+   * arriving before the lazy reload (editor bulk-save storms) coalesce into one
+   * pending set and one cleanup.
    */
   const ejectApp = (cleanupInstances: Set<string>) => {
+    bootGeneration++
     moostMiddleware = null
     if (localFetchTeardown) {
       localFetchTeardown()
       localFetchTeardown = null
     }
-    moostRestartCleanup(adapters, options.onEject, cleanupInstances)
+    if (pendingCleanup) {
+      for (const id of cleanupInstances) {
+        pendingCleanup.add(id)
+      }
+    } else {
+      pendingCleanup = cleanupInstances
+    }
     reloadRequired = true
   }
 
@@ -588,6 +621,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
       bootError = null
       reloadRequired = false
       reloadPromise = null
+      pendingCleanup = null
+      // The boot below is authoritative for the current generation.
+      bootingGeneration = bootGeneration
 
       // Serialize app reloads. On HMR, hotUpdate() nulls moostMiddleware and sets
       // reloadRequired; the next request lazily re-imports the entry. Without a lock,
@@ -602,6 +638,13 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         console.log()
         return (async () => {
           try {
+            // This boot serves the latest eject generation; a listen() capture
+            // arriving for an older generation is a torn boot (see the stamps).
+            bootingGeneration = bootGeneration
+            // Consume the pending eject cleanup under the reload lock (see ejectApp).
+            const cleanupInstances = pendingCleanup ?? undefined
+            pendingCleanup = null
+            moostRestartCleanup(adapters, options.onEject, cleanupInstances)
             // Re-establish the adapter capture before re-importing the entry. The
             // listen() patch lives on whatever MoostHttp.prototype the runner first
             // evaluated; a reload may hand the re-imported entry a fresh
@@ -624,6 +667,14 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
             }
             await ssrImport(options.entry)
             bootError = null
+            if (httpCaptured && !moostMiddleware) {
+              // The entry re-executed but listen() never re-captured a
+              // middleware — requests would silently fall through to the
+              // frontend handler. Surface it instead of serving wrong answers.
+              logger.error(
+                `⚠️  Moost app reloaded but no HTTP middleware was captured — the entry did not re-run listen().`,
+              )
+            }
           } catch (error) {
             // Swallow instead of letting the rejection escape into connect (which
             // would hang the request): the middleware serves 502 while bootError is
