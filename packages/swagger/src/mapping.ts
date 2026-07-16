@@ -130,10 +130,7 @@ const globalSchemas: Record<string, TSwaggerSchema> = {}
 let schemaRefs = new WeakMap<object, string>()
 const nameToType = new Map<string, object>()
 
-export function mapToSwaggerSpec(
-  metadata: TControllerOverview[],
-  options?: TSwaggerOptions,
-) {
+export function mapToSwaggerSpec(metadata: TControllerOverview[], options?: TSwaggerOptions) {
   resetSchemaRegistry()
 
   const is31 = options?.openapiVersion === '3.1'
@@ -781,13 +778,8 @@ function createSchemaResolution(type: unknown): SchemaResolution | undefined {
 function schemaFromFunction(fn: Function): SchemaResolution | undefined {
   const ctor = fn as Function & { toJsonSchema?: () => unknown }
   if (typeof ctor.toJsonSchema === 'function') {
-    const schema = asSwaggerSchema(ctor.toJsonSchema())
-    return {
-      kind: 'component',
-      schema,
-      typeRef: ctor,
-      suggestedName: ctor.name,
-    }
+    // undefined when an atscript annotated type's toJsonSchema() threw (schema emit disabled)
+    return componentFromToJsonSchema(ctor as { toJsonSchema: () => unknown }, ctor.name)
   }
 
   if (fn.length === 0) {
@@ -812,26 +804,79 @@ function schemaFromInstance(obj: object): SchemaResolution | undefined {
   const ctor = (obj as { constructor?: { toJsonSchema?: () => unknown; name?: string } })
     .constructor
   if (ctor && typeof ctor.toJsonSchema === 'function') {
-    const schema = asSwaggerSchema(ctor.toJsonSchema())
-    return {
-      kind: 'component',
-      schema,
-      typeRef: ctor,
-      suggestedName: ctor.name,
-    }
+    return componentFromToJsonSchema(ctor as { toJsonSchema: () => unknown }, ctor.name)
   }
 
   if (typeof (obj as { toJsonSchema?: () => unknown }).toJsonSchema === 'function') {
-    const schema = asSwaggerSchema((obj as { toJsonSchema: () => unknown }).toJsonSchema())
-    return {
-      kind: 'component',
-      schema,
-      typeRef: obj,
-      suggestedName: getTypeName(obj),
-    }
+    return componentFromToJsonSchema(obj as { toJsonSchema: () => unknown }, getTypeName(obj))
   }
 
   return undefined
+}
+
+/**
+ * Resolves a `toJsonSchema()` host to a named component resolution, or
+ * `undefined` when an atscript annotated type's schema emit is disabled
+ * (see {@link callToJsonSchema}).
+ */
+function componentFromToJsonSchema(
+  host: { toJsonSchema: () => unknown },
+  suggestedName?: string,
+): SchemaResolution | undefined {
+  const schema = callToJsonSchema(host)
+  return schema ? { kind: 'component', schema, typeRef: host, suggestedName } : undefined
+}
+
+/**
+ * Structural (duck-typed) guard for atscript annotated types.
+ *
+ * Mirrors the `isAnnotatedType` contract from
+ * `atscript/packages/typescript/src/runtime/annotated-type.ts`: an annotated
+ * type carries a truthy `__is_atscript_annotated_type` marker, and codegen
+ * always renders a `static toJsonSchema()` alongside it.
+ *
+ * NOTE: this must stay a structural check — `@moostjs/swagger` cannot import
+ * any `@atscript/*` package because atscript depends on moost (the import
+ * would be circular).
+ */
+function isAtscriptAnnotatedType(type: unknown): type is { toJsonSchema: () => unknown } {
+  if (!type || (typeof type !== 'function' && typeof type !== 'object')) {
+    return false
+  }
+  const candidate = type as {
+    __is_atscript_annotated_type?: unknown
+    toJsonSchema?: unknown
+  }
+  return !!candidate.__is_atscript_annotated_type && typeof candidate.toJsonSchema === 'function'
+}
+
+let atscriptJsonSchemaHintLogged = false
+
+/**
+ * Calls `toJsonSchema()` guarding the atscript case: when the atscript project
+ * does not enable `emit.jsonSchema` (`jsonSchema: false`, the default of the
+ * `@atscript/typescript` plugin — see its `plugin.ts` options doc), the
+ * generated `toJsonSchema()` is a stub that throws at runtime. In that case a
+ * one-time hint is logged and `undefined` is returned so callers fall back to
+ * the generic (pre-atscript) resolution. Non-annotated types keep the previous
+ * behavior: errors propagate as before.
+ */
+function callToJsonSchema(host: { toJsonSchema: () => unknown }): TSwaggerSchema | undefined {
+  try {
+    return asSwaggerSchema(host.toJsonSchema())
+  } catch (error) {
+    if (!isAtscriptAnnotatedType(host)) {
+      throw error
+    }
+    if (!atscriptJsonSchemaHintLogged) {
+      atscriptJsonSchemaHintLogged = true
+      // oxlint-disable-next-line no-console
+      console.warn(
+        '[moost-swagger] toJsonSchema() of an atscript annotated type threw; falling back to a generic schema. Enable jsonSchema emit in the @atscript/typescript plugin options (jsonSchema: "bundle" or "lazy") to get real schemas in the OpenAPI spec.',
+      )
+    }
+    return undefined
+  }
 }
 
 function asSwaggerSchema(schema: unknown): TSwaggerSchema {
