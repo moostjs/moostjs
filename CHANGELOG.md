@@ -1,3 +1,13 @@
+## [0.6.32](https://github.com/moostjs/moostjs/compare/v0.6.31...v0.6.32) (2026-07-16)
+
+
+### Features
+
+* **moost:** DI diagnostics, controller group prefixes, @Params paramSource, inheritance audit ([f25c8e1](https://github.com/moostjs/moostjs/commit/f25c8e1b68c269b425d9399abd9ba1cf07ac831e))
+* **swagger:** derive schemas from atscript annotated types via toJsonSchema ([c8a253a](https://github.com/moostjs/moostjs/commit/c8a253a25a7a0f58085a3b16e7e1202d8887d1c2))
+
+
+
 ## [0.6.31](https://github.com/moostjs/moostjs/compare/v0.6.30...v0.6.31) (2026-07-11)
 
 
