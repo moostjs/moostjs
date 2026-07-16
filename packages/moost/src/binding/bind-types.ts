@@ -4,6 +4,7 @@ import type { TAny, TClassConstructor, TObject } from '../common-types'
 import type { TMoostMetadata } from '../metadata'
 import type { Moost, TMoostAdapter } from '../moost'
 import type { TPipeData } from '../pipes'
+import type { TParamAuditFinding } from './param-audit'
 
 export interface TBindControllerOptions {
   getInstance: () => Promise<TObject> | TObject
@@ -19,6 +20,8 @@ export interface TBindControllerOptions {
   moostInstance: Moost
   /** Collector for `@MoostInit` methods discovered while walking the controller. */
   registerInitHook?: (hook: TInitHook) => void
+  /** Collector for D1 method-param audit findings; omit to skip the audit. */
+  reportParamAudit?: (findings: TParamAuditFinding[]) => void
 }
 
 /**

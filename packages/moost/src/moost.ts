@@ -9,14 +9,19 @@ import { Hookable } from 'hookable'
 
 import { bindControllerMethods } from './binding/bind-controller'
 import type { TInitHook } from './binding/bind-types'
+import type { TInheritanceAuditMode } from './binding/inheritance-audit'
+import { auditInheritance } from './binding/inheritance-audit'
+import type { TParamAuditFinding, TParamAuditMode } from './binding/param-audit'
+import { auditParams, formatParamAuditError, resolveParamAuditMode } from './binding/param-audit'
 import type { TAny, TAnyFn, TClassConstructor, TEmpty, TFunction, TObject } from './common-types'
 import { setControllerContext } from './composables'
 import type { TInterceptorDef } from './decorators'
 import { TInterceptorPriority } from './decorators'
 import type { InterceptorHandler } from './interceptor-handler'
 import { getDefaultLogger, setDefaultLogger } from './logger'
-import type { TInterceptorData, TMoostHandler } from './metadata'
+import type { TInterceptorData, TMoostHandler, TMoostMetadata } from './metadata'
 import { getMoostMate } from './metadata'
+import { registerDiagnosticsSource } from './metadata/diagnostics'
 import { getMoostInfact } from './metadata/infact'
 import { sharedPipes } from './pipes/shared-pipes'
 import type { TPipeData, TPipeFn } from './pipes/types'
@@ -31,10 +36,117 @@ export { clearGlobalWooks, getGlobalWooks } from 'wooks'
 
 export interface TMoostOptions {
   /**
-   * Prefix that is used for each event path
+   * Global path prefix — mounts the whole app under one path segment.
+   *
+   * This is the first-class "serve everything under `/api`" option: every
+   * controller (registered via `registerControllers`, imported through
+   * `@ImportController`, or the Moost subclass itself) computes its mount
+   * path as `globalPrefix + '/' + <own prefix>`, so
+   * `new Moost({ globalPrefix: 'api' })` mounts a `@Controller('users')`
+   * class at `/api/users` without touching any registration call.
+   *
+   * All registration forms stay under `globalPrefix` — even the
+   * prefix-replacing ones (`[prefix, Ctrl]` tuple, `mode: 'replace'`) only
+   * replace the controller's own `@Controller` prefix, never the global one.
+   * Extra/duplicate slashes are normalized by the router.
    */
   globalPrefix?: string
   logger?: TConsoleBase
+  /**
+   * Bind-time DI diagnostics, evaluated during `init()`.
+   *
+   * `paramTypes` audits constructor and handler params whose emitted design
+   * type is unusable for DI — `Object` (class imported with `import type`, or
+   * an interface/union type) or `undefined` (circular import) — and that carry
+   * no explicit resolution (`@Inject`, `@Resolve`-based decorators, `@Circular`):
+   * - `'error'` — log every finding and reject `init()` when a non-optional
+   *   constructor param is affected (it would fail at instantiation anyway);
+   * - `'warn'` — log findings, never throw;
+   * - `'off'` — skip the audit entirely.
+   *
+   * Defaults to `'error'` when `NODE_ENV !== 'production'`, `'warn'` otherwise.
+   * Optional/nullable constructor params and handler method params are always
+   * warn-only (`undefined` injection is legal there).
+   */
+  diagnostics?: {
+    paramTypes?: TParamAuditMode
+    /**
+     * `inheritance` audits every registered controller for the two subclassing
+     * traps (warn-only, never rejects `init()`):
+     * - a class that registered 0 handlers while an ancestor defines some,
+     *   without a deliberate `@Inherit(false)` opt-out — parent routes
+     *   silently 404 (fires both when no `@Inherit` decision exists and when
+     *   `@Inherit()` is present but an undecorated intermediate class breaks
+     *   the chain — the warning names the broken link);
+     * - a DI-instantiated class with no effective constructor param metadata
+     *   while a decorated ancestor declares constructor params — dependencies
+     *   silently resolve to `undefined` (or the class is not seen as
+     *   injectable at all when it carries no metadata).
+     *
+     * `'warn'` (default) logs a warning naming both classes and the fix
+     * (`@Inherit()` or re-declaring); `'off'` skips the audit.
+     */
+    inheritance?: TInheritanceAuditMode
+  }
+}
+
+/**
+ * Object registration form for {@link Moost.registerControllers}: mounts a
+ * group of controllers under a shared path prefix with explicit composition
+ * semantics (see `mode`).
+ */
+export interface TControllersGroup {
+  /**
+   * Path segment applied to every controller of the group
+   * (always mounted under `globalPrefix` when one is set).
+   */
+  prefix: string
+  /** Controllers (classes or instances) to register. */
+  controllers: (TObject | TFunction)[]
+  /**
+   * How `prefix` combines with each controller's own `@Controller(...)` prefix:
+   * - `'prepend'` (default) — `globalPrefix + '/' + prefix + '/' + own prefix`;
+   * - `'replace'` — `prefix` replaces the controller's own prefix
+   *   (same semantics as the `[prefix, controller]` tuple form).
+   */
+  mode?: 'prepend' | 'replace'
+}
+
+/**
+ * Normalized internal shape of a pending controller registration —
+ * `registerControllers` reduces all of its accepted forms to this.
+ */
+export interface TControllerRegistration {
+  controller: TObject | TFunction
+  /**
+   * Replaces the controller's own `@Controller` prefix
+   * (tuple form / object form with `mode: 'replace'`).
+   */
+  replaceOwnPrefix?: string
+  /**
+   * Inserted between `globalPrefix` and the controller's own prefix
+   * (object form with `mode: 'prepend'`).
+   */
+  prependPrefix?: string
+}
+
+/**
+ * Detects the object registration form of `registerControllers`: a plain
+ * object (no class prototype) carrying a `controllers` array. Controller
+ * instances are class instances and never match, so all pre-existing
+ * registration forms bind unchanged.
+ */
+function isControllersGroup(
+  entry: TObject | TFunction | [string, TObject | TFunction] | TControllersGroup,
+): entry is TControllersGroup {
+  if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+    return false
+  }
+  const proto: unknown = Object.getPrototypeOf(entry)
+  return (
+    (proto === Object.prototype || proto === null) &&
+    Array.isArray((entry as TControllersGroup).controllers)
+  )
 }
 
 /**
@@ -109,10 +221,24 @@ export class Moost extends Hookable {
 
   protected replace: TReplaceRegistry = {}
 
-  protected unregisteredControllers: (TObject | TFunction | [string, TObject | TFunction])[] = []
+  protected unregisteredControllers: TControllerRegistration[] = []
+
+  /** D1 param-audit findings collected while binding controllers, flushed by `init()`. */
+  protected paramAuditFindings: TParamAuditFinding[] = []
+
+  /** Effective `diagnostics.paramTypes` mode, resolved once (see {@link TMoostOptions}). */
+  protected readonly paramAuditMode: TParamAuditMode
+
+  /** Effective `diagnostics.inheritance` mode (see {@link TMoostOptions}). */
+  protected readonly inheritanceAuditMode: TInheritanceAuditMode
+
+  /** D5: set once `init()` completes — late provide/replace registrations then warn. */
+  protected initialized = false
 
   constructor(protected options?: TMoostOptions) {
     super()
+    this.paramAuditMode = resolveParamAuditMode(options?.diagnostics?.paramTypes)
+    this.inheritanceAuditMode = options?.diagnostics?.inheritance || 'warn'
     this.logger = options?.logger || getDefaultLogger(`${__DYE_DIM__ + __DYE_MAGENTA__}moost`)
     setDefaultLogger(this.logger)
     const mate = getMoostMate()
@@ -203,12 +329,29 @@ export class Moost extends Hookable {
         this.setProvideRegistry(a.getProvideRegistry())
       }
     }
-    this.unregisteredControllers.unshift(this)
-    await this.bindControllers()
+    this.unregisteredControllers.unshift({ controller: this })
+    let auditError: string | undefined
+    try {
+      await this.bindControllers()
+    } finally {
+      // D4: expose this app's controllers overview to the DI diagnostics scans
+      registerDiagnosticsSource(this)
+      // D1 findings are logged even when binding threw; a bind error then
+      // propagates from the try block, taking precedence over the audit error
+      auditError = this.flushParamAudit()
+    }
+    if (auditError) {
+      throw new Error(auditError)
+    }
     await this.runInitHooks()
     for (const a of this.adapters) {
       await (a.onInit && a.onInit(this))
     }
+    // Flagged only after the adapters' onInit loop: registry updates made by
+    // init() itself (top of this method) or by adapters during boot are part
+    // of the normal init flow and must not trigger the D5 late-registration
+    // warning below (setProvideRegistry/setReplaceRegistry).
+    this.initialized = true
   }
 
   /**
@@ -236,24 +379,55 @@ export class Moost extends Hookable {
     }
   }
 
+  /**
+   * D1 audit of a DI-instantiated controller class' constructor params.
+   * Findings are collected for `init()` to flush. Returns `true` when the
+   * bind-time SINGLETON instantiation must be skipped: in `'error'` mode a
+   * fatal-capable finding guarantees `init()` rejects with the aggregated
+   * audit error (naming class and param), which the generic infact
+   * instantiation error would otherwise preempt.
+   */
+  protected collectConstructorAudit(className: string, classMeta?: TMoostMetadata): boolean {
+    if (this.paramAuditMode === 'off' || !classMeta?.injectable) {
+      return false
+    }
+    const findings = auditParams(classMeta.params, { className })
+    this.paramAuditFindings.push(...findings)
+    return this.paramAuditMode === 'error' && findings.some((f) => f.severity === 'fatal-capable')
+  }
+
+  /**
+   * Flushes D1 findings collected during binding: every finding is logged as a
+   * warning; in `'error'` mode, fatal-capable findings are folded into one
+   * aggregate error message listing all of them, returned for `init()` to
+   * throw (`init()` owns the precedence between this and a bind error).
+   */
+  protected flushParamAudit(): string | undefined {
+    const findings = this.paramAuditFindings
+    this.paramAuditFindings = []
+    for (const f of findings) {
+      this.logger.warn(f.message)
+    }
+    const fatal = findings.filter((f) => f.severity === 'fatal-capable')
+    if (fatal.length > 0 && this.paramAuditMode === 'error') {
+      return formatParamAuditError(fatal)
+    }
+    return undefined
+  }
+
   protected async bindControllers() {
     const meta = getMoostMate()
     const thisMeta = meta.read(this)
     const provide = { ...thisMeta?.provide, ...this.provide }
     const replace = { ...thisMeta?.replace, ...this.replace }
-    for (const _controller of this.unregisteredControllers) {
-      let newPrefix: string | undefined
-      let controller = _controller
-      if (Array.isArray(_controller) && typeof _controller[0] === 'string') {
-        newPrefix = _controller[0]
-        controller = _controller[1] as TObject
-      }
+    const globalPrefix = this.options?.globalPrefix || ''
+    for (const { controller, prependPrefix, replaceOwnPrefix } of this.unregisteredControllers) {
       await this.bindController(
         controller,
         provide,
         replace,
-        this.options?.globalPrefix || '',
-        newPrefix,
+        prependPrefix ? `${globalPrefix}/${prependPrefix}` : globalPrefix,
+        replaceOwnPrefix,
       )
     }
     this.unregisteredControllers = []
@@ -272,15 +446,17 @@ export class Moost extends Hookable {
     const isControllerConsructor = isConstructor(controller)
 
     const ownPrefix =
-      typeof replaceOwnPrefix === 'string'
-        ? replaceOwnPrefix
-        : classMeta?.controller?.prefix || ''
+      typeof replaceOwnPrefix === 'string' ? replaceOwnPrefix : classMeta?.controller?.prefix || ''
     const computedPrefix = `${globalPrefix}/${ownPrefix}`
 
     const pipes = mergeSorted(this.pipes, classMeta?.pipes)
     let instance: TObject | undefined
     const infactOpts = { provide, replace, customData: { pipes } }
+    const skipInstantiation =
+      isControllerConsructor &&
+      this.collectConstructorAudit((controller as TFunction).name, classMeta)
     if (
+      !skipInstantiation &&
       isControllerConsructor &&
       (classMeta?.injectable === 'SINGLETON' || classMeta?.injectable === true)
     ) {
@@ -307,22 +483,36 @@ export class Moost extends Hookable {
     const classConstructor = isConstructor(controller)
       ? controller
       : (getConstructor(controller) as TClassConstructor)
-    this.controllersOverview.push(
-      await bindControllerMethods({
-        getInstance,
-        classConstructor,
-        adapters: this.adapters,
-        globalPrefix,
-        replaceOwnPrefix,
-        interceptors: Array.from(this.interceptors),
-        pipes,
-        provide: classMeta?.provide,
-        replace: classMeta?.replace,
-        logger: this.logger,
-        moostInstance: this,
-        registerInitHook: (hook) => this.initHooks.push(hook),
-      }),
-    )
+    const controllerOverview = await bindControllerMethods({
+      getInstance,
+      classConstructor,
+      adapters: this.adapters,
+      globalPrefix,
+      replaceOwnPrefix,
+      interceptors: Array.from(this.interceptors),
+      pipes,
+      provide: classMeta?.provide,
+      replace: classMeta?.replace,
+      logger: this.logger,
+      moostInstance: this,
+      registerInitHook: (hook) => this.initHooks.push(hook),
+      reportParamAudit:
+        this.paramAuditMode === 'off'
+          ? undefined
+          : (findings) => this.paramAuditFindings.push(...findings),
+    })
+    this.controllersOverview.push(controllerOverview)
+    // §3 inheritance audit (warn-only) — route-drop and lost-ctor-params traps
+    if (this.inheritanceAuditMode !== 'off') {
+      this.paramAuditFindings.push(
+        ...auditInheritance({
+          classConstructor,
+          classMeta,
+          ownHandlersCount: controllerOverview.handlers.length,
+          diInstantiated: isControllerConsructor,
+        }),
+      )
+    }
     this.handlerOverviewIndex = undefined // overview changed — drop the memoized index
     if (classMeta?.importController) {
       const prefix =
@@ -390,9 +580,7 @@ export class Moost extends Hookable {
     return this.globalInterceptorHandler()
   }
 
-  applyGlobalInterceptors(
-    ...items: (TClassConstructor | TInterceptorDef | TInterceptorData)[]
-  ) {
+  applyGlobalInterceptors(...items: (TClassConstructor | TInterceptorDef | TInterceptorData)[]) {
     const mate = getMoostMate()
     for (const item of items) {
       if (typeof item === 'function') {
@@ -421,33 +609,101 @@ export class Moost extends Hookable {
 
   /**
    * Register new entries to provide as dependency injections
+   *
+   * Ordering rule: call this **before `init()`**. `init()` snapshots the
+   * provide registry once when binding controllers, so entries added later are
+   * never seen by already-bound controllers (sibling registration order does
+   * not matter — only the before/after-`init()` boundary does). To scope
+   * providers to part of the app, use class-level `@Provide` on a parent
+   * controller — it flows parent → child through `@ImportController`, never
+   * to siblings.
    * @param provide - Provide Registry (use createProvideRegistry from '\@prostojs/infact')
    * @returns
    */
   setProvideRegistry(provide: TProvideRegistry) {
+    if (this.initialized) {
+      this.logger.warn(
+        '[moost] setProvideRegistry() called after init() — already-bound controllers will not ' +
+          'see these providers. Register providers before init(), or provide them via @Provide ' +
+          'on a parent controller.',
+      )
+    }
     this.provide = { ...this.provide, ...provide }
     return this
   }
 
   /**
    * Register replace classes to provide as dependency injections
+   *
+   * Ordering rule: call this **before `init()`**. `init()` snapshots the
+   * replace registry once when binding controllers, so replacements added
+   * later are never seen by already-bound controllers.
    * @param replace - Replace Registry (use createReplaceRegistry from '\@prostojs/infact')
    * @returns
    */
   setReplaceRegistry(replace: TReplaceRegistry) {
+    if (this.initialized) {
+      this.logger.warn(
+        '[moost] setReplaceRegistry() called after init() — already-bound controllers will not ' +
+          'see these replacements. Register replacements before init().',
+      )
+    }
     this.replace = { ...this.replace, ...replace }
     return this
   }
 
   /**
-   * Register controllers (similar to @ImportController decorator)
-   * @param controllers - list of target controllers (instances)
+   * Register controllers with the app (similar to the `@ImportController` decorator).
+   *
+   * Accepted forms (mixable in one call):
+   *
+   * 1. **Class or instance** — `registerControllers(UsersController)`.
+   *    Mounted at `globalPrefix + '/' + own @Controller prefix`.
+   *
+   * 2. **Tuple `[prefix, controller]`** — `registerControllers(['api/users', UsersController])`.
+   *    **IMPORTANT: the string REPLACES the controller's own `@Controller(...)` prefix — it does
+   *    NOT prepend to it.** `['api', UsersController]` mounts a `@Controller('users')` class at
+   *    `/api`, not `/api/users`, so every tuple registration must repeat the full path.
+   *    To compose prefixes instead, use the object form below.
+   *
+   * 3. **Object group `{ prefix, controllers, mode? }`** —
+   *    `registerControllers({ prefix: 'api', controllers: [UsersController] })`.
+   *    Registers every entry of `controllers` under `prefix`:
+   *    - `mode: 'prepend'` (default) composes the prefixes:
+   *      `globalPrefix + '/' + prefix + '/' + own @Controller prefix`
+   *      (a `@Controller('users')` class mounts at `/api/users`);
+   *    - `mode: 'replace'` replaces each controller's own prefix with `prefix`
+   *      (same semantics as the tuple form).
+   *
+   * The object form is detected only for plain objects with a `controllers` array, so
+   * controller classes, instances and tuples keep working unchanged. To mount the whole
+   * app under one segment, prefer the `globalPrefix` option (see {@link TMoostOptions}).
+   *
+   * @param controllers - controllers to register: classes, instances,
+   *   `[prefix, controller]` tuples or `{ prefix, controllers, mode? }` groups
    * @returns
    */
   public registerControllers(
-    ...controllers: (TObject | TFunction | [string, TObject | TFunction])[]
+    ...controllers: (TObject | TFunction | [string, TObject | TFunction] | TControllersGroup)[]
   ) {
-    this.unregisteredControllers.push(...controllers)
+    for (const entry of controllers) {
+      if (Array.isArray(entry) && typeof entry[0] === 'string') {
+        this.unregisteredControllers.push({
+          controller: entry[1],
+          replaceOwnPrefix: entry[0],
+        })
+      } else if (isControllersGroup(entry)) {
+        for (const controller of entry.controllers) {
+          this.unregisteredControllers.push(
+            entry.mode === 'replace'
+              ? { controller, replaceOwnPrefix: entry.prefix }
+              : { controller, prependPrefix: entry.prefix },
+          )
+        }
+      } else {
+        this.unregisteredControllers.push({ controller: entry })
+      }
+    }
     return this
   }
 

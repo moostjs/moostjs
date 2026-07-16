@@ -7,6 +7,7 @@ import { mergeSorted } from '../shared-utils'
 import type { TControllerOverview, THandlerOverview } from '../types'
 import { getIterceptorHandlerFactory } from '../utils'
 import type { TBindControllerOptions } from './bind-types'
+import { auditParams } from './param-audit'
 import { getInstanceOwnMethods } from './utils'
 
 export async function bindControllerMethods(options: TBindControllerOptions) {
@@ -35,6 +36,16 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
 
   for (const method of methods) {
     const methodMeta = getMoostMate().read(fakeInstance, method as string) || ({} as TMoostMetadata)
+
+    // D1 param audit (warn-only for method params) — covers event handlers and @MoostInit hooks
+    if (options.reportParamAudit && (methodMeta.moostInit || methodMeta.handlers?.length)) {
+      options.reportParamAudit(
+        auditParams(methodMeta.params, {
+          className: classConstructor.name,
+          methodName: method as string,
+        }),
+      )
+    }
 
     if (methodMeta.moostInit) {
       if (meta.injectable === 'FOR_EVENT') {

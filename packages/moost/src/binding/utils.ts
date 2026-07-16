@@ -26,17 +26,23 @@ export function getInstanceOwnProps<T = TAny>(instance: T): (keyof T)[] {
   ].filter((m) => typeof instance[m as keyof typeof instance] !== 'function') as (keyof T)[]
 }
 
-const fnProto = Object.getPrototypeOf(Function) as TClassConstructor
+/**
+ * Walks the user-defined ancestor classes of a constructor, closest first.
+ * Terminates at `Function.prototype` (it is a function but has no `.prototype`).
+ */
+export function* ancestorsOf(classConstructor: TClassConstructor): Generator<TClassConstructor> {
+  let parent = Object.getPrototypeOf(classConstructor) as TClassConstructor
+  while (typeof parent === 'function' && parent.prototype) {
+    yield parent
+    parent = Object.getPrototypeOf(parent) as TClassConstructor
+  }
+}
 
 function getParentProps(constructor: TClassConstructor): string[] {
-  const parent = Object.getPrototypeOf(constructor) as TClassConstructor
-  if (
-    typeof parent === 'function' &&
-    parent !== fnProto &&
-    parent !== constructor &&
-    parent.prototype
-  ) {
-    return [...getParentProps(parent), ...Object.getOwnPropertyNames(parent.prototype)]
+  const props: string[] = []
+  for (const parent of ancestorsOf(constructor)) {
+    // deepest ancestor's props first, matching subclass-overrides-parent order
+    props.unshift(...Object.getOwnPropertyNames(parent.prototype))
   }
-  return []
+  return props
 }

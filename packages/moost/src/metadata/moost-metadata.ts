@@ -5,6 +5,7 @@ import { Mate } from '@prostojs/mate'
 import type { TAny, TClassConstructor, TEmpty, TFunction, TObject } from '../common-types'
 import type { TInterceptorDef, TInterceptorPriority } from '../decorators/intercept.decorator'
 import type { TDecoratorLevel } from '../decorators/types'
+import { stampOnce } from '../module-identity'
 import type { TPipeData, TPipeMetas } from '../pipes'
 
 const METADATA_WORKSPACE = 'moost'
@@ -109,6 +110,9 @@ export function getMoostMate<
   Prop extends TObject = TEmpty,
   Param extends TObject = TEmpty,
 >() {
+  // reachable duplicate-copy check: `sideEffects: false` lets bundlers drop
+  // the module-scope stamp; first decorator use is where copies diverge
+  stampOnce()
   return moostMate as unknown as Mate<
     TMoostMetadata & Class & { params: (Param & TMateParamMeta)[] },
     TMoostMetadata & Prop & { params: (Param & TMateParamMeta)[] }

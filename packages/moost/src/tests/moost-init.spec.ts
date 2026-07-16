@@ -6,29 +6,9 @@ import { HandlerPaths } from '../decorators/handler-paths.decorator'
 import { Injectable } from '../decorators/injectable.decorator'
 import { InjectMoost, MoostInit } from '../decorators/init.decorator'
 import { getHandlerPaths, useHandlerPaths } from '../handler-paths'
-import { getMoostMate } from '../metadata'
-import type { TMoostAdapter, TMoostAdapterOptions } from '../moost'
+import type { TMoostAdapter } from '../moost'
 import { Moost } from '../moost'
-
-/**
- * Minimal handler decorator + adapter so these tests stay self-contained
- * (no @moostjs/event-http dependency). `FakeGet` marks a method as a handler;
- * `fakeRouteAdapter` registers it, populating `registeredAs` in the overview —
- * exactly the data a real adapter produces and an init hook reads.
- */
-function FakeGet(path?: string) {
-  return getMoostMate().decorate('handlers', { type: 'FAKE', path }, true)
-}
-
-const fakeRouteAdapter: TMoostAdapter<unknown> = {
-  name: 'fake-route',
-  bindHandler(opts: TMoostAdapterOptions<unknown, object>) {
-    for (const h of opts.handlers) {
-      const fullPath = `${opts.prefix}/${h.path ?? ''}`.replace(/\/+/g, '/')
-      opts.register(h, fullPath, [])
-    }
-  },
-}
+import { FakeGet, fakeRouteAdapter } from './fake-route.artifacts'
 
 describe('@MoostInit', () => {
   it('runs once after bind, with a complete controllers overview', async () => {

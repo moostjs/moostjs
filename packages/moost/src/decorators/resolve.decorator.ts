@@ -45,12 +45,24 @@ export function Param(name: string) {
 }
 
 /**
- * Get Parsed Params from url parh
+ * Get Parsed Params from url path
+ *
+ * Stamps `paramSource: 'ROUTE'` metadata (like `@Param(name)` does), so
+ * source-aware pipes (e.g. coercion pipes that only coerce string-transport
+ * input) recognize the whole params object as route input.
+ *
+ * Tip: type the argument with an interface-based DTO (e.g. an atscript `.as`
+ * interface) — interfaces emit as `declare class`, so the design type survives
+ * every metadata toolchain, unlike scalar type aliases which only survive
+ * syntactic emitters.
  * @decorator
  * @paramType object
  */
 export function Params() {
-  return Resolve(() => useRouteParams().params, 'params')
+  return getMoostMate().apply(
+    getMoostMate().decorate('paramSource', 'ROUTE'),
+    Resolve(() => useRouteParams().params, 'params'),
+  )
 }
 
 /**

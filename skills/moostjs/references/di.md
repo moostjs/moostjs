@@ -46,6 +46,7 @@ constructor(
 | 1 | `@Inject(SomeClass)` matches class-keyed provide entries (the key is normalized to the registry's symbol). It is usually redundant: class-typed constructor params resolve automatically by type, consulting the provide registry. |
 | 2 | `@Inject` on handler/`@MoostInit` method params or on properties is a no-op — yields `undefined` regardless of registration (only Infact's constructor path consumes `inject` meta). Use constructor injection or `@Resolve`-based decorators instead. |
 | 3 | A missing key on a non-`@Optional()` constructor param throws `Could not inject ...` at instantiation. |
+| 4 | Subclassing: a decorated subclass with no own constructor inherits the parent's ctor params automatically; an entirely undecorated subclass inherits NOTHING (not injectable). Rules + bind-time warnings: [decorators.md#inheritance](decorators.md#inheritance). |
 
 ### `@Provide(type, factory)` — class / param / prop
 

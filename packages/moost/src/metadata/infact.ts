@@ -4,9 +4,12 @@ import { getConstructor } from '@prostojs/mate'
 import { useLogger } from '@wooksjs/event-core'
 
 import { useScopeId } from '../adapter-utils'
+import type { TFunction } from '../common-types'
 import { getDefaultLogger } from '../logger'
 import type { TPipeData } from '../pipes'
 import { runPipes } from '../pipes/run-pipes'
+import type { TInfactErrorDetail } from './diagnostics'
+import { findTokenProviders, formatInfactErrorContext, formatScopeHint } from './diagnostics'
 import type { TMoostMetadata, TMoostParamsMetadata } from './moost-metadata'
 import { getMoostMate } from './moost-metadata'
 
@@ -62,6 +65,131 @@ export function defineInfactScope<T extends object>(name: string | symbol, scope
  */
 export function getInfactScopeVars<T extends object>(name: string | symbol) {
   return scopeVarsMap.get(name) as T | undefined
+}
+
+type TInfactEventName = 'new-instance' | 'warn' | 'error'
+
+/** Applies the `setInfactLoggingOptions` filters to an Infact event. */
+function shouldLogInfactEvent(event: TInfactEventName, targetClass: TFunction): boolean {
+  if (event === 'warn') {
+    return !!loggingOptions.warn
+  }
+  if (event === 'error') {
+    return !!loggingOptions.error
+  }
+  // 'new-instance'
+  const scope = getMoostMate().read(targetClass)?.injectable || 'SINGLETON'
+  return (
+    loggingOptions.newInstance !== false &&
+    (loggingOptions.newInstance === scope ||
+      (loggingOptions.newInstance === 'SINGLETON' && scope === true))
+  )
+}
+
+/** Renders the DI resolution-hierarchy breadcrumb (`⋱ A → B`). */
+function formatHierarchy(args?: unknown[]): string {
+  return `${__DYE_DIM__ + __DYE_BLUE__}⋱ ${args?.map(String).join(' → ') || ''}`
+}
+
+function formatNewInstanceArg(a: unknown): string {
+  switch (typeof a) {
+    case 'number':
+    case 'boolean': {
+      return `${__DYE_YELLOW__}${a}${__DYE_DIM__ + __DYE_BLUE__}`
+    }
+    case 'string': {
+      return `${__DYE_GREEN_BRIGHT__}"${a.slice(0, 1)}..."${__DYE_DIM__ + __DYE_BLUE__}`
+    }
+    case 'object': {
+      if (Array.isArray(a)) {
+        return `[${a.length}]`
+      }
+      if (getConstructor(a)) {
+        return getConstructor(a).name
+      }
+      return '{}'
+    }
+    default: {
+      return '*'
+    }
+  }
+}
+
+/** Renders the resolved constructor args for the `new-instance` log line. */
+function formatNewInstanceParams(args?: unknown[]): string {
+  return (
+    args
+      ?.map(
+        (a) =>
+          `${__DYE_DIM__ + __DYE_BOLD__}${formatNewInstanceArg(a)}${__DYE_BOLD_OFF__ + __DYE_DIM__}`,
+      )
+      .join(', ') || ''
+  )
+}
+
+/**
+ * Renders an `'error'` event. Without `detail` (everything the installed
+ * @prostojs/infact@0.4.1 ever produces) the output is exactly the legacy
+ * format. With `detail` (newer infact) the D2 consumer context is rendered
+ * and, when the failing `@Inject` token is class-provided on a sibling
+ * controller of a registered app, the D4 scope hint is appended.
+ */
+function renderInfactError(
+  targetClass: TFunction,
+  message: string,
+  args?: unknown[],
+  detail?: TInfactErrorDetail,
+): string {
+  if (!detail) {
+    const instance = `${__DYE_UNDERSCORE__}${targetClass.name}${__DYE_UNDERSCORE_OFF__}`
+    return `Failed to instantiate ${instance}. ${message} ${formatHierarchy(args)}`
+  }
+  let text = formatInfactErrorContext(targetClass.name, message, detail)
+  if (detail.injectToken !== undefined) {
+    const hint = formatScopeHint(detail.injectToken, findTokenProviders(detail.injectToken))
+    if (hint) {
+      text += `\n  ${hint}`
+    }
+  }
+  return text
+}
+
+/**
+ * Infact event sink. Declared with the forward-compatible 5-param signature:
+ * the installed @prostojs/infact (0.4.1) calls it with 4 args (never passes
+ * `detail`), while newer infact versions pass a `detail` payload on `'error'`
+ * events that unlocks the rich D2/D4 rendering (see `renderInfactError`).
+ *
+ * Exported for tests — since 0.4.1 never passes `detail` at runtime, the
+ * detail-driven path is exercised by invoking this function directly.
+ */
+// oxlint-disable-next-line max-params -- forward-compatible infact `on` signature (5th arg)
+export function onInfactEvent(
+  event: TInfactEventName,
+  targetClass: TFunction,
+  message: string,
+  args?: unknown[],
+  detail?: TInfactErrorDetail,
+) {
+  if (!shouldLogInfactEvent(event, targetClass)) {
+    return
+  }
+  let logger
+  try {
+    // useLogger(topic) derives a child logger via createTopic when supported,
+    // falling back to the base logger otherwise
+    logger = event === 'error' ? getDefaultLogger(INFACT_BANNER) : useLogger(INFACT_BANNER)
+  } catch {
+    logger = getDefaultLogger(INFACT_BANNER)
+  }
+  const instance = `${__DYE_UNDERSCORE__}${targetClass.name}${__DYE_UNDERSCORE_OFF__}`
+  if (event === 'new-instance') {
+    logger.info(`new ${instance}${__DYE_DIM__ + __DYE_BLUE__}(${formatNewInstanceParams(args)})`)
+  } else if (event === 'warn') {
+    logger.warn(`${instance} - ${message} ${formatHierarchy(args)}`)
+  } else {
+    logger.error(renderInfactError(targetClass, message, args, detail))
+  }
 }
 
 /**
@@ -138,93 +266,9 @@ export function getNewMoostInfact() {
 
     storeProvideRegByInstance: true,
 
-    on: (event, targetClass, message, args?) => {
-      switch (event) {
-        case 'new-instance': {
-          const scope = getMoostMate().read(targetClass)?.injectable || 'SINGLETON'
-          if (
-            loggingOptions.newInstance === false ||
-            !(
-              loggingOptions.newInstance === scope ||
-              (loggingOptions.newInstance === 'SINGLETON' && scope === true)
-            )
-          ) {
-            return
-          }
-          break
-        }
-        case 'warn': {
-          if (!loggingOptions.warn) {
-            return
-          }
-          break
-        }
-        case 'error': {
-          if (!loggingOptions.error) {
-            return
-          }
-          break
-        }
-        default:
-      }
-      let logger
-      try {
-        // useLogger(topic) derives a child logger via createTopic when supported,
-        // falling back to the base logger otherwise
-        logger = event === 'error' ? getDefaultLogger(INFACT_BANNER) : useLogger(INFACT_BANNER)
-      } catch {
-        logger = getDefaultLogger(INFACT_BANNER)
-      }
-      const instance = `${__DYE_UNDERSCORE__}${targetClass.name}${__DYE_UNDERSCORE_OFF__}`
-      switch (event) {
-        case 'new-instance': {
-          const params =
-            args
-              ?.map((a) => {
-                switch (typeof a) {
-                  case 'number':
-                  case 'boolean': {
-                    return `${__DYE_YELLOW__}${a}${__DYE_DIM__ + __DYE_BLUE__}`
-                  }
-                  case 'string': {
-                    return `${__DYE_GREEN_BRIGHT__}"${a.slice(0, 1)}..."${
-                      __DYE_DIM__ + __DYE_BLUE__
-                    }`
-                  }
-                  case 'object': {
-                    if (Array.isArray(a)) {
-                      return `[${a.length}]`
-                    }
-                    if (getConstructor(a)) {
-                      return getConstructor(a).name
-                    }
-                    return '{}'
-                  }
-                  default: {
-                    return '*'
-                  }
-                }
-              })
-              .map((a) => `${__DYE_DIM__ + __DYE_BOLD__}${a}${__DYE_BOLD_OFF__ + __DYE_DIM__}`)
-              .join(', ') || ''
-          logger.info(`new ${instance}${__DYE_DIM__ + __DYE_BLUE__}(${params})`)
-          break
-        }
-        case 'warn': {
-          const hier = `${__DYE_DIM__ + __DYE_BLUE__}⋱ ${args?.map(String).join(' → ') || ''}`
-          logger.warn(`${instance} - ${message} ${hier}`)
-          break
-        }
-        case 'error': {
-          const hier = `${__DYE_DIM__ + __DYE_BLUE__}⋱ ${args?.map(String).join(' → ') || ''}`
-          logger.error(`Failed to instantiate ${instance}. ${message} ${hier}`)
-          break
-        }
-        default: {
-          break
-        }
-      }
-    },
+    // @prostojs/infact ≥0.5.0 passes the optional 5th `detail` arg on DI
+    // errors; older copies simply never pass it and get the legacy format.
+    on: onInfactEvent,
   })
   return infactInstance
 }

@@ -2,6 +2,8 @@
 
 Moost supports inheriting metadata from superclasses, making it easier to reuse common configurations and annotations. By default, metadata defined on a superclass does not propagate to subclasses. The `@Inherit()` decorator enables this inheritance, reducing boilerplate when extending controllers, class-based interceptors, or any `@Injectable` class.
 
+This page covers the `@Inherit()` merge mechanics. For the task-level view — which metadata flows for each subclass shape, the route-drop and constructor-params traps, and the bind-time warnings that catch them — see [Subclassing Controllers](/moost/subclassing).
+
 ## Key Points
 
 - **Decorator:** `@Inherit()` marks a class or method to inherit metadata from its superclass; `@Inherit(false)` on an overridden method opts back out (see [Gotchas](#gotchas)).
@@ -139,9 +141,9 @@ Before 0.6.30, an override carrying *any* own decorator silently dropped **all**
 
 ## Gotchas
 
-1. **No `@Inherit`, no inheritance.** Overriding a decorated method in a subclass *without* `@Inherit` (method-level or class-level) silently drops the inherited decorators — the route/command simply disappears, with no warning.
+1. **No `@Inherit`, no inheritance.** Overriding a decorated method in a subclass *without* `@Inherit` (method-level or class-level) drops the inherited decorators — the route/command simply disappears. A registered controller that ends up with zero handlers while an ancestor defines some triggers a bind-time warning (see [Subclassing Controllers](/moost/subclassing#the-route-drop-trap)); `diagnostics: { inheritance: 'off' }` on Moost options silences it.
 2. **Class-level keys are shallow-merged.** Class-level `@Inherit()` merges the parent's class metadata (prefix, interceptors, etc.) under the subclass's own — e.g. a subclass without `@Controller(prefix)` keeps the parent's prefix.
-3. **Constructor params inherit only without a declared constructor.** A subclass with no constructor of its own inherits the parent's constructor param metadata (DI resolves it, no `@Inherit()` needed). A subclass that declares a constructor uses its own params only — re-apply `@Inject()` and friends there.
+3. **Constructor params inherit only without a declared constructor.** A *decorated* subclass with no constructor of its own inherits the parent's constructor param metadata (DI resolves it, no `@Inherit()` needed). A subclass that declares a constructor uses its own params only — re-apply `@Inject()` and friends there. A subclass with no decorators at all inherits nothing, and an undecorated intermediate class breaks the automatic fallback — both cases are warned about at bind time ([details](/moost/subclassing#constructor-params-across-extends)).
 
 ## Summary
 

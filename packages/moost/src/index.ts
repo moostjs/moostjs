@@ -1,8 +1,18 @@
+export * from './module-identity'
 export * from './adapter-utils'
 export { getInstanceOwnMethods, getInstanceOwnProps } from './binding/utils'
 export type { TGetHandlerPathsOptions } from './handler-paths'
 export { getHandlerPaths, useHandlerPaths } from './handler-paths'
-export type { TAny, TAnyFn, TClassConstructor, TEmpty, TFunction, TLogger, TObject, TPrimitives } from './common-types'
+export type {
+  TAny,
+  TAnyFn,
+  TClassConstructor,
+  TEmpty,
+  TFunction,
+  TLogger,
+  TObject,
+  TPrimitives,
+} from './common-types'
 export { isThenable, mergeSorted } from './shared-utils'
 
 export * from './moost'

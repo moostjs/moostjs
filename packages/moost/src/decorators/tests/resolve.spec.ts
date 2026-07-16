@@ -111,6 +111,13 @@ describe('resolve decorators', () => {
       }
     }
   })
+  it('must stamp paramSource ROUTE for @Param', () => {
+    expect(meta?.params?.[1]?.paramSource).toBe('ROUTE')
+    expect(meta?.params?.[1]?.paramName).toBe('test')
+  })
+  it('must stamp paramSource ROUTE for @Params', () => {
+    expect(meta?.params?.[2]?.paramSource).toBe('ROUTE')
+  })
   it('must set resolved for @Params', () => {
     const i = 2
     expect(meta?.params).toBeDefined()

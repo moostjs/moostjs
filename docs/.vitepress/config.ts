@@ -265,6 +265,10 @@ export default defineConfig({
                             link: '/moost/controllers',
                         },
                         {
+                            text: 'Subclassing Controllers',
+                            link: '/moost/subclassing',
+                        },
+                        {
                             text: 'Application Init',
                             link: '/moost/app-init',
                         },

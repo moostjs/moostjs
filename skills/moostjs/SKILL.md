@@ -4,7 +4,8 @@ description: >-
   Use when working with the Moost framework (moost, @moostjs/event-http/cli/wf/ws,
   @moostjs/swagger, @moostjs/otel, @moostjs/vite, create-moost) to
   build decorator-driven TypeScript apps for HTTP, CLI, WebSocket, Workflow events,
-  or custom adapters. Covers controllers, handler/parameter/response decorators, DI,
+  or custom adapters. Covers controllers, controller subclassing (@Inherit),
+  handler/parameter/response decorators, DI,
   interceptors, pipes, auth guards, framework errors, common metadata decorators,
   Wooks composables, adapter authoring, quick apps, workflow outlets/state
   strategies, WebSocket rooms/testing, logging, app-init hooks (@MoostInit), the
@@ -26,7 +27,7 @@ Powered by: `@prostojs/mate` (metadata), `@prostojs/infact` (DI), `@wooksjs/even
 | Domain | File | Load when |
 |---|---|---|
 | Core concepts, Moost class, lifecycle, registration, app init | [core.md](references/core.md) | New project, multi-adapter setup, `app.init()`, `@MoostInit`/`@InjectMoost`, boot-time setup, Moost subclass |
-| Decorators, metadata, custom decorators, Mate | [decorators.md](references/decorators.md) | Creating/using decorators, reading metadata |
+| Decorators, metadata, custom decorators, Mate | [decorators.md](references/decorators.md) | Creating/using decorators, reading metadata, subclassing controllers / `@Inherit` / parent routes 404 / `diagnostics.inheritance` |
 | DI scopes, @Injectable, @Inject, @Provide, @Circular | [di.md](references/di.md) | Services, scoping, providers, replacements |
 | Interceptors: priority, @Intercept, guards, class-based | [interceptors.md](references/interceptors.md) | Auth/logging/error cross-cutting |
 | Pipes: @Pipe, @Resolve, TRANSFORM/VALIDATE | [pipes.md](references/pipes.md) | Validation, transformation, custom param decorators |

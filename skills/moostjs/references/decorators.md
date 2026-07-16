@@ -180,9 +180,23 @@ Merge rules (shallow, own keys win):
 1. **Decorated override under class-level `@Inherit()` MERGES** — parent method meta (route bindings, guards, descriptions) merged under the override's own, so adding e.g. a rate-limit decorator keeps the parent's `@Get`/`@Post` binding. *(Before 0.6.30: any own decorator silently dropped ALL parent method meta, route included.)*
 2. **Array fields replace wholesale** — an override with its own `@Get('x')` serves only `x`; `handlers`/`interceptors`/`pipes` are never concatenated with the parent's.
 3. **Params merge per index** — params with no own decorators inherit the parent's resolvers; a param that re-declares `@Body()` etc. keeps its own.
-4. **`@Inherit(false)` on an overridden member = full replacement** — only own metadata; the parent's route is NOT bound.
-5. **Ctor params**: subclass with NO declared constructor inherits the parent's ctor param meta (DI resolves it, no `@Inherit()` needed); a declared constructor uses own params only — re-declare `@Inject` there.
+4. **`@Inherit(false)` on an overridden member = full replacement** — only own metadata; the parent's route is NOT bound. Class-level `@Inherit(false)` = deliberate opt-out (also silences the route-drop warning, rule 8).
+5. **Ctor params**: a *decorated* subclass with NO declared constructor inherits the parent's ctor param meta automatically (DI resolves it, no `@Inherit()` needed); a declared constructor uses own params only — re-declare `@Inject` there. An entirely undecorated subclass inherits NOTHING (not even `injectable`), and an undecorated intermediate class breaks the automatic fallback (it walks one level only).
 6. **`@Inherit()` on only the base class does nothing** — the subclass's own meta stays `undefined` and no route is bound.
+7. **Routes never flow without `@Inherit()`** — `@Controller('own')` on the subclass replaces the prefix but does NOT carry the parent's routes; the app boots, DI works, every inherited endpoint 404s.
+8. **Bind-time warnings** — `init()` warns (never throws) when a registered controller registered 0 handlers while an ancestor defines some — both without an `@Inherit` decision and when `@Inherit()` is present but an undecorated intermediate class breaks the chain (`@Inherit()` bridges one level at a time; the warning names the broken link) — and when a DI-instantiated class lacks ctor param meta while a decorated ancestor declares some (fix: `@Inherit()` on the intermediate class(es), or re-declare). A class-level `@Inherit(false)` opt-out stays silent. Silence with `new Moost({ diagnostics: { inheritance: 'off' } })` (default `'warn'`).
+
+Subclass shapes at a glance (parent = `@Controller('p')` + routes + ctor deps):
+
+| Subclass | Prefix | Injectable | Ctor params | Parent routes |
+|---|---|---|---|---|
+| no decorators | — | — | — | dropped |
+| `@Inherit()` (empty) | parent | parent | parent | all |
+| `@Controller('own')`, no own ctor | own | own | parent (auto) | dropped |
+| `@Controller('own')` + own ctor | own | own | own | dropped |
+| `@Inherit()` + own ctor | parent | parent | own | all |
+| `@Controller('own')` + `@Inherit()` | own | parent | parent | all, under own prefix |
+| `@Inherit(false)` | — | — | parent (auto) | dropped (deliberate) |
 
 ## Gotchas
 
