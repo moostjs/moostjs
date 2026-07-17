@@ -230,7 +230,10 @@
     "typescript/consistent-indexed-object-style": "error",
     "typescript/consistent-type-assertions": "error",
     "typescript/consistent-type-definitions": "error",
-    "typescript/consistent-type-imports": "error",
+    // off: emitDecoratorMetadata repo — auto-fixing value imports to
+    // `import type` makes design:paramtypes emit `Object`, silently
+    // breaking DI-by-type and decorator form binding.
+    "typescript/consistent-type-imports": "off",
     "typescript/no-inferrable-types": "error",
     "typescript/prefer-for-of": "error",
     "typescript/prefer-function-type": "error",

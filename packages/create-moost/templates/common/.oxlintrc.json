@@ -33,7 +33,11 @@
     "import/no-default-export": "error",
     "import/consistent-type-specifier-style": ["error", "prefer-top-level"],
 
-    "typescript/consistent-type-imports": "error",
+    // consistent-type-imports MUST stay off: this project relies on
+    // emitDecoratorMetadata (moost DI by param type, atscript .as forms in
+    // decorators). Auto-fixing a value import to `import type` makes
+    // design:paramtypes emit `Object` — DI and form binding break silently.
+    "typescript/consistent-type-imports": "off",
     "typescript/no-extraneous-class": "off",
     "typescript/no-explicit-any": "warn",
     "typescript/no-non-null-assertion": "warn",
