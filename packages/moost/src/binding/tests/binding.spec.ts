@@ -1,4 +1,4 @@
-import { getInstanceOwnMethods } from '../utils'
+import { getInstanceOwnMethods, getInstanceOwnProps } from '../utils'
 import { describe, it, expect } from 'vitest'
 
 class A {
@@ -65,5 +65,45 @@ describe('getInstanceMethods', () => {
     const methods = getInstanceOwnMethods(fakeInstance)
     const unique = [...new Set(methods)]
     expect(methods).toHaveLength(unique.length)
+  })
+
+  it('must not invoke getters while scanning (throwing getter = crash before the fix)', () => {
+    // Real-world shape: moost-db's `.table` getter throws for view-bound
+    // controllers; a method scan must classify by descriptor, not by value.
+    class Guarded {
+      get table(): never {
+        throw new Error('.table is only available for table-bound controllers')
+      }
+
+      handler() {
+        /** */
+      }
+    }
+    class Derived extends Guarded {
+      derivedHandler() {
+        /** */
+      }
+    }
+    const instance = new Derived()
+    const methods = getInstanceOwnMethods(instance)
+    expect(methods).toContain('handler')
+    expect(methods).toContain('derivedHandler')
+    // Accessor properties are props, not methods.
+    expect(methods.includes('table')).toBeFalsy()
+    const props = getInstanceOwnProps(instance)
+    expect(props).toContain('table')
+    expect(props.includes('handler')).toBeFalsy()
+  })
+
+  it('classifies a shadowing instance field by the instance descriptor (nearest wins)', () => {
+    class C {
+      shadowed() {
+        /** */
+      }
+    }
+    const instance = new C() as C & { shadowed: string }
+    Object.defineProperty(instance, 'shadowed', { value: 'not a function anymore' })
+    expect(getInstanceOwnMethods(instance).includes('shadowed')).toBeFalsy()
+    expect(getInstanceOwnProps(instance)).toContain('shadowed')
   })
 })

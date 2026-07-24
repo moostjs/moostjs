@@ -1,29 +1,50 @@
-import { getConstructor } from '@prostojs/mate'
-
 import type { TAny, TClassConstructor } from '../common-types'
 
-/** Returns the own method names of an instance, including inherited methods from parent classes. */
+/**
+ * Returns the own method names of an instance, including inherited methods
+ * from parent classes.
+ *
+ * Classification is descriptor-based and NEVER invokes accessors: a property
+ * is a method only when its nearest descriptor is a DATA property holding a
+ * function. Accessor properties (get/set) are classified as props, not
+ * methods — evaluating `instance[name]` to test them would fire the getter,
+ * and getters are allowed to throw (e.g. moost-db's `.table` throws for
+ * view-bound controllers), which used to turn a mere method scan into a
+ * crash.
+ */
 export function getInstanceOwnMethods<T = TAny>(instance: T): (keyof T)[] {
-  const proto = Object.getPrototypeOf(instance)
-  return [
-    ...new Set([
-      ...getParentProps(getConstructor(instance) as TClassConstructor), // Inheritance support
-      ...Object.getOwnPropertyNames(proto),
-      ...Object.getOwnPropertyNames(instance),
-    ]),
-  ].filter((m) => typeof instance[m as keyof typeof instance] === 'function') as (keyof T)[]
+  return collectByDescriptor(instance as object, true) as (keyof T)[]
 }
 
-/** Returns the own non-method property names of an instance, including inherited properties. */
+/** Returns the own non-method property names of an instance, including inherited properties. Accessor properties are always included (their getters are never invoked — see {@link getInstanceOwnMethods}). */
 export function getInstanceOwnProps<T = TAny>(instance: T): (keyof T)[] {
-  const proto = Object.getPrototypeOf(instance)
-  return [
-    ...new Set([
-      ...getParentProps(getConstructor(instance) as TClassConstructor), // Inheritance support
-      ...Object.getOwnPropertyNames(proto),
-      ...Object.getOwnPropertyNames(instance),
-    ]),
-  ].filter((m) => typeof instance[m as keyof typeof instance] !== 'function') as (keyof T)[]
+  return collectByDescriptor(instance as object, false) as (keyof T)[]
+}
+
+/**
+ * Walks the prototype chain (instance own names first, then each prototype up
+ * to but excluding `Object.prototype`) and classifies every name by its
+ * NEAREST descriptor — matching JS property-resolution order, so an instance
+ * field shadowing a prototype method is classified by the instance field.
+ */
+function collectByDescriptor(instance: object, wantMethods: boolean): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  let obj: object | null = instance
+  while (obj && obj !== Object.prototype) {
+    for (const name of Object.getOwnPropertyNames(obj)) {
+      if (seen.has(name)) {
+        continue
+      }
+      seen.add(name)
+      const desc = Object.getOwnPropertyDescriptor(obj, name)!
+      if ((typeof desc.value === 'function') === wantMethods) {
+        out.push(name)
+      }
+    }
+    obj = Object.getPrototypeOf(obj) as object | null
+  }
+  return out
 }
 
 /**
@@ -36,13 +57,4 @@ export function* ancestorsOf(classConstructor: TClassConstructor): Generator<TCl
     yield parent
     parent = Object.getPrototypeOf(parent) as TClassConstructor
   }
-}
-
-function getParentProps(constructor: TClassConstructor): string[] {
-  const props: string[] = []
-  for (const parent of ancestorsOf(constructor)) {
-    // deepest ancestor's props first, matching subclass-overrides-parent order
-    props.unshift(...Object.getOwnPropertyNames(parent.prototype))
-  }
-  return props
 }
