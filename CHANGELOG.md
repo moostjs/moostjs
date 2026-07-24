@@ -1,3 +1,12 @@
+## [0.6.34](https://github.com/moostjs/moostjs/compare/v0.6.33...v0.6.34) (2026-07-24)
+
+
+### Bug Fixes
+
+* **moost:** getInstanceOwnMethods/getInstanceOwnProps classify by descriptor — never invoke accessors ([c3f0c62](https://github.com/moostjs/moostjs/commit/c3f0c6279aea19390a7b5028b45a990874868a20))
+
+
+
 ## [0.6.33](https://github.com/moostjs/moostjs/compare/v0.6.32...v0.6.33) (2026-07-17)
 
 
