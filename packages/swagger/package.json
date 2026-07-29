@@ -42,11 +42,11 @@
     "test": "vitest"
   },
   "dependencies": {
-    "swagger-ui-dist": "^5.31.2"
+    "swagger-ui-dist": "^5.32.11"
   },
   "devDependencies": {
     "@types/swagger-ui-dist": "3.30.5",
-    "vitest": "3.2.4"
+    "vitest": "3.2.7"
   },
   "peerDependencies": {
     "@moostjs/event-http": "workspace:^",

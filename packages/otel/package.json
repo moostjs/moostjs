@@ -43,10 +43,10 @@
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",
-    "@opentelemetry/sdk-trace-base": "^2.8.0"
+    "@opentelemetry/sdk-trace-base": "^2.10.0"
   },
   "devDependencies": {
-    "vitest": "3.2.4"
+    "vitest": "3.2.7"
   },
   "peerDependencies": {
     "@moostjs/event-http": "workspace:^",
