@@ -1,13 +1,19 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { resolve } from 'node:path'
-import type { EnvironmentModuleGraph, PluginOption } from 'vite'
+import type { EnvironmentModuleGraph, PluginOption, ResolvedConfig } from 'vite'
 import { createServerModuleRunner } from 'vite'
 import MagicString from 'magic-string'
 
 import { createAdapterDetector } from './adapter-detector'
 import { patchMoostHandlerLogging } from './moost-logging'
 import { moostRestartCleanup } from './restart-cleanup'
+import {
+  findExternalRuntimeConsumers,
+  formatExternalRuntimeConsumersWarning,
+  npmPackageName,
+  RUNTIME_PACKAGE_PATTERNS,
+} from './ssr-externals-check'
 import {
   DEFAULT_SSR_HEAD,
   DEFAULT_SSR_OUTLET,
@@ -210,6 +216,21 @@ export interface TMoostViteDevOptions {
    * instead of evaluated by Vite's ESM-only SSR module runner.
    */
   ssrExternal?: string[]
+  /**
+   * Verify the production SSR build for a split moost/wooks runtime.
+   *
+   * After the middleware-mode `vite build`, the plugin inspects the bare
+   * imports left in `dist/server` (i.e. the packages that were externalized)
+   * and walks their dependency trees. When the runtime is bundled but an
+   * external package depends on `moost` / `@moostjs/*` / `@wooksjs/*` /
+   * `wooks`, that package would load a second runtime copy from
+   * `node_modules` and its request composables would read `undefined` in
+   * production — the build prints a warning naming the package and the fix.
+   * Skipped when the runtime is externalized (coherent all-external setup).
+   *
+   * Default: `true`. Set `false` to silence the check.
+   */
+  ssrExternalCheck?: boolean
 }
 
 /**
@@ -372,6 +393,10 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
 
   patchMoostHandlerLogging()
 
+  /** Set by the middleware-mode `config` hook: the consumer externalized the runtime themselves. */
+  let runtimeExternalized = false
+  let resolvedConfig: ResolvedConfig | undefined
+
   const pluginConfig: PluginOption = {
     name: PLUGIN_NAME,
     enforce: 'pre',
@@ -469,12 +494,11 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         // consumer has explicitly externalized the runtime themselves (e.g.
         // `ssr.external: ['@wooksjs/event-http', ...]`), in which case their coherent
         // all-external setup is left intact.
-        const runtimeNoExternal = [/^moost($|\/)/, /^@moostjs\//, /^@wooksjs\//, /^wooks($|\/)/]
-        const runtimeExternalized = (ssrExternal ?? []).some(
-          (e) => typeof e === 'string' && runtimeNoExternal.some((re) => re.test(e)),
+        runtimeExternalized = (ssrExternal ?? []).some(
+          (e) => typeof e === 'string' && RUNTIME_PACKAGE_PATTERNS.some((re) => re.test(e)),
         )
         if (isBuild && Array.isArray(ssrNoExternal) && !runtimeExternalized) {
-          ssrNoExternal = [...ssrNoExternal, ...runtimeNoExternal]
+          ssrNoExternal = [...ssrNoExternal, ...RUNTIME_PACKAGE_PATTERNS]
         }
 
         return {
@@ -574,6 +598,45 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         ssrFetchForwarding: options.ssrFetchForwarding,
       }
       ;(config as Record<string, unknown>).__moostViteHttpRef = moostHttpRef
+      resolvedConfig = config
+    },
+
+    /**
+     * Post-build check for a split moost/wooks runtime in the SSR output (see
+     * `ssrExternalCheck`). The guard above keeps the runtime a single instance
+     * but cannot see the mirror case: an externalized dependency that itself
+     * depends on the runtime loads a second copy from node_modules at runtime.
+     * Bare specifiers left in the emitted chunks are exactly the externalized
+     * packages, so inspect those instead of re-deriving Vite's externalization.
+     */
+    generateBundle(_outputOptions, bundle) {
+      const cfg = resolvedConfig
+      if (
+        !cfg ||
+        cfg.command !== 'build' ||
+        !options.middleware ||
+        options.ssrExternalCheck === false ||
+        runtimeExternalized ||
+        this.environment?.name !== 'ssr'
+      ) {
+        return
+      }
+      const externalIds = new Set<string>()
+      for (const chunk of Object.values(bundle)) {
+        if (chunk.type !== 'chunk') {
+          continue
+        }
+        for (const id of [...chunk.imports, ...chunk.dynamicImports]) {
+          // chunk-to-chunk imports are listed by file name — skip those
+          if (!(id in bundle) && npmPackageName(id)) {
+            externalIds.add(id)
+          }
+        }
+      }
+      const consumers = findExternalRuntimeConsumers({ root: cfg.root, externalIds })
+      if (consumers.length > 0) {
+        cfg.logger.warn(`\n[${PLUGIN_NAME}] ${formatExternalRuntimeConsumersWarning(consumers)}\n`)
+      }
     },
 
     /**

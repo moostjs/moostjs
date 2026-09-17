@@ -3,6 +3,7 @@
 Vite dev plugin for [Moost](https://moost.org). Enables hot module replacement for Moost HTTP applications during development, automatic adapter detection, and production build configuration.
 
 Supports two modes:
+
 - **Backend mode** (default) — Moost owns the server, Vite provides HMR and TypeScript transforms
 - **Middleware mode** — Vite serves the frontend (Vue, React, etc.), Moost handles API routes as middleware
 
@@ -217,6 +218,10 @@ ssr: {
 
 When you use an explicit `noExternal` list, the plugin automatically keeps the **moost/wooks runtime** (`moost`, `@moostjs/*`, `@wooksjs/*`, `wooks`) bundled alongside your listed packages, so there is always a single runtime instance. This avoids a subtle production-only failure: if any `noExternal` package imports `@wooksjs/*` (e.g. `@aooth/*` and other `.as`-shipping libs do), it would otherwise pull in a second copy while externalized `moost` uses the first — splitting the event context so `useRequest()` / `useHeaders()` / `useAuthorization()` read `undefined`. If you would rather externalize the runtime instead, list it under `ssr.external` (e.g. `['@wooksjs/event-http', '@wooksjs/event-core', 'wooks', ...]`) and add those packages as direct dependencies — the plugin detects an externalized runtime and leaves your all-external setup intact.
 
+The guard works in one direction only. The mirror case — the runtime bundled, but a dependency that _calls_ wooks composables (`useRequest()`, `useHeaders()`, …) left external because it wasn't in your `noExternal` list (or was put in `ssr.external`) — loads a second runtime copy from `node_modules` and fails the same way. Rule of thumb: whatever `pnpm why @wooksjs/event-http` lists must sit on the same side as the runtime — listed in `noExternal` when the runtime is bundled, external when the runtime is external. Never split.
+
+After the SSR build the plugin checks for exactly that: it inspects the bare imports left in `dist/server` and warns when any externalized package (or one of its transitive dependencies) depends on `moost` / `@moostjs/*` / `@wooksjs/*` / `wooks` while the runtime is bundled, naming the package and the fix. `ssrExternalCheck: false` silences it. The symptom of a split, should you ever see it, is `TypeError: Cannot read properties of undefined (reading 'headers')` (or any header name) from inside a composable, in production only. Full explanation and a manual verification recipe: [SSR Bundle Size](https://moost.org/webapp/vite#ssr-bundle-size).
+
 ## SSR Local Fetch
 
 When `ssrFetch` is enabled (default: `true`), the plugin patches `globalThis.fetch` so that local paths are routed in-process through Moost instead of making a real HTTP request. This is useful for SSR where server-side code fetches from its own API:
@@ -244,25 +249,26 @@ The plugin injects a `__VITE_ID` decorator on `@Injectable` and `@Controller` cl
 
 ## Options
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `entry` | `string` | — | Application entry file (required) |
-| `port` | `number` | `3000` | Dev server port (backend mode only) |
-| `host` | `string` | `'localhost'` | Dev server host (backend mode only) |
-| `outDir` | `string` | `'dist'` | Build output directory (backend mode only) |
-| `format` | `'cjs' \| 'esm'` | `'esm'` | Output module format (backend mode only) |
-| `sourcemap` | `boolean` | `true` | Generate source maps (both modes; in middleware mode applies to the `dist/server` SSR build) |
-| `externals` | `boolean \| object` | `true` | Configure external dependencies (backend mode only) |
-| `onEject` | `function` | — | Hook to control DI instance ejection during HMR |
-| `ssrFetch` | `boolean` | `true` | Enable local fetch interception for SSR |
-| `middleware` | `boolean` | `false` | Run Moost as Connect middleware (Vite serves frontend) |
-| `prefix` | `string` | `'/api'` (prod server) | URL prefix filter for middleware mode (e.g. `'/api'`); the production server defaults to `'/api'` when omitted |
-| `ssrEntry` | `string` | — | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`) |
-| `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
-| `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |
-| `ssrHead` | `string` | `'<!--ssr-head-->'` | HTML placeholder for SSR-rendered `<head>` tags (place inside `<head>`) |
-| `serverEntry` | `string` | — | Custom production server entry file (e.g. `'./server.ts'`) |
-| `ssrExternal` | `string[]` | — | Packages to keep external in the SSR build (middleware mode, `vite build` only). Concatenated with `cfg.ssr.external`. See [SSR Bundle Size](#ssr-bundle-size). |
+| Option             | Type                | Default                | Description                                                                                                                                                     |
+| ------------------ | ------------------- | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `entry`            | `string`            | —                      | Application entry file (required)                                                                                                                               |
+| `port`             | `number`            | `3000`                 | Dev server port (backend mode only)                                                                                                                             |
+| `host`             | `string`            | `'localhost'`          | Dev server host (backend mode only)                                                                                                                             |
+| `outDir`           | `string`            | `'dist'`               | Build output directory (backend mode only)                                                                                                                      |
+| `format`           | `'cjs' \| 'esm'`    | `'esm'`                | Output module format (backend mode only)                                                                                                                        |
+| `sourcemap`        | `boolean`           | `true`                 | Generate source maps (both modes; in middleware mode applies to the `dist/server` SSR build)                                                                    |
+| `externals`        | `boolean \| object` | `true`                 | Configure external dependencies (backend mode only)                                                                                                             |
+| `onEject`          | `function`          | —                      | Hook to control DI instance ejection during HMR                                                                                                                 |
+| `ssrFetch`         | `boolean`           | `true`                 | Enable local fetch interception for SSR                                                                                                                         |
+| `middleware`       | `boolean`           | `false`                | Run Moost as Connect middleware (Vite serves frontend)                                                                                                          |
+| `prefix`           | `string`            | `'/api'` (prod server) | URL prefix filter for middleware mode (e.g. `'/api'`); the production server defaults to `'/api'` when omitted                                                  |
+| `ssrEntry`         | `string`            | —                      | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`)                                                                                                      |
+| `ssrOutlet`        | `string`            | `'<!--ssr-outlet-->'`  | HTML placeholder for SSR-rendered content                                                                                                                       |
+| `ssrState`         | `string`            | `'<!--ssr-state-->'`   | HTML placeholder for SSR state transfer script                                                                                                                  |
+| `ssrHead`          | `string`            | `'<!--ssr-head-->'`    | HTML placeholder for SSR-rendered `<head>` tags (place inside `<head>`)                                                                                         |
+| `serverEntry`      | `string`            | —                      | Custom production server entry file (e.g. `'./server.ts'`)                                                                                                      |
+| `ssrExternal`      | `string[]`          | —                      | Packages to keep external in the SSR build (middleware mode, `vite build` only). Concatenated with `cfg.ssr.external`. See [SSR Bundle Size](#ssr-bundle-size). |
+| `ssrExternalCheck` | `boolean`           | `true`                 | Warn after the middleware-mode SSR build when an externalized package depends on the bundled moost/wooks runtime. See [SSR Bundle Size](#ssr-bundle-size).      |
 
 Options marked "backend mode only" are ignored when `middleware: true` — the user's `vite.config.ts` controls build/server configuration in middleware mode.
 
