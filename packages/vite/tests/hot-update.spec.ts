@@ -20,7 +20,17 @@ import { beforeAll, describe, expect, it } from 'vitest'
 interface THealth {
   status: number
   text: string
-  json: { ok: boolean; boot: number; value: string; tag: string; res: string[] } | null
+  json: {
+    ok: boolean
+    boot: number
+    value: string
+    tag: string
+    res: string[]
+    jobs: string[]
+    ticks: Record<string, number>
+    fails: string[]
+    ready: number
+  } | null
 }
 
 interface TReport {
@@ -33,6 +43,9 @@ interface TReport {
   brokenThenFixed: { broken: THealth; fixed: THealth }
   storm: { health: THealth; boots: number[]; hammerOk: boolean }
   dispose: { before: THealth; after: THealth; log: string[] }
+  repeatedReloads: { first: THealth; second: THealth }
+  failedStart: { failed: THealth; recovered: THealth }
+  readyGate: { before: number; count: number; violations: THealth[]; last: THealth }
 }
 
 const DRIVER = fileURLToPath(new URL('hot-update.driver.mjs', import.meta.url))
@@ -145,6 +158,60 @@ describe('moost-vite scoped hot reload', () => {
     // …and released BEFORE the replacement opened (the reload awaits disposal).
     expect(log.indexOf(closes[0])).toBeLessThan(log.indexOf(opens[1]))
     expect(report.dispose.log.some((l) => l.includes('Disposed "ResourceOwner"'))).toBe(true)
+  })
+
+  it('leaves exactly one recurring job alive after three reloads in a row', () => {
+    const jobs = report.repeatedReloads.second.json?.jobs ?? []
+    const starts = jobs.filter((e) => e.startsWith('start:'))
+    const stops = jobs.filter((e) => e.startsWith('stop:'))
+
+    // One runner at boot + one per reload; every ejected one was stopped.
+    expect(starts).toEqual(['start:1', 'start:2', 'start:3', 'start:4'])
+    expect(stops).toEqual(['stop:1', 'stop:2', 'stop:3'])
+    expect(jobs.at(-1)).toBe('start:4')
+
+    // …and only the surviving runner's interval is still firing: every older id
+    // froze at the tick count it had when its dispose hook cleared the timer.
+    const before = report.repeatedReloads.first.json?.ticks ?? {}
+    const after = report.repeatedReloads.second.json?.ticks ?? {}
+    const moved = Object.keys(after).filter((id) => (after[id] ?? 0) > (before[id] ?? 0))
+    expect(moved).toEqual(['4'])
+  })
+
+  it('answers 502 for a boot that failed inside init(), and disposes what it left behind', () => {
+    // The boot died in a controller constructor — after a provider had already
+    // been constructed, and AFTER listen() captured a middleware (the documented
+    // entry order): the plugin awaits the entry's un-awaited init() and gates on
+    // the error, instead of serving the routes bound before the failure.
+    expect(report.failedStart.failed.status).toBe(502)
+    expect(report.failedStart.failed.text).toContain('Moost app failed to load')
+    expect(report.failedStart.failed.json).toBe(null)
+
+    const fails = report.failedStart.recovered.json?.fails ?? []
+    const opens = fails.filter((e) => e.startsWith('failopen:'))
+    const closes = fails.filter((e) => e.startsWith('failclose:'))
+
+    // boot → failed boot → recovery boot, each disposing its predecessor.
+    expect(opens).toEqual(['failopen:1', 'failopen:2', 'failopen:3'])
+    // The instance the FAILED boot created was disposed…
+    expect(closes).toEqual(['failclose:1', 'failclose:2'])
+    // …before the healthy boot constructed its replacement.
+    expect(fails.indexOf('failclose:2')).toBeLessThan(fails.indexOf('failopen:3'))
+    expect(report.failedStart.recovered.json?.ok).toBe(true)
+  })
+
+  it('never answers a request from a half-initialised app during a reload', () => {
+    const { before, count, violations, last } = report.readyGate
+
+    // The reload did happen…
+    expect(count).toBeGreaterThan(0)
+    expect(last.json?.boot).toBeGreaterThan(before)
+    // …and every answer in between came from a fully booted app: the @MoostInit
+    // hook stamps `ready` 150ms after the entry bumps `boot`, so a response served
+    // between module evaluation and the end of init() would carry the new `boot`
+    // with the previous boot's `ready` (or fall through to the SPA fallback).
+    expect(violations).toEqual([])
+    expect(last.json?.ready).toBe(last.json?.boot)
   })
 
   it('keeps reloading when a dispose hook throws', () => {

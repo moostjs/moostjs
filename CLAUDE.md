@@ -90,7 +90,7 @@ Custom build script (`scripts/build.js`) using:
 - **Test files:** `*.spec.ts` (co-located with source or in `tests/` subdirectories). Test fixtures use `*.artifacts.ts`.
 - **Commit messages:** Conventional commits enforced via commitlint + husky (`feat:`, `fix:`, `chore:`, etc.)
 - **TypeScript:** Strict mode, legacy experimental decorators with emitDecoratorMetadata, `bundler` module resolution.
-- **Linting rules of note:** `import/no-default-export` (error), `typescript/consistent-type-imports` (error), `max-params: 4`, `max-statements: 20`, `complexity: 10`.
+- **Linting rules of note:** `import/no-default-export` (error), `max-params: 4` (warn). `typescript/consistent-type-imports`, `max-statements` and `complexity` are explicitly `off` in `.oxlintrc.json` — the first because auto-fixing value imports to `import type` makes `emitDecoratorMetadata` emit `Object` for `design:paramtypes` and silently breaks DI-by-type.
 - **Formatting:** No semicolons, single quotes, trailing commas, 100 char print width.
 - **Path aliases in tsconfig:** `moost` → `packages/moost/src`, `@moostjs/*` → `packages/*/src`.
 

@@ -18,19 +18,65 @@ process.env.NODE_ENV = 'development'
 const FIXTURE_ROOT = fileURLToPath(new URL('fixture-tmp', import.meta.url))
 
 /**
+ * `src/failing.ts` in its healthy (`fail: false`) or boot-breaking variant.
+ * `FailOwner` opens its resource during `init()`; `FailController`, registered
+ * after it, throws in the `fail` variant — so the boot dies *after* a provider
+ * made it into the DI registry. Both live in one module on purpose: editing it
+ * is what ejects (and therefore disposes) the instance the failed boot left
+ * behind, since esbuild emits no `design:paramtypes` for a dependency-based
+ * eject (see the note on the fixture below).
+ */
+const failingSource = (fail) => `import { Injectable, MoostDispose } from 'moost'
+
+import { globalLog, nextId } from './fixture-state'
+
+const failLog = () => globalLog('__fixture_fail_log')
+
+@Injectable()
+export class FailOwner {
+  id = nextId('__fixture_fail_seq')
+
+  constructor() {
+    failLog().push('failopen:' + String(this.id))
+  }
+
+  @MoostDispose()
+  close() {
+    failLog().push('failclose:' + String(this.id))
+  }
+}
+
+@Injectable()
+export class FailController {
+  constructor() {
+${fail ? "    throw new Error('fixture boot failure')" : '    // this variant boots fine'}
+  }
+}
+`
+
+/**
  * Fullstack fixture (middleware: true + prefix + ssrEntry) with three distinct
  * module graphs sharing one Vite dev server:
- * - Moost entry graph:   main.ts → controller.ts → value.ts + config.json + resource.ts
+ * - Moost entry graph:   main.ts → controller.ts → value.ts + config.json,
+ *                        plus resource.ts, jobs.ts and failing.ts, which share
+ *                        the never-edited fixture-state.ts leaf (imported by,
+ *                        never importing, the edited modules — so it never
+ *                        widens an eject set)
  * - SSR render graph:    entry-server.ts → note.ts (loaded via server.ssrLoadModule)
  * - client-only graph:   ui/notify.ts (loaded only by the browser)
  *
  * `resource.ts` holds the disposal fixtures: a singleton that "opens" a fake
  * resource on construction and releases it from a `@MoostDispose` hook, plus a
- * sibling whose hook throws. Both are registered explicitly rather than
- * constructor-injected because Vite transforms TS with esbuild, which never
- * emits `design:paramtypes` — what matters here is that they are SINGLETON
- * `@Injectable()` instances living in the DI registry, exactly like an injected
- * provider.
+ * sibling whose hook throws. `jobs.ts` owns a recurring timer (the "duplicated
+ * job per reload" shape), `failing.ts` the partially-failed-boot shape. All are
+ * registered explicitly rather than constructor-injected because Vite transforms
+ * TS with esbuild, which never emits `design:paramtypes` — what matters here is
+ * that they are SINGLETON `@Injectable()` instances living in the DI registry,
+ * exactly like an injected provider.
+ *
+ * The entry keeps the documented order (`listen()`, then an un-awaited `init()`):
+ * the plugin captures and awaits the init promise itself, so a boot that dies
+ * inside `init()` answers 502 instead of serving half-bound routes.
  */
 const FIXTURE_FILES = {
   'index.html': `<!doctype html>
@@ -56,6 +102,9 @@ const FIXTURE_FILES = {
 import { MoostHttp } from '@moostjs/event-http'
 
 import { ApiController } from './controller'
+import { FailController, FailOwner } from './failing'
+import { JobRunner } from './jobs'
+import { ReadyMarker } from './ready'
 import { BrokenResource, ResourceOwner } from './resource'
 
 const g = globalThis as Record<string, unknown>
@@ -64,7 +113,15 @@ g.__fixture_boot = ((g.__fixture_boot as number) ?? 0) + 1
 const app = new Moost()
 const http = new MoostHttp()
 app.adapter(http).listen(3000)
-app.registerControllers(ApiController, ResourceOwner, BrokenResource)
+app.registerControllers(
+  ApiController,
+  ResourceOwner,
+  BrokenResource,
+  JobRunner,
+  ReadyMarker,
+  FailOwner,
+  FailController,
+)
 void app.init()
 `,
   'src/controller.ts': `import { Controller } from 'moost'
@@ -78,26 +135,47 @@ import { VALUE } from './value'
 export class ApiController {
   @Get('health')
   health() {
+    const g = globalThis as Record<string, unknown>
     return {
       ok: true,
-      boot: (globalThis as Record<string, unknown>).__fixture_boot as number,
+      boot: g.__fixture_boot as number,
       value: VALUE,
       tag: (config as { tag: string }).tag,
       res: resourceLog(),
+      // Read off globalThis rather than imported: importing jobs.ts/failing.ts
+      // here would widen their importer set and eject this controller too.
+      jobs: (g.__fixture_job_log as string[]) ?? [],
+      ticks: (g.__fixture_job_ticks as Record<string, number>) ?? {},
+      fails: (g.__fixture_fail_log as string[]) ?? [],
+      ready: (g.__fixture_ready as number) ?? 0,
     }
   }
 }
 `,
+  'src/fixture-state.ts': `const g = globalThis as Record<string, unknown>
+
+/** A log that survives reloads on globalThis, so the test can compare across boots. */
+export function globalLog(key: string): string[] {
+  const log = (g[key] as string[]) ?? []
+  g[key] = log
+  return log
+}
+
+/** Next value of the per-key id sequence kept on globalThis (1, 2, 3, … across boots). */
+export function nextId(key: string): number {
+  const id = ((g[key] as number) ?? 0) + 1
+  g[key] = id
+  return id
+}
+`,
   'src/resource.ts': `import { Injectable, MoostDispose } from 'moost'
+
+import { globalLog } from './fixture-state'
 
 const g = globalThis as Record<string, unknown>
 
-/** Survives reloads on globalThis, so the test can compare across boots. */
-export function resourceLog(): string[] {
-  const log = (g.__fixture_res_log as string[]) ?? []
-  g.__fixture_res_log = log
-  return log
-}
+/** Re-exported so controller.ts keeps importing resource.ts (its eject set is part of the test). */
+export const resourceLog = () => globalLog('__fixture_res_log')
 
 @Injectable()
 export class ResourceOwner {
@@ -119,6 +197,58 @@ export class BrokenResource {
   @MoostDispose()
   close() {
     throw new Error('fixture dispose failure')
+  }
+}
+`,
+  'src/jobs.ts': `import { Injectable, MoostDispose } from 'moost'
+
+import { globalLog, nextId } from './fixture-state'
+
+const g = globalThis as Record<string, unknown>
+
+const jobLog = () => globalLog('__fixture_job_log')
+
+@Injectable()
+export class JobRunner {
+  id = nextId('__fixture_job_seq')
+
+  timer: any = null
+
+  constructor() {
+    jobLog().push('start:' + String(this.id))
+    this.timer = setInterval(() => {
+      const ticks = (g.__fixture_job_ticks as Record<string, number>) ?? {}
+      ticks[String(this.id)] = (ticks[String(this.id)] ?? 0) + 1
+      g.__fixture_job_ticks = ticks
+    }, 20)
+    // Unref'd so a leaked interval cannot keep this driver process alive —
+    // a missed dispose must show up as a ticking counter, not as a hang.
+    this.timer.unref()
+  }
+
+  @MoostDispose()
+  stop() {
+    clearInterval(this.timer)
+    jobLog().push('stop:' + String(this.id))
+  }
+}
+`,
+  'src/failing.ts': failingSource(false),
+  'src/ready.ts': `import { Controller, MoostInit } from 'moost'
+
+const g = globalThis as Record<string, unknown>
+
+/**
+ * Stamps the current boot number into \`__fixture_ready\`, but only after a real
+ * delay — so an app that is merely *evaluated* (entry ran, \`init()\` still in
+ * flight) reports a \`ready\` that lags its \`boot\`.
+ */
+@Controller()
+export class ReadyMarker {
+  @MoostInit()
+  async markReady() {
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    g.__fixture_ready = g.__fixture_boot
   }
 }
 `,
@@ -313,6 +443,62 @@ try {
   editFile('src/resource.ts', `${FIXTURE_FILES['src/resource.ts']}\n// touched\n`)
   const after = await pollUntil(getHealth, (h) => countOpens(h) > opensBefore)
   report.dispose = { before, after, log: disposeLogLines }
+
+  // 10. repeated reloads with a live recurring job: each eject must stop the old
+  // interval, so after three reloads in a row exactly ONE runtime is left ticking.
+  const countStarts = (h) => (h.json?.jobs ?? []).filter((e) => e.startsWith('start:')).length
+  let starts = countStarts(await getHealth())
+  for (let i = 0; i < 3; i++) {
+    const seen = starts
+    editFile('src/jobs.ts', `${FIXTURE_FILES['src/jobs.ts']}\n// touched ${String(i)}\n`)
+    starts = countStarts(await pollUntil(getHealth, (h) => countStarts(h) > seen))
+  }
+  // Two snapshots a few intervals apart: only the surviving runner's counter moves.
+  const ticksFirst = await getHealth()
+  await sleep(250)
+  const ticksSecond = await getHealth()
+  report.repeatedReloads = { first: ticksFirst, second: ticksSecond }
+
+  // 11. a boot that dies inside init(): the boot below constructs FailOwner and
+  // then throws in FailController's constructor. listen() already ran (documented
+  // entry order), so an HTTP middleware IS captured — the plugin must still answer
+  // 502 from the awaited init() rejection instead of serving the routes that were
+  // bound before the failure. The next reload must also eject and dispose the
+  // instance that failed boot left in the registry, BEFORE the healthy boot
+  // constructs its replacement.
+  editFile('src/failing.ts', failingSource(true))
+  const failedBoot = await pollUntil(getHealth, (h) => h.status === 502)
+  editFile('src/failing.ts', FIXTURE_FILES['src/failing.ts'])
+  const recovered = await pollUntil(getHealth, (h) => h.status === 200 && h.json?.ok === true)
+  report.failedStart = { failed: failedBoot, recovered }
+
+  // 12. a request issued right after a reload is triggered must be answered by the
+  // FULLY initialised new app. `boot` is bumped while the entry evaluates, `ready`
+  // only by an @MoostInit hook that resolves 150ms later — so any answer from a
+  // merely-evaluated app shows `ready` lagging `boot`. Hammer the server from the
+  // moment of the edit until the new boot shows up and keep every sample.
+  const readyBaseline = await getHealth()
+  const readyBefore = readyBaseline.json?.boot ?? 0
+  editFile('src/ready.ts', `${FIXTURE_FILES['src/ready.ts']}\n// touched\n`)
+  const readySamples = []
+  const readyDeadline = Date.now() + 15_000
+  let readyLast = await getHealth()
+  readySamples.push(readyLast)
+  while ((readyLast.json?.boot ?? 0) <= readyBefore && Date.now() < readyDeadline) {
+    readyLast = await getHealth()
+    readySamples.push(readyLast)
+  }
+  // Only the offenders are reported (hundreds of samples otherwise): an answer is
+  // an offender when it is not a healthy response from an app whose @MoostInit
+  // hook has already run for the very boot that answered.
+  report.readyGate = {
+    before: readyBefore,
+    count: readySamples.length,
+    violations: readySamples.filter(
+      (h) => h.status !== 200 || h.json?.ok !== true || h.json?.ready !== h.json?.boot,
+    ),
+    last: readyLast,
+  }
 
   console.log(`__RESULT__ ${JSON.stringify(report)}`)
 } finally {

@@ -6,7 +6,7 @@ import { createServerModuleRunner } from 'vite'
 import MagicString from 'magic-string'
 
 import { createAdapterDetector } from './adapter-detector'
-import { patchMoostHandlerLogging } from './moost-logging'
+import { captureMoostInit, patchMoostHandlerLogging } from './moost-logging'
 import { moostRestartCleanup } from './restart-cleanup'
 import {
   bundledPackagesFromModuleIds,
@@ -344,6 +344,12 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   let bootingGeneration = 0
   /** Whether the HTTP listen() patch has ever captured a middleware (i.e. this is an HTTP app). */
   let httpCaptured = false
+  /**
+   * The `app.init()` promises the current boot handed us (see `captureMoostInit`) —
+   * several when one entry boots several apps, none for a boot that never calls
+   * `init()`. Reset by `beginBoot()`, consumed by `settleBootInit()`.
+   */
+  let bootInitPromises: Promise<void>[] = []
   /** Module IDs awaiting DI cleanup — consumed in runReload; see ejectApp. */
   let pendingCleanup: Set<string> | null = null
   /** In middleware mode: maps req → next() for the onNoMatch callback */
@@ -440,6 +446,53 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   }
 
   patchMoostHandlerLogging()
+  if (!isTest && !isProd) {
+    // Why a boot must await init() and not just the entry: see `captureMoostInit`.
+    // Skipped wherever there is no dev server to consume the capture (prod/test),
+    // so a rejection is never marked handled with nobody to report it.
+    captureMoostInit((promise) => {
+      if (bootingGeneration !== bootGeneration) {
+        // Same race the listen() capture guards against: a torn boot finishing its
+        // init after a newer eject. Ignore it; the follow-up reload replaces it.
+        logger.error(
+          `⚠️  A stale Moost boot called init() (boot generation ${bootingGeneration}, latest ${bootGeneration}) — an HMR reload race; a follow-up reload will replace it.`,
+        )
+        return
+      }
+      bootInitPromises.push(promise)
+    })
+  }
+  /** Marks the boot about to run as authoritative for the current generation. */
+  const beginBoot = () => {
+    bootingGeneration = bootGeneration
+    bootInitPromises = []
+  }
+  /**
+   * Finishes a boot: awaits the `init()` promise(s) the entry that just executed
+   * handed us, so the boot is only "done" once the app is fully initialized —
+   * every controller bound, every `@MoostInit` hook run (see `captureMoostInit`).
+   * Owns `bootError`: cleared on success, set and logged when an init rejected;
+   * returns whether the boot succeeded.
+   */
+  const settleBootInit = async (): Promise<boolean> => {
+    const initPromises = bootInitPromises
+    bootInitPromises = []
+    try {
+      await Promise.all(initPromises)
+      bootError = null
+      return true
+    } catch (error) {
+      bootError = error
+      logger.error(`✖️  Moost app init failed: ${(error as Error).message}`)
+      return false
+    }
+  }
+  /** Answers a request while `bootError` is set (see the gate in configureServer). */
+  const answerBootError = (res: ServerResponse) => {
+    res.statusCode = 502
+    res.setHeader('Content-Type', 'text/plain')
+    res.end(`Moost app failed to load: ${(bootError as Error).message}`)
+  }
 
   /** Set by the middleware-mode `config` hook: the consumer externalized the runtime themselves. */
   let runtimeExternalized = false
@@ -756,15 +809,17 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
       // so app.listen() would bind a real port. All reloads go through runReload.
       const runner = createServerModuleRunner(server.environments.ssr, { hmr: false })
       const ssrImport = (id: string) => runner.import(id)
-      // Reset closure state from a previous server (plugin instances are reused
-      // across server.restart()): a stale bootError / pending reload would 502 or
-      // double-boot the fresh server below.
+      // Reset closure state from a previous server: a stale bootError / pending
+      // reload would 502 or double-boot the fresh server below. Inline plugin
+      // instances are reused across server.restart(); with a config file the
+      // factory re-runs instead (Vite re-imports the config) and a NEW instance
+      // takes over — safe because the process-wide init patch has a single slot
+      // that the newest instance fills (see `captureMoostInit`).
       bootError = null
       reloadRequired = false
       reloadPromise = null
       pendingCleanup = null
-      // The boot below is authoritative for the current generation.
-      bootingGeneration = bootGeneration
+      beginBoot()
 
       // Serialize app reloads. On HMR, hotUpdate() nulls moostMiddleware and sets
       // reloadRequired; the next request lazily re-imports the entry. Without a lock,
@@ -781,7 +836,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           try {
             // This boot serves the latest eject generation; a listen() capture
             // arriving for an older generation is a torn boot (see the stamps).
-            bootingGeneration = bootGeneration
+            beginBoot()
             // Consume the pending eject cleanup under the reload lock (see ejectApp).
             const cleanupInstances = pendingCleanup ?? undefined
             pendingCleanup = null
@@ -811,8 +866,11 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
               server.environments.ssr.moduleGraph.invalidateModule(entryModule)
             }
             await ssrImport(options.entry)
-            bootError = null
-            if (httpCaptured && !moostMiddleware) {
+            // The entry is only evaluated at this point; `init()` is typically
+            // still in flight (the documented order leaves it un-awaited). The
+            // reload is not finished — and drainReload must not release the
+            // waiting requests — until it settles.
+            if ((await settleBootInit()) && httpCaptured && !moostMiddleware) {
               // The entry re-executed but listen() never re-captured a
               // middleware — requests would silently fall through to the
               // frontend handler. Surface it instead of serving wrong answers.
@@ -852,6 +910,12 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
       // Import the SSR entry so the app initializes
       // (MoostHttp.listen is patched, so no actual server is spawned).
       await ssrImport(options.entry)
+      // …and for the app to be initialized, not merely evaluated, BEFORE the
+      // middleware is attached below — so the initial boot cannot serve a
+      // half-bound app either (reloads are covered by drainReload). A failing init
+      // sets bootError instead of taking the dev server down; the next hot update
+      // retries. See `captureMoostInit`.
+      await settleBootInit()
 
       // Attach Moost as a middleware if present
       server.middlewares.use(async (req, res, next) => {
@@ -862,6 +926,13 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           return next()
         }
 
+        if (bootError) {
+          // Checked BEFORE the captured middleware (see `captureMoostInit`), and
+          // answered explicitly rather than falling through to the SPA/SSR
+          // fallback, which would serve index.html for API routes.
+          answerBootError(res)
+          return
+        }
         if (moostMiddleware) {
           if (options.middleware) {
             pendingNextMap.set(req, next)
@@ -869,14 +940,6 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
             return
           }
           return moostMiddleware(req, res)
-        }
-        if (bootError) {
-          // The app failed to load — answer explicitly rather than falling through
-          // to the SPA/SSR fallback, which would serve index.html for API routes.
-          res.statusCode = 502
-          res.setHeader('Content-Type', 'text/plain')
-          res.end(`Moost app failed to load: ${(bootError as Error).message}`)
-          return
         }
         next()
       })
@@ -961,6 +1024,12 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
                   // Same reload lock as the main middleware: an HMR mid-render would
                   // otherwise race ssrLoadModule against a half-ejected app.
                   await drainReload()
+                  if (bootError) {
+                    // Same gate as the main middleware: the local-fetch hook listen()
+                    // installed would dispatch SSR self-fetches into the half-bound app.
+                    answerBootError(res)
+                    return
+                  }
                   let template = await fs.readFile(
                     resolve(server.config.root, 'index.html'),
                     'utf8',

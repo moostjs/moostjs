@@ -149,7 +149,9 @@ await app.listen()
 
 Server-side HMR is scoped to the Moost entry graph: any file the server imports (reachable from `entry` — `.ts`, `.json`, anything) reloads the app, with no restart needed. On such an edit the plugin invalidates the changed files, ejects the affected DI instances (cascading to dependants), and re-initializes the app on the next request — the entry is re-imported in place, so editing a controller, data model or provider all behave the same, including in middleware + SSR mode where the dev server keeps owning the port.
 
-Every ejected instance is **disposed** before the entry re-imports: its [`@MoostDispose`](/moost/app-dispose) hooks (or `Symbol.asyncDispose`/`Symbol.dispose`) are awaited, so a singleton that owns a connection, consumer, timer or file handle releases it instead of leaking one copy per reload — the replacement never races the old one. A failing hook is logged as a warning and the reload continues. An instance kept by an `onEject` veto is *not* disposed (it stays live and in use). If a resource still accumulates across reloads, its owner is missing a `@MoostDispose` hook.
+Every ejected instance is **disposed** before the entry re-imports: its [`@MoostDispose`](/moost/app-dispose) hooks (or `Symbol.asyncDispose`/`Symbol.dispose`) are awaited, so a singleton that owns a connection, consumer, timer or file handle releases it instead of leaking one copy per reload — the replacement never races the old one. A failing hook is logged as a warning and the reload continues. An instance kept by an `onEject` veto is *not* disposed (it stays live and in use). If a resource still accumulates across reloads, its owner is missing a `@MoostDispose` hook. This holds across repeated reloads (exactly one runtime stays live) and after a boot that failed part-way — the instances that boot left behind are disposed by the next reload.
+
+For production shutdown, where no reload ever happens, call [`app.disposeOnSignals()`](/moost/app-dispose#graceful-shutdown) in the entry: it runs the same hooks on SIGTERM/SIGINT, and unlike a hand-written `process.once(...)` it registers one listener per process, so the dev server re-executing the entry re-targets it instead of stacking one handler per reload. Under the dev server Vite's own SIGTERM listener closes the server and exits, which can race `dispose()`; SIGINT (Ctrl-C) is untouched by Vite.
 
 Files outside the entry graph never touch the Moost app:
 
@@ -157,6 +159,18 @@ Files outside the entry graph never touch the Moost app:
 - **SSR render modules** (the `ssrEntry` graph) are refreshed by Vite's default invalidation, so the next server-rendered page picks them up without rebooting Moost.
 
 If a server edit breaks the app (e.g. a syntax error), requests matching `prefix` (or all requests when no `prefix` is set) answer `502` with the load error instead of falling through to the frontend; the next edit retries the reload.
+
+### Waiting for `init()`
+
+A reload is not finished when the entry has *run* — it is finished when the app is **initialized**. The plugin captures the promise your entry's `app.init()` returns and awaits it as part of the boot, so a request is never answered by a half-bound app: every route is mounted and every [`@MoostInit`](/moost/app-init) hook has run before the first request gets through (the same holds for the server's very first boot).
+
+That is why the documented entry order — `app.adapter(http).listen(port)` followed by an un-awaited `app.init()` — is fine under the dev server: the plugin, not the entry, owns the waiting.
+
+If `init()` **rejects** (a bind error, a DI audit error, a throwing `@MoostInit` hook), the plugin logs `✖️  Moost app init failed: <message>` and answers `502` with `Moost app failed to load: <message>` for matching requests — even though `listen()` already handed it a middleware. Without that gate a half-booted app answers `200` for the handful of routes bound before the failure and lets the rest fall through to the SPA fallback. The next edit retries, exactly like a failed reload.
+
+::: info Since 0.6.37
+Earlier versions awaited only the entry's module evaluation: a rejecting `init()` went unobserved, and requests could be served by a partially bound app.
+:::
 
 ## Options
 
