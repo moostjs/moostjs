@@ -6,14 +6,15 @@ description: >-
   build decorator-driven TypeScript apps for HTTP, CLI, WebSocket, Workflow events,
   or custom adapters. Covers controllers, controller subclassing (@Inherit),
   handler/parameter/response decorators, DI,
-  interceptors, pipes, auth guards, framework errors, common metadata decorators,
+  interceptors, pipes, auth guards, framework errors, metadata decorators,
   Wooks composables, adapter authoring, quick apps, workflow outlets/state
   strategies, WebSocket rooms/testing, logging, app-init hooks (@MoostInit), the
-  Vite plugin (dev/build, middleware, SSR/SPA, deployment), event
-  context/scoping, Swagger/OpenAPI generation, and OTel tracing/metrics. Not for
-  plain @wooksjs/* apps without Moost decorators (use the wooksjs skill), nor
-  auth/RBAC — @moostjs/arbac is deprecated; use the aooth packages
-  (@aooth/auth-moost, @aooth/arbac-moost) and their own docs/skill.
+  Vite plugin (dev/build, middleware, SSR/SPA, deployment, SSR externalization
+  splits: instanceof AtscriptDbView, empty table instead of view,
+  @atscript/db-mysql external), event context/scoping, Swagger/OpenAPI, and OTel
+  tracing/metrics. Not for plain @wooksjs/* apps without Moost decorators (use
+  the wooksjs skill), nor auth/RBAC — @moostjs/arbac is deprecated; use the
+  aooth packages (@aooth/auth-moost, @aooth/arbac-moost) and their skill.
 ---
 
 # Moost

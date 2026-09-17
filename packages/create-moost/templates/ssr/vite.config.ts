@@ -12,10 +12,11 @@ export default defineConfig({
   //
   //   ssr: { external: ['better-sqlite3', 'mysql2'] },
   //
-  // Adding `ssr.noExternal` flips the policy: everything NOT listed becomes external,
-  // and any external package that calls wooks composables (useRequest, useHeaders, …)
-  // breaks in production only. `vite build` warns when it detects that split — see
-  // https://moost.org/webapp/vite#ssr-bundle-size
+  // Adding `ssr.noExternal` flips the policy: everything NOT listed becomes external.
+  // Rule: a package with module state — moost/wooks (and any `@atscript/*` package) —
+  // is either entirely bundled or entirely external, together with everything that
+  // depends on it; a split breaks in production only. `vite build` warns when it
+  // detects one — see https://moost.org/webapp/vite#ssr-bundle-size
   plugins: [
     vue(),
     moostVite({

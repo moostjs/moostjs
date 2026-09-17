@@ -178,7 +178,7 @@ If a server edit breaks the app (e.g. a syntax error), requests matching `prefix
 | `ssrHead` | `string` | `'<!--ssr-head-->'` | HTML placeholder for SSR-rendered `<head>` tags — place inside `<head>` (see [render contract](/webapp/ssr#the-render-contract)) |
 | `serverEntry` | `string` | — | Custom production server entry file (e.g. `'./server.ts'`) |
 | `ssrExternal` | `string[]` | — | Packages to keep external in the middleware-mode SSR build (concatenated with `cfg.ssr.external`). See [SSR Bundle Size](#ssr-bundle-size). |
-| `ssrExternalCheck` | `boolean` | `true` | Warn after the middleware-mode SSR build when an externalized package depends on the bundled moost/wooks runtime. See [Keep consumers on the same side](#keep-consumers-on-the-same-side-as-the-runtime). |
+| `ssrExternalCheck` | `boolean \| { packages?: (string \| RegExp)[] }` | `true` | Warn after the middleware-mode SSR build when an externalized package depends on a **bundled** shared-state package (`moost`, `@moostjs/*`, `wooks`, `@wooksjs/*`, `@atscript/*` by default). `{ packages: [...] }` watches more — an exact name (`'lodash'`), a scope prefix (`'@acme/'`) or a `RegExp`. See [Keep consumers on the same side](#keep-consumers-on-the-same-side-as-the-shared-packages). |
 
 ::: tip
 Options `port`, `host`, `outDir`, `format`, and `externals` are only used in backend mode — in middleware mode, your `vite.config.ts` controls build and server configuration. The exception is `sourcemap`: it applies in both modes (in middleware mode it controls source maps for the `dist/server/` SSR build, default `true`).
@@ -207,7 +207,7 @@ export default defineConfig({
 
 **Safe to externalize:** publicly-published, semver-stable libraries with a single canonical build (Vue, Vue Router, `@vue/server-renderer`, VueUse).
 
-**Don't externalize:** workspace packages, anything that uses `Symbol()` as a public slot key (Moost, wooks), anything not reliably hoisted by pnpm.
+**Don't externalize:** workspace packages, anything that keeps module-level state — `Symbol()` slot keys, registries, class identity (Moost, wooks, `@atscript/*`) — anything not reliably hoisted by pnpm.
 
 You can also opt out of bundle-everything entirely by setting `ssr.noExternal` to an explicit list — the plugin honors it, appending `/^@moostjs\/vite($|\/)/` (so its `define:` substitutions still land) plus, unless you externalize the runtime yourself, the moost/wooks runtime patterns described below:
 
@@ -220,38 +220,49 @@ ssr: {
 
 When you use an explicit `noExternal` list, the plugin automatically keeps the **moost/wooks runtime** (`moost`, `@moostjs/*`, `@wooksjs/*`, `wooks`) bundled alongside your listed packages, so there is always a single runtime instance. Without this, any listed package that imports `@wooksjs/*` (e.g. `@aooth/*` and other `.as`-shipping libs) would pull in a second copy while externalized `moost` uses the first — splitting the event context so `useRequest()` / `useHeaders()` / `useAuthorization()` read `undefined` in production only. If you would rather externalize the runtime instead, list it under `ssr.external` (`['@wooksjs/event-http', '@wooksjs/event-core', 'wooks', …]`) and add those packages as direct dependencies — the plugin detects an externalized runtime and leaves your all-external setup intact.
 
-### Keep consumers on the same side as the runtime
+### Keep consumers on the same side as the shared packages
 
 The guard guarantees a single runtime **instance**, not a single **graph** — and it works in one direction only: it stops a *bundled* package from dragging in a second runtime copy next to an *external* one. The mirror image is on you. With an explicit `noExternal` list, every dependency you did not list is externalized — including libraries that merely *call* wooks composables (`useRequest()`, `useHeaders()`, `useCookies()`, `useAuthorization()`) without shipping `.as` source. Such a library resolves its own `@wooksjs/*` from `node_modules`, reads a slot the bundled runtime never wrote, and fails with the same production-only error. The same split appears if you put such a library in `ssr.external` while keeping the bundle-everything default.
 
-The three outcomes at a glance:
+**It is not only the runtime.** Any package that keeps module-level state breaks the same way when Node loads a second copy of it: the moost/wooks runtime (Symbol slot keys, DI registries) and the `@atscript/*` family alike — `@atscript/core`, `@atscript/typescript`, `@atscript/db` and its adapters, moost-db, the UI packages — which additionally rely on **class identity**. Bundle `@atscript/db` while leaving `@atscript/db-mysql` (or `@atscript/db-sqlite`) external, and the adapter's `instanceof` check runs against the class from *its own* copy: a view declared through the bundled copy is not recognized, the adapter creates an empty physical table in its place, and reads return nothing — no error, no stack trace.
 
-| `vite.config.ts` | moost/wooks runtime | A dependency that calls wooks composables | Result |
+**The rule, in one sentence: a shared-state package is either entirely bundled or entirely external, together with everything that depends on it.**
+
+The outcomes at a glance:
+
+| `vite.config.ts` | Shared-state package | A package that depends on it | Result |
 |---|---|---|---|
 | no `ssr` block, or `ssr.external` only (what `create-moost` emits) | bundled | bundled | ✅ one instance |
-| `noExternal` list **and** the runtime in `ssr.external` | external | external | ✅ one instance — Node dedupes by realpath, so keep one version of each runtime package in the tree |
+| `noExternal` list **and** the runtime in `ssr.external` | external | external | ✅ one instance — Node dedupes by realpath, so keep one version of each package in the tree |
 | `noExternal` list, runtime **not** externalized, consumer not listed | bundled (by the guard) | external | ❌ split — production only |
+| bundle-everything default (or a `noExternal` list) **and** `@atscript/db-mysql` / `@atscript/db-sqlite` in `ssr.external` | `@atscript/db` bundled | adapter external | ❌ split — the adapter's `instanceof` check fails, so it creates an empty table where a managed view was declared and reads return nothing |
 
-**Rule of thumb — classify by what a package does, not what it is.** If `pnpm why @wooksjs/event-http` (or `pnpm why moost`) lists a package as a dependent, that package shares the event context: with an explicit `noExternal` list it must be *listed*; with an all-external runtime it must stay *external*. Never split. A package can be publicly published and semver-stable and still be unsafe to externalize on its own.
+**Rule of thumb — classify by what a package does, not what it is.** If `pnpm why @wooksjs/event-http` (or `pnpm why moost`, `pnpm why @atscript/db`) lists a package as a dependent, that package shares module state: with an explicit `noExternal` list it must be *listed*; with the shared package external it must stay *external*. Never split. A package can be publicly published and semver-stable and still be unsafe to externalize on its own.
 
-**The build checks this for you.** After the SSR build, the plugin inspects the bare imports left in `dist/server` — those are the externalized packages — and walks their dependency trees. If the runtime is bundled and any external package (or one of its transitive dependencies) depends on `moost` / `@moostjs/*` / `@wooksjs/*` / `wooks`, `vite build` prints a warning naming the package and the fix:
+**The build checks this for you.** After the SSR build, the plugin compares both sides of the output: the packages it inlined into `dist/server` and the bare imports left in it (those are the externalized packages, whose dependency trees it walks). When an external package — or one of its transitive dependencies — depends on a **bundled** watched package, `vite build` prints a warning naming the package and the fix:
 
 ```
-[moost-vite] The moost/wooks runtime is bundled into dist/server, but these externalized packages depend on it and will load a second copy from node_modules:
-  - some-auth-lib depends on @wooksjs/event-http
-Two runtime instances split the event context: useRequest() / useHeaders() / useAuthorization() inside those packages read `undefined` in production only.
-Fix: add 'some-auth-lib' to ssr.noExternal (or drop them from ssr.external / ssrExternal), or externalize the whole runtime via ssr.external.
+[moost-vite] These externalized packages depend on packages that are bundled into dist/server, so Node will load a second copy of them from node_modules:
+  - some-auth-lib depends on @wooksjs/event-http (bundled)
+  - @atscript/db-mysql depends on @atscript/db (bundled)
+Two copies of a package split its module state — event-context slots, DI registries and class identity (instanceof) stop matching across the boundary, in production only. Symptoms: "Cannot read properties of undefined (reading 'headers')" inside a wooks composable, or a database adapter creating an empty table where a managed view was declared.
+Fix: keep each shared package and everything that depends on it on the same side — add 'some-auth-lib', '@atscript/db-mysql' to ssr.noExternal (or drop them from ssr.external / ssrExternal), or externalize the whole family (for example every @atscript/* package, or the whole moost/wooks runtime) via ssr.external.
+Set ssrExternalCheck: false in moostVite() to silence this check, or ssrExternalCheck: { packages: [...] } to watch more packages.
 ```
 
-The check is skipped when you externalize the runtime yourself, and `ssrExternalCheck: false` silences it. To verify by hand — or on a plugin version without the check — list what `dist/server` still imports from `node_modules`:
+Watched by default: `moost`, `@moostjs/*`, `wooks`, `@wooksjs/*` and `@atscript/*`. Any other package of yours that keeps module-level state belongs in the watched set too — `ssrExternalCheck: { packages: ['some-registry-lib', '@acme/', /^my-lib-/] }` (exact name, scope prefix, or `RegExp`). `ssrExternalCheck: false` silences the check entirely.
+
+To verify by hand — or on a plugin version without the check — list what `dist/server` still imports from `node_modules`:
 
 ```bash
 pnpm build
 grep -rhoE 'from *"[^"./][^"]*"' dist/server --include='*.js' | sed 's/from *"//; s/"$//' | sort -u
-# With a bundled runtime: anything here that depends on moost/wooks is a split.
+# Anything here that depends on a bundled shared-state package (moost/wooks, @atscript/*) is a split.
 # Native drivers and leaf libraries are expected.
 ```
 
+**Validate the packed artifact.** Source-level tests all share one module graph, so they can never see an identity split — only the installed build can. Install the built app with its production dependencies from the same lockfile (copy the output plus `package.json` / lockfile and run `pnpm install --prod --frozen-lockfile`, or `pnpm pack` and install the tarball), start the emitted server, and hit one route per adapter: a request that reads headers/auth, and one that reads and writes through each database adapter. A split shows up there and nowhere else.
+
 ::: warning Symptom
-`TypeError: Cannot read properties of undefined (reading 'headers')` — or `(reading 'authorization')`, `(reading 'cookie')`, any header name, depending on which composable runs first — thrown from inside a wooks composable, in production only while `vite serve` is healthy, means two copies of the wooks runtime are loaded. Fix the externalization split above; the code is fine.
+`TypeError: Cannot read properties of undefined (reading 'headers')` — or `(reading 'authorization')`, `(reading 'cookie')`, any header name, depending on which composable runs first — thrown from inside a wooks composable, in production only while `vite serve` is healthy, means two copies of the wooks runtime are loaded. The silent variant: a database adapter creates an **empty table** where a managed view was declared (its `instanceof` check saw a class from the other copy), so queries return nothing and no error is raised. Fix the externalization split above; the code is fine.
 :::

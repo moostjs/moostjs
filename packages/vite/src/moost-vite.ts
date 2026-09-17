@@ -9,8 +9,10 @@ import { createAdapterDetector } from './adapter-detector'
 import { patchMoostHandlerLogging } from './moost-logging'
 import { moostRestartCleanup } from './restart-cleanup'
 import {
-  findExternalRuntimeConsumers,
-  formatExternalRuntimeConsumersWarning,
+  bundledPackagesFromModuleIds,
+  compilePackagePatterns,
+  findSplitPackages,
+  formatSplitPackagesWarning,
   npmPackageName,
   RUNTIME_PACKAGE_PATTERNS,
 } from './ssr-externals-check'
@@ -217,20 +219,33 @@ export interface TMoostViteDevOptions {
    */
   ssrExternal?: string[]
   /**
-   * Verify the production SSR build for a split moost/wooks runtime.
+   * Verify the production SSR build for split shared-state packages.
    *
-   * After the middleware-mode `vite build`, the plugin inspects the bare
-   * imports left in `dist/server` (i.e. the packages that were externalized)
-   * and walks their dependency trees. When the runtime is bundled but an
-   * external package depends on `moost` / `@moostjs/*` / `@wooksjs/*` /
-   * `wooks`, that package would load a second runtime copy from
-   * `node_modules` and its request composables would read `undefined` in
-   * production — the build prints a warning naming the package and the fix.
-   * Skipped when the runtime is externalized (coherent all-external setup).
+   * After the middleware-mode `vite build`, the plugin compares what ended up
+   * inside `dist/server` (the bundled packages) with the bare imports left in
+   * the output (the externalized ones) and walks the externals' dependency
+   * trees. When an external package depends on a bundled watched package, Node
+   * loads a second copy of it at runtime — event-context slots, DI registries
+   * and `instanceof` checks stop matching in production only — so the build
+   * prints a warning naming the package and the fix.
+   *
+   * Watched by default: `moost`, `@moostjs/*`, `wooks`, `@wooksjs/*` and
+   * `@atscript/*`. Pass `{ packages: [...] }` to watch more: an exact package
+   * name (`'lodash'`), a scope/prefix ending with `/` (`'@acme/'`), or a
+   * `RegExp`.
    *
    * Default: `true`. Set `false` to silence the check.
    */
-  ssrExternalCheck?: boolean
+  ssrExternalCheck?: boolean | TSSRExternalCheckOptions
+}
+
+/** Extra packages the SSR split check should watch on top of its defaults. */
+export interface TSSRExternalCheckOptions {
+  /**
+   * Package names (`'lodash'`), scope/prefix strings ending with `/`
+   * (`'@acme/'`) or `RegExp`s, added to the watched set.
+   */
+  packages?: (string | RegExp)[]
 }
 
 /**
@@ -263,6 +278,39 @@ function generatedServerEntry(root?: string): string {
   const entryPath = resolve(dir, 'server-entry.mjs')
   writeFileSync(entryPath, DEFAULT_SERVER_ENTRY_CODE)
   return entryPath
+}
+
+/** Minimal shape of an emitted bundle entry — chunks carry both sides of the split check. */
+interface TEmittedEntry {
+  type: string
+  imports?: string[]
+  dynamicImports?: string[]
+  moduleIds?: string[]
+}
+
+/**
+ * Read the emitted SSR bundle: the packages inlined into it (from every chunk's
+ * module ids) and the bare specifiers it still imports (the externalized ones).
+ */
+function scanSsrBundle(bundle: Record<string, TEmittedEntry>): {
+  externalIds: Set<string>
+  bundledPackages: Set<string>
+} {
+  const externalIds = new Set<string>()
+  const moduleIds: string[] = []
+  for (const chunk of Object.values(bundle)) {
+    if (chunk.type !== 'chunk') {
+      continue
+    }
+    moduleIds.push(...(chunk.moduleIds ?? []))
+    for (const id of [...(chunk.imports ?? []), ...(chunk.dynamicImports ?? [])]) {
+      // chunk-to-chunk imports are listed by file name — skip those
+      if (!(id in bundle) && npmPackageName(id)) {
+        externalIds.add(id)
+      }
+    }
+  }
+  return { externalIds, bundledPackages: bundledPackagesFromModuleIds(moduleIds) }
 }
 
 export function moostVite(options: TMoostViteDevOptions): PluginOption {
@@ -602,12 +650,13 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
     },
 
     /**
-     * Post-build check for a split moost/wooks runtime in the SSR output (see
+     * Post-build check for split shared-state packages in the SSR output (see
      * `ssrExternalCheck`). The guard above keeps the runtime a single instance
      * but cannot see the mirror case: an externalized dependency that itself
-     * depends on the runtime loads a second copy from node_modules at runtime.
-     * Bare specifiers left in the emitted chunks are exactly the externalized
-     * packages, so inspect those instead of re-deriving Vite's externalization.
+     * depends on a bundled package loads a second copy from node_modules at
+     * runtime. The emitted chunks carry both sides of that comparison — module
+     * ids for what was bundled, bare specifiers for what stayed external — so
+     * read those instead of re-deriving Vite's externalization.
      */
     generateBundle(_outputOptions, bundle) {
       const cfg = resolvedConfig
@@ -616,26 +665,23 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         cfg.command !== 'build' ||
         !options.middleware ||
         options.ssrExternalCheck === false ||
-        runtimeExternalized ||
         this.environment?.name !== 'ssr'
       ) {
         return
       }
-      const externalIds = new Set<string>()
-      for (const chunk of Object.values(bundle)) {
-        if (chunk.type !== 'chunk') {
-          continue
-        }
-        for (const id of [...chunk.imports, ...chunk.dynamicImports]) {
-          // chunk-to-chunk imports are listed by file name — skip those
-          if (!(id in bundle) && npmPackageName(id)) {
-            externalIds.add(id)
-          }
-        }
-      }
-      const consumers = findExternalRuntimeConsumers({ root: cfg.root, externalIds })
-      if (consumers.length > 0) {
-        cfg.logger.warn(`\n[${PLUGIN_NAME}] ${formatExternalRuntimeConsumersWarning(consumers)}\n`)
+      const { externalIds, bundledPackages } = scanSsrBundle(bundle)
+      const splits = findSplitPackages({
+        root: cfg.root,
+        externalIds,
+        bundledPackages,
+        patterns: compilePackagePatterns(
+          typeof options.ssrExternalCheck === 'object'
+            ? options.ssrExternalCheck.packages
+            : undefined,
+        ),
+      })
+      if (splits.length > 0) {
+        cfg.logger.warn(`\n[${PLUGIN_NAME}] ${formatSplitPackagesWarning(splits)}\n`)
       }
     },
 
