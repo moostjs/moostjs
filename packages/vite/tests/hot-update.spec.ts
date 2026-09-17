@@ -20,7 +20,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 interface THealth {
   status: number
   text: string
-  json: { ok: boolean; boot: number; value: string; tag: string } | null
+  json: { ok: boolean; boot: number; value: string; tag: string; res: string[] } | null
 }
 
 interface TReport {
@@ -32,11 +32,16 @@ interface TReport {
   entryTouch: { health: THealth }
   brokenThenFixed: { broken: THealth; fixed: THealth }
   storm: { health: THealth; boots: number[]; hammerOk: boolean }
+  dispose: { before: THealth; after: THealth; log: string[] }
 }
 
 const DRIVER = fileURLToPath(new URL('hot-update.driver.mjs', import.meta.url))
 const DIST = fileURLToPath(new URL('../dist/index.mjs', import.meta.url))
 const SRC = fileURLToPath(new URL('../src', import.meta.url))
+// The fixture app imports the BUILT `moost` (it is externalized in dev, see the
+// driver), so a stale core build means missing `@MoostDispose`, not a red test.
+const MOOST_DIST = fileURLToPath(new URL('../../moost/dist/index.mjs', import.meta.url))
+const MOOST_SRC = fileURLToPath(new URL('../../moost/src', import.meta.url))
 
 /** Newest mtime across the plugin sources — guards against testing a stale build. */
 function newestSrcMtime(dir: string): number {
@@ -57,6 +62,12 @@ describe('moost-vite scoped hot reload', () => {
     }
     if (statSync(DIST).mtimeMs < newestSrcMtime(SRC)) {
       throw new Error('dist/index.mjs is older than src — run `pnpm build vite` first')
+    }
+    if (!existsSync(MOOST_DIST)) {
+      throw new Error('moost/dist/index.mjs missing — run `pnpm build moost` first')
+    }
+    if (statSync(MOOST_DIST).mtimeMs < newestSrcMtime(MOOST_SRC)) {
+      throw new Error('moost/dist/index.mjs is older than src — run `pnpm build moost` first')
     }
     const { stdout } = await promisify(execFile)('node', [DRIVER], {
       timeout: 180_000,
@@ -83,6 +94,8 @@ describe('moost-vite scoped hot reload', () => {
     expect(report.clientOnly.second.json).toMatchObject({ ok: true, boot: 1, value: 'v1' })
     // Default client HMR pipeline still serves the fresh module
     expect(report.clientOnly.clientMod).toContain('toast_v2')
+    // Nothing was ejected, so nothing was disposed either
+    expect(report.clientOnly.second.json?.res).toEqual(['open:1'])
   })
 
   it('refreshes the SSR render graph without rebooting Moost', () => {
@@ -117,5 +130,31 @@ describe('moost-vite scoped hot reload', () => {
     // Every subsequent request is served by that single new pipeline.
     expect(report.storm.hammerOk).toBe(true)
     expect(report.storm.boots).toEqual([6])
+  })
+
+  it('disposes an ejected singleton once, before the replacement is constructed', () => {
+    const log = report.dispose.after.json?.res ?? []
+    const opens = log.filter((e) => e.startsWith('open:'))
+    const closes = log.filter((e) => e.startsWith('close:'))
+
+    // The provider's own file changed → the old instance was ejected and a new
+    // one constructed on the next boot.
+    expect(opens).toHaveLength(2)
+    // Released exactly once — the leak this feature exists to prevent.
+    expect(closes).toEqual([`close:${opens[0].slice('open:'.length)}`])
+    // …and released BEFORE the replacement opened (the reload awaits disposal).
+    expect(log.indexOf(closes[0])).toBeLessThan(log.indexOf(opens[1]))
+    expect(report.dispose.log.some((l) => l.includes('Disposed "ResourceOwner"'))).toBe(true)
+  })
+
+  it('keeps reloading when a dispose hook throws', () => {
+    // The sibling provider's hook throws on every eject; the app still reloads.
+    expect(report.dispose.after.status).toBe(200)
+    expect(report.dispose.after.json?.ok).toBe(true)
+    expect(
+      report.dispose.log.some(
+        (l) => l.includes('BrokenResource') && l.includes('the reload continues'),
+      ),
+    ).toBe(true)
   })
 })

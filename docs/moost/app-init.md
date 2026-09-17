@@ -120,6 +120,7 @@ earlySetup() {}
 
 ## See also
 
+- [Application Dispose](/moost/app-dispose) — `@MoostDispose`, the teardown counterpart: release what a singleton owns on shutdown or dev-server reload.
 - [Event Lifecycle](/moost/event-lifecycle) — the per-event flow (`@MoostInit` is the boot-time counterpart).
 - [Controllers](/moost/controllers) — `getControllersOverview()` and how controllers are registered.
 - [Dependency Injection](/moost/di/) — how `@InjectMoost` and constructor injection resolve.

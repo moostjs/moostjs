@@ -40,6 +40,12 @@ export interface TMoostMetadata<H extends TObject = TEmpty>
    * (ascending) across all controllers.
    */
   moostInit?: { priority: number }
+  /**
+   * Set by `@MoostDispose()` — marks a method to run when the instance is
+   * disposed (`Moost.dispose()`, or a hot-reload eject in `@moostjs/vite`).
+   * `priority` orders hooks (ascending) across all instances.
+   */
+  moostDispose?: { priority: number }
   params: (TMateParamMeta & TMoostParamsMetadata)[]
 }
 

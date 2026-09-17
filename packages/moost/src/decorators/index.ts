@@ -1,6 +1,7 @@
 export * from './circular.decorator'
 export * from './common.decorator'
 export * from './controller.decorator'
+export * from './dispose.decorator'
 export * from './handler-paths.decorator'
 export * from './inherit.decorator'
 export * from './init.decorator'

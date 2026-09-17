@@ -273,6 +273,10 @@ export default defineConfig({
                             link: '/moost/app-init',
                         },
                         {
+                            text: 'Application Dispose',
+                            link: '/moost/app-dispose',
+                        },
+                        {
                             text: 'Interceptors',
                             link: '/moost/interceptors',
                         },

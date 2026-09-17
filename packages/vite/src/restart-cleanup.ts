@@ -1,4 +1,4 @@
-import { clearGlobalWooks, getMoostInfact, getMoostMate, Moost } from 'moost'
+import { clearGlobalWooks, disposeInstances, getMoostInfact, getMoostMate, Moost } from 'moost'
 
 import type { createAdapterDetector } from './adapter-detector'
 import type { TMoostViteDevOptions } from './moost-vite'
@@ -7,13 +7,21 @@ import { getLogger } from './utils'
 /**
  * Clean up Moost’s global containers and optionally remove specific instances from the registry.
  *
+ * Every instance actually removed from a registry is **disposed** before the
+ * caches are dropped: its `@MoostDispose` hooks (or `Symbol.asyncDispose` /
+ * `Symbol.dispose`) are awaited, so a singleton owning a connection, consumer,
+ * timer or file handle releases it instead of leaking one copy per reload. An
+ * instance kept by an `onEject` veto is never disposed. A failing hook is
+ * warned about and the reload continues.
+ *
  * @param {Set<string>} [cleanupInstances] A set of module IDs to remove from the registry.
+ * @returns the instances that were ejected (and therefore disposed)
  */
-export function moostRestartCleanup(
+export async function moostRestartCleanup(
   adapters: ReturnType<typeof createAdapterDetector>[],
   onEject?: TMoostViteDevOptions['onEject'],
   cleanupInstances?: Set<string>,
-) {
+): Promise<object[]> {
   const logger = getLogger()
   const infact = getMoostInfact() as unknown as {
     registry: Record<symbol, object>
@@ -29,6 +37,9 @@ export function moostRestartCleanup(
 
   const mate = getMoostMate<{ __vite_id?: string }>()
 
+  /** Instances removed from a registry by this run — disposed below, before the caches drop. */
+  const ejected: object[] = []
+
   // If we have specific IDs to remove, do so
   if (cleanupInstances) {
     for (const reg of registries) {
@@ -38,6 +49,7 @@ export function moostRestartCleanup(
         if (viteId && cleanupInstances.has(viteId)) {
           logger.debug(`🔃 Replacing "${constructorName(instance)}"`)
           delete reg[key]
+          ejected.push(instance)
         }
       }
 
@@ -49,6 +61,7 @@ export function moostRestartCleanup(
             (!onEject || onEject(instance, type))
           ) {
             delete reg[key]
+            ejected.push(instance)
             logger.debug(
               `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "Moost")`,
             )
@@ -57,6 +70,7 @@ export function moostRestartCleanup(
           for (const adapter of adapters) {
             if (adapter.compare(type) && (!onEject || onEject(instance, type))) {
               delete reg[key]
+              ejected.push(instance)
               logger.debug(
                 `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "${
                   adapter.constructor!.name
@@ -68,11 +82,18 @@ export function moostRestartCleanup(
         })
       }
       // need to remove instances with unknown dependencies
-      clearDependantRegistry(reg, onEject)
+      clearDependantRegistry(reg, onEject, ejected)
     }
     infact.registry = registry
     infact.scopes = scopes
   }
+
+  // Run the ejected instances' dispose hooks BEFORE the Mate cache is dropped
+  // below (the hooks are discovered through metadata) and before the entry
+  // re-imports, so the replacement instance never races the old one for the
+  // same connection/consumer/handle. Best effort: a throwing hook must not
+  // break the dev loop.
+  await disposeEjected(ejected)
 
   // Drop Mate's read cache and reset global wooks. NOTE: `Mate._cleanup()` does
   // NOT wipe decorator metadata in Node — mate's reflect shim only carries a
@@ -85,11 +106,32 @@ export function moostRestartCleanup(
   // pipeline is fully released. Do not build on the assumption of a wipe.
   getMoostMate()._cleanup()
   clearGlobalWooks()
+  return ejected
+}
+
+/** Awaits the `@MoostDispose` hooks of the ejected instances; never throws. */
+async function disposeEjected(ejected: object[]) {
+  if (ejected.length === 0) {
+    return
+  }
+  const logger = getLogger()
+  const { disposed, errors } = await disposeInstances(ejected, { logger, onError: 'warn' })
+  for (const instance of disposed) {
+    logger.debug(`♻️  Disposed "${constructorName(instance)}"`)
+  }
+  for (const e of errors) {
+    logger.warn(
+      `⚠️  Dispose hook "${constructorName(e.instance)}.${String(
+        e.method,
+      )}" failed — the reload continues`,
+    )
+  }
 }
 
 function clearDependantRegistry(
   registry: Record<symbol, object>,
-  onEject?: TMoostViteDevOptions['onEject'],
+  onEject: TMoostViteDevOptions['onEject'] | undefined,
+  ejected: object[],
 ) {
   const logger = getLogger()
   const objSet = new Set()
@@ -102,8 +144,8 @@ function clearDependantRegistry(
     }
     for (const key of Object.getOwnPropertySymbols(registry)) {
       const instance = registry[key]
-      const ejected = checkAndEject(instance, objSet, onEject, registry, key, logger)
-      if (ejected) {
+      if (checkAndEject(instance, objSet, onEject, registry, key, logger)) {
+        ejected.push(instance)
         somethingIsDeleted = true
       }
     }

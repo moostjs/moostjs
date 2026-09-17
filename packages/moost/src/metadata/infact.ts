@@ -40,6 +40,24 @@ export function getMoostInfact() {
   return sharedMoostInfact
 }
 
+/**
+ * Every SINGLETON instance currently held by an Infact container's **global**
+ * registry (per-event `scopes` registries are excluded — those instances are
+ * torn down with their event).
+ *
+ * Infact keeps the registry as a protected symbol-keyed object; this helper
+ * centralizes the one cast needed to read it, so consumers
+ * (`Moost.dispose()`, the `@moostjs/vite` dev plugin) do not each re-derive it.
+ */
+export function getInfactSingletonInstances(
+  infact: ReturnType<typeof getMoostInfact> = getMoostInfact(),
+): object[] {
+  const { registry } = infact as unknown as { registry: Record<symbol, object> }
+  return Object.getOwnPropertySymbols(registry)
+    .map((k) => registry[k])
+    .filter(Boolean)
+}
+
 interface TCustom {
   pipes?: TPipeData[]
 }

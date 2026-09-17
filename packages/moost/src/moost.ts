@@ -17,12 +17,14 @@ import type { TAny, TAnyFn, TClassConstructor, TEmpty, TFunction, TObject } from
 import { setControllerContext } from './composables'
 import type { TInterceptorDef } from './decorators'
 import { TInterceptorPriority } from './decorators'
+import type { TDisposeError } from './dispose'
+import { describeDisposeErrors, disposeInstances } from './dispose'
 import type { InterceptorHandler } from './interceptor-handler'
 import { getDefaultLogger, setDefaultLogger } from './logger'
 import type { TInterceptorData, TMoostHandler, TMoostMetadata } from './metadata'
 import { getMoostMate } from './metadata'
 import { registerDiagnosticsSource } from './metadata/diagnostics'
-import { getMoostInfact } from './metadata/infact'
+import { getInfactSingletonInstances, getMoostInfact } from './metadata/infact'
 import { sharedPipes } from './pipes/shared-pipes'
 import type { TPipeData, TPipeFn } from './pipes/types'
 import { TPipePriority } from './pipes/types'
@@ -235,6 +237,17 @@ export class Moost extends Hookable {
   /** D5: set once `init()` completes — late provide/replace registrations then warn. */
   protected initialized = false
 
+  /**
+   * SINGLETON controller instances this app obtained at bind time (DI-resolved
+   * or registered as objects). They are disposed together with the DI registry
+   * singletons — an object-registered controller never enters the Infact
+   * registry, so it would otherwise be missed.
+   */
+  protected singletonInstances = new Set<TObject>()
+
+  /** In-flight/settled `dispose()` run — makes disposal idempotent. */
+  protected disposePromise?: Promise<void>
+
   constructor(protected options?: TMoostOptions) {
     super()
     this.paramAuditMode = resolveParamAuditMode(options?.diagnostics?.paramTypes)
@@ -380,6 +393,75 @@ export class Moost extends Hookable {
   }
 
   /**
+   * ### dispose
+   * Graceful shutdown: stops the adapters, then runs every `@MoostDispose`
+   * hook of every singleton this app can reach — DI registry singletons
+   * (`@Injectable()` providers included) plus the controller instances bound at
+   * boot. A class with no decorated hook but an `[Symbol.asyncDispose]()` /
+   * `[Symbol.dispose]()` method is disposed through that.
+   *
+   * Order: every adapter's `onDispose` in registration order (stop taking new
+   * work first), then instance hooks by ascending `priority`. Everything is
+   * awaited, failures never stop the run — once all hooks have run, a failed
+   * disposal rejects the returned promise with an `AggregateError` naming each
+   * failing `Class.method`.
+   *
+   * Idempotent: the promise of the first call is returned for every later one,
+   * and an instance already disposed (e.g. ejected by the `@moostjs/vite` dev
+   * server) is skipped.
+   *
+   * DI registries and metadata caches are left intact — use the existing
+   * cleanup helpers when a clean container is what you need.
+   *
+   * ```ts
+   * for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+   *   process.once(signal, () => { void app.dispose().finally(() => process.exit(0)) })
+   * }
+   * ```
+   */
+  public dispose(): Promise<void> {
+    if (!this.disposePromise) {
+      this.disposePromise = this.runDispose()
+    }
+    return this.disposePromise
+  }
+
+  /** Adapters' `onDispose` in registration order; errors are collected, not fatal. */
+  protected async disposeAdapters(): Promise<TDisposeError[]> {
+    const errors: TDisposeError[] = []
+    for (const a of this.adapters) {
+      try {
+        await a.onDispose?.(this)
+      } catch (error) {
+        errors.push({ instance: a, method: 'onDispose', error })
+        this.logger.warn(
+          `[moost] adapter "${a.name}" onDispose failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        )
+      }
+    }
+    return errors
+  }
+
+  /** The one-shot body behind {@link Moost.dispose} (see its docs for the contract). */
+  protected async runDispose(): Promise<void> {
+    const errors = await this.disposeAdapters()
+    const candidates = [...getInfactSingletonInstances(), ...this.singletonInstances]
+    const result = await disposeInstances(candidates, { logger: this.logger, onError: 'warn' })
+    errors.push(...result.errors)
+    this.logger.debug(
+      `[moost] disposed: ${this.adapters.length} adapter(s), ${result.hooks} hook(s), ${errors.length} error(s)`,
+    )
+    if (errors.length > 0) {
+      throw new AggregateError(
+        errors.map((e) => e.error),
+        describeDisposeErrors(errors),
+      )
+    }
+  }
+
+  /**
    * D1 audit of a DI-instantiated controller class' constructor params.
    * Findings are collected for `init()` to flush. Returns `true` when the
    * bind-time SINGLETON instantiation must be skipped: in `'error'` mode a
@@ -470,6 +552,11 @@ export class Moost extends Hookable {
     } else if (!isControllerConsructor) {
       instance = controller
       infact.setInstanceRegistries(instance, provide, replace, { pipes })
+    }
+    if (instance) {
+      // Remember the singleton so `dispose()` reaches it even when it never
+      // lands in the Infact registry (object-registered controllers, `this`).
+      this.singletonInstances.add(instance)
     }
 
     // getInstance - instance factory for resolving SINGLETON and FOR_EVENT instance
@@ -743,5 +830,12 @@ export interface TMoostAdapter<H> {
     options: TMoostAdapterOptions<H, T>,
   ) => void | Promise<void>
   onInit?: (moost: Moost) => void | Promise<void>
+  /**
+   * Called by {@link Moost.dispose} **before** any `@MoostDispose` instance
+   * hook, in adapter registration order: stop taking new work here (close the
+   * server, stop the consumer/engine). Awaited; a throwing `onDispose` is
+   * logged and collected, never aborts the rest of the shutdown.
+   */
+  onDispose?: (moost: Moost) => void | Promise<void>
   getProvideRegistry?: () => TProvideRegistry
 }

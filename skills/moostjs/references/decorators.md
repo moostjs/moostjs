@@ -23,6 +23,7 @@ Decorators run through `getMoostMate()` — singleton `Mate` in the `'moost'` wo
 | `@Optional()` | param / prop | `optional: true` |
 | `@Required()` | param / prop | `required: true`; also appends to class `requiredProps` |
 | `@MoostInit({ priority? })` | method | `moostInit: { priority }` — run once at boot, post-bind. Semantics: [core.md](core.md#app-init-moostinit) |
+| `@MoostDispose({ priority? })` | method | `moostDispose: { priority }` — run once when the instance is disposed (`app.dispose()` / vite HMR eject). Semantics: [core.md](core.md#app-dispose-moostdispose) |
 | `@InjectMoost()` | param / prop | resolver returning the running `Moost` instance |
 | `@HandlerPaths(method?, opts?)` | param / prop | resolver → `string[]` of a handler's mounted paths. [core.md](core.md#resolving-a-handlers-mounted-path) |
 | `ApplyDecorators(...ds)` | any | composition helper (wraps `mate.apply`) |
@@ -45,6 +46,7 @@ Decorators run through `getMoostMate()` — singleton `Mate` in the `'moost'` wo
 | `properties` | Mate `collectPropKeys` (automatic) | DI property resolution |
 | `loggerTopic` | `@LoggerTopic` | `@InjectMoostLogger` |
 | `moostInit` | `@MoostInit` | init-hook collection |
+| `moostDispose` | `@MoostDispose` | dispose-hook discovery (read from live instances at dispose time, not at bind) |
 | `params` | param decorators (sparse array, index = param position) | argument/constructor resolution |
 
 **Param-only fields live on `TMoostParamsMetadata`**, accessed via `meta.params[index]` (NOT on class/method meta): `inject` (`@Inject`), `fromScope` (`@InjectFromScope`), `circular` (`@Circular`), `paramSource`/`paramName` (set by `@Param` to `'ROUTE'`; HTTP decorators set `'QUERY'`/`'QUERY_ITEM'`/`'BODY'`).

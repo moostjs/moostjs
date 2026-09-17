@@ -47,6 +47,14 @@ export async function bindControllerMethods(options: TBindControllerOptions) {
       )
     }
 
+    if (methodMeta.moostDispose && meta.injectable === 'FOR_EVENT') {
+      throw new Error(
+        `@MoostDispose is not allowed on a FOR_EVENT controller (${classConstructor.name}.${String(
+          method,
+        )}). Dispose hooks run on the SINGLETON instance; FOR_EVENT instances are torn down with their event — put the hook on the singleton that owns the resource.`,
+      )
+    }
+
     if (methodMeta.moostInit) {
       if (meta.injectable === 'FOR_EVENT') {
         throw new Error(

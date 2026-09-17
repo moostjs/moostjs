@@ -1,3 +1,4 @@
+// oxlint-disable max-lines -- the fixture app's sources are inlined below
 // Driver for hot-update.spec.ts — runs the full hot-reload scenario in a plain
 // Node process. The spec spawns this script instead of importing the plugin
 // directly because the plugin must share the native `moost` /
@@ -19,9 +20,17 @@ const FIXTURE_ROOT = fileURLToPath(new URL('fixture-tmp', import.meta.url))
 /**
  * Fullstack fixture (middleware: true + prefix + ssrEntry) with three distinct
  * module graphs sharing one Vite dev server:
- * - Moost entry graph:   main.ts → controller.ts → value.ts + config.json
+ * - Moost entry graph:   main.ts → controller.ts → value.ts + config.json + resource.ts
  * - SSR render graph:    entry-server.ts → note.ts (loaded via server.ssrLoadModule)
  * - client-only graph:   ui/notify.ts (loaded only by the browser)
+ *
+ * `resource.ts` holds the disposal fixtures: a singleton that "opens" a fake
+ * resource on construction and releases it from a `@MoostDispose` hook, plus a
+ * sibling whose hook throws. Both are registered explicitly rather than
+ * constructor-injected because Vite transforms TS with esbuild, which never
+ * emits `design:paramtypes` — what matters here is that they are SINGLETON
+ * `@Injectable()` instances living in the DI registry, exactly like an injected
+ * provider.
  */
 const FIXTURE_FILES = {
   'index.html': `<!doctype html>
@@ -47,6 +56,7 @@ const FIXTURE_FILES = {
 import { MoostHttp } from '@moostjs/event-http'
 
 import { ApiController } from './controller'
+import { BrokenResource, ResourceOwner } from './resource'
 
 const g = globalThis as Record<string, unknown>
 g.__fixture_boot = ((g.__fixture_boot as number) ?? 0) + 1
@@ -54,13 +64,14 @@ g.__fixture_boot = ((g.__fixture_boot as number) ?? 0) + 1
 const app = new Moost()
 const http = new MoostHttp()
 app.adapter(http).listen(3000)
-app.registerControllers(ApiController)
+app.registerControllers(ApiController, ResourceOwner, BrokenResource)
 void app.init()
 `,
   'src/controller.ts': `import { Controller } from 'moost'
 import { Get } from '@moostjs/event-http'
 
 import config from './config.json'
+import { resourceLog } from './resource'
 import { VALUE } from './value'
 
 @Controller('api')
@@ -72,7 +83,42 @@ export class ApiController {
       boot: (globalThis as Record<string, unknown>).__fixture_boot as number,
       value: VALUE,
       tag: (config as { tag: string }).tag,
+      res: resourceLog(),
     }
+  }
+}
+`,
+  'src/resource.ts': `import { Injectable, MoostDispose } from 'moost'
+
+const g = globalThis as Record<string, unknown>
+
+/** Survives reloads on globalThis, so the test can compare across boots. */
+export function resourceLog(): string[] {
+  const log = (g.__fixture_res_log as string[]) ?? []
+  g.__fixture_res_log = log
+  return log
+}
+
+@Injectable()
+export class ResourceOwner {
+  boot = g.__fixture_boot as number
+
+  constructor() {
+    resourceLog().push('open:' + String(this.boot))
+  }
+
+  @MoostDispose()
+  async close() {
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    resourceLog().push('close:' + String(this.boot))
+  }
+}
+
+@Injectable()
+export class BrokenResource {
+  @MoostDispose()
+  close() {
+    throw new Error('fixture dispose failure')
   }
 }
 `,
@@ -93,6 +139,26 @@ export async function render(_url: string) {
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Tee stdout/stderr so the report can assert on the plugin's disposal logging
+ * (the `♻️ Disposed` debug lines and the "reload continues" warnings), which is
+ * console output, not part of any HTTP response.
+ */
+const ANSI = new RegExp(`${String.fromCodePoint(27)}\\[[0-9;]*m`, 'g')
+const disposeLogLines = []
+for (const stream of [process.stdout, process.stderr]) {
+  const write = stream.write.bind(stream)
+  stream.write = (chunk, ...rest) => {
+    const text = typeof chunk === 'string' ? chunk : String(chunk)
+    for (const line of text.split('\n')) {
+      if (line.includes('Dispose hook') || line.includes('Disposed "')) {
+        disposeLogLines.push(line.replace(ANSI, '').trim())
+      }
+    }
+    return write(chunk, ...rest)
+  }
+}
 
 async function pollUntil(fn, predicate, timeout = 15_000) {
   const deadline = Date.now() + timeout
@@ -236,6 +302,17 @@ try {
     boots: [...new Set(hammer.map((h) => h.json?.boot))],
     hammerOk: hammer.every((h) => h.status === 200 && h.json?.value === 'v4'),
   }
+
+  // 9. disposal on eject: editing the provider's own file ejects it, so its
+  // @MoostDispose hook must run — awaited — before the replacement instance is
+  // constructed by the new boot. The sibling provider whose hook throws must
+  // warn without blocking the reload.
+  const countOpens = (h) => (h.json?.res ?? []).filter((e) => e.startsWith('open:')).length
+  const before = await getHealth()
+  const opensBefore = countOpens(before)
+  editFile('src/resource.ts', `${FIXTURE_FILES['src/resource.ts']}\n// touched\n`)
+  const after = await pollUntil(getHealth, (h) => countOpens(h) > opensBefore)
+  report.dispose = { before, after, log: disposeLogLines }
 
   console.log(`__RESULT__ ${JSON.stringify(report)}`)
 } finally {

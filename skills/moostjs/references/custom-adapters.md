@@ -27,6 +27,7 @@ Adapter flow: `app.adapter(a)` registers → during `app.init()` Moost calls `a.
 | `name` (required) | identifying label for the adapter (not currently consumed by the runtime — still required by the interface) |
 | `bindHandler(opts)` | called once per controller method during `init()` — filter `opts.handlers` by your type and register routes with your engine (may be async) |
 | `onInit?(moost)` | called after ALL controllers are bound and `@MoostInit` hooks ran — start servers/engines here |
+| `onDispose?(moost)` | called FIRST by `Moost.dispose()` (before any `@MoostDispose` instance hook), in adapter registration order — stop servers/engines/consumers here. Awaited; a throw is logged + collected, never aborts the shutdown. Make it a no-op when nothing was started. See [core.md](core.md#app-dispose-moostdispose) |
 | `getProvideRegistry?()` | provide-registry entries merged into DI before binding (expose your engine instances) |
 
 ## TMoostAdapterOptions

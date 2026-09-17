@@ -149,6 +149,8 @@ await app.listen()
 
 Server-side HMR is scoped to the Moost entry graph: any file the server imports (reachable from `entry` — `.ts`, `.json`, anything) reloads the app, with no restart needed. On such an edit the plugin invalidates the changed files, ejects the affected DI instances (cascading to dependants), and re-initializes the app on the next request — the entry is re-imported in place, so editing a controller, data model or provider all behave the same, including in middleware + SSR mode where the dev server keeps owning the port.
 
+Every ejected instance is **disposed** before the entry re-imports: its [`@MoostDispose`](/moost/app-dispose) hooks (or `Symbol.asyncDispose`/`Symbol.dispose`) are awaited, so a singleton that owns a connection, consumer, timer or file handle releases it instead of leaking one copy per reload — the replacement never races the old one. A failing hook is logged as a warning and the reload continues. An instance kept by an `onEject` veto is *not* disposed (it stays live and in use). If a resource still accumulates across reloads, its owner is missing a `@MoostDispose` hook.
+
 Files outside the entry graph never touch the Moost app:
 
 - **Client-side modules** (composables, stores, anything only the browser imports) keep Vite's regular HMR — browser updates flow as in any Vite app while the API keeps serving.
@@ -167,7 +169,7 @@ If a server edit breaks the app (e.g. a syntax error), requests matching `prefix
 | `format` | `'cjs' \| 'esm'` | `'esm'` | Output module format |
 | `sourcemap` | `boolean` | `true` | Generate source maps |
 | `externals` | `boolean \| object` | `true` | External dependencies config |
-| `onEject` | `function` | — | Hook to control DI instance ejection during HMR |
+| `onEject` | `function` | — | Veto hook per HMR ejection candidate `(instance, depClass)` — return `false` to keep the instance (it is then not ejected and not [disposed](/moost/app-dispose)) |
 | `ssrFetch` | `boolean` | `true` | Enable [SSR local fetch](/webapp/fetch) interception |
 | `ssrFetchForwarding` | `boolean` | `true` | Run each SSR render inside an HTTP context seeded from the page request — SSR self-calls inherit the [viewer's identity](/webapp/fetch#ssr-viewer-identity) and their `Set-Cookie` reaches the page response |
 | `middleware` | `boolean` | `false` | Run Moost as Connect middleware |

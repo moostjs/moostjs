@@ -3,6 +3,7 @@
 export {
   defineInfactScope,
   getInfactScopeVars,
+  getInfactSingletonInstances,
   getMoostInfact,
   getNewMoostInfact,
   setInfactLoggingOptions,

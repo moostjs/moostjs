@@ -119,6 +119,17 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
     this.moost = moost
   }
 
+  /**
+   * Called by `Moost.dispose()` before any `@MoostDispose` hook runs: stops the
+   * heartbeat, closes the WebSocket server and every open connection (code
+   * `1001`) via {@link MoostWs.close}. Safe when nothing was ever started, and
+   * in HTTP-integrated mode too (the shared HTTP server is closed by the HTTP
+   * adapter's own `onDispose`).
+   */
+  onDispose() {
+    this.close()
+  }
+
   getProvideRegistry() {
     return createProvideRegistry(
       [MoostWs, () => this],

@@ -6,6 +6,7 @@ Moost lifecycle, controller registration, adapter attachment.
 - [Mental model](#mental-model)
 - [Lifecycle](#lifecycle)
 - [App init (`@MoostInit`)](#app-init-moostinit)
+- [App dispose (`@MoostDispose`)](#app-dispose-moostdispose)
 - [API](#api)
 - [Patterns](#patterns)
 - [Gotchas](#gotchas)
@@ -104,6 +105,37 @@ getHandlerPaths(moost, AuthController, 'refresh')                      // pure f
 | 3 | `opts` is `TGetHandlerPathsOptions` (exported from `moost`): `opts.type` filters by event type (`'HTTP'`); `opts.predicate(h)` narrows by transport detail (e.g. HTTP verb `h.handler.method`) without coupling core to a transport. |
 | 4 | `@HandlerPaths(method?)`/`useHandlerPaths(method?)` default `method` to the current context method — in `@MoostInit` that's the init method, so pass the handler method name explicitly. |
 
+## App dispose (`@MoostDispose`)
+
+Teardown counterpart of `@MoostInit`: release what a singleton owns (cache client, queue consumer, DB handle, timer, watcher) on shutdown **and** when the [vite dev plugin](vite.md) ejects the instance on hot reload.
+
+```ts
+import { Injectable, MoostDispose } from 'moost'
+
+@Injectable()                              // works on any SINGLETON — not just controllers
+class CacheClient {
+  @MoostDispose({ priority: 0 })           // lower priority runs first; default 0; NO arguments
+  async close() { await this.client.quit() }
+}
+
+await app.dispose()                        // graceful shutdown; adapters first, then hooks
+```
+
+Graceful shutdown wiring: `for (const s of ['SIGTERM','SIGINT'] as const) process.once(s, () => { void app.dispose().finally(() => process.exit(0)) })`.
+
+| # | Invariant |
+|---|---|
+| 1 | Two triggers, same hooks: `app.dispose()` and a `@moostjs/vite` HMR eject. Process signals NEVER fire on HMR — a resource leaking one handle per dev reload means its owner lacks a `@MoostDispose`. |
+| 2 | At most once per instance, ever (tracked per instance): a second `dispose()`, or an eject followed by a shutdown, runs nothing. `dispose()` returns the first call's promise. |
+| 3 | SINGLETON controllers AND `@Injectable()` singletons (hooks are discovered from live instances at dispose time, not at bind). On a `FOR_EVENT` **controller** it throws at bind; on a `FOR_EVENT` **injectable** it is never invoked. |
+| 4 | Order: every adapter's `onDispose(moost)` in registration order (stop intake), THEN instance hooks by ascending `priority`, ties in discovery order. All awaited, sequentially. |
+| 5 | Hook takes NO arguments (no pipes, no resolvers) — inject what it needs in the constructor. |
+| 6 | Errors are best effort: every remaining hook still runs; `dispose()` then rejects with an `AggregateError` naming each failing `Class.method`; an HMR eject only warns and keeps reloading. |
+| 7 | No `@MoostDispose` method but `[Symbol.asyncDispose]()` (preferred) or `[Symbol.dispose]()` present → that is used as the single priority-0 hook. |
+| 8 | `dispose()` does NOT clear DI registries or metadata caches — it only runs teardown. |
+
+Key imports: `import { MoostDispose, disposeInstances } from 'moost'`. `disposeInstances(instances, { logger?, onError?: 'warn' \| 'throw' })` → `Promise<{ hooks, errors, disposed }>` runs the same hooks for a set of objects you own (what the vite plugin calls on ejected instances).
+
 ## API
 
 ### `new Moost(opts?: TMoostOptions)`
@@ -118,6 +150,7 @@ getHandlerPaths(moost, AuthController, 'refresh')                      // pure f
 | `adapter<T>(a: T): T` | attach adapter; returns the adapter |
 | `registerControllers(...ctrls)` | classes / instances / `[prefix, ctrl]` tuples |
 | `init(): Promise<void>` | must be awaited |
+| `dispose(): Promise<void>` | graceful shutdown — adapters' `onDispose`, then `@MoostDispose` hooks; idempotent. See [App dispose](#app-dispose-moostdispose) |
 | `applyGlobalInterceptors(...items)` | class ctors, `TInterceptorDef`, or `TInterceptorData` |
 | `applyGlobalPipes(...pipes)` | `TPipeFn` or `TPipeData` |
 | `setProvideRegistry(reg)` | merges DI providers |

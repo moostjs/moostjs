@@ -179,6 +179,23 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     this.moost = moost
   }
 
+  /**
+   * Called by `Moost.dispose()` before any `@MoostDispose` hook runs: stops the
+   * HTTP server this adapter started through {@link MoostHttp.listen}, so
+   * shutdown drains in-flight requests before singletons release what they own.
+   *
+   * A no-op when no server is listening — the adapter was used as a middleware
+   * (`getServerCb()`), `listen()` was never called (or failed), or the server is
+   * already closed. Guarding on the live server avoids wooks' `close()`
+   * never-settling (no server) and Node's `ERR_SERVER_NOT_RUNNING` (closed).
+   */
+  async onDispose() {
+    if (!this.httpApp.getServer()?.listening) {
+      return
+    }
+    await this.httpApp.close()
+  }
+
   getProvideRegistry() {
     return createProvideRegistry(
       [WooksHttp, () => this.getHttpApp()],

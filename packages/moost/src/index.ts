@@ -1,6 +1,8 @@
 export * from './module-identity'
 export * from './adapter-utils'
 export { getInstanceOwnMethods, getInstanceOwnProps } from './binding/utils'
+export type { TDisposeError, TDisposeOptions, TDisposeResult } from './dispose'
+export { disposeInstances } from './dispose'
 export type { TGetHandlerPathsOptions } from './handler-paths'
 export { getHandlerPaths, useHandlerPaths } from './handler-paths'
 export type {

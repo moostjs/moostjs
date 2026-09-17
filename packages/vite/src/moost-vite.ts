@@ -785,7 +785,11 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
             // Consume the pending eject cleanup under the reload lock (see ejectApp).
             const cleanupInstances = pendingCleanup ?? undefined
             pendingCleanup = null
-            moostRestartCleanup(adapters, options.onEject, cleanupInstances)
+            // Awaited: the ejected instances' `@MoostDispose` hooks must finish
+            // releasing what they own (connections, consumers, handles) BEFORE
+            // the adapters re-init and the entry re-imports — otherwise the
+            // replacement instance opens a second copy of the same resource.
+            await moostRestartCleanup(adapters, options.onEject, cleanupInstances)
             // Re-establish the adapter capture before re-importing the entry. The
             // listen() patch lives on whatever MoostHttp.prototype the runner first
             // evaluated; a reload may hand the re-imported entry a fresh
@@ -843,7 +847,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         adapter.ssrLoadModule = ssrImport
       }
 
-      moostRestartCleanup(adapters, options.onEject)
+      await moostRestartCleanup(adapters, options.onEject)
 
       // Import the SSR entry so the app initializes
       // (MoostHttp.listen is patched, so no actual server is spawned).
