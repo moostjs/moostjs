@@ -1,3 +1,14 @@
+## [0.6.36](https://github.com/moostjs/moostjs/compare/v0.6.35...v0.6.36) (2026-09-17)
+
+
+### Features
+
+* **moost:** @MoostDispose + Moost.dispose() lifecycle; adapters onDispose; vite awaits disposal of ejected instances ([f58781a](https://github.com/moostjs/moostjs/commit/f58781a5c78357d890e85c73dff5a0a8a7c2c33e))
+* **vite:** ssrExternalCheck reads the real bundled set and watches @atscript/* too (packages option) ([faff767](https://github.com/moostjs/moostjs/commit/faff767e635bf16c5958cc478fe11987f83be524))
+* **vite:** warn at build time when an externalized dep depends on the bundled moost/wooks runtime (ssrExternalCheck) ([b8c7831](https://github.com/moostjs/moostjs/commit/b8c783127ba325fb0849f7d2c3d34121f7483c4f))
+
+
+
 ## [0.6.35](https://github.com/moostjs/moostjs/compare/v0.6.34...v0.6.35) (2026-07-29)
 
 
