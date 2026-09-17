@@ -1,3 +1,17 @@
+## [0.6.37](https://github.com/moostjs/moostjs/compare/v0.6.36...v0.6.37) (2026-09-17)
+
+
+### Bug Fixes
+
+* **vite:** boot awaits app.init() and 502s before the captured middleware; reload/failed-start tests ([12f8e95](https://github.com/moostjs/moostjs/commit/12f8e9521c962b62feebd18accdcc12e5952061f))
+
+
+### Features
+
+* **moost): app.disposeOnSignals(:** one shutdown listener per signal, re-targeted on entry re-execution ([dce7730](https://github.com/moostjs/moostjs/commit/dce7730c35964f4a878bf5537161704d8224482f))
+
+
+
 ## [0.6.36](https://github.com/moostjs/moostjs/compare/v0.6.35...v0.6.36) (2026-09-17)
 
 
