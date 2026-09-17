@@ -67,7 +67,8 @@ function classNameOf(instance: object): string {
   return proto?.constructor?.name || 'Object'
 }
 
-function errorMessage(error: unknown): string {
+/** @internal Message of a thrown value, whatever it is. */
+export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 

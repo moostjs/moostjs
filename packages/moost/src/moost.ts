@@ -18,7 +18,8 @@ import { setControllerContext } from './composables'
 import type { TInterceptorDef } from './decorators'
 import { TInterceptorPriority } from './decorators'
 import type { TDisposeError } from './dispose'
-import { describeDisposeErrors, disposeInstances } from './dispose'
+import { describeDisposeErrors, disposeInstances, errorMessage } from './dispose'
+import { registerDisposeOnSignals } from './dispose-signals'
 import type { InterceptorHandler } from './interceptor-handler'
 import { getDefaultLogger, setDefaultLogger } from './logger'
 import type { TInterceptorData, TMoostHandler, TMoostMetadata } from './metadata'
@@ -414,9 +415,7 @@ export class Moost extends Hookable {
    * cleanup helpers when a clean container is what you need.
    *
    * ```ts
-   * for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-   *   process.once(signal, () => { void app.dispose().finally(() => process.exit(0)) })
-   * }
+   * app.disposeOnSignals() // SIGTERM + SIGINT → dispose() → re-raise
    * ```
    */
   public dispose(): Promise<void> {
@@ -424,6 +423,34 @@ export class Moost extends Hookable {
       this.disposePromise = this.runDispose()
     }
     return this.disposePromise
+  }
+
+  /**
+   * ### disposeOnSignals
+   * Disposes this app when the process receives one of `signals` (default
+   * `['SIGTERM', 'SIGINT']`), then re-raises the signal with no listener left,
+   * so the process exits with Node's default status for it.
+   *
+   * Registers each process listener **once per process**: calling it again —
+   * e.g. the entry re-executing under the `@moostjs/vite` dev server — re-targets
+   * the existing listeners at the newest app instead of stacking one handler per
+   * old app (which is what a plain `process.once(...)` in the entry does, until
+   * Node warns about a listener leak). Signals are unioned across calls; an
+   * already-registered one is never replaced or removed.
+   *
+   * A second signal while disposal runs gets Node's default handling, since the
+   * listeners are already removed. A failing `dispose()` is logged as a warning
+   * and the signal is re-raised all the same.
+   *
+   * Returns a function that unregisters the listeners (tests, embedded runners).
+   *
+   * ```ts
+   * await app.init()
+   * app.disposeOnSignals()
+   * ```
+   */
+  public disposeOnSignals(signals: NodeJS.Signals[] = ['SIGTERM', 'SIGINT']): () => void {
+    return registerDisposeOnSignals(this, signals)
   }
 
   /** Adapters' `onDispose` in registration order; errors are collected, not fatal. */
@@ -434,11 +461,7 @@ export class Moost extends Hookable {
         await a.onDispose?.(this)
       } catch (error) {
         errors.push({ instance: a, method: 'onDispose', error })
-        this.logger.warn(
-          `[moost] adapter "${a.name}" onDispose failed: ${
-            error instanceof Error ? error.message : String(error)
-          }`,
-        )
+        this.logger.warn(`[moost] adapter "${a.name}" onDispose failed: ${errorMessage(error)}`)
       }
     }
     return errors

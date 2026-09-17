@@ -52,24 +52,49 @@ Two triggers, same hooks:
   replacement never opens a second copy of the same resource. This is the trigger process
   signals can never cover: no signal fires on HMR.
 
+The dev-server trigger also covers a **partially failed start**: instances a boot constructed before
+it threw stay in the registry and are disposed by the next reload, before the healthy boot builds
+their replacements. **Repeated reloads** leave exactly one live runtime — every eject disposes the
+instance it replaces, so recurring timers and consumers do not accumulate.
+
 ## Graceful shutdown
 
-`dispose()` is what you call from a signal handler (or a test's teardown):
+`disposeOnSignals()` wires the app to the process signals — one call, nothing to unwind:
 
 ```ts
 const app = new Moost()
 // ...
 await app.init()
 
-for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-  process.once(signal, () => {
-    void app.dispose().finally(() => process.exit(0))
-  })
-}
+app.disposeOnSignals() // SIGTERM + SIGINT by default
 ```
+
+On a signal it first removes its listeners, runs `dispose()`, and then **re-raises that same signal**
+with nothing listening, so the process exits with Node's default status for it (`143` for SIGTERM,
+`130` for SIGINT) rather than a hand-picked `0`. A **second** signal while the teardown is still
+running therefore gets Node's default handling (the listeners are already gone — the process exits
+right away with `128 + n`), so an impatient Ctrl-C is never stuck. A failing `dispose()` is logged as
+a warning and the signal is re-raised all the same.
+
+Pass your own list (`app.disposeOnSignals(['SIGTERM'])`) — signals are unioned across calls, never
+replaced. The return value is a function that unregisters the listeners again (tests, embedded
+runners).
 
 Adapters stop taking new work first (see the table), then the hooks run, so in-flight
 requests finish against resources that are still open.
+
+::: tip Why not `process.once` in the entry
+Under the [`@moostjs/vite`](/webapp/vite#hot-module-replacement) dev server the entry re-executes on
+every reload, so a hand-written `process.once(signal, ...)` stacks one listener per dead app (Node
+warns about a listener leak after ten) and Ctrl-C then disposes the *first* app instead of the live
+one. `disposeOnSignals()` registers each listener once per process and re-targets it at the newest
+app, which makes calling it from a re-executing entry safe.
+:::
+
+::: info Added in 0.6.37
+`disposeOnSignals()` is new in 0.6.37. Earlier versions had no helper: the wiring had to be a
+hand-written `process.once(signal, ...)` loop in the entry, with the dev-server caveat above.
+:::
 
 ## Semantics
 

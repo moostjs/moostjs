@@ -46,3 +46,6 @@ app.registerControllers(AppController, WsController).init();
 //=IF (!wf && !ws)
 app.registerControllers(AppController).init();
 //=END IF
+
+// Dispose the app on SIGTERM/SIGINT (one listener per process, safe under the dev server)
+app.disposeOnSignals();

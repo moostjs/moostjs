@@ -93,3 +93,4 @@ The `@Get('hello/:name')` decorator registers the method as a `GET` handler. The
 - [Reading Request Data](./request) — extract query params, headers, cookies, and body
 - [Controllers](./controllers) — organize handlers into logical groups
 - [Vue + Moost (SSR)](./ssr) — fullstack Vue app with SSR, in-process API calls, and HMR
+- [Application Dispose](/moost/app-dispose) — `@MoostDispose` hooks and `app.disposeOnSignals()` for graceful shutdown

@@ -121,7 +121,7 @@ class CacheClient {
 await app.dispose()                        // graceful shutdown; adapters first, then hooks
 ```
 
-Graceful shutdown wiring: `for (const s of ['SIGTERM','SIGINT'] as const) process.once(s, () => { void app.dispose().finally(() => process.exit(0)) })`.
+Graceful shutdown wiring (since 0.6.37): `app.disposeOnSignals()` — default `['SIGTERM','SIGINT']`, returns an unregister fn. NEVER hand-write `process.once(sig, () => app.dispose())` in the entry: under the vite dev server the entry re-executes per reload, so that stacks one listener per dead app (Node's listener-leak warning at 10) and Ctrl-C then disposes the FIRST app. `disposeOnSignals()` keeps ONE listener per signal per process (state on `globalThis`) and re-targets it at the newest app; signals union across calls. On signal: remove the listeners FIRST, then `dispose()`, then re-raise the same signal → Node's default exit status (143/130), NOT `exit(0)`. Second signal while disposing → Node's default handling (exit 128+n; the listeners are already removed). A rejecting `dispose()` warns and the signal is re-raised anyway.
 
 | # | Invariant |
 |---|---|
