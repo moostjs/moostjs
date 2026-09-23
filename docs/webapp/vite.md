@@ -151,6 +151,28 @@ Server-side HMR is scoped to the Moost entry graph: any file the server imports 
 
 Every ejected instance is **disposed** before the entry re-imports: its [`@MoostDispose`](/moost/app-dispose) hooks (or `Symbol.asyncDispose`/`Symbol.dispose`) are awaited, so a singleton that owns a connection, consumer, timer or file handle releases it instead of leaking one copy per reload — the replacement never races the old one. A failing hook is logged as a warning and the reload continues. An instance kept by an `onEject` veto is *not* disposed (it stays live and in use). If a resource still accumulates across reloads, its owner is missing a `@MoostDispose` hook. This holds across repeated reloads (exactly one runtime stays live) and after a boot that failed part-way — the instances that boot left behind are disposed by the next reload.
 
+### What a reload rebuilds, and what it keeps
+
+A reload rebuilds three kinds of DI instance, and keeps everything else:
+
+- instances of classes whose module was edited, or imports an edited file;
+- every singleton that takes `Moost` or an adapter (`MoostHttp`, …) as a constructor parameter — the app itself is new on every reload;
+- every singleton that depends on one of the above, however deep: `Moost → Database → Repository → Worker` rebuilds all four.
+
+Everything rebuilt is disposed first (above). A singleton with none of those dependencies is **kept**: the same instance serves the new app and is not disposed.
+
+| You want                                                  | Do this                                                                                                     |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| A per-boot owner (DB connection, queue consumer, cache) rebuilt on every reload | Give it a `Moost` constructor parameter (`constructor(app: Moost)`) and a `@MoostDispose` hook. Its consumers follow automatically. |
+| A process-lifetime singleton (telemetry, metrics exporter) kept across reloads | Keep `Moost`, adapters and rebuilt classes out of its constructor. If it is a registered controller, its [`@MoostInit`](/moost/app-init) hook runs **again** on the same instance for every new app — make the hook idempotent. |
+| A class-level `@Provide` factory to see the new boot      | Nothing — factories run again after every reload, so every instance built for the new app receives the new value (a kept instance keeps what it was injected). Read the current state inside the factory (`() => currentSpace().get(Model)`), don't capture it at decoration time. |
+
+Dependency-based rebuilding reads constructor parameter types from decorator metadata. A parameter whose type is imported with `import type` (or is an interface) is invisible to it, so the consumer is kept even when its dependency is rebuilt — import classes you inject as values.
+
+::: info Since 0.6.38
+Earlier versions stopped the cascade after one level: in `Moost → Database → Repository → Worker` the `Worker` survived holding the disposed `Database` (on every other reload). And with `@prostojs/infact` 0.5.0 a class-level `@Provide` factory ran once per process, so a controller rebuilt after a reload was still injected what the first boot resolved — for example a table bound to a closed connection. 0.6.38 depends on infact 0.5.1, which re-runs factories after each reload.
+:::
+
 For production shutdown, where no reload ever happens, call [`app.disposeOnSignals()`](/moost/app-dispose#graceful-shutdown) in the entry: it runs the same hooks on SIGTERM/SIGINT, and unlike a hand-written `process.once(...)` it registers one listener per process, so the dev server re-executing the entry re-targets it instead of stacking one handler per reload. Under the dev server Vite's own SIGTERM listener closes the server and exits, which can race `dispose()`; SIGINT (Ctrl-C) is untouched by Vite.
 
 Files outside the entry graph never touch the Moost app:

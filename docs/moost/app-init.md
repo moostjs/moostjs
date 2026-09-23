@@ -95,10 +95,10 @@ Pass `opts.predicate` to narrow by event-specific criteria without coupling core
 | Concern          | Behavior                                                                                                                                            |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **When**         | After all controllers are bound, before the `adapter.onInit` loop. The full overview is guaranteed complete.                                         |
-| **How often**    | Exactly once per `init()`.                                                                                                                           |
-| **Scope**        | SINGLETON controllers only. `@MoostInit` on a `FOR_EVENT` controller throws at bind (there is no init-time instance).                                |
+| **How often**    | Exactly once per `init()` — per app, not per instance. A singleton kept across a dev-server reload runs its hooks again on the same instance for the new app ([what a reload keeps](/webapp/vite#what-a-reload-rebuilds-and-what-it-keeps)). |
+| **Scope**        | SINGLETON controllers only — classes registered with `registerControllers` or `@ImportController`. A hook on a class that is only injected somewhere never runs. `@MoostInit` on a `FOR_EVENT` controller throws at bind (there is no init-time instance). |
 | **Ordering**     | Ascending `priority` (default `0`), then registration order — same mental model as [interceptor](/moost/interceptors) priority. Lower runs first.    |
-| **Arguments**    | Resolved through the [resolve pipe](/moost/pipes/resolve) **only** — `@InjectMoost`, `@Inject`, `@Const`, and other `@Resolve`-based params work.    |
+| **Arguments**    | Resolved through the [resolve pipe](/moost/pipes/resolve) **only** — `@InjectMoost`, `@Const`, and other `@Resolve`-based params work. `@Inject` does **not** (it resolves constructor parameters only; on a method param it yields `undefined`) — inject into the constructor instead.    |
 | **Interceptors** | **Not** applied. Guards/auth/error interceptors are request concerns; init hooks call the method directly.                                           |
 | **Transform/Validate pipes** | **Not** applied — only the resolve pipe runs. Injected values are not validated or transformed.                                          |
 | **Async**        | Each hook is awaited.                                                                                                                                |
@@ -114,6 +114,8 @@ earlySetup() {}
 
 - **DO** use it for one-time setup that depends on the complete overview — deriving paths, warming caches, validating config.
 - **DO** put the result somewhere request handlers can read it (an injectable holder), rather than recomputing per request.
+- **DO** make a hook idempotent when its singleton can outlive a dev-server reload (it has no `Moost` dependency) — it runs again for every new app.
+- **DON'T** put `@MoostInit` on a class that is only injected — hooks are collected from registered controllers; register the class or move the hook to one.
 - **DON'T** call request-scoped composables (`useRequest`, `useHeaders`, `useRouteParams`, `useCookies`) — there is no event at init; they will fail.
 - **DON'T** put `@MoostInit` on a `FOR_EVENT` controller — it throws at bind. Use a SINGLETON.
 - **DON'T** rely on it for per-request logic — it runs once at boot, not per event.

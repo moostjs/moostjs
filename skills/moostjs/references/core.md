@@ -77,8 +77,8 @@ class AuthController {
 | # | Invariant |
 |---|---|
 | 1 | Runs after all `bindHandler` calls, before `adapter.onInit` — `getControllersOverview()` is complete (incl. `handlers[].registeredAs[].path`). A SINGLETON constructor runs *during* bind and sees a PARTIAL overview — use `@MoostInit` instead. |
-| 2 | Runs exactly once per `init()`. |
-| 3 | SINGLETON controllers only. `@MoostInit` on a `FOR_EVENT` controller throws at bind. |
+| 2 | Runs exactly once per `init()` — per APP, not per instance. A singleton KEPT across a dev reload (no `Moost`/adapter/rebuilt dep in its ctor — see [vite.md](vite.md#gotchas)) runs its hooks AGAIN on the same instance for each new app → make such hooks idempotent. |
+| 3 | SINGLETON controllers only, and only REGISTERED ones (`registerControllers` / `@ImportController`) — hooks are collected at bind; a `@MoostInit` on a class that is only injected never runs. `@MoostInit` on a `FOR_EVENT` controller throws at bind. |
 | 4 | Args resolve via the RESOLVE pipe ONLY — resolver-based decorators (`@InjectMoost`/`@Resolve`/`@Const`/`@HandlerPaths`) work; `@Inject` is a no-op on method params (yields `undefined` — it works only on constructor params); TRANSFORM/VALIDATE pipes and interceptors do NOT run. |
 | 5 | Runs in a synthetic init context — kind-specific request composables (`useRequest`/`useHeaders`/`useRouteParams`/`useCookies`) fail (no request event data); context-based composables (`useLogger`, `useControllerContext`, `useHandlerPaths`) work, as do DI and `app.getLogger()`. |
 | 6 | Ordered by `priority` ascending (default 0) across ALL controllers, then registration order. |
