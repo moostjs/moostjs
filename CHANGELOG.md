@@ -1,3 +1,12 @@
+## [0.6.39](https://github.com/moostjs/moostjs/compare/v0.6.38...v0.6.39) (2026-09-23)
+
+
+### Features
+
+* **vite:** prod server host option, listen() resolves with the bound server, rejects on bind error ([0e7028d](https://github.com/moostjs/moostjs/commit/0e7028d01f5a982a953eb37f3361cd65559fdc3f))
+
+
+
 ## [0.6.38](https://github.com/moostjs/moostjs/compare/v0.6.37...v0.6.38) (2026-09-23)
 
 
