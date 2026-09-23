@@ -1,3 +1,12 @@
+## [0.6.38](https://github.com/moostjs/moostjs/compare/v0.6.37...v0.6.38) (2026-09-23)
+
+
+### Bug Fixes
+
+* **vite:** HMR ejects dependants at every depth through one fixed-point pass ([cdab0f6](https://github.com/moostjs/moostjs/commit/cdab0f62b1fcddb8e8e58c744b3cc38d0d3bdd50))
+
+
+
 ## [0.6.37](https://github.com/moostjs/moostjs/compare/v0.6.36...v0.6.37) (2026-09-17)
 
 
