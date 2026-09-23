@@ -1,13 +1,12 @@
-import { clearGlobalWooks, disposeInstances, getMoostInfact, getMoostMate, Moost } from 'moost'
+import { clearGlobalWooks, disposeInstances, getMoostInfact, getMoostMate } from 'moost'
 
-import type { createAdapterDetector } from './adapter-detector'
 import type { TMoostViteDevOptions } from './moost-vite'
 import { getLogger } from './utils'
 
 /**
  * Clean up Moost’s global containers and optionally remove specific instances from the registry.
  *
- * Every instance actually removed from a registry is **disposed** before the
+ * Every instance actually removed from the registry is **disposed** before the
  * caches are dropped: its `@MoostDispose` hooks (or `Symbol.asyncDispose` /
  * `Symbol.dispose`) are awaited, so a singleton owning a connection, consumer,
  * timer or file handle releases it instead of leaking one copy per reload. An
@@ -18,74 +17,44 @@ import { getLogger } from './utils'
  * @returns the instances that were ejected (and therefore disposed)
  */
 export async function moostRestartCleanup(
-  adapters: ReturnType<typeof createAdapterDetector>[],
   onEject?: TMoostViteDevOptions['onEject'],
   cleanupInstances?: Set<string>,
 ): Promise<object[]> {
   const logger = getLogger()
   const infact = getMoostInfact() as unknown as {
     registry: Record<symbol, object>
-    scopes: Record<string | symbol, Record<symbol, object>>
   } & ReturnType<typeof getMoostInfact>
 
-  const { registry, scopes } = infact
-
-  const registries = [registry, ...Object.values(scopes)]
-
-  // Clear any internal references
+  // Only the singleton registry can survive a reload. `_cleanup()` drops the
+  // per-event scopes (in-flight requests of the old app) and, since
+  // @prostojs/infact 0.5.1, the provide-factory cache — so a class-level
+  // `@Provide` factory runs again against the new boot instead of handing a
+  // retained class what the previous boot resolved.
+  const { registry } = infact
   infact._cleanup()
 
   const mate = getMoostMate<{ __vite_id?: string }>()
 
-  /** Instances removed from a registry by this run — disposed below, before the caches drop. */
+  /** Instances removed from the registry by this run — disposed below, before the caches drop. */
   const ejected: object[] = []
 
   // If we have specific IDs to remove, do so
   if (cleanupInstances) {
-    for (const reg of registries) {
-      for (const key of Object.getOwnPropertySymbols(reg)) {
-        const instance = reg[key]
-        const viteId = mate.read(instance)?.__vite_id
-        if (viteId && cleanupInstances.has(viteId)) {
-          logger.debug(`🔃 Replacing "${constructorName(instance)}"`)
-          delete reg[key]
-          ejected.push(instance)
-        }
+    for (const key of Object.getOwnPropertySymbols(registry)) {
+      const instance = registry[key]
+      const viteId = mate.read(instance)?.__vite_id
+      if (viteId && cleanupInstances.has(viteId)) {
+        logger.debug(`🔃 Replacing "${constructorName(instance)}"`)
+        delete registry[key]
+        ejected.push(instance)
       }
-
-      for (const key of Object.getOwnPropertySymbols(reg)) {
-        const instance = reg[key]
-        scanParams(instance, (type: Function) => {
-          if (
-            (type === Moost || type instanceof Moost || type.prototype instanceof Moost) &&
-            (!onEject || onEject(instance, type))
-          ) {
-            delete reg[key]
-            ejected.push(instance)
-            logger.debug(
-              `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "Moost")`,
-            )
-            return true
-          }
-          for (const adapter of adapters) {
-            if (adapter.compare(type) && (!onEject || onEject(instance, type))) {
-              delete reg[key]
-              ejected.push(instance)
-              logger.debug(
-                `✖️  Ejecting "${constructorName(instance)}" (depends on re-instantiated "${
-                  adapter.constructor!.name
-                }")`,
-              )
-              return true
-            }
-          }
-        })
-      }
-      // need to remove instances with unknown dependencies
-      clearDependantRegistry(reg, onEject, ejected)
     }
+
+    // Eject, transitively, everything that depends on a class that is not in
+    // the registry — the re-instantiated `Moost` and adapters never are, nor is
+    // anything just removed above.
+    clearDependantRegistry(registry, onEject, ejected)
     infact.registry = registry
-    infact.scopes = scopes
   }
 
   // Run the ejected instances' dispose hooks BEFORE the Mate cache is dropped
@@ -128,23 +97,26 @@ async function disposeEjected(ejected: object[]) {
   }
 }
 
+/**
+ * Ejects, to a fixed point, every instance whose constructor dependency is not
+ * in the registry: an instance ejected in one pass ejects its consumers in the
+ * next (Moost → Database → Repository → Worker loses the whole chain). An
+ * `onEject` veto keeps the instance present, and with it its consumers.
+ */
 function clearDependantRegistry(
   registry: Record<symbol, object>,
   onEject: TMoostViteDevOptions['onEject'] | undefined,
   ejected: object[],
 ) {
   const logger = getLogger()
-  const objSet = new Set()
   let somethingIsDeleted = true
   while (somethingIsDeleted) {
     somethingIsDeleted = false
-    for (const key of Object.getOwnPropertySymbols(registry)) {
+    const keys = Object.getOwnPropertySymbols(registry)
+    const present = new Set<unknown>(keys.map((key) => registry[key].constructor))
+    for (const key of keys) {
       const instance = registry[key]
-      objSet.add(Object.getPrototypeOf(instance).constructor)
-    }
-    for (const key of Object.getOwnPropertySymbols(registry)) {
-      const instance = registry[key]
-      if (checkAndEject(instance, objSet, onEject, registry, key, logger)) {
+      if (checkAndEject(instance, present, onEject, registry, key, logger)) {
         ejected.push(instance)
         somethingIsDeleted = true
       }
@@ -165,9 +137,7 @@ function checkAndEject(
     if (!objSet.has(type) && (!onEject || onEject(instance, type))) {
       delete registry[key]
       logger.debug(
-        `✖️  Ejecting "${constructorName(instance)}" (depends on "${
-          type.name
-        }" which is not in registry)`,
+        `✖️  Ejecting "${constructorName(instance)}" (depends on "${type.name}", rebuilt by this reload)`,
       )
       ejected = true
       return true

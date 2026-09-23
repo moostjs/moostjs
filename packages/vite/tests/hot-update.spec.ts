@@ -17,21 +17,33 @@ import { beforeAll, describe, expect, it } from 'vitest'
  * Requires `pnpm build vite` to have run.
  */
 
-interface THealth {
+/** One JSON probe of the fixture app (`getJson` in the driver). */
+interface TProbe<TJson> {
   status: number
   text: string
-  json: {
-    ok: boolean
-    boot: number
-    value: string
-    tag: string
-    res: string[]
-    jobs: string[]
-    ticks: Record<string, number>
-    fails: string[]
-    ready: number
-  } | null
+  json: TJson | null
 }
+
+type THealth = TProbe<{
+  ok: boolean
+  boot: number
+  value: string
+  tag: string
+  res: string[]
+  jobs: string[]
+  ticks: Record<string, number>
+  fails: string[]
+  ready: number
+}>
+
+type TChainProbe = TProbe<{
+  boot: number
+  worker: number
+  db: number
+  dbClosed: boolean
+  latestDb: number
+  log: string[]
+}>
 
 interface TReport {
   baseline: { health: THealth; page: string; clientMod: string }
@@ -46,6 +58,7 @@ interface TReport {
   repeatedReloads: { first: THealth; second: THealth }
   failedStart: { failed: THealth; recovered: THealth }
   readyGate: { before: number; count: number; violations: THealth[]; last: THealth }
+  indirectChain: { probes: TChainProbe[] }
 }
 
 const DRIVER = fileURLToPath(new URL('hot-update.driver.mjs', import.meta.url))
@@ -212,6 +225,28 @@ describe('moost-vite scoped hot reload', () => {
     // with the previous boot's `ready` (or fall through to the SPA fallback).
     expect(violations).toEqual([])
     expect(last.json?.ready).toBe(last.json?.boot)
+  })
+
+  it('rebuilds a singleton that reaches the app only through other singletons, on every reload', () => {
+    const { probes } = report.indirectChain
+    expect(probes).toHaveLength(3)
+    for (const probe of probes) {
+      expect(probe.status).toBe(200)
+      // The Worker serving this boot is wired to the CURRENT Database — not to a
+      // predecessor that was ejected (and closed by its @MoostDispose hook) on an
+      // earlier reload. Before the fix, every other reload kept the old Worker.
+      expect(probe.json?.dbClosed).toBe(false)
+      expect(probe.json?.db).toBe(probe.json?.latestDb)
+    }
+    // One fresh Worker per reload.
+    const workers = probes.map((p) => p.json?.worker)
+    expect(new Set(workers).size).toBe(3)
+
+    // Every Database but the live one was closed exactly once.
+    const log = probes.at(-1)?.json?.log ?? []
+    const ids = (prefix: string) =>
+      log.filter((e) => e.startsWith(prefix)).map((e) => e.slice(prefix.length))
+    expect(ids('dbclose:')).toEqual(ids('dbopen:').slice(0, -1))
   })
 
   it('keeps reloading when a dispose hook throws', () => {

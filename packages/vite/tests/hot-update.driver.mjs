@@ -21,10 +21,9 @@ const FIXTURE_ROOT = fileURLToPath(new URL('fixture-tmp', import.meta.url))
  * `src/failing.ts` in its healthy (`fail: false`) or boot-breaking variant.
  * `FailOwner` opens its resource during `init()`; `FailController`, registered
  * after it, throws in the `fail` variant — so the boot dies *after* a provider
- * made it into the DI registry. Both live in one module on purpose: editing it
- * is what ejects (and therefore disposes) the instance the failed boot left
- * behind, since esbuild emits no `design:paramtypes` for a dependency-based
- * eject (see the note on the fixture below).
+ * made it into the DI registry. Both live in one module on purpose: FailOwner
+ * has no constructor dependencies, so editing its own module is what ejects
+ * (and therefore disposes) the instance the failed boot left behind.
  */
 const failingSource = (fail) => `import { Injectable, MoostDispose } from 'moost'
 
@@ -68,11 +67,17 @@ ${fail ? "    throw new Error('fixture boot failure')" : '    // this variant bo
  * `resource.ts` holds the disposal fixtures: a singleton that "opens" a fake
  * resource on construction and releases it from a `@MoostDispose` hook, plus a
  * sibling whose hook throws. `jobs.ts` owns a recurring timer (the "duplicated
- * job per reload" shape), `failing.ts` the partially-failed-boot shape. All are
- * registered explicitly rather than constructor-injected because Vite transforms
- * TS with esbuild, which never emits `design:paramtypes` — what matters here is
- * that they are SINGLETON `@Injectable()` instances living in the DI registry,
- * exactly like an injected provider.
+ * job per reload" shape), `failing.ts` the partially-failed-boot shape. They
+ * have no constructor dependencies, so they are ejected only when their own
+ * module (or one it imports) changes; they are registered explicitly — what
+ * matters is that they are SINGLETON `@Injectable()` instances living in the DI
+ * registry, exactly like an injected provider.
+ *
+ * `database.ts` → `repository.ts` → `worker.ts` is a constructor-injected chain
+ * (the fixture tsconfig enables `emitDecoratorMetadata`, which Vite's Oxc
+ * transform honours) rooted in a `Moost` dependency: no module of it is ever
+ * edited, so every reload ejects it purely through DI — Database because it
+ * depends on the re-instantiated app, Repository and Worker transitively.
  *
  * The entry keeps the documented order (`listen()`, then an un-awaited `init()`):
  * the plugin captures and awaits the init promise itself, so a boot that dies
@@ -94,7 +99,8 @@ const FIXTURE_FILES = {
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   }
 }
 `,
@@ -106,6 +112,7 @@ import { FailController, FailOwner } from './failing'
 import { JobRunner } from './jobs'
 import { ReadyMarker } from './ready'
 import { BrokenResource, ResourceOwner } from './resource'
+import { ChainWorker } from './worker'
 
 const g = globalThis as Record<string, unknown>
 g.__fixture_boot = ((g.__fixture_boot as number) ?? 0) + 1
@@ -121,6 +128,7 @@ app.registerControllers(
   ReadyMarker,
   FailOwner,
   FailController,
+  ChainWorker,
 )
 void app.init()
 `,
@@ -252,6 +260,65 @@ export class ReadyMarker {
   }
 }
 `,
+  'src/database.ts': `import { Injectable, Moost, MoostDispose } from 'moost'
+
+import { globalLog, nextId } from './fixture-state'
+
+/** An app-lifetime connection owner: it depends on the app, so every reload replaces it. */
+@Injectable()
+export class Database {
+  id = nextId('__fixture_db_seq')
+
+  closed = false
+
+  constructor(readonly app: Moost) {
+    globalLog('__fixture_chain_log').push('dbopen:' + String(this.id))
+  }
+
+  @MoostDispose()
+  close() {
+    this.closed = true
+    globalLog('__fixture_chain_log').push('dbclose:' + String(this.id))
+  }
+}
+`,
+  'src/repository.ts': `import { Injectable } from 'moost'
+
+import { Database } from './database'
+
+@Injectable()
+export class Repository {
+  constructor(readonly db: Database) {}
+}
+`,
+  'src/worker.ts': `import { Controller } from 'moost'
+import { Get } from '@moostjs/event-http'
+
+import { nextId } from './fixture-state'
+import { Repository } from './repository'
+
+/** Two DI hops away from the app: Worker → Repository → Database → Moost. */
+@Controller('api')
+export class ChainWorker {
+  id = nextId('__fixture_worker_seq')
+
+  constructor(readonly repo: Repository) {}
+
+  @Get('chain')
+  chain() {
+    const g = globalThis as Record<string, unknown>
+    const db = this.repo.db
+    return {
+      boot: g.__fixture_boot as number,
+      worker: this.id,
+      db: db.id,
+      dbClosed: db.closed,
+      latestDb: g.__fixture_db_seq as number,
+      log: (g.__fixture_chain_log as string[]) ?? [],
+    }
+  }
+}
+`,
   'src/value.ts': `export const VALUE = 'v1'
 `,
   'src/config.json': `{ "tag": "a" }
@@ -336,8 +403,8 @@ try {
   await server.listen()
   const baseUrl = `http://localhost:${server.httpServer.address().port}`
 
-  const getHealth = async () => {
-    const res = await fetch(`${baseUrl}/api/health`)
+  const getJson = async (path) => {
+    const res = await fetch(`${baseUrl}${path}`)
     const text = await res.text()
     let json = null
     try {
@@ -347,6 +414,9 @@ try {
     }
     return { status: res.status, text: text.slice(0, 200), json }
   }
+  const getHealth = () => getJson('/api/health')
+  /** The app boot that answered a health probe (0 when none did). */
+  const bootOf = (h) => h.json?.boot ?? 0
   const getPage = async () => await fetch(`${baseUrl}/`).then((res) => res.text())
   const getClientMod = async () =>
     await fetch(`${baseUrl}/src/ui/notify.ts`).then((res) => res.text())
@@ -400,7 +470,7 @@ try {
   // 6. entry edit reloads the app
   editFile('src/main.ts', `${FIXTURE_FILES['src/main.ts']}\n// touched\n`)
   report.entryTouch = {
-    health: await pollUntil(getHealth, (h) => (h.json?.boot ?? 0) >= 4),
+    health: await pollUntil(getHealth, (h) => bootOf(h) >= 4),
   }
 
   // 7. broken server graph answers 502, next edit recovers
@@ -478,13 +548,13 @@ try {
   // merely-evaluated app shows `ready` lagging `boot`. Hammer the server from the
   // moment of the edit until the new boot shows up and keep every sample.
   const readyBaseline = await getHealth()
-  const readyBefore = readyBaseline.json?.boot ?? 0
+  const readyBefore = bootOf(readyBaseline)
   editFile('src/ready.ts', `${FIXTURE_FILES['src/ready.ts']}\n// touched\n`)
   const readySamples = []
   const readyDeadline = Date.now() + 15_000
   let readyLast = await getHealth()
   readySamples.push(readyLast)
-  while ((readyLast.json?.boot ?? 0) <= readyBefore && Date.now() < readyDeadline) {
+  while (bootOf(readyLast) <= readyBefore && Date.now() < readyDeadline) {
     readyLast = await getHealth()
     readySamples.push(readyLast)
   }
@@ -499,6 +569,22 @@ try {
     ),
     last: readyLast,
   }
+
+  // 13. indirect DI chain: Worker → Repository → Database → Moost, none of whose
+  // modules is edited. Each reload (triggered by an unrelated controller) ejects
+  // Database for depending on the re-instantiated app, and must eject Repository
+  // and Worker transitively — otherwise the new app keeps serving the old Worker,
+  // still wired to a Database whose @MoostDispose hook already closed it.
+  const getChain = () => getJson('/api/chain')
+  const chainProbes = []
+  let chainBoot = bootOf(await getHealth())
+  for (let i = 0; i < 3; i++) {
+    const seen = chainBoot
+    editFile('src/controller.ts', `${FIXTURE_FILES['src/controller.ts']}\n// chain ${String(i)}\n`)
+    chainBoot = bootOf(await pollUntil(getHealth, (h) => bootOf(h) > seen))
+    chainProbes.push(await getChain())
+  }
+  report.indirectChain = { probes: chainProbes }
 
   console.log(`__RESULT__ ${JSON.stringify(report)}`)
 } finally {
