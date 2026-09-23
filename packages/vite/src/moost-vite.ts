@@ -692,7 +692,6 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         ssrEntry: options.ssrEntry,
         serverEntry: options.serverEntry,
         prefix: prefixes,
-        port: options.port,
         ssrOutlet: options.ssrOutlet,
         ssrState: options.ssrState,
         ssrHead: options.ssrHead,

@@ -1,4 +1,6 @@
+import { once } from 'node:events'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import type { Server } from 'node:net'
 import type { TSSRHttpContextRunner, TSSRRender, TSSRRenderResult } from './utils'
 import {
   DEFAULT_SSR_HEAD,
@@ -28,6 +30,8 @@ export interface TSSRServerOptions {
   prefix?: string | string[]
   /** Override: port number (default: process.env.PORT || 3000) */
   port?: number
+  /** Override: bind address, e.g. '127.0.0.1' (default: process.env.HOST, else all interfaces) */
+  host?: string
   /** Override: client build directory (default: 'dist/client') */
   clientDir?: string
   /** Override: HTML placeholder for SSR content */
@@ -50,8 +54,13 @@ export interface TSSRServerOptions {
 export interface TSSRServer {
   /** Add Connect-compatible middleware (runs in both dev and prod) */
   use(middleware: TMiddleware): void
-  /** Start the server */
-  listen(port?: number): Promise<void>
+  /**
+   * Start the server; resolves with the bound server (for `address()` / `close()`)
+   * and rejects on a bind error (`EADDRINUSE`, `EACCES`, bad host).
+   * `port`/`host` and the matching options apply in production only — in dev,
+   * Vite's `server.port`/`server.host` do.
+   */
+  listen(port?: number, host?: string): Promise<Server>
 }
 
 // Declared globally by the plugin's `define` during build:app.
@@ -63,6 +72,17 @@ declare const __MOOST_SSR_OUTLET__: string
 declare const __MOOST_SSR_STATE__: string
 declare const __MOOST_SSR_HEAD__: string
 declare const __MOOST_SSR_FORWARDING__: boolean
+
+/** URL of the address the server actually bound (wildcard binds print as localhost). */
+function serverUrl(server: Server): string {
+  const addr = server.address()
+  if (!addr || typeof addr === 'string') {
+    return String(addr)
+  }
+  const wildcard = addr.address === '::' || addr.address === '0.0.0.0'
+  const host = wildcard ? 'localhost' : addr.family === 'IPv6' ? `[${addr.address}]` : addr.address
+  return `http://${host}:${addr.port}`
+}
 
 function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined))
@@ -132,7 +152,12 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
       use(mw) {
         userMiddlewares.push(mw)
       },
-      async listen(_port) {
+      async listen(port, host) {
+        if ((port ?? host ?? opts.port ?? opts.host) !== undefined) {
+          console.warn(
+            '[moost-vite] port/host passed to createSSRServer() or listen() are ignored in dev — set server.port / server.host in vite.config instead.',
+          )
+        }
         for (const mw of userMiddlewares) {
           vite.middlewares.use(mw as any)
         }
@@ -141,6 +166,8 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
         }
         await vite.listen()
         vite.printUrls()
+        // vite.listen() throws when there is no HTTP server (middlewareMode).
+        return vite.httpServer as Server
       },
     }
   }
@@ -170,6 +197,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const ssrForwarding =
     (opts.ssrFetchForwarding as boolean | undefined) ?? __MOOST_SSR_FORWARDING__ ?? true
   const defaultPort = (opts.port as number) || Number(process.env.PORT) || 3000
+  const defaultHost = (opts.host as string | undefined) ?? process.env.HOST
 
   // Read HTML template once at startup
   const template = await fs.readFile(path.resolve(clientDir, 'index.html'), 'utf8')
@@ -277,9 +305,8 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
     use(mw) {
       userMiddlewares.push(mw)
     },
-    async listen(port) {
-      const p = port || defaultPort
-      createHttpServer((req, res) => {
+    async listen(port, host) {
+      const server = createHttpServer((req, res) => {
         const url = req.url || '/'
 
         // 1. User middlewares (sequential)
@@ -302,9 +329,11 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
           serveStatic(req, res)
         }
         runNext()
-      }).listen(p, () => {
-        console.log(`Server running at http://localhost:${p}`)
       })
+      server.listen(port || defaultPort, host || defaultHost)
+      await once(server, 'listening')
+      console.log(`Server running at ${serverUrl(server)}`)
+      return server
     },
   }
 }

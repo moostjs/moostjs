@@ -139,7 +139,14 @@ const app = await createSSRServer()
 await app.listen()
 ```
 
-`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead` — in production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?)`.
+`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `host`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead` — in production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?, host?)`.
+
+**Port and bind address.** In production, `listen(port?, host?)` resolves each value from the first one that is set:
+
+- port: the `listen` argument, then the `port` option, then `PORT`, then `3000`
+- host: the `listen` argument, then the `host` option, then `HOST`, then Node's default (all interfaces)
+
+`HOST=127.0.0.1` keeps a built app loopback-only behind a reverse proxy, and it works with the generated server entry too. `await app.listen()` resolves with the bound Node server, which you can `close()` for a graceful shutdown. It rejects on a bind error (`EADDRINUSE`, `EACCES`, unknown host). In dev, Vite's `server.port` / `server.host` apply instead, and a port or host passed to `createSSRServer` / `listen` only logs a warning.
 
 ::: tip
 `serverEntry` is only used during `vite build`. In dev, the plugin handles SSR/SPA fallback directly. If you need custom middleware in dev too, run `tsx server.ts` instead of `vite`.
