@@ -5,6 +5,7 @@ import {
   createHttpApp,
   HttpError,
   useRequest,
+  useResponse,
   WooksHttp,
   WooksHttpResponse,
 } from '@wooksjs/event-http'
@@ -232,8 +233,16 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         manualUnscope: true,
         hooks: {
           init: ({ unscope }) => {
-            const { raw } = useRequest()
-            raw.on('end', unscope) // will unscope on request end
+            if (handler.method === 'UPGRADE') {
+              // An upgraded socket never completes an HTTP response.
+              useRequest().raw.on('end', unscope)
+              return
+            }
+            // Release the event's DI scope once the RESPONSE is done (sent or
+            // aborted). The request's own 'end'/'close' fire as soon as its body
+            // is consumed — FOR_EVENT dependencies resolved after reading the
+            // body (guards, write hooks) would hit an unregistered scope.
+            useResponse().getRawRes(true).once('close', unscope)
           },
         },
         targetPath,

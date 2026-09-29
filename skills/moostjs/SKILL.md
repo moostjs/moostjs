@@ -77,7 +77,7 @@ Other entry points:
 
 ## Cross-cutting facts
 
-**DI scopes** — `@Injectable()` / `@Injectable(true)` / `@Injectable('SINGLETON')` = one instance for app lifetime. `@Injectable('FOR_EVENT')` = fresh instance per event. `@Controller()` implicitly sets `@Injectable(true)` (SINGLETON). Use `'FOR_EVENT'` when class properties hold per-request state or when using property-level ref/resolver decorators. FOR_EVENT requires an active event context (composables don't work in SINGLETON constructors).
+**DI scopes** — `@Injectable()` / `@Injectable(true)` / `@Injectable('SINGLETON')` = one instance for app lifetime. `@Injectable('FOR_EVENT')` = fresh instance per event. `@Controller()` implicitly sets `@Injectable(true)` (SINGLETON). Use `'FOR_EVENT'` when class properties hold per-request state or when using property-level ref/resolver decorators. FOR_EVENT requires an active event context (composables don't work in SINGLETON constructors). HTTP: the event scope lives until the response closes (since 0.6.40; through 0.6.39 it ended when the request body finished, so FOR_EVENT resolved after `@Body()` threw `scope … isn't registered`).
 
 **Wooks composables work inside handlers** — All `@wooksjs/*` composables (e.g., `useRequest`, `useResponse`, `useHeaders`) work directly in Moost handlers; they run in the same event context.
 
