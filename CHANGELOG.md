@@ -1,3 +1,12 @@
+## [0.6.40](https://github.com/moostjs/moostjs/compare/v0.6.39...v0.6.40) (2026-09-29)
+
+
+### Bug Fixes
+
+* **event-http:** release the event DI scope when the response closes, not on request body end ([de59e8d](https://github.com/moostjs/moostjs/commit/de59e8d213c09c77c4df573d802882a8a6deb4b0))
+
+
+
 ## [0.6.39](https://github.com/moostjs/moostjs/compare/v0.6.38...v0.6.39) (2026-09-23)
 
 
