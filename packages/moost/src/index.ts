@@ -40,7 +40,7 @@ export {
   resetContextInjector,
 } from '@wooksjs/event-core'
 export type { TProvideRegistry } from '@prostojs/infact'
-export { createProvideRegistry, createReplaceRegistry } from '@prostojs/infact'
+export { createProvideRegistry, createReplaceRegistry, getClassKey } from '@prostojs/infact'
 export { getConstructor, isConstructor } from '@prostojs/mate'
 export type { TControllerOverview, TContextInjectorHook } from './types'
 export type { Mate, TMateParamMeta } from '@prostojs/mate'

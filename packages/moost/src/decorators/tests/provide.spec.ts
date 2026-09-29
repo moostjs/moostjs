@@ -1,16 +1,21 @@
+import { getClassKey } from '@prostojs/infact'
+
 import { getMoostMate, getMoostInfact } from '../../metadata'
 import {
   EmailService,
   NotificationService,
+  PrimaryDbToken,
   ProvideTestClass,
+  ReplicaDbToken,
   ToInjectTestClass,
+  TwinTokenConsumer,
 } from './provide.artifacts'
 import { describe, it, expect } from 'vitest'
 
 describe('provide.decorator', () => {
   it('must set provide meta', () => {
     const meta = getMoostMate().read(ProvideTestClass)
-    const key = Symbol.for(ToInjectTestClass as unknown as string)
+    const key = getClassKey(ToInjectTestClass)
     expect(meta).toHaveProperty('provide')
     if (meta?.provide) {
       expect(Object.getOwnPropertySymbols(meta.provide).includes(key)).toBe(true)
@@ -29,9 +34,9 @@ describe('provide.decorator', () => {
     if (meta?.params) {
       expect(meta.params).toHaveLength(1)
       expect(meta.params[0]).toHaveProperty('inject')
-      // class keys are normalized to the same Symbol.for(...) key
+      // class keys are normalized to the identity key
       // that createProvideRegistry stores them under
-      expect(meta.params[0].inject).toBe(Symbol.for(ToInjectTestClass as unknown as string))
+      expect(meta.params[0].inject).toBe(getClassKey(ToInjectTestClass))
     }
   })
   it('must resolve class-keyed @Inject from class-keyed @Provide', async () => {
@@ -39,5 +44,11 @@ describe('provide.decorator', () => {
     expect(instance).toBeInstanceOf(NotificationService)
     expect(instance?.email).toBeInstanceOf(EmailService)
     expect(instance?.email.transport).toBe('smtp')
+  })
+  it('must resolve identical-source class tokens to their own @Provide', async () => {
+    expect(String(PrimaryDbToken)).toBe(String(ReplicaDbToken))
+    const instance = await getMoostInfact().get(TwinTokenConsumer)
+    expect(instance?.primary).toBe('primary')
+    expect(instance?.replica).toBe('replica')
   })
 })

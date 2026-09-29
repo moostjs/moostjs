@@ -1,5 +1,6 @@
 // oxlint-disable max-classes-per-file -- one isolated fixture per test case
 import { beforeEach, describe, expect, it } from 'vitest'
+import { getClassKey } from '@prostojs/infact'
 
 import { Controller, Provide } from '../decorators'
 import { setDefaultLogger } from '../logger'
@@ -96,8 +97,8 @@ describe('D4 findTokenProviders / registerDiagnosticsSource', () => {
     app.registerControllers(ClassTokenProviderController)
     await app.init()
 
-    // @Inject(DbSpace) normalizes the class token to the same global symbol
-    const token = Symbol.for(String(DbSpace))
+    // @Inject(DbSpace) normalizes the class token to the same identity key
+    const token = getClassKey(DbSpace)
     expect(findTokenProviders(token)).toEqual(['ClassTokenProviderController'])
   })
 
@@ -150,8 +151,9 @@ describe('D4 formatScopeHint', () => {
 
   it('stringifies symbol tokens readably', () => {
     expect(formatScopeHint(Symbol.for('MY_SYM'), ['A'])).toContain('Token "MY_SYM"')
-    // class tokens are keyed by Symbol.for(<class source>) — render the class name
-    expect(formatScopeHint(Symbol.for('class DbSpace {\n}'), ['A'])).toContain('Token "DbSpace"')
+    // class tokens are keyed by Symbol(<class name>) — render the class name
+    class DbSpace {}
+    expect(formatScopeHint(getClassKey(DbSpace), ['A'])).toContain('Token "DbSpace"')
   })
 })
 

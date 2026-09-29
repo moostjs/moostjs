@@ -1,5 +1,5 @@
 import type { TProvideFn } from '@prostojs/infact'
-import { createProvideRegistry, createReplaceRegistry } from '@prostojs/infact'
+import { createProvideRegistry, createReplaceRegistry, getClassKey } from '@prostojs/infact'
 
 import type { TClassConstructor } from '../common-types'
 import { getInfactScopeVars } from '../metadata'
@@ -47,10 +47,10 @@ export function Replace(type: TClassConstructor, newType: TClassConstructor): Cl
  * @param type - string or class constructor
  */
 export function Inject(type: string | TClassConstructor): ParameterDecorator & PropertyDecorator {
-  // Class keys must be normalized to the same `Symbol.for(...)` key that
-  // `createProvideRegistry` stores them under, otherwise the provide-registry
+  // Class keys must be normalized to the key `createProvideRegistry` stores
+  // them under (the class's identity key), otherwise the provide-registry
   // lookup (a plain property access in @prostojs/infact) never matches.
-  const key = typeof type === 'string' ? type : Symbol.for(String(type))
+  const key = typeof type === 'string' ? type : getClassKey(type)
   return getMoostMate().decorate('inject', key)
 }
 

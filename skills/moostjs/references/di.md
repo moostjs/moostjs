@@ -43,7 +43,7 @@ constructor(
 
 | # | Invariant |
 |---|---|
-| 1 | `@Inject(SomeClass)` matches class-keyed provide entries (the key is normalized to the registry's symbol). It is usually redundant: class-typed constructor params resolve automatically by type, consulting the provide registry. |
+| 1 | `@Inject(SomeClass)` matches class-keyed provide entries (the key is normalized to the registry's key, `getClassKey(SomeClass)`). It is usually redundant: class-typed constructor params resolve automatically by type, consulting the provide registry. |
 | 2 | `@Inject` on handler/`@MoostInit` method params or on properties is a no-op — yields `undefined` regardless of registration (only Infact's constructor path consumes `inject` meta). Use constructor injection or `@Resolve`-based decorators instead. |
 | 3 | A missing key on a non-`@Optional()` constructor param throws `Could not inject ...` at instantiation. |
 | 4 | Subclassing: a decorated subclass with no own constructor inherits the parent's ctor params automatically; an entirely undecorated subclass inherits NOTHING (not injectable). Rules + bind-time warnings: [decorators.md#inheritance](decorators.md#inheritance). |
@@ -81,6 +81,8 @@ app.setReplaceRegistry(replace)
 ```
 
 Registries merge — later entries override earlier ones with the same key.
+
+Class keys are by **constructor identity** (`getClassKey(Class)` → a per-class `Symbol(name)`, exported from `moost`): two classes with identical bodies (`const LoggerToken = class {}`, `const UserToken = class {}`) are distinct tokens in provide/replace registries and singleton slots. `≤ 0.6.40` keyed by source text, so identical-source classes (bare `class {}` tokens, abstract token classes after a bundler erased their members) were ONE token — replacing one replaced the other. Diagnose a prod-only startup error `scope "…" isn't registered` / `Failed to instantiate` on a FOR_EVENT class, or a token resolving to an unrelated provider, as that version gap.
 
 ## Scoped injection
 
@@ -149,6 +151,7 @@ unscope()   // cleans up FOR_EVENT instances
 - `getNewMoostInfact()` — a fresh, isolated container configured for moost metadata (useful in tests)
 - `setInfactLoggingOptions({ newInstance?, warn?, error? })` — controls which DI events are logged (`newInstance` accepts `true`/`false`/`'SINGLETON'`/`'FOR_EVENT'`)
 - `getInfactScopeVars(scopeName)` — reads the vars object registered with `defineInfactScope` (what `@InjectScopeVars` uses under the hood)
+- `getClassKey(Class)` — the registry key of a class (identity symbol)
 
 ## Gotchas
 
@@ -165,7 +168,7 @@ unscope()   // cleans up FOR_EVENT instances
 import { Injectable, Inject, Provide, Replace, Circular, Optional,
          InjectFromScope, InjectScopeVars, defineInfactScope,
          InjectEventLogger, InjectMoostLogger, LoggerTopic,
-         createProvideRegistry, createReplaceRegistry,
+         createProvideRegistry, createReplaceRegistry, getClassKey,
          useScopeId, registerEventScope, getMoostInfact } from 'moost'
 ```
 

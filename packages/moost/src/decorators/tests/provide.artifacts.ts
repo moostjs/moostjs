@@ -20,3 +20,17 @@ export class EmailService {
 export class NotificationService {
   constructor(@Inject(EmailService) public email: EmailService) {}
 }
+
+/** Two class tokens with identical source text (`class {}`) — distinct DI keys. */
+export const PrimaryDbToken = class {}
+export const ReplicaDbToken = class {}
+
+@Injectable()
+@Provide(PrimaryDbToken, () => 'primary')
+@Provide(ReplicaDbToken, () => 'replica')
+export class TwinTokenConsumer {
+  constructor(
+    @Inject(PrimaryDbToken) public primary: string,
+    @Inject(ReplicaDbToken) public replica: string,
+  ) {}
+}

@@ -75,8 +75,8 @@ export function resetDiagnosticsSources() {
 /**
  * Scans the registered apps' controllers for a class-scoped `@Provide`
  * carrying `token` and returns the provider controller class names. Both
- * string and symbol keys are checked — symbol class-tokens match by identity
- * because infact keys them via `Symbol.for` (same class source, same symbol).
+ * string and symbol keys are checked — a class token matches because
+ * `@Inject(Class)` and `@Provide(Class)` both key it via infact's `getClassKey`.
  */
 export function findTokenProviders(token: string | symbol): string[] {
   const providers: string[] = []
@@ -91,16 +91,9 @@ export function findTokenProviders(token: string | symbol): string[] {
   return providers
 }
 
-const CLASS_SOURCE_RE = /^class\s+([\w$]+)/
-
-/** Renders a provide token readably: strings as-is, class-source symbols by class name. */
+/** Renders a provide token readably: strings as-is, symbols (class keys carry the class name) by description. */
 function stringifyToken(token: string | symbol): string {
-  if (typeof token === 'string') {
-    return token
-  }
-  const description = token.description ?? token.toString()
-  const match = CLASS_SOURCE_RE.exec(description)
-  return match ? match[1] : description
+  return typeof token === 'string' ? token : token.description || token.toString()
 }
 
 /**

@@ -180,4 +180,9 @@ class TenantService {
 - **`@Provide`/`@Inject` don't make a class injectable.** The class still needs `@Controller()` or `@Injectable()` — otherwise the DI container rejects it with `Class is not Injectable and not Optional`.
 - **A missing provide entry throws at instantiation.** If `@Inject('key')` has no matching entry anywhere up the tree, instance creation fails (unless the parameter is marked `@Optional()`).
 - **Provide factories run once per registry entry.** The result is cached and shared by every consumer in the subtree — a factory is *not* called once per consumer.
+- **Class tokens are matched by identity.** Every class is its own token, even when two bodies are identical: `const LoggerToken = class {}` and `const UserToken = class {}` never share a provide entry, a replacement or a singleton. Export a token from one module and import it everywhere. `getClassKey(Class)` (exported from `moost`) returns the key a class is filed under.
 - **Register custom scopes before they are used.** `@InjectFromScope('name')` throws if `defineInfactScope('name', ...)` was not called first.
+
+::: warning Version note
+Up to and including `0.6.40`, class tokens were keyed by their source text, so two classes with identical bodies were one token — a bare `class {}`, or an abstract token class once a bundler erased its members. Replacing or providing one hit the other too; typically a production build failed at startup with `scope … isn't registered` when a `FOR_EVENT` replacement of one token captured a singleton's dependency on another.
+:::
