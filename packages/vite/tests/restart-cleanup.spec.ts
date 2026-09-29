@@ -1,6 +1,8 @@
 // oxlint-disable max-classes-per-file -- each case declares its own DI chain
 import {
   getInfactSingletonInstances,
+  getMoostInfact,
+  getMoostMate,
   Inject,
   Injectable,
   Moost,
@@ -9,7 +11,13 @@ import {
 } from 'moost'
 import { describe, expect, it } from 'vitest'
 
-import { moostRestartCleanup } from '../src/restart-cleanup'
+import {
+  EJECT_ALL,
+  mergeCleanup,
+  moostRestartCleanup,
+  readViteId,
+  VITE_ID_KEY,
+} from '../src/restart-cleanup'
 
 /** Constructors of the instances currently alive in the (process-global) DI registry. */
 const aliveConstructors = () => getInfactSingletonInstances().map((i) => i.constructor)
@@ -149,5 +157,58 @@ describe('moostRestartCleanup — provide factories', () => {
     // factory ran again: up to @prostojs/infact 0.5.0 the first boot's value
     // was cached on the class's provide entry and survived every reload.
     expect(current()?.space).toBe('boot-2')
+  })
+})
+
+describe('moostRestartCleanup — module eject and full reboot', () => {
+  /** One evaluation of a module declaring an `@Injectable()` class: a NEW class per call. */
+  function evaluateModule(viteId: string, log: string[]) {
+    @(getMoostMate().decorate(VITE_ID_KEY, viteId))
+    @Injectable()
+    class Service {
+      @MoostDispose()
+      close() {
+        log.push(`close:${viteId}`)
+      }
+    }
+    return Service
+  }
+
+  it('ejects, disposes and replaces the singleton of a changed module', async () => {
+    const log: string[] = []
+    const First = evaluateModule('/src/changed.ts', log)
+    const first = await getMoostInfact().get(First)
+    expect(readViteId(first)).toBe('/src/changed.ts')
+
+    const ejected = await moostRestartCleanup(undefined, new Set(['/src/changed.ts']))
+    expect(ejected).toContain(first)
+    expect(log).toEqual(['close:/src/changed.ts'])
+
+    const Second = evaluateModule('/src/changed.ts', log)
+    const second = await getMoostInfact().get(Second)
+    expect(second).toBeInstanceOf(Second)
+    expect(second).not.toBe(first)
+  })
+
+  it('disposes every instance on a full reboot, regardless of onEject', async () => {
+    const log: string[] = []
+    const Kept = evaluateModule('/src/untouched.ts', log)
+    const kept = await getMoostInfact().get(Kept)
+
+    // a server (re)start: no module ids, the whole registry goes
+    const ejected = await moostRestartCleanup(() => false)
+    expect(ejected).toContain(kept)
+    expect(log).toEqual(['close:/src/untouched.ts'])
+    expect(getInfactSingletonInstances()).toEqual([])
+  })
+
+  it('lets a queued full reboot win over module-scoped cleanups', () => {
+    // the hot-update fallback (entry not in the graph → invalidateAll) queues EJECT_ALL
+    expect(mergeCleanup(null, new Set(['/a.ts']))).toEqual(new Set(['/a.ts']))
+    expect(mergeCleanup(new Set(['/a.ts']), new Set(['/b.ts']))).toEqual(
+      new Set(['/a.ts', '/b.ts']),
+    )
+    expect(mergeCleanup(new Set(['/a.ts']), EJECT_ALL)).toBe(EJECT_ALL)
+    expect(mergeCleanup(EJECT_ALL, new Set(['/b.ts']))).toBe(EJECT_ALL)
   })
 })

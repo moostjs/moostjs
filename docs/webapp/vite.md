@@ -112,6 +112,23 @@ moostVite({
 
 Omit `ssrEntry` for SPA mode — the production build still generates a server for static files and API routes, just without server-side rendering.
 
+::: warning Version note
+Up to and including `0.6.40`, the production server of a build without `ssrEntry` crashed on start with `ReferenceError: __MOOST_SSR_OUTLET__ is not defined`. On those versions, define the four SSR constants yourself in `vite.config.ts`:
+
+```ts
+environments: {
+  ssr: {
+    define: {
+      __MOOST_SSR_ENTRY__: 'undefined',
+      __MOOST_SSR_OUTLET__: JSON.stringify('<!--ssr-outlet-->'),
+      __MOOST_SSR_STATE__: JSON.stringify('<!--ssr-state-->'),
+      __MOOST_SSR_HEAD__: JSON.stringify('<!--ssr-head-->'),
+    },
+  },
+},
+```
+:::
+
 Your `entry-server.ts` `render(url)` can return per-page `<head>` tags plus an HTTP status and headers, not just HTML and state — see [the render contract](/webapp/ssr#the-render-contract). See [Vue + Moost (SSR)](/webapp/ssr) for the full guide.
 
 ## Custom Server Entry
@@ -186,6 +203,8 @@ Files outside the entry graph never touch the Moost app:
 
 - **Client-side modules** (composables, stores, anything only the browser imports) keep Vite's regular HMR — browser updates flow as in any Vite app while the API keeps serving.
 - **SSR render modules** (the `ssrEntry` graph) are refreshed by Vite's default invalidation, so the next server-rendered page picks them up without rebooting Moost.
+
+Restarting the dev server (`server.restart()`, or `r` + Enter) rebuilds and disposes every instance. Up to and including `0.6.40` a restart disposed nothing, and the restarted app's `listen()` bound the app's own port for real (`EADDRINUSE`, or a dev process that never exits).
 
 If a server edit breaks the app (e.g. a syntax error), requests matching `prefix` (or all requests when no `prefix` is set) answer `502` with the load error instead of falling through to the frontend; the next edit retries the reload.
 

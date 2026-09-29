@@ -1,11 +1,15 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import type { AddressInfo, Server } from 'node:net'
 import { createServer as createNetServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { MoostHttp } from '@moostjs/event-http'
+import type { Plugin } from 'vite'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
+import { moostVite } from '../src/moost-vite'
+import type { TMoostViteDevOptions } from '../src/moost-vite'
 import { createSSRServer } from '../src/prod-server'
 
 /**
@@ -13,15 +17,14 @@ import { createSSRServer } from '../src/prod-server'
  * plugin bakes into `build:app` are stubbed as globals, and the entry only
  * calls `MoostHttp.listen()` (captured by the server, never binds itself).
  */
+/** Every build-time define the generated production server reads. */
 const DEFINES = [
-  '__MOOST_ENTRY__',
-  '__MOOST_SSR_ENTRY__',
-  '__MOOST_PREFIX__',
-  '__MOOST_SSR_OUTLET__',
-  '__MOOST_SSR_STATE__',
-  '__MOOST_SSR_HEAD__',
-  '__MOOST_SSR_FORWARDING__',
-] as const
+  ...new Set(
+    readFileSync(fileURLToPath(new URL('../src/prod-server.ts', import.meta.url)), 'utf8').match(
+      /__MOOST_[A-Z_]+__/g,
+    ),
+  ),
+]
 
 const g = globalThis as Record<string, unknown>
 const clientDir = mkdtempSync(join(tmpdir(), 'moost-prod-server-'))
@@ -111,6 +114,50 @@ describe('createSSRServer (production) — bind address', () => {
       expect(logs.some((l) => l.startsWith('Server running'))).toBe(false)
     } finally {
       await close(blocker)
+    }
+  })
+})
+
+/** The `define` map the middleware-mode `vite build` bakes into the SSR environment. */
+function serverDefines(options: Partial<TMoostViteDevOptions> = {}): Record<string, string> {
+  const [plugin] = moostVite({ entry: './src/main.ts', middleware: true, ...options }) as Plugin[]
+  const config = (plugin.config as Function)(
+    { root: clientDir },
+    { command: 'build', mode: 'production' },
+  )
+  return config.environments.ssr.define
+}
+
+describe('createSSRServer (production) — build-time defines', () => {
+  it('bakes every define the prod server reads, SSR or not', () => {
+    expect(DEFINES).toContain('__MOOST_SSR_OUTLET__')
+    for (const options of [{}, { ssrEntry: '/src/entry-server.ts' }]) {
+      expect(Object.keys(serverDefines(options))).toEqual(expect.arrayContaining(DEFINES))
+    }
+    expect(serverDefines().__MOOST_SSR_ENTRY__).toBe('undefined')
+    expect(serverDefines({ ssrEntry: '/src/entry-server.ts' }).__MOOST_SSR_ENTRY__).toBe(
+      JSON.stringify('./ssr/entry-server.js'),
+    )
+  })
+
+  it('starts a client-only server with exactly the baked defines', async () => {
+    // up to 0.6.40 the SSR placeholders were baked only with `ssrEntry`:
+    // ReferenceError: __MOOST_SSR_OUTLET__ is not defined
+    const baked = serverDefines()
+    try {
+      for (const name of DEFINES) {
+        delete g[name]
+        if (name in baked) {
+          g[name] = new Function(`return ${baked[name]}`)()
+        }
+      }
+      const server = await start({ port: await freePort() })
+      const res = await fetch(`http://127.0.0.1:${address(server).port}/`)
+      expect(await res.text()).toContain('SPA_SHELL')
+    } finally {
+      for (const name of DEFINES) {
+        g[name] = undefined
+      }
     }
   })
 })

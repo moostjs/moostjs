@@ -85,6 +85,8 @@ node dist/server/server.js
 
 Auto-generated. Serves static assets (`sirv`) + API routes (Moost) + SSR render or SPA fallback. The Moost `entry` is built to `dist/server/<entry-basename>.js` (e.g. `main.js`) and imported by the server at runtime — no hand-authored Node wrapper needed.
 
+`≤ 0.6.40`: a build WITHOUT `ssrEntry` (SPA) produced a server crashing on start with `ReferenceError: __MOOST_SSR_OUTLET__ is not defined` (the SSR placeholder defines were baked only with `ssrEntry`). Workaround on those versions: `environments: { ssr: { define: { __MOOST_SSR_ENTRY__: 'undefined', __MOOST_SSR_OUTLET__: '"<!--ssr-outlet-->"', __MOOST_SSR_STATE__: '"<!--ssr-state-->"', __MOOST_SSR_HEAD__: '"<!--ssr-head-->"' } } }` in `vite.config.ts`; current versions bake all four always.
+
 ## Custom server entry
 
 For custom prod middleware (compression, auth, logging):
@@ -162,6 +164,7 @@ import type { TSSRRender, TSSRRenderContext, TSSRRenderResult } from '@moostjs/v
 - A server edit that fails to load (syntax error, bad import) makes requests matching `prefix` (all requests when no `prefix` is set) answer `502` with the error message (instead of falling through to the SPA/SSR fallback); the next edit retries.
 - Since 0.6.37 the plugin captures the entry's `app.init()` promise and **awaits it as part of every boot** (initial and reload), so no request is ever served by a half-bound app and the documented `listen()`-then-un-awaited-`init()` entry order is correct under the dev server. A **rejecting** `init()` (bind error, DI audit error, throwing `@MoostInit` hook) logs `✖️  Moost app init failed: …` and answers `502` `Moost app failed to load: …` — the bootError gate is checked BEFORE the captured middleware, because `listen()` ran first and left one behind. On `≤ 0.6.36` the same app answered `200` from the routes bound before the failure and fell the rest through to the SPA fallback — diagnose "some API routes work, the rest return index.html after an edit" as an out-of-date plugin, not an app bug.
 - SSR self-calls hitting per-IP rate limits / auth guards as `127.0.0.1`-anonymous → `@moostjs/vite` ≤ 0.6.30 (no `ssrFetchForwarding`). Worse: on those versions forwarding **accidentally** worked in dev and in prod-without-`prefix` (render ran inside the page's context via the no-match path) but broke once `prefix` was set — auth-aware SSR passing in dev and failing in prod is that version gap, not app code. Current versions forward deterministically in every mode.
+- Dev server restart (`server.restart()` / `r` + Enter) rebuilds and disposes EVERY instance (no `onEject` veto). `≤ 0.6.40`: a restart disposed nothing (one leaked connection/timer per restart) and the restarted app's `listen()` was NOT captured → the app bound its own port for real (`EADDRINUSE`, or `vite` never exiting) — diagnose as an out-of-date plugin.
 - Editing an entry-graph module in middleware+SSR dev re-imports the entry, which re-runs `app.listen()`; the plugin re-captures the patched `MoostHttp.listen()` on each reload so it never re-binds the dev port. Diagnose a dev `EADDRINUSE` on HMR as an out-of-date `@moostjs/vite` (versions ≤ 0.6.24 crashed here).
 
 ## See also

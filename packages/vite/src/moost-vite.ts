@@ -7,7 +7,8 @@ import MagicString from 'magic-string'
 
 import { createAdapterDetector } from './adapter-detector'
 import { captureMoostInit, patchMoostHandlerLogging } from './moost-logging'
-import { moostRestartCleanup } from './restart-cleanup'
+import { EJECT_ALL, mergeCleanup, moostRestartCleanup, VITE_ID_KEY } from './restart-cleanup'
+import type { TRestartCleanup } from './restart-cleanup'
 import {
   bundledPackagesFromModuleIds,
   compilePackagePatterns,
@@ -35,9 +36,12 @@ import type { TSSRHttpContextRunner, TSSRRender } from './utils'
 /** A simple request-response middleware type for Node’s http module. */
 type TMiddleware = (req: IncomingMessage, res: ServerResponse) => any
 
-/** Regex checks */
-const REG_HAS_EXPORT_CLASS = /(^\s*@(Injectable|Controller)\()/m
-const REG_REPLACE_EXPORT_CLASS = /(^\s*@(Injectable|Controller)\()/gm
+/**
+ * Classes that land in the DI registry: every `@Injectable()`, `@Controller()`
+ * and `@Interceptor()` class (exported or not) gets `@__VITE_ID(<module id>)`,
+ * which drives the per-module eject on reload.
+ */
+const REG_DI_CLASS = /(^\s*@(Injectable|Controller|Interceptor)\()/gm
 
 export interface TMoostViteDevOptions {
   /**
@@ -256,7 +260,7 @@ export interface TSSRExternalCheckOptions {
  * - **Dev Mode Middleware**:
  *   - Patches `MoostHttp.prototype.listen` to register a custom middleware for serving the app via Vite's dev server instead of binding to a port.
  *   - Handles Moost state cleanup and hot module replacement (HMR) during development.
- * - **Class Tracking**: Injects a `__VITE_ID()` decorator into exported classes to enable tracking and cleanup during hot reloads.
+ * - **Class Tracking**: Injects a `__VITE_ID()` decorator into DI classes to enable tracking and cleanup during hot reloads.
  * - **Externals Support**:
  *   - Allows marking Node.js built-in modules and dependencies from `package.json` (optionally excluding workspace dependencies) as external during builds.
  *   - Configured via the `externals` option, which helps reduce bundle size and ensures compatibility with runtime environments.
@@ -332,6 +336,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
    */
   const moostHttpRef: { current: TSSRHttpContextRunner | null } = { current: null }
   const ssrForwarding = options.ssrFetchForwarding !== false
+  const ssrOutlet = options.ssrOutlet || DEFAULT_SSR_OUTLET
+  const ssrState = options.ssrState || DEFAULT_SSR_STATE
+  const ssrHead = options.ssrHead || DEFAULT_SSR_HEAD
   /**
    * Boot-identity stamps (dev-only "mongrel state" diagnostic — a stale pipeline
    * presents as security middleware silently switched off). `bootGeneration` is
@@ -350,8 +357,8 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
    * `init()`. Reset by `beginBoot()`, consumed by `settleBootInit()`.
    */
   let bootInitPromises: Promise<void>[] = []
-  /** Module IDs awaiting DI cleanup — consumed in runReload; see ejectApp. */
-  let pendingCleanup: Set<string> | null = null
+  /** DI cleanup awaiting the next reload (module IDs, or EJECT_ALL) — consumed in runReload; see ejectApp. */
+  let pendingCleanup: TRestartCleanup | null = null
   /** In middleware mode: maps req → next() for the onNoMatch callback */
   const pendingNextMap = new WeakMap<IncomingMessage, () => void>()
 
@@ -427,7 +434,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
    * arriving before the lazy reload (editor bulk-save storms) coalesce into one
    * pending set and one cleanup.
    */
-  const ejectApp = (cleanupInstances: Set<string>) => {
+  const ejectApp = (cleanup: TRestartCleanup) => {
     bootGeneration++
     moostMiddleware = null
     moostHttpRef.current = null
@@ -435,13 +442,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
       localFetchTeardown()
       localFetchTeardown = null
     }
-    if (pendingCleanup) {
-      for (const id of cleanupInstances) {
-        pendingCleanup.add(id)
-      }
-    } else {
-      pendingCleanup = cleanupInstances
-    }
+    pendingCleanup = mergeCleanup(pendingCleanup, cleanup)
     reloadRequired = true
   }
 
@@ -461,6 +462,27 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
       }
       bootInitPromises.push(promise)
     })
+  }
+  /**
+   * Readies the process for the next evaluation of the entry — the first boot,
+   * a `server.restart()` and every reload alike (they drifted apart once: a
+   * restart skipped the adapter step and its app bound the port for real):
+   * 1. DI cleanup, awaited: the ejected instances' `@MoostDispose` hooks must
+   *    release what they own (connections, consumers, handles) BEFORE the entry
+   *    re-imports, or the replacement opens a second copy of the resource.
+   * 2. Re-establish the adapter capture. The listen() patch lives on whatever
+   *    `MoostHttp.prototype` was evaluated first; a new runner or a re-evaluated
+   *    `@moostjs/event-http` hands the entry an unpatched prototype, and
+   *    `app.listen()` would bind the port for real → EADDRINUSE. `init()`
+   *    re-resolves the adapter through the runner the entry imports from.
+   */
+  const prepareBoot = async (cleanup: TRestartCleanup) => {
+    await moostRestartCleanup(options.onEject, cleanup)
+    for (const adapter of adapters) {
+      if (adapter.detected) {
+        await adapter.init()
+      }
+    }
   }
   /** Marks the boot about to run as authoritative for the current generation. */
   const beginBoot = () => {
@@ -522,9 +544,14 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           // `null` (not '/api') when omitted — the prod server must keep the
           // dev contract: no prefix → everything routes through Moost first.
           __MOOST_PREFIX__: JSON.stringify(prefixes ?? null),
-          // Baked unconditionally (unlike the ssrEntry-gated defines below):
-          // the prod server evaluates it at startup even when SSR is off.
+          // Every define the prod server reads is baked unconditionally: it
+          // evaluates them all at startup, SSR or not — a missing one is a
+          // ReferenceError in a client-only build. `undefined` = no SSR entry.
           __MOOST_SSR_FORWARDING__: JSON.stringify(ssrForwarding),
+          __MOOST_SSR_ENTRY__: 'undefined',
+          __MOOST_SSR_OUTLET__: JSON.stringify(ssrOutlet),
+          __MOOST_SSR_STATE__: JSON.stringify(ssrState),
+          __MOOST_SSR_HEAD__: JSON.stringify(ssrHead),
         }
 
         // Build inputs: server entry + Moost backend entry are always included,
@@ -539,11 +566,6 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           const ssrBasename = entryBasename(options.ssrEntry)
           ssrInput[`ssr/${ssrBasename.replace(/\.js$/, '')}`] = options.ssrEntry
           serverDefines.__MOOST_SSR_ENTRY__ = JSON.stringify(`./ssr/${ssrBasename}`)
-          serverDefines.__MOOST_SSR_OUTLET__ = JSON.stringify(
-            options.ssrOutlet || DEFAULT_SSR_OUTLET,
-          )
-          serverDefines.__MOOST_SSR_STATE__ = JSON.stringify(options.ssrState || DEFAULT_SSR_STATE)
-          serverDefines.__MOOST_SSR_HEAD__ = JSON.stringify(options.ssrHead || DEFAULT_SSR_HEAD)
         }
 
         // Nitro pattern: clean once upfront, emptyOutDir: false on all environments
@@ -753,10 +775,11 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         }
       }
 
-      // Inject a decorator to track the file ID if the file exports a class
-      if (REG_HAS_EXPORT_CLASS.test(code)) {
+      // Inject a decorator to track the file ID on every DI class of the module
+      // (`search` ignores the regex's global `lastIndex` state)
+      if (code.search(REG_DI_CLASS) !== -1) {
         const s = new MagicString(code)
-        s.replace(REG_REPLACE_EXPORT_CLASS, '\n@__VITE_ID(import.meta.filename)\n$1')
+        s.replace(REG_DI_CLASS, '\n@__VITE_ID(import.meta.filename)\n$1')
         s.prepend(`import { __VITE_ID } from 'virtual:vite-id'\n\n`)
         return {
           code: s.toString(),
@@ -777,7 +800,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
 
     /**
      * Provides the code for "virtual:vite-id".
-     * It exports a `__VITE_ID(id)` function that decorates a class with a `__vite_id` property.
+     * It exports a `__VITE_ID(id)` function that stamps a class with its module id (`readViteId`).
      */
     load(id) {
       if (id === '\0virtual:vite-id') {
@@ -786,7 +809,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           import { getMoostMate } from "moost";
           const mate = getMoostMate();
           export function __VITE_ID(id) {
-            return mate.decorate("__vite_id", id)
+            return mate.decorate(${JSON.stringify(VITE_ID_KEY)}, id)
           }
         `,
           map: null,
@@ -837,25 +860,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
             // arriving for an older generation is a torn boot (see the stamps).
             beginBoot()
             // Consume the pending eject cleanup under the reload lock (see ejectApp).
-            const cleanupInstances = pendingCleanup ?? undefined
+            const cleanup = pendingCleanup ?? EJECT_ALL
             pendingCleanup = null
-            // Awaited: the ejected instances' `@MoostDispose` hooks must finish
-            // releasing what they own (connections, consumers, handles) BEFORE
-            // the adapters re-init and the entry re-imports — otherwise the
-            // replacement instance opens a second copy of the same resource.
-            await moostRestartCleanup(options.onEject, cleanupInstances)
-            // Re-establish the adapter capture before re-importing the entry. The
-            // listen() patch lives on whatever MoostHttp.prototype the runner first
-            // evaluated; a reload may hand the re-imported entry a fresh
-            // @moostjs/event-http evaluation whose prototype was never patched, so
-            // app.listen() would bind the port for real → EADDRINUSE. Re-running
-            // init() re-resolves the adapter through the same deduping runner the
-            // entry imports from, re-applying the patch to the live prototype.
-            for (const adapter of adapters) {
-              if (adapter.detected) {
-                await adapter.init()
-              }
-            }
+            await prepareBoot(cleanup)
             // hotUpdate() invalidates the entry node, so this import re-executes the
             // entry (re-running listen() → re-capturing the middleware). Backstop for
             // any path that left the entry node fresh: a cached import would be a
@@ -904,7 +911,8 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         adapter.ssrLoadModule = ssrImport
       }
 
-      await moostRestartCleanup(options.onEject)
+      // A server (re)start boots from a fresh runner: nothing survives it.
+      await prepareBoot(EJECT_ALL)
 
       // Import the SSR entry so the app initializes
       // (MoostHttp.listen is patched, so no actual server is spawned).
@@ -983,12 +991,14 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         // Guarantee the next runReload() re-executes the entry even if importer
         // propagation stopped short of it for any reason.
         moduleGraph.invalidateModule(entryModule)
+        ejectApp(cleanupInstances)
       } else {
         // Entry node not resolvable (it was never imported) — fail open with a
-        // full invalidation so the scheduled reload re-executes everything.
+        // full invalidation so the scheduled reload re-executes everything,
+        // and therefore rebuilds (ejects and disposes) every DI instance.
         moduleGraph.invalidateAll()
+        ejectApp(EJECT_ALL)
       }
-      ejectApp(cleanupInstances)
       // Handled: suppress Vite's default ssr hot update for these modules
       return []
     },
@@ -1008,9 +1018,6 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
       ? {
           name: `${PLUGIN_NAME}:ssr-fallback`,
           async configureServer(server) {
-            const ssrOutlet = options.ssrOutlet || DEFAULT_SSR_OUTLET
-            const ssrState = options.ssrState || DEFAULT_SSR_STATE
-            const ssrHead = options.ssrHead || DEFAULT_SSR_HEAD
             const fs = await import('node:fs/promises')
             // Return post-hook so this runs AFTER Vite's internal middleware
             return () => {

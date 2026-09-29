@@ -344,6 +344,8 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
  */
 const ANSI = new RegExp(`${String.fromCodePoint(27)}\\[[0-9;]*m`, 'g')
 const disposeLogLines = []
+/** How many times the plugin captured `MoostHttp.listen()` (one per boot). */
+const listenCaptures = { count: 0 }
 for (const stream of [process.stdout, process.stderr]) {
   const write = stream.write.bind(stream)
   stream.write = (chunk, ...rest) => {
@@ -351,6 +353,9 @@ for (const stream of [process.stdout, process.stderr]) {
     for (const line of text.split('\n')) {
       if (line.includes('Dispose hook') || line.includes('Disposed "')) {
         disposeLogLines.push(line.replace(ANSI, '').trim())
+      }
+      if (line.includes('Overtaking HTTP.listen')) {
+        listenCaptures.count++
       }
     }
     return write(chunk, ...rest)
@@ -585,6 +590,29 @@ try {
     chainProbes.push(await getChain())
   }
   report.indirectChain = { probes: chainProbes }
+
+  // 14. editing a shared leaf re-evaluates every module importing it: each of
+  // their singletons is ejected, disposed and rebuilt from the new class (DI
+  // keys are class identities, and Vite re-evaluates exactly the importer chain
+  // the plugin ejects).
+  const importerBefore = await getHealth()
+  editFile('src/fixture-state.ts', `${FIXTURE_FILES['src/fixture-state.ts']}\n// touched\n`)
+  const importerAfter = await pollUntil(getHealth, (h) => bootOf(h) > bootOf(importerBefore))
+  report.importerEdit = { before: importerBefore, after: importerAfter }
+
+  // 15. server.restart() keeps this plugin instance but brings a NEW module
+  // runner and drops the DI registry: every instance must be disposed first,
+  // and the re-imported entry's listen() must still be captured, not bind the
+  // app's port for real (which also kept the process alive after close()).
+  const restartBefore = await getHealth()
+  const capturesBefore = listenCaptures.count
+  await server.restart()
+  const restartAfter = await pollUntil(getHealth, (h) => bootOf(h) > bootOf(restartBefore))
+  report.restart = {
+    before: restartBefore,
+    after: restartAfter,
+    captures: listenCaptures.count - capturesBefore,
+  }
 
   console.log(`__RESULT__ ${JSON.stringify(report)}`)
 } finally {

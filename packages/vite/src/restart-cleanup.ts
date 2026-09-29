@@ -3,22 +3,49 @@ import { clearGlobalWooks, disposeInstances, getMoostInfact, getMoostMate } from
 import type { TMoostViteDevOptions } from './moost-vite'
 import { getLogger } from './utils'
 
+/** Metadata key the transform's `@__VITE_ID(<module id>)` stamps on DI classes. */
+export const VITE_ID_KEY = '__vite_id'
+
+/** The module id stamped on the class of `target` (a class or an instance), if any. */
+export function readViteId(target: object): string | undefined {
+  return getMoostMate<{ [VITE_ID_KEY]?: string }>().read(target)?.[VITE_ID_KEY]
+}
+
+/** Cleanup scope of a full reboot (server start/restart, full invalidation). */
+export const EJECT_ALL = 'all'
+
+/** What a cleanup ejects: the instances of these module ids (+ dependants), or everything. */
+export type TRestartCleanup = Set<string> | typeof EJECT_ALL
+
+/** Coalesces a queued cleanup with the next one: module ids add up, `EJECT_ALL` wins. */
+export function mergeCleanup(
+  pending: TRestartCleanup | null,
+  next: TRestartCleanup,
+): TRestartCleanup {
+  if (pending === EJECT_ALL || next === EJECT_ALL) {
+    return EJECT_ALL
+  }
+  return pending ? new Set([...pending, ...next]) : next
+}
+
 /**
- * Clean up Moost’s global containers and optionally remove specific instances from the registry.
+ * Clean up Moost’s global containers and eject instances from the registry:
+ * those of the given module ids (plus, transitively, their dependants), or —
+ * with `EJECT_ALL`, the default — every instance.
  *
  * Every instance actually removed from the registry is **disposed** before the
  * caches are dropped: its `@MoostDispose` hooks (or `Symbol.asyncDispose` /
  * `Symbol.dispose`) are awaited, so a singleton owning a connection, consumer,
  * timer or file handle releases it instead of leaking one copy per reload. An
- * instance kept by an `onEject` veto is never disposed. A failing hook is
- * warned about and the reload continues.
+ * instance kept by an `onEject` veto is never disposed (there is no veto on a
+ * full reboot: the registry is dropped either way). A failing hook is warned
+ * about and the reload continues.
  *
- * @param {Set<string>} [cleanupInstances] A set of module IDs to remove from the registry.
  * @returns the instances that were ejected (and therefore disposed)
  */
 export async function moostRestartCleanup(
   onEject?: TMoostViteDevOptions['onEject'],
-  cleanupInstances?: Set<string>,
+  cleanup: TRestartCleanup = EJECT_ALL,
 ): Promise<object[]> {
   const logger = getLogger()
   const infact = getMoostInfact() as unknown as {
@@ -33,17 +60,20 @@ export async function moostRestartCleanup(
   const { registry } = infact
   infact._cleanup()
 
-  const mate = getMoostMate<{ __vite_id?: string }>()
-
   /** Instances removed from the registry by this run — disposed below, before the caches drop. */
   const ejected: object[] = []
 
-  // If we have specific IDs to remove, do so
-  if (cleanupInstances) {
+  if (cleanup === EJECT_ALL) {
+    // A full reboot keeps nothing: `_cleanup()` above already dropped the
+    // registry, so every instance it held is disposed.
+    for (const key of Object.getOwnPropertySymbols(registry)) {
+      ejected.push(registry[key])
+    }
+  } else {
     for (const key of Object.getOwnPropertySymbols(registry)) {
       const instance = registry[key]
-      const viteId = mate.read(instance)?.__vite_id
-      if (viteId && cleanupInstances.has(viteId)) {
+      const viteId = readViteId(instance)
+      if (viteId && cleanup.has(viteId)) {
         logger.debug(`🔃 Replacing "${constructorName(instance)}"`)
         delete registry[key]
         ejected.push(instance)

@@ -59,6 +59,30 @@ interface TReport {
   failedStart: { failed: THealth; recovered: THealth }
   readyGate: { before: number; count: number; violations: THealth[]; last: THealth }
   indirectChain: { probes: TChainProbe[] }
+  importerEdit: { before: THealth; after: THealth }
+  restart: { before: THealth; after: THealth; captures: number }
+}
+
+/** Disposable fixture owners: the health key each logs into, and its open/close prefixes. */
+const OWNERS = [
+  ['res', 'open:', 'close:'],
+  ['jobs', 'start:', 'stop:'],
+  ['fails', 'failopen:', 'failclose:'],
+] as const
+
+/** Every owner's live instance was disposed, then rebuilt, exactly once between the probes. */
+function expectAllRebuilt({ before, after }: { before: THealth; after: THealth }) {
+  expect(after.json?.ok).toBe(true)
+  for (const [key, open, close] of OWNERS) {
+    const prev = before.json?.[key] ?? []
+    const live = prev.at(-1) ?? ''
+    expect(live.startsWith(open)).toBe(true)
+    expect(after.json?.[key]).toEqual([
+      ...prev,
+      close + live.slice(open.length),
+      expect.stringMatching(new RegExp(`^${open}`)),
+    ])
+  }
 }
 
 const DRIVER = fileURLToPath(new URL('hot-update.driver.mjs', import.meta.url))
@@ -131,6 +155,9 @@ describe('moost-vite scoped hot reload', () => {
 
   it('reloads the app when a server-graph module changes', () => {
     expect(report.serverGraph.health.json).toMatchObject({ ok: true, boot: 2, value: 'v2' })
+    // singletons of modules outside the edit's importer chain keep their live
+    // instance: their class objects were not re-evaluated
+    expect(report.serverGraph.health.json).toMatchObject({ res: ['open:1'], jobs: ['start:1'] })
   })
 
   it('reloads the app when a non-ts entry-graph file changes', () => {
@@ -247,6 +274,17 @@ describe('moost-vite scoped hot reload', () => {
     const ids = (prefix: string) =>
       log.filter((e) => e.startsWith(prefix)).map((e) => e.slice(prefix.length))
     expect(ids('dbclose:')).toEqual(ids('dbopen:').slice(0, -1))
+  })
+
+  it('rebuilds the singletons of every module importing an edited one', () => {
+    expectAllRebuilt(report.importerEdit)
+  })
+
+  it('disposes every instance on server.restart() and captures listen() again', () => {
+    // ≤0.6.40: a restart disposed nothing (a leak per restart), and the new
+    // runner's MoostHttp was never patched — app.listen() bound the port for real.
+    expectAllRebuilt(report.restart)
+    expect(report.restart.captures).toBe(1)
   })
 
   it('keeps reloading when a dispose hook throws', () => {
