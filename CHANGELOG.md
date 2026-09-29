@@ -1,3 +1,13 @@
+## [0.6.41](https://github.com/moostjs/moostjs/compare/v0.6.40...v0.6.41) (2026-09-29)
+
+
+### Bug Fixes
+
+* **moost:** key DI class tokens by constructor identity (infact 0.6), not source text ([345105e](https://github.com/moostjs/moostjs/commit/345105e70f5011ff90c121dc0cd8ca13768eeed2))
+* **vite:** bake SSR defines for client-only builds; dispose every singleton on full reboot ([1b252d3](https://github.com/moostjs/moostjs/commit/1b252d3a5afcaa4307833b982bac3bcce71bc9b8))
+
+
+
 ## [0.6.40](https://github.com/moostjs/moostjs/compare/v0.6.39...v0.6.40) (2026-09-29)
 
 
