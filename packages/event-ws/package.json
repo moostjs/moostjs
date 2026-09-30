@@ -46,6 +46,7 @@
     "@wooksjs/event-ws": "catalog:"
   },
   "devDependencies": {
+    "@moostjs/event-http": "workspace:^",
     "vitest": "3.2.7"
   },
   "peerDependencies": {
