@@ -33,6 +33,8 @@ class RequestState {
 }
 ```
 
+Every event owns its scope. A child event — a workflow run started with `eventContext: current()`, each WebSocket message — gets a scope of its own: `FOR_EVENT` instances are never shared with the parent event, and the child ending never releases the parent's scope (before 0.6.42 it did, failing later resolutions with `scope "…" isn't registered`). How long an HTTP request's scope lives: [Web app DI](/webapp/di).
+
 ::: warning Scope Rule
 Do not inject `FOR_EVENT` classes into singletons. Singletons are created once, so an event-scoped dependency inside one would break event isolation. The reverse — injecting singletons into `FOR_EVENT` classes — is fine.
 :::

@@ -115,6 +115,8 @@ Type importable from `@moostjs/event-ws`. Pass via `new MoostWs({ wooksWs: { ...
 | `@Connect()` | connection | throwing closes the connection |
 | `@Disconnect()` | connection | on close |
 
+Each `@Message` runs in its own `FOR_EVENT` scope; `@Connect`/`@Disconnect` share the connection's ([di.md#scopes](di.md#scopes)).
+
 Return values are sent as replies **only if** the client message included a correlation `id`. Fire-and-forget (no `id`) produces no reply.
 
 ```ts

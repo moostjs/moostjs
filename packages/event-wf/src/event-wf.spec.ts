@@ -6,7 +6,16 @@ import {
   useWfStrategy,
   WooksWf,
 } from '@wooksjs/event-wf'
-import { clearGlobalWooks, Controller, Moost } from 'moost'
+import {
+  clearGlobalWooks,
+  Controller,
+  createEventContext,
+  current,
+  getMoostInfact,
+  Moost,
+  registerEventScope,
+  useScopeId,
+} from 'moost'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Step, StepTTL, Workflow, WorkflowParam, WorkflowSchema } from './decorators'
@@ -299,5 +308,35 @@ describe('MoostWf adapter — @StepTTL on re-pause', () => {
     const output = await wf.start('/flow-ttl-explicit', {}, {})
 
     expect(output.expires).toBe(explicit)
+  })
+})
+
+describe('MoostWf — DI scope of a run linked to a parent event', () => {
+  it('runs in its own scope and leaves the parent event scope registered', async () => {
+    let stepScope = ''
+    @Controller()
+    class WfScoped {
+      @Step('scoped-step')
+      step() {
+        stepScope = useScopeId()
+      }
+
+      @Workflow('flow-scoped')
+      @WorkflowSchema(['scoped-step'])
+      flow() {}
+    }
+
+    const wf = await buildMoost(WfScoped)
+    const scopes = (getMoostInfact() as unknown as { scopes: Map<string, unknown> }).scopes
+    await createEventContext({ logger: console }, async () => {
+      // stands in for the HTTP request that starts the run
+      const parentScope = useScopeId()
+      const unscope = registerEventScope(parentScope)
+      await wf.start('/flow-scoped', {}, { eventContext: current() })
+      expect(stepScope).not.toBe(parentScope)
+      expect(scopes.has(stepScope)).toBe(false) // released when the run ended
+      expect(scopes.has(parentScope)).toBe(true) // still owned by the parent event
+      unscope()
+    })
   })
 })

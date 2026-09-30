@@ -172,7 +172,7 @@ wf.start<I>(schemaId, initialContext, opts?): Promise<TFlowOutput<T, I, IR>>
 wf.resume<I>(state, opts?):                    Promise<TFlowOutput<T, I, IR>>
 ```
 
-Opts bag (`TWfRunOptions`): `input?` (step input), `eventContext?` (parent ctx for composable inheritance, e.g. `current()` from an HTTP handler), `strategy?: { name }` (initial state strategy in named-registry mode).
+Opts bag (`TWfRunOptions`): `input?` (step input), `eventContext?` (parent ctx for composable inheritance, e.g. `current()` from an HTTP handler; the run still gets its OWN DI scope — `FOR_EVENT` instances are not shared with the parent, see [di.md#scopes](di.md#scopes)), `strategy?: { name }` (initial state strategy in named-registry mode).
 
 **Breaking in 0.6.18.** Both methods used to take `input` as a positional arg; now it lives on the opts bag. `wf.start('flow', ctx, val)` → `wf.start('flow', ctx, { input: val })`.
 

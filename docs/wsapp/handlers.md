@@ -132,7 +132,7 @@ Room membership is automatically cleaned up when a connection closes — you don
 
 All three handler types participate in the full Moost event lifecycle:
 
-1. **Scope registration** — `FOR_EVENT` scoped instances are created
+1. **Scope registration** — `FOR_EVENT` scoped instances are created (each `@Message` has its own scope; `@Connect`/`@Disconnect` share the connection's)
 2. **Interceptor before** — Runs before args are resolved; can short-circuit the handler
 3. **Argument resolution** — Pipes resolve, transform, and validate parameters
 4. **Handler execution** — Your method body runs

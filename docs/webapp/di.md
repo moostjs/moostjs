@@ -48,7 +48,11 @@ export class GreetController {
 
 Because a new `GreetController` is created for each request, `this.name` safely holds the current request's `:name` parameter.
 
-The request's `FOR_EVENT` scope lives until the **response** is sent (or the connection aborts), so interceptors, guards and handlers can resolve event-scoped dependencies at any point — including after reading the body. Through 0.6.39 the scope was released when the request body finished streaming, so a `FOR_EVENT` dependency first resolved after `@Body()` failed with `The requested scope "…" isn't registered.`
+The request's `FOR_EVENT` scope lives until the **response** is done (sent — including a streamed body — or the client disconnected) **and** the handler has finished. Interceptors, guards and handlers can resolve event-scoped dependencies at any point: after reading the body, while a returned stream is being sent, or after the client went away mid-handler.
+
+::: info Changed in 0.6.42
+Earlier versions could fail with `The requested scope "…" isn't registered` when a `FOR_EVENT` dependency was first resolved after `@Body()` (≤ 0.6.39), or after the client disconnected mid-handler (≤ 0.6.41).
+:::
 
 ## Property-level resolvers
 

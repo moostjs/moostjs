@@ -1,6 +1,6 @@
 // oxlint-disable complexity
-import type { Logger } from '@wooksjs/event-core'
-import { current, defineWook, getContextInjector, useLogger } from '@wooksjs/event-core'
+import type { EventContext, Logger } from '@wooksjs/event-core'
+import { cached, current, getContextInjector, useLogger } from '@wooksjs/event-core'
 
 import { setControllerContext } from './composables'
 import type { InterceptorHandler } from './interceptor-handler'
@@ -54,8 +54,15 @@ function nextScopeId(): string {
   return `__moost_${_scopeChar}_${++_scopeNum}`
 }
 
-/** Composable returning the moost scope ID for the current event. Generates on first call, caches for subsequent calls. */
-export const useScopeId = defineWook(() => nextScopeId())
+const scopeIdSlot = cached(() => nextScopeId())
+
+/**
+ * Composable returning the moost DI scope ID of the current event. Generated on first call
+ * and cached on the event context itself — never inherited from a parent context, so a child
+ * event (a workflow run started with `eventContext`, a WebSocket message) owns its scope
+ * instead of sharing, and later releasing, its parent's.
+ */
+export const useScopeId = (ctx?: EventContext): string => (ctx ?? current()).getOwn(scopeIdSlot)
 
 /** Registers a DI scope for the given ID and returns an unscope function. */
 export function registerEventScope(scopeId: string) {
@@ -66,6 +73,40 @@ export function registerEventScope(scopeId: string) {
   }
 }
 
+const noop = () => {}
+
+/**
+ * Registers an event's DI scope, held by its handler lifecycle and, with `adapterHolds`, by
+ * the adapter too. Each release is idempotent; the scope is dropped once every holder let go,
+ * so an adapter signal that fires early (a client disconnect mid-handler) cannot pull the
+ * scope from under a running handler. Built outside the handler closure so a long-lived
+ * adapter listener (the response 'close' of a streamed body) retains only the scope.
+ */
+function holdEventScope(scopeId: string, adapterHolds: boolean) {
+  const drop = registerEventScope(scopeId)
+  let holders = adapterHolds ? 2 : 1
+  const hold = () => {
+    let held = true
+    return () => {
+      if (held) {
+        held = false
+        if (--holders === 0) {
+          drop()
+        }
+      }
+    }
+  }
+  const releaseLifecycle = hold()
+  return {
+    releaseLifecycle,
+    failLifecycle: (error: unknown): never => {
+      releaseLifecycle()
+      throw error
+    },
+    unscope: adapterHolds ? hold() : noop,
+  }
+}
+
 /**
  * Creates the complete event handler lifecycle processor used by adapters.
  * Handles scope registration, controller resolution, interceptors, argument resolution,
@@ -73,6 +114,7 @@ export function registerEventScope(scopeId: string) {
  */
 export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>) {
   const ci = getContextInjector<TContextInjectorHook>()
+  const manualUnscope = !!options.manualUnscope
   // Pre-compute strings used in ci.with() to avoid per-request template literal creation
   const handlerSpanName = `Handler:${options.targetPath}` as 'Handler'
   const handlerAttrs = {
@@ -86,7 +128,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     // useLogger(topic, ctx) derives a child logger via createTopic when supported,
     // falling back to the base logger otherwise
     const logger = useLogger(options.loggerTitle, ctx)
-    const unscope = registerEventScope(scopeId)
+    const { unscope, releaseLifecycle, failLifecycle } = holdEventScope(scopeId, manualUnscope)
 
     let response: unknown
     // Lazy hookOptions — only allocated when hooks actually need them
@@ -106,7 +148,18 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     let interceptorHandler: InterceptorHandler | undefined
     let raise = false
 
+    // One guard releases the lifecycle hold on any failure, sync or from any async step
+    // (release is idempotent, so paths that already released pass straight through).
     try {
+      const result = start()
+      return isThenable(result)
+        ? (result as PromiseLike<unknown>).then(undefined, failLifecycle)
+        : result
+    } catch (error) {
+      return failLifecycle(error)
+    }
+
+    function start(): unknown {
       if (options.hooks?.init) {
         const hookResult = options.hooks.init(getHookOptions())
         if (isThenable(hookResult)) {
@@ -114,11 +167,6 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         }
       }
       return afterInit()
-    } catch (error) {
-      if (!options.manualUnscope) {
-        unscope()
-      }
-      throw error
     }
 
     function afterInit(): unknown {
@@ -280,9 +328,6 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
               if (options.logErrors) {
                 logger.error(String(error))
               }
-              if (!options.manualUnscope) {
-                unscope()
-              }
               throw error
             },
           )
@@ -298,9 +343,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
     }
 
     function finalize(): unknown {
-      if (!options.manualUnscope) {
-        unscope()
-      }
+      releaseLifecycle()
       if (options.hooks?.end) {
         const endResult = options.hooks.end(getHookOptions())
         if (isThenable(endResult)) {

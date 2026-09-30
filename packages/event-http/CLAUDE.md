@@ -23,7 +23,7 @@ Moost App → MoostHttp (adapter) → WooksHttp (@wooksjs/event-http) → Node.j
 
 ## Non-Obvious Patterns
 
-**Manual unscope tied to request lifecycle.** `bindHandler` sets `manualUnscope: true` and hooks `unscope` to the raw request's `'end'` event. The DI scope stays alive for the entire request duration, including streaming.
+**Event scope held until the response closes.** `bindHandler` sets `manualUnscope: true` and hooks `unscope` to the raw response's `'close'` (sent or client disconnected). Core `defineMoostEventHandler` additionally holds the scope until the handler lifecycle settles, so a disconnect mid-handler never drops it early. `UPGRADE` handlers take no adapter hold (the socket is handed to the WS server; no HTTP response ever completes) — their scope ends with the handler. Never tie it to the request's `'end'`/`'close'` — they fire once the body is read. Real-server coverage: `event-http.scope.spec.ts` (the in-process `request()` helper does not reproduce the socket lifecycle).
 
 **Double-slash trailing-slash convention.** A route ending with `//` (e.g., `@Get('api//')`) forces a trailing `/` in the URL pattern.
 

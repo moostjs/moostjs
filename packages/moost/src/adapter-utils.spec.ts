@@ -2,6 +2,7 @@
 import {
   ContextInjector,
   createEventContext,
+  current,
   replaceContextInjector,
   resetContextInjector,
 } from '@wooksjs/event-core'
@@ -9,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { TInterceptorDef } from './decorators'
 import type { TInterceptorDefFactory } from './decorators/interceptor.decorator'
-import { defineMoostEventHandler } from './adapter-utils'
+import { defineMoostEventHandler, useScopeId } from './adapter-utils'
 import { InterceptorHandler } from './interceptor-handler'
 import { getMoostInfact } from './metadata/infact'
 
@@ -55,6 +56,18 @@ describe('defineMoostEventHandler', () => {
   })
 
   describe('scope cleanup', () => {
+    it('gives a child event context its own scope id instead of inheriting it', () => {
+      createEventContext({ logger: testLogger }, () => {
+        const parent = current()
+        const parentId = useScopeId()
+        createEventContext({ logger: testLogger, parent }, () => {
+          expect(useScopeId()).not.toBe(parentId)
+          expect(useScopeId()).toBe(useScopeId())
+        })
+        expect(useScopeId(parent)).toBe(parentId)
+      })
+    })
+
     it('must call unscope when getControllerInstance throws', () => {
       const unregisterSpy = vi.spyOn(infact, 'unregisterScope')
 
@@ -160,6 +173,111 @@ describe('defineMoostEventHandler', () => {
 
       expect(result).toBe('ok')
       expect(unregisterSpy).toHaveBeenCalled()
+    })
+
+    it('manualUnscope: an early adapter unscope waits for the running handler', async () => {
+      const unregisterSpy = vi.spyOn(infact, 'unregisterScope')
+      let adapterUnscope!: () => void
+      const running = Promise.withResolvers<string>()
+
+      const handler = defineMoostEventHandler({
+        loggerTitle: 'test',
+        targetPath: '/test',
+        handlerType: 'HTTP',
+        manualUnscope: true,
+        hooks: { init: ({ unscope }) => void (adapterUnscope = unscope) },
+        getIterceptorHandler: () => undefined,
+        getControllerInstance: () => ({ run: () => running.promise }),
+        controllerMethod: 'run' as never,
+      })
+
+      const result = createEventContext({ logger: testLogger }, handler)
+      adapterUnscope() // e.g. the client disconnected mid-handler
+      adapterUnscope() // idempotent
+      expect(unregisterSpy).not.toHaveBeenCalled()
+      running.resolve('ok')
+      expect(await result).toBe('ok')
+      expect(unregisterSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('manualUnscope: a settled handler keeps the scope until the adapter unscopes', async () => {
+      const unregisterSpy = vi.spyOn(infact, 'unregisterScope')
+      let adapterUnscope!: () => void
+
+      const handler = defineMoostEventHandler({
+        loggerTitle: 'test',
+        targetPath: '/test',
+        handlerType: 'HTTP',
+        manualUnscope: true,
+        hooks: { init: ({ unscope }) => void (adapterUnscope = unscope) },
+        getIterceptorHandler: () => undefined,
+        getControllerInstance: async () => ({ run: () => 'ok' }),
+        controllerMethod: 'run' as never,
+      })
+
+      expect(await createEventContext({ logger: testLogger }, handler)).toBe('ok')
+      expect(unregisterSpy).not.toHaveBeenCalled()
+      adapterUnscope()
+      expect(unregisterSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+      [
+        'an async controller instantiation',
+        {
+          getControllerInstance: async () => {
+            throw new Error('boom')
+          },
+        },
+      ],
+      [
+        'an async init hook',
+        {
+          hooks: {
+            init: async () => {
+              throw new Error('boom')
+            },
+          },
+          getControllerInstance: () => ({}),
+        },
+      ],
+    ])('must release the scope when %s rejects', async (_, opts) => {
+      const unregisterSpy = vi.spyOn(infact, 'unregisterScope')
+
+      const handler = defineMoostEventHandler({
+        loggerTitle: 'test',
+        targetPath: '/test',
+        handlerType: 'HTTP',
+        getIterceptorHandler: () => undefined,
+        ...opts,
+      })
+
+      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow('boom')
+      expect(unregisterSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('must release the scope when an after interceptor throws for an async handler', async () => {
+      const unregisterSpy = vi.spyOn(infact, 'unregisterScope')
+      const def: TInterceptorDef = {
+        after: () => {
+          throw new Error('after boom')
+        },
+      }
+
+      const handler = defineMoostEventHandler({
+        loggerTitle: 'test',
+        targetPath: '/test',
+        handlerType: 'HTTP',
+        getIterceptorHandler: () =>
+          new InterceptorHandler([{ handler: def, name: 'After', spanName: 'Interceptor:After' }]),
+        getControllerInstance: async () => ({ run: async () => 'ok' }),
+        controllerMethod: 'run' as never,
+      })
+
+      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
+        'after boom',
+      )
+      expect(unregisterSpy).toHaveBeenCalledTimes(1)
     })
   })
 

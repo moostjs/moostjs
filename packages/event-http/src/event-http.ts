@@ -4,7 +4,6 @@ import type { TWooksHttpOptions } from '@wooksjs/event-http'
 import {
   createHttpApp,
   HttpError,
-  useRequest,
   useResponse,
   WooksHttp,
   WooksHttpResponse,
@@ -20,6 +19,17 @@ import type {
 } from 'moost'
 import { defineMoostEventHandler, getMoostMate } from 'moost'
 import type { ListenOptions } from 'net'
+
+const holdScopeUntilResponseCloses = {
+  init: ({ unscope }: { unscope: () => void }) => {
+    const res = useResponse().getRawRes(true)
+    if (res.closed) {
+      unscope() // the client was already gone
+    } else {
+      res.once('close', unscope)
+    }
+  },
+}
 
 type TPathBuilder<ParamsType = Record<string, string | string[]>> = (params?: ParamsType) => string
 
@@ -164,17 +174,22 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
   > = {}
 
   async onNotFound() {
-    return defineMoostEventHandler({
+    this.notFoundHandler ??= defineMoostEventHandler({
       loggerTitle: LOGGER_TITLE,
       getIterceptorHandler: () => this.moost?.getGlobalInterceptorHandler(),
       getControllerInstance: () => this.moost,
       callControllerMethod: () => new HttpError(404, 'Resource Not Found'),
+      manualUnscope: true,
+      hooks: holdScopeUntilResponseCloses,
       targetPath: '',
       handlerType: '__SYSTEM__',
-    })()
+    })
+    return this.notFoundHandler()
   }
 
   protected moost?: Moost
+
+  private notFoundHandler?: () => unknown
 
   onInit(moost: Moost) {
     this.moost = moost
@@ -223,6 +238,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         path.endsWith('//') ? '/' : ''
       }` // explicit double slash "//" -> force url to end with slash
 
+      const isUpgrade = handler.method === 'UPGRADE'
       fn = defineMoostEventHandler({
         loggerTitle: LOGGER_TITLE,
         getIterceptorHandler: opts.getIterceptorHandler,
@@ -230,30 +246,20 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
         controllerMethod: opts.method,
         controllerName: opts.controllerName,
         resolveArgs: opts.resolveArgs,
-        manualUnscope: true,
-        hooks: {
-          init: ({ unscope }) => {
-            if (handler.method === 'UPGRADE') {
-              // An upgraded socket never completes an HTTP response.
-              useRequest().raw.on('end', unscope)
-              return
-            }
-            // Release the event's DI scope once the RESPONSE is done (sent or
-            // aborted). The request's own 'end'/'close' fire as soon as its body
-            // is consumed — FOR_EVENT dependencies resolved after reading the
-            // body (guards, write hooks) would hit an unregistered scope.
-            useResponse().getRawRes(true).once('close', unscope)
-          },
-        },
+        // An upgrade never completes an HTTP response (the socket is handed to the WS
+        // server), so its scope ends with the handler. Every other request's scope is
+        // also held until the RESPONSE is done — sent or aborted (the request's own
+        // 'end'/'close' fire as soon as its body is consumed).
+        manualUnscope: !isUpgrade,
+        hooks: isUpgrade ? undefined : holdScopeUntilResponseCloses,
         targetPath,
         controllerPrefix: opts.prefix,
         handlerType: handler.type,
       })
 
-      const routerBinding =
-        handler.method === 'UPGRADE'
-          ? this.httpApp.upgrade(targetPath, fn)
-          : this.httpApp.on(handler.method, targetPath, fn)
+      const routerBinding = isUpgrade
+        ? this.httpApp.upgrade(targetPath, fn)
+        : this.httpApp.on(handler.method, targetPath, fn)
       const { getPath: pathBuilder } = routerBinding
       const methodMeta =
         getMoostMate().read(opts.fakeInstance, opts.method as string) || ({} as TMoostMetadata)

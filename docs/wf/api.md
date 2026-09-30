@@ -141,7 +141,7 @@ start<I>(
 | `schemaId` | Workflow identifier (matching `@Workflow` path, including controller prefix) |
 | `initialContext` | Initial context object passed to steps |
 | `opts.input` | Optional input for the first step |
-| `opts.eventContext` | Parent event context (e.g. from `current()` inside an HTTP handler) — links the run to a parent scope so steps can read its composables |
+| `opts.eventContext` | Parent event context (e.g. from `current()` inside an HTTP handler) — steps can read its composables. The run still has its **own** DI scope: `FOR_EVENT` instances are not shared with the parent event, and the parent's scope stays intact when the run ends (before 0.6.42 the run shared the parent's scope and released it on completion, breaking later `FOR_EVENT` resolution in the HTTP handler) |
 | `opts.strategy` | `{ name }` of the initial state strategy. A step may later swap it via `swapStrategy(name)` |
 
 ```ts

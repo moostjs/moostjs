@@ -63,7 +63,7 @@ const fn = defineMoostEventHandler({
   callControllerMethod: undefined,         // override default invocation
   resolveArgs: opts.resolveArgs,           // may be undefined for no-arg handlers
   logErrors: false,
-  manualUnscope: false,                    // true => adapter calls unscope() manually
+  manualUnscope: false,                    // true => scope also waits for the adapter's unscope()
   hooks: { init, end },                    // see below
   targetPath: '/api/users/:id',            // full path for logging/tracing
   controllerPrefix: opts.prefix,
@@ -79,7 +79,7 @@ scope register (useScopeId + registerEventScope) → logger setup → hooks.init
   → interceptor before (reply() short-circuits)
   → resolveArgs() → handler (or callControllerMethod)
   → interceptor after / onError
-  → unscope (skipped if manualUnscope) → hooks.end → return
+  → release scope (manualUnscope: only once the adapter also called unscope()) → hooks.end → return
 ```
 
 ## Hook options
@@ -90,7 +90,7 @@ scope register (useScopeId + registerEventScope) → logger setup → hooks.init
 |---|---|
 | `scopeId` | the event's DI scope ID |
 | `logger` | event logger |
-| `unscope()` | cleans up the DI scope — call it yourself when `manualUnscope: true` |
+| `unscope()` | the adapter's release of the DI scope with `manualUnscope: true` — idempotent; see [Scope management](#scope-management) |
 | `method?` | the controller method name — available in BOTH `init` and `end` |
 | `instance?` | exists on the type but is NEVER populated by `defineMoostEventHandler` — to reach the controller instance in `hooks.end`, capture it via `getControllerInstance()` or `useControllerContext().getController()` |
 | `getResponse()` | current response value (set after the handler/interceptors ran) |
@@ -163,9 +163,11 @@ function MyEvent(name: string): MethodDecorator {
 
 ## Scope management
 
-`manualUnscope: false` (default) — DI scope auto-cleans after handler returns. Good for request-scoped handlers that complete synchronously.
+The scope id comes from `useScopeId(ctx)`, which is owned by that event context (never inherited from a parent) — give every event its own context.
 
-`manualUnscope: true` — adapter controls scope lifetime. Required for:
+`manualUnscope: false` (default) — DI scope is released when the handler lifecycle settles (returned, threw, or rejected — including a rejected async `getControllerInstance`/`hooks.init`).
+
+`manualUnscope: true` — the adapter ALSO holds the scope; it is dropped once `unscope()` was called **and** the lifecycle settled, in either order (since 0.6.42). An early adapter signal (client disconnect mid-handler) therefore never pulls the scope from a running handler. Required for:
 - Long-lived connections (WebSocket, SSE)
 - Streaming responses
 - Workflows that pause/resume
@@ -175,8 +177,9 @@ const fn = defineMoostEventHandler({
   manualUnscope: true,
   hooks: {
     init: ({ unscope }) => {
-      const { raw } = useRequest()
-      raw.on('end', unscope)   // cleanup on request end (MoostHttp's pattern)
+      // MoostHttp's pattern: the RESPONSE closes once sent or on disconnect.
+      // NOT useRequest().raw 'end'/'close' — they fire as soon as the body is read.
+      useResponse().getRawRes(true).once('close', unscope)
     },
   },
   // …
@@ -251,7 +254,7 @@ class MyAdapter implements TMoostAdapter<TMeta> {
 
 ### HTTP (MoostHttp)
 
-- `manualUnscope: true`, `unscope` hooked to request `'end'` (keeps scope alive for streaming).
+- `manualUnscope: true`, `unscope` hooked to the response `'close'` (keeps the scope through body parsing and streamed responses; `UPGRADE` handlers take no adapter hold — their scope ends with the handler).
 - `getProvideRegistry()` exposes `WooksHttp`, `'WooksHttp'`, `HttpServer`, `HttpsServer`.
 
 ### CLI (MoostCli)

@@ -15,7 +15,13 @@ Powered by `@prostojs/infact`. Scopes, providers, replacements, circular refs, l
 ## Scopes
 
 - `SINGLETON` / `true` — one instance for app lifetime. Instantiated once during `init()` (in a synthetic event context) or on first use.
-- `FOR_EVENT` — fresh instance per event. Requires an active event context. Auto-cleaned when the scope unregisters.
+- `FOR_EVENT` — fresh instance per event. Requires an active event context. Auto-cleaned when the event's scope is released.
+
+| # | `FOR_EVENT` scope lifetime (since 0.6.42) |
+|---|---|
+| 1 | HTTP: lives until the response is done (sent, streamed body included, or client disconnected) **and** the handler settled — resolvable after `@Body()`, while a returned stream is sent, and after a client abort. `@Upgrade` handlers: until the handler settles. |
+| 2 | Every event context owns its scope — never inherited from a parent context. A workflow run started with `eventContext: current()` gets its own (its steps share it; released when the run ends): `FOR_EVENT` instances are NOT shared with the starting request — carry data via context/composables. Each WS `@Message` gets its own; `@Connect`/`@Disconnect` use the connection's. Resolving `FOR_EVENT` in a child context no moost handler runs in (a raw wooks handler) fails — it no longer borrows the parent's scope. |
+| 3 | Symptom of the pre-0.6.42 bugs: `The requested scope "__moost_…" isn't registered` / `Failed to instantiate <FOR_EVENT class>`. ≤ 0.6.39 the HTTP scope ended once the request body was read; ≤ 0.6.41 a client disconnect mid-handler dropped it, a workflow run with `eventContext` released the **starting request's** scope when it ended, and concurrent WS messages on one connection shared one scope (the first to finish tore it down for the rest). |
 
 `@Controller()` implicitly sets `@Injectable(true)` (SINGLETON). Add `@Injectable('FOR_EVENT')` explicitly on controllers that hold per-event state (property-level ref decorators, per-request fields).
 
