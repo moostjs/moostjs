@@ -1,3 +1,12 @@
+## [0.6.42](https://github.com/moostjs/moostjs/compare/v0.6.41...v0.6.42) (2026-09-30)
+
+
+### Bug Fixes
+
+* **moost:** own DI scope per event; keep HTTP scope until response closes and handler settles ([350fdf8](https://github.com/moostjs/moostjs/commit/350fdf8d3f81b659d6b54d4c02831581af05efbd))
+
+
+
 ## [0.6.41](https://github.com/moostjs/moostjs/compare/v0.6.40...v0.6.41) (2026-09-29)
 
 
