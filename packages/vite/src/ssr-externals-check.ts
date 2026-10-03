@@ -16,23 +16,34 @@ export const RUNTIME_PACKAGE_PATTERNS = [
   /^wooks($|\/)/,
 ]
 
+/**
+ * The `ssr.noExternal` entry the plugin always adds, so the `define:`
+ * substitutions in `prod-server.mjs` land.
+ */
+export const PLUGIN_NO_EXTERNAL = /^@moostjs\/vite($|\/)/
+
 export function isRuntimePackage(name: string): boolean {
   return RUNTIME_PACKAGE_PATTERNS.some((re) => re.test(name))
 }
 
 /**
- * Packages the build check watches by default: the moost/wooks runtime plus the
- * `@atscript/*` family. All of them keep module-level state — Symbol slot keys,
- * DI/model registries, class identity used by `instanceof` — so a second copy
- * loaded by Node breaks lookups that the bundled copy filled in.
+ * Packages the split checks watch by default: the moost/wooks runtime, the DI
+ * and metadata containers under it (`@prostojs/infact`, `@prostojs/mate`) and
+ * the `@atscript/*` family. All of them keep module-level state — Symbol slot
+ * keys, DI/model registries, class identity used by `instanceof` — so a second
+ * copy loaded by Node breaks lookups that the other copy filled in.
  *
  * This is deliberately wider than {@link RUNTIME_PACKAGE_PATTERNS}: the guard
- * that force-bundles packages covers the runtime only, while the check merely
- * reports what the output shows.
+ * that force-bundles packages covers the runtime only, while the checks merely
+ * report what the build output / dev config shows.
  */
-export const SHARED_STATE_PACKAGE_PATTERNS: RegExp[] = [...RUNTIME_PACKAGE_PATTERNS, /^@atscript\//]
+export const SHARED_STATE_PACKAGE_PATTERNS: RegExp[] = [
+  ...RUNTIME_PACKAGE_PATTERNS,
+  /^@prostojs\/(infact|mate)($|\/)/,
+  /^@atscript\//,
+]
 
-function escapeRegExp(input: string): string {
+export function escapeRegExp(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
@@ -111,14 +122,15 @@ export function bundledPackagesFromModuleIds(moduleIds: Iterable<string>): Set<s
   return packages
 }
 
-interface TPkgJson {
+export interface TPkgJson {
   name?: string
   dependencies?: Record<string, string>
+  devDependencies?: Record<string, string>
   peerDependencies?: Record<string, string>
   optionalDependencies?: Record<string, string>
 }
 
-function readPkgJson(dir: string): TPkgJson | undefined {
+export function readPkgJson(dir: string): TPkgJson | undefined {
   try {
     return JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as TPkgJson
   } catch {
@@ -151,12 +163,13 @@ export function findPackageDir(name: string, fromDir: string): string | undefine
   }
 }
 
+/** Membership test for the packages on the other side of the split (bundled, or inlined in dev). */
+export interface TPackageSet {
+  has(name: string): boolean
+}
+
 /** Deps of `pkg` that are watched packages AND were bundled into the output. */
-function splitDepsOf(
-  pkg: TPkgJson,
-  patterns: RegExp[],
-  bundledPackages: ReadonlySet<string>,
-): string[] {
+function splitDepsOf(pkg: TPkgJson, patterns: RegExp[], bundledPackages: TPackageSet): string[] {
   const names = new Set<string>()
   for (const group of [pkg.dependencies, pkg.peerDependencies, pkg.optionalDependencies]) {
     for (const dep of Object.keys(group ?? {})) {
@@ -186,7 +199,7 @@ const MAX_VISITED = 5000
 export function findSplitPackages(opts: {
   root: string
   externalIds: Iterable<string>
-  bundledPackages: ReadonlySet<string>
+  bundledPackages: TPackageSet
   patterns?: RegExp[]
 }): TSplitPackage[] {
   const patterns = opts.patterns ?? SHARED_STATE_PACKAGE_PATTERNS
@@ -227,17 +240,21 @@ export function findSplitPackages(opts: {
   return found
 }
 
-/** Human-readable build warning for {@link findSplitPackages} results. */
-export function formatSplitPackagesWarning(splits: TSplitPackage[]): string {
-  const lines = splits.map((s) => {
+/** One warning line per split: the consumer, its external chain and its split deps (tagged `label`). */
+export function formatSplitLines(splits: TSplitPackage[], label: string): string[] {
+  return splits.map((s) => {
     const chain = s.via.length > 0 ? ` (loaded via external ${s.via.join(' → ')})` : ''
-    const deps = s.splitDeps.map((d) => `${d} (bundled)`).join(', ')
+    const deps = s.splitDeps.map((d) => `${d} (${label})`).join(', ')
     return `  - ${s.name}${chain} depends on ${deps}`
   })
+}
+
+/** Human-readable build warning for {@link findSplitPackages} results. */
+export function formatSplitPackagesWarning(splits: TSplitPackage[]): string {
   const direct = [...new Set(splits.map((s) => (s.via.length > 0 ? s.via[0] : s.name)))]
   return [
     'These externalized packages depend on packages that are bundled into dist/server, so Node will load a second copy of them from node_modules:',
-    ...lines,
+    ...formatSplitLines(splits, 'bundled'),
     'Two copies of a package split its module state — event-context slots, DI registries and class identity (instanceof) stop matching across the boundary, in production only. Symptoms: "Cannot read properties of undefined (reading \'headers\')" inside a wooks composable, or a database adapter creating an empty table where a managed view was declared.',
     `Fix: keep each shared package and everything that depends on it on the same side — add ${direct.map((d) => `'${d}'`).join(', ')} to ssr.noExternal (or drop them from ssr.external / ssrExternal), or externalize the whole family (for example every @atscript/* package, or the whole moost/wooks runtime) via ssr.external.`,
     'Set ssrExternalCheck: false in moostVite() to silence this check, or ssrExternalCheck: { packages: [...] } to watch more packages.',

@@ -53,6 +53,7 @@ new MoostHttp(existingWooksHttp)      // reuse an instance
 | `getServerCb(onNoMatch?)` | `RequestListener` | for custom HTTP/HTTPS servers |
 | `fetch(request)` | `Promise<Response \| null>` | in-process route invocation (SSR) |
 | `request(input, init?)` | `Promise<Response \| null>` | convenience fetch; relative paths prefixed with `http://localhost` |
+| `invoke(method, path, { body?, rawBody?, contentType?, isolate?, prepare? })` | `Promise<R>` | run another route's full pipeline INSIDE the current request; resolves to the handler's value / rejects with its error (guard `reply(err)` too); 404 `HttpError` when no route. See gotcha 9 |
 | `withHttpContext(req, res, fn)` | `Promise<{ result, response }>` | run `fn` inside an HTTP context seeded from a real `(req, res)`, no route dispatch — nested `fetch()` inherits identity; ≥ 0.7.20 wooks (see [Local fetch / SSR](#local-fetch--ssr)) |
 
 ### Integrating with existing server
@@ -207,3 +208,4 @@ From `@moostjs/event-http`: `httpKind`, `HttpError`, `useHttpContext` (re-export
 6. Default 404 handler runs through the global interceptor chain — but only when `MoostHttp` creates its own Wooks app; when you pass a pre-built `WooksHttp` instance, configure `onNotFound` on it yourself.
 7. `forwardHeaders: ['x']` replaces the default identity set (silent loss of `authorization`/`cookie` forwarding) — spread `DEFAULT_FORWARD_HEADERS` to extend.
 8. In-process calls with **no** caller HTTP context arrive anonymous from `127.0.0.1` — per-IP rate limiting then buckets every such call (e.g. all SSR renders fleet-wide) under one `ip:127.0.0.1` subject. Wrap the caller in `withHttpContext` (or upgrade `@moostjs/vite` past 0.6.30, which does it for SSR).
+9. `invoke()`: the route sees ITS body (`body` → `@Body`/`useBody`/`@RawBody`/`rawBody()`; none given → empty, never the caller's), own route params / controller context / `FOR_EVENT` scope (released when the handler settles), but the CALLER's request, headers, URL, query. Status/headers/cookies it sets are discarded (detached response); `getRawRes()` writes still hit the caller's socket. `prepare(ctx)` gets the route's child context (seed slots / read what the route left after it settled). Get the adapter with `useControllerContext().instantiate(MoostHttp)`.

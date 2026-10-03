@@ -120,6 +120,8 @@ The root span is renamed after the controller is resolved to include meaningful 
 - **Other events:** `{EventType} {route}` (e.g. `CLI users list`, `WF process-order`)
 - **Unresolved routes:** `{EventType} <unresolved>` when no route was matched
 
+Routes run inside a running event (`MoostHttp.invoke()`) never rename or re-attribute the calling event's root span and record no event metrics of their own; their lifecycle spans (`Interceptors:before`, `Handler:{path}`, …) appear as children of the caller's span.
+
 ## Error handling
 
 When an error occurs at any lifecycle phase:

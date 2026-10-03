@@ -59,4 +59,5 @@ For most cases, constructor injection is simpler and more predictable. Use `inst
 ## Gotchas
 
 - **The target class must be DI-visible.** `instantiate()` rejects classes without `@Injectable()` (or a matching provide-registry entry) with `Class is not Injectable and not Optional`.
+- **Adapter classes resolve to the attached adapter.** `instantiate(MoostHttp)` (or `MoostCli`, `MoostWf`, `MoostWs`) returns the adapter instance your app attached with `app.adapter()` — also when you attached a subclass, and also when the class you pass comes from a second copy of the adapter package (a library loaded on the other side of a bundler/SSR externalization split). The second-copy case logs a one-time warning: fix the duplicate install, since other module state is split too. Versions <= 0.6.42 reject both cases with `Class is not Injectable`.
 - **Requires an active event context.** `useControllerContext()` only works inside handlers and interceptors; calling it at module top level (or outside an event) throws `No active event context`.

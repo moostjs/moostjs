@@ -86,7 +86,8 @@ export function useOtelContext(ctx?: EventContext) {
     getSpan,
     getSpanContext,
     getPropagationHeaders,
-    registerSpan: (span: Span) => _ctx.set(otelSpanKey, span),
+    // the span belongs to this event — never overwrite a parent event's span
+    registerSpan: (span: Span) => _ctx.setOwn(otelSpanKey, span),
     pushSpan,
     customSpanAttr,
     customMetricAttr,

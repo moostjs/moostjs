@@ -39,6 +39,28 @@ Every event owns its scope. A child event — a workflow run started with `event
 Do not inject `FOR_EVENT` classes into singletons. Singletons are created once, so an event-scoped dependency inside one would break event isolation. The reverse — injecting singletons into `FOR_EVENT` classes — is fine.
 :::
 
+## Running Code as Another Controller
+
+`withControllerContext(instance, method, fn, opts?)` runs `fn` in a child of the current event whose controller context is `instance` / `method`. Hooks and services that read `useControllerContext()` (permission layers, metadata readers) then behave as if the event had been routed to that controller — and nothing written in the child (controller context, `ctx.set()`, composable state) leaks back into the calling event.
+
+```ts
+import { useControllerContext, withControllerContext } from 'moost'
+
+const source = await useControllerContext().instantiate(IssueController)
+const verdicts = await withControllerContext(source, 'list', () => source.checkAccess(ids))
+```
+
+| Option | Default | Effect |
+| --- | --- | --- |
+| `shareScope` | `true` | `FOR_EVENT` dependencies resolve in the calling event's scope (same instances). `false`: the child gets its own scope, registered while `fn` runs and released when it settles |
+| `isolate` | — | Slots / `defineWook` composables the child computes for itself instead of reading the caller's |
+| `route`, `prefix` | `''`, — | What `useControllerContext().getRoute()` / `getPrefix()` report in the child |
+
+The lower-level `forkEventContext({ isolate? })` creates the same copy-on-write child without a controller context; run code in it with `run(child, fn)`. `FOR_EVENT` classes cannot be resolved in a plain forked context — use `withControllerContext()` for that.
+
+-   **DO** call it from inside a running moost handler (the shared scope must be live).
+-   **DON'T** run a routed handler inside a scope-sharing child: a handler registers and releases its own scope. Use [`MoostHttp.invoke()`](/webapp/fetch#http-invoke-method-path-opts-inside-the-current-request) to run another route.
+
 ## Controllers and DI
 
 Controllers are automatically injectable (the `@Controller()` decorator handles this). Add constructor parameters typed as injectable classes and Moost resolves them:

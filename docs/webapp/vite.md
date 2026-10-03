@@ -242,7 +242,7 @@ Earlier versions awaited only the entry's module evaluation: a rejecting `init()
 | `ssrHead` | `string` | `'<!--ssr-head-->'` | HTML placeholder for SSR-rendered `<head>` tags — place inside `<head>` (see [render contract](/webapp/ssr#the-render-contract)) |
 | `serverEntry` | `string` | — | Custom production server entry file (e.g. `'./server.ts'`) |
 | `ssrExternal` | `string[]` | — | Packages to keep external in the middleware-mode SSR build (concatenated with `cfg.ssr.external`). See [SSR Bundle Size](#ssr-bundle-size). |
-| `ssrExternalCheck` | `boolean \| { packages?: (string \| RegExp)[] }` | `true` | Warn after the middleware-mode SSR build when an externalized package depends on a **bundled** shared-state package (`moost`, `@moostjs/*`, `wooks`, `@wooksjs/*`, `@atscript/*` by default). `{ packages: [...] }` watches more — an exact name (`'lodash'`), a scope prefix (`'@acme/'`) or a `RegExp`. See [Keep consumers on the same side](#keep-consumers-on-the-same-side-as-the-shared-packages). |
+| `ssrExternalCheck` | `boolean \| { packages?: (string \| RegExp)[] }` | `true` | Warn after the middleware-mode SSR build when an externalized package depends on a **bundled** shared-state package (`moost`, `@moostjs/*`, `wooks`, `@wooksjs/*`, `@prostojs/infact`, `@prostojs/mate`, `@atscript/*` by default), and at dev-server startup when one depends on a package the SSR module runner **inlines**. `{ packages: [...] }` watches more — an exact name (`'lodash'`), a scope prefix (`'@acme/'`) or a `RegExp`. See [Keep consumers on the same side](#keep-consumers-on-the-same-side-as-the-shared-packages) and [Dev server: one runtime copy](#dev-server-one-runtime-copy). |
 
 ::: tip
 Options `port`, `host`, `outDir`, `format`, and `externals` are only used in backend mode — in middleware mode, your `vite.config.ts` controls build and server configuration. The exception is `sourcemap`: it applies in both modes (in middleware mode it controls source maps for the `dist/server/` SSR build, default `true`).
@@ -314,7 +314,7 @@ Fix: keep each shared package and everything that depends on it on the same side
 Set ssrExternalCheck: false in moostVite() to silence this check, or ssrExternalCheck: { packages: [...] } to watch more packages.
 ```
 
-Watched by default: `moost`, `@moostjs/*`, `wooks`, `@wooksjs/*` and `@atscript/*`. Any other package of yours that keeps module-level state belongs in the watched set too — `ssrExternalCheck: { packages: ['some-registry-lib', '@acme/', /^my-lib-/] }` (exact name, scope prefix, or `RegExp`). `ssrExternalCheck: false` silences the check entirely.
+Watched by default: `moost`, `@moostjs/*`, `wooks`, `@wooksjs/*`, `@prostojs/infact`, `@prostojs/mate` and `@atscript/*`. Any other package of yours that keeps module-level state belongs in the watched set too — `ssrExternalCheck: { packages: ['some-registry-lib', '@acme/', /^my-lib-/] }` (exact name, scope prefix, or `RegExp`). `ssrExternalCheck: false` silences the check entirely.
 
 To verify by hand — or on a plugin version without the check — list what `dist/server` still imports from `node_modules`:
 
@@ -329,4 +329,26 @@ grep -rhoE 'from *"[^"./][^"]*"' dist/server --include='*.js' | sed 's/from *"//
 
 ::: warning Symptom
 `TypeError: Cannot read properties of undefined (reading 'headers')` — or `(reading 'authorization')`, `(reading 'cookie')`, any header name, depending on which composable runs first — thrown from inside a wooks composable, in production only while `vite serve` is healthy, means two copies of the wooks runtime are loaded. The silent variant: a database adapter creates an **empty table** where a managed view was declared (its `instanceof` check saw a class from the other copy), so queries return nothing and no error is raised. Fix the externalization split above; the code is fine.
+:::
+
+## Dev server: one runtime copy
+
+`vite serve` has two module worlds too: Vite's SSR module runner evaluates your app code (and anything it *inlines*), while every *externalized* dependency is loaded natively by Node. Vite externalizes installed `node_modules` packages by default, so `moost`, `@moostjs/*` and `@wooksjs/*` load **once, through Node**, and your app and any library that imports them on its own — `@atscript/moost-db` resolving `MoostHttp` for a delegated query, an auth library calling `useRequest()` — share one copy. No `ssr` config is needed for this.
+
+Two configurations make the runner evaluate its own copy next to Node's:
+
+- **The runtime listed in `ssr.noExternal`** (or `noExternal: true`) for `vite serve`. Don't — keep it dev-external; put a list you need for the build behind `command === 'build'`.
+- **A linked workspace package** (`workspace:*`, `link:`) — Vite inlines packages that resolve outside `node_modules`. List it in `ssr.external` when an installed dependency imports it as well.
+
+The dev server checks this at startup (same `ssrExternalCheck` option and watched set as the build) and names each natively loaded package that depends on an inlined one:
+
+```text
+[moost-vite] These packages are loaded natively by Node in dev, but depend on packages Vite's SSR module runner evaluates its own copy of (ssr.noExternal, or a linked workspace package):
+  - some-db-lib depends on @moostjs/event-http (inlined)
+Two copies of a package split its module state — class identity ("Class is not Injectable" when a library resolves an adapter through DI), DI registries and event-context slots stop matching across the boundary.
+Fix: let Vite externalize '@moostjs/event-http' in dev (remove it from ssr.noExternal; list a linked workspace package in ssr.external), or add 'some-db-lib' to ssr.noExternal so the runner evaluates those as well.
+```
+
+::: info @moostjs/vite <= 0.6.42
+Up to 0.6.42 the plugin itself loaded the adapter through the runner, so every dev app ran a runner copy of `@moostjs/event-http` — a natively loaded library calling `useControllerContext().instantiate(MoostHttp)` failed with `Class is not Injectable`. The usual workaround was adding such libraries to `ssr.noExternal` for dev; drop it after upgrading.
 :::

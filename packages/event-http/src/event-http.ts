@@ -4,25 +4,46 @@ import type { TWooksHttpOptions } from '@wooksjs/event-http'
 import {
   createHttpApp,
   HttpError,
+  httpKind,
   useResponse,
   WooksHttp,
   WooksHttpResponse,
 } from '@wooksjs/event-http'
+import { seedBody } from '@wooksjs/http-body'
+import type { Buffer } from 'buffer'
 import { Server as HttpServer } from 'http'
 import { Server as HttpsServer } from 'https'
 import type {
+  EventContext,
   Moost,
   TConsoleBase,
+  TIsolatedSlot,
   TMoostAdapter,
   TMoostAdapterOptions,
   TMoostMetadata,
 } from 'moost'
-import { defineMoostEventHandler, getMoostMate } from 'moost'
+import {
+  current,
+  defineMoostEventHandler,
+  forkEventContext,
+  getMoostMate,
+  globalKey,
+  MOOST_ADAPTER_BRAND,
+  run,
+} from 'moost'
 import type { ListenOptions } from 'net'
+
+/** Marks the child context of {@link MoostHttp.invoke}. */
+const invocationKey = globalKey<true>('moost-http.invocation')
 
 const holdScopeUntilResponseCloses = {
   init: ({ unscope }: { unscope: () => void }) => {
-    const res = useResponse().getRawRes(true)
+    const ctx = current()
+    if (ctx.hasOwn(invocationKey)) {
+      unscope() // an invoked route answers its caller — its scope ends with the handler
+      return
+    }
+    const res = useResponse(ctx).getRawRes(true)
     if (res.closed) {
       unscope() // the client was already gone
     } else {
@@ -40,6 +61,30 @@ export interface THttpHandlerMeta {
 }
 
 const LOGGER_TITLE = 'moost-http'
+
+/** Options for {@link MoostHttp.invoke}. */
+export interface TMoostHttpInvokeOptions {
+  /**
+   * The parsed request body the invoked route sees (`@Body()`, `useBody().parseBody()`).
+   * Without `body` / `rawBody` the route sees an empty body — never the calling request's.
+   */
+  body?: unknown
+  /** The raw body bytes (`@RawBody()`, `rawBody()`). Default: derived from `body` (JSON for objects). */
+  rawBody?: Buffer | string
+  /** The content type `useBody().is()` checks. Default: derived from `body` (`application/json` for objects). */
+  contentType?: string
+  /**
+   * Slots (or `defineWook` composables) of the calling event that the invoked route must not
+   * read through — per-event state the calling handler computed and the route must compute
+   * for itself.
+   */
+  isolate?: Iterable<TIsolatedSlot>
+  /**
+   * Called with the route's child context before the route runs — seed extra slots, or keep a
+   * reference to read what the route left in it once `invoke()` settled.
+   */
+  prepare?: (ctx: EventContext) => void
+}
 
 /**
  * ## Moost HTTP Adapter
@@ -67,6 +112,9 @@ const LOGGER_TITLE = 'moost-http'
  * ```
  */
 export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
+  /** Names this adapter for DI independently of class identity (see `MOOST_ADAPTER_BRAND`). */
+  static readonly [MOOST_ADAPTER_BRAND] = '@moostjs/event-http/MoostHttp'
+
   public readonly name = 'http'
 
   protected httpApp: WooksHttp
@@ -132,6 +180,81 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
    */
   public withHttpContext<T>(req: IncomingMessage, res: ServerResponse, fn: () => T) {
     return this.httpApp.withHttpContext(req, res, fn)
+  }
+
+  /**
+   * Runs the route matching `method` + `path` inside the CURRENT HTTP event — its whole moost
+   * pipeline (DI scope, guards and other interceptors, argument resolution, pipes, handler) —
+   * and resolves to the handler's return value, or rejects with its error. Nothing is written
+   * to the HTTP response.
+   *
+   * The route runs in a copy-on-write child of the current event: it reads the caller's
+   * request, headers and authorization through, but sees its own body (`opts.body`), its own
+   * route params, its own controller context and its own `FOR_EVENT` DI scope (released when
+   * the handler settles). Status, headers and cookies it sets go to a detached response and
+   * are discarded.
+   *
+   * Use it to delegate work to another controller's route without a network round-trip or
+   * re-sending credentials. Rejects with `HttpError(404)` when no route matches.
+   *
+   * @example
+   * ```ts
+   * const http = await useControllerContext().instantiate(MoostHttp)
+   * const summary = await http.invoke('POST', '/issues/actions/close', { body: { ids } })
+   * ```
+   */
+  public invoke<R = unknown>(
+    method: string,
+    path: string,
+    opts?: TMoostHttpInvokeOptions,
+  ): Promise<R> {
+    const parent = current()
+    const caller = parent.has(httpKind.keys.response)
+      ? parent.get(httpKind.keys.response)
+      : undefined
+    if (!caller) {
+      throw new Error('MoostHttp.invoke() must be called inside an HTTP event')
+    }
+    const child = forkEventContext({ parent, isolate: opts?.isolate })
+    child.setOwn(invocationKey, true)
+    const ResponseCtor = caller.constructor as typeof WooksHttpResponse
+    child.setOwn(
+      httpKind.keys.response,
+      new ResponseCtor(
+        caller.getRawRes(true),
+        parent.get(httpKind.keys.req),
+        parent.logger,
+        undefined,
+        true,
+      ),
+    )
+    seedBody(child, opts?.body, { raw: opts?.rawBody, contentType: opts?.contentType })
+    opts?.prepare?.(child)
+    return run(child, async () => {
+      const handlers = this.httpApp.getWooks().lookupHandlers(method, path, child)
+      if (!handlers?.length) {
+        throw new HttpError(404, `No route for ${method} ${path}`)
+      }
+      // Same chain semantics as a routed request: the first handler that does not throw answers —
+      // a returned Error is that answer (rejects without trying the next handler).
+      let failure: unknown
+      for (const handler of handlers) {
+        let result: unknown
+        try {
+          result = await handler()
+        } catch (error) {
+          failure = error
+          continue
+        }
+        if (result instanceof Error) {
+          // oxlint-disable-next-line no-throw-literal -- narrowed to an Error by the check above
+          throw result
+        }
+        return result as R
+      }
+      // oxlint-disable-next-line no-throw-literal -- rethrows the last handler's error as is
+      throw failure
+    })
   }
 
   public listen(

@@ -22,30 +22,32 @@ Adapter flow: `app.adapter(a)` registers → during `app.init()` Moost calls `a.
 
 `import type { TMoostAdapter, TMoostAdapterOptions } from 'moost'`. An adapter implements four members:
 
-| Member | What you implement |
-|---|---|
-| `name` (required) | identifying label for the adapter (not currently consumed by the runtime — still required by the interface) |
-| `bindHandler(opts)` | called once per controller method during `init()` — filter `opts.handlers` by your type and register routes with your engine (may be async) |
-| `onInit?(moost)` | called after ALL controllers are bound and `@MoostInit` hooks ran — start servers/engines here |
-| `onDispose?(moost)` | called FIRST by `Moost.dispose()` (before any `@MoostDispose` instance hook), in adapter registration order — stop servers/engines/consumers here. Awaited; a throw is logged + collected, never aborts the shutdown. Make it a no-op when nothing was started. See [core.md](core.md#app-dispose-moostdispose) |
-| `getProvideRegistry?()` | provide-registry entries merged into DI before binding (expose your engine instances) |
+| Member                  | What you implement                                                                                                                                                                                                                                                                                              |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name` (required)       | identifying label for the adapter (not currently consumed by the runtime — still required by the interface)                                                                                                                                                                                                     |
+| `bindHandler(opts)`     | called once per controller method during `init()` — filter `opts.handlers` by your type and register routes with your engine (may be async)                                                                                                                                                                     |
+| `onInit?(moost)`        | called after ALL controllers are bound and `@MoostInit` hooks ran — start servers/engines here                                                                                                                                                                                                                  |
+| `onDispose?(moost)`     | called FIRST by `Moost.dispose()` (before any `@MoostDispose` instance hook), in adapter registration order — stop servers/engines/consumers here. Awaited; a throw is logged + collected, never aborts the shutdown. Make it a no-op when nothing was started. See [core.md](core.md#app-dispose-moostdispose) |
+| `getProvideRegistry?()` | provide-registry entries merged into DI before binding (expose your engine instances)                                                                                                                                                                                                                           |
+
+Optional brand: `static readonly [MOOST_ADAPTER_BRAND] = '<package>/<Class>'` (symbol exported from `moost`) lets `useControllerContext().instantiate(YourAdapter)` return the attached adapter when a subclass of it is attached, or when the caller's class comes from a second copy of your package (warns once). The built-in adapters carry one.
 
 ## TMoostAdapterOptions
 
 What `bindHandler(opts)` gives you, and what to do with each field:
 
-| Field | Use |
-|---|---|
-| `prefix` | computed path prefix from the controller hierarchy — prepend to handler paths |
-| `fakeInstance` | `Object.create(ctor.prototype)` — for reading metadata only, never invoke methods |
-| `getInstance()` | real DI-resolved controller instance — may return a Promise (`FOR_EVENT`) |
-| `method` | the controller method name being bound |
-| `handlers` | ALL handler entries on the method (every decorator) — filter by your `handler.type`! |
-| `getIterceptorHandler()` | pass through to `defineMoostEventHandler` |
-| `resolveArgs?` | pass through to `defineMoostEventHandler`; `undefined` for no-arg methods |
-| `controllerName?` | controller class name — feeds tracing span attributes |
-| `logHandler(eventName)` | call once per registered route for the init-time route-mapping log |
-| `register(handler, path, args)` | report the final mounted path back to the controllers overview (`registeredAs`) |
+| Field                           | Use                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------ |
+| `prefix`                        | computed path prefix from the controller hierarchy — prepend to handler paths        |
+| `fakeInstance`                  | `Object.create(ctor.prototype)` — for reading metadata only, never invoke methods    |
+| `getInstance()`                 | real DI-resolved controller instance — may return a Promise (`FOR_EVENT`)            |
+| `method`                        | the controller method name being bound                                               |
+| `handlers`                      | ALL handler entries on the method (every decorator) — filter by your `handler.type`! |
+| `getIterceptorHandler()`        | pass through to `defineMoostEventHandler`                                            |
+| `resolveArgs?`                  | pass through to `defineMoostEventHandler`; `undefined` for no-arg methods            |
+| `controllerName?`               | controller class name — feeds tracing span attributes                                |
+| `logHandler(eventName)`         | call once per registered route for the init-time route-mapping log                   |
+| `register(handler, path, args)` | report the final mounted path back to the controllers overview (`registeredAs`)      |
 
 ## defineMoostEventHandler
 
@@ -55,19 +57,19 @@ Returns a function that, when called inside a Wooks event context, runs the full
 const fn = defineMoostEventHandler({
   // contextType is deprecated — unused since wooks v0.7; the event kind comes
   // from the wooks adapter (eventTypeKey/defineEventKind). Do not pass it.
-  loggerTitle: 'my-adapter',               // required
+  loggerTitle: 'my-adapter', // required
   getIterceptorHandler: opts.getIterceptorHandler,
   getControllerInstance: opts.getInstance,
   controllerMethod: opts.method,
   controllerName: opts.controllerName,
-  callControllerMethod: undefined,         // override default invocation
-  resolveArgs: opts.resolveArgs,           // may be undefined for no-arg handlers
+  callControllerMethod: undefined, // override default invocation
+  resolveArgs: opts.resolveArgs, // may be undefined for no-arg handlers
   logErrors: false,
-  manualUnscope: false,                    // true => scope also waits for the adapter's unscope()
-  hooks: { init, end },                    // see below
-  targetPath: '/api/users/:id',            // full path for logging/tracing
+  manualUnscope: false, // true => scope also waits for the adapter's unscope()
+  hooks: { init, end }, // see below
+  targetPath: '/api/users/:id', // full path for logging/tracing
   controllerPrefix: opts.prefix,
-  handlerType: handler.type,               // required
+  handlerType: handler.type, // required
 })
 ```
 
@@ -86,15 +88,15 @@ scope register (useScopeId + registerEventScope) → logger setup → hooks.init
 
 `hooks.init` and `hooks.end` receive the same `TMoostEventHandlerHookOptions<T>` object (`import type { TMoostEventHandlerHookOptions } from 'moost'`):
 
-| Field | Notes |
-|---|---|
-| `scopeId` | the event's DI scope ID |
-| `logger` | event logger |
-| `unscope()` | the adapter's release of the DI scope with `manualUnscope: true` — idempotent; see [Scope management](#scope-management) |
-| `method?` | the controller method name — available in BOTH `init` and `end` |
-| `instance?` | exists on the type but is NEVER populated by `defineMoostEventHandler` — to reach the controller instance in `hooks.end`, capture it via `getControllerInstance()` or `useControllerContext().getController()` |
-| `getResponse()` | current response value (set after the handler/interceptors ran) |
-| `reply(r)` | overwrite the response |
+| Field           | Notes                                                                                                                                                                                                          |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scopeId`       | the event's DI scope ID                                                                                                                                                                                        |
+| `logger`        | event logger                                                                                                                                                                                                   |
+| `unscope()`     | the adapter's release of the DI scope with `manualUnscope: true` — idempotent; see [Scope management](#scope-management)                                                                                       |
+| `method?`       | the controller method name — available in BOTH `init` and `end`                                                                                                                                                |
+| `instance?`     | exists on the type but is NEVER populated by `defineMoostEventHandler` — to reach the controller instance in `hooks.end`, capture it via `getControllerInstance()` or `useControllerContext().getController()` |
+| `getResponse()` | current response value (set after the handler/interceptors ran)                                                                                                                                                |
+| `reply(r)`      | overwrite the response                                                                                                                                                                                         |
 
 ## Minimal adapter
 
@@ -103,7 +105,9 @@ import type { TMoostAdapter, TMoostAdapterOptions } from 'moost'
 import { defineMoostEventHandler } from 'moost'
 import { createEventContext } from '@wooksjs/event-core'
 
-interface TMyHandlerMeta { eventName: string }
+interface TMyHandlerMeta {
+  eventName: string
+}
 
 class MyAdapter implements TMoostAdapter<TMyHandlerMeta> {
   name = 'my-adapter'
@@ -112,7 +116,10 @@ class MyAdapter implements TMoostAdapter<TMyHandlerMeta> {
   bindHandler<T extends object>(opts: TMoostAdapterOptions<TMyHandlerMeta, T>) {
     for (const h of opts.handlers) {
       if (h.type !== 'MY_EVENT') continue
-      const targetPath = `${opts.prefix}/${h.path || (opts.method as string)}`.replaceAll(/\/\/+/g, '/')
+      const targetPath = `${opts.prefix}/${h.path || (opts.method as string)}`.replaceAll(
+        /\/\/+/g,
+        '/',
+      )
 
       const fn = defineMoostEventHandler({
         loggerTitle: 'my-adapter',
@@ -148,14 +155,20 @@ Type the mate with your handler meta — with bare `getMoostMate()` the extra fi
 import type { TEmpty, TMoostMetadata } from 'moost'
 import { getMoostMate } from 'moost'
 
-interface TMyHandlerMeta { eventName: string }
+interface TMyHandlerMeta {
+  eventName: string
+}
 
 function MyEvent(name: string): MethodDecorator {
-  return getMoostMate<TEmpty, TMoostMetadata<TMyHandlerMeta>>().decorate('handlers', {
-    type: 'MY_EVENT',
-    path: name,
-    eventName: name,
-  }, true)  // true = push to array
+  return getMoostMate<TEmpty, TMoostMetadata<TMyHandlerMeta>>().decorate(
+    'handlers',
+    {
+      type: 'MY_EVENT',
+      path: name,
+      eventName: name,
+    },
+    true,
+  ) // true = push to array
 }
 ```
 
@@ -168,6 +181,7 @@ The scope id comes from `useScopeId(ctx)`, which is owned by that event context 
 `manualUnscope: false` (default) — DI scope is released when the handler lifecycle settles (returned, threw, or rejected — including a rejected async `getControllerInstance`/`hooks.init`).
 
 `manualUnscope: true` — the adapter ALSO holds the scope; it is dropped once `unscope()` was called **and** the lifecycle settled, in either order (since 0.6.42). An early adapter signal (client disconnect mid-handler) therefore never pulls the scope from a running handler. Required for:
+
 - Long-lived connections (WebSocket, SSE)
 - Streaming responses
 - Workflows that pause/resume
@@ -196,7 +210,9 @@ import { current } from '@wooksjs/event-core'
 // it interns the slot by name across duplicate module loads (dual ESM/CJS, or a
 // duplicated install), so set/get can't desync into a "Key ... is not set" 500.
 const eventDataKey = globalKey<unknown>('my-adapter.data')
-function setEventData(data: unknown) { current().set(eventDataKey, data) }
+function setEventData(data: unknown) {
+  current().set(eventDataKey, data)
+}
 
 function EventData(field?: string): ParameterDecorator & PropertyDecorator {
   return Resolve(() => {
@@ -217,7 +233,10 @@ Adapter-private quick form:
 
 ```ts
 import { Mate } from '@prostojs/mate'
-interface TMyAdapterMeta { myOption?: string; myTimeout?: number }
+interface TMyAdapterMeta {
+  myOption?: string
+  myTimeout?: number
+}
 const myMate = new Mate<TMyAdapterMeta, TMyAdapterMeta>('my-adapter')
 
 function MyOption(value: string): MethodDecorator {
@@ -235,7 +254,9 @@ Run the global interceptor chain when no handler matches:
 ```ts
 class MyAdapter implements TMoostAdapter<TMeta> {
   private moost?: Moost
-  onInit(m: Moost) { this.moost = m }
+  onInit(m: Moost) {
+    this.moost = m
+  }
 
   async onNotFound() {
     return defineMoostEventHandler({

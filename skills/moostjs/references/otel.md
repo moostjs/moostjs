@@ -105,3 +105,4 @@ First arg: `TSpanInput` (`{ name, options? }`) or an existing `Span`. Third arg 
 | 7 | `getPropagationHeaders()` is not strictly W3C-compliant (`traceFlags` unpadded decimal, `tracestate` is a `TraceState` object that stringifies to `[object Object]`) — use `propagation.inject(context.active(), headers)` from `@opentelemetry/api` for real propagation |
 | 8 | `WF_STEP` and `__SYSTEM__` (404 fallback) handlers skip only root-span renaming + metric attribution — their lifecycle spans are still emitted unless `@OtelIgnoreSpan()` applies |
 | 9 | `moost.ignore` is `true` or absent — never `false`; filter with `=== true` semantics |
+| 10 | Nested route invocations (`MoostHttp.invoke()`) never rename / re-attribute the caller's root span nor record event metrics; their lifecycle spans nest under it. `registerSpan()` stores on the CURRENT context only (a child event no longer overwrites its parent's span) |

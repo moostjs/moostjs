@@ -3,7 +3,7 @@ import { Infact } from '@prostojs/infact'
 import { getConstructor } from '@prostojs/mate'
 import { useLogger } from '@wooksjs/event-core'
 
-import { useScopeId } from '../adapter-utils'
+import { useScopeId } from '../event-scope'
 import type { TFunction } from '../common-types'
 import { getDefaultLogger } from '../logger'
 import type { TPipeData } from '../pipes'

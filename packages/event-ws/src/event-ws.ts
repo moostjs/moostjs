@@ -2,7 +2,7 @@ import { createProvideRegistry } from '@prostojs/infact'
 import type { TWooksWsOptions } from '@wooksjs/event-ws'
 import { createWsApp, WooksWs } from '@wooksjs/event-ws'
 import type { Moost, TConsoleBase, TMoostAdapter, TMoostAdapterOptions } from 'moost'
-import { defineMoostEventHandler } from 'moost'
+import { defineMoostEventHandler, MOOST_ADAPTER_BRAND } from 'moost'
 
 /** Handler metadata for routed WebSocket message events. */
 export interface TWsMessageHandlerMeta {
@@ -67,6 +67,9 @@ const LOGGER_TITLE = 'moost-ws'
  * ```
  */
 export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
+  /** Names this adapter for DI independently of class identity (see `MOOST_ADAPTER_BRAND`). */
+  static readonly [MOOST_ADAPTER_BRAND] = '@moostjs/event-ws/MoostWs'
+
   public readonly name = 'ws'
 
   protected wsApp: WooksWs

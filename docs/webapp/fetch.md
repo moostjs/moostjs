@@ -31,6 +31,40 @@ const response = await http.request('/api/users', {
 
 Convenience wrapper — accepts a URL string (relative paths auto-prefixed with `http://localhost`), URL object, or Request, plus optional `RequestInit`.
 
+### `http.invoke(method, path, opts?)` — inside the current request
+
+```ts
+import { MoostHttp } from '@moostjs/event-http'
+import { useControllerContext } from 'moost'
+
+@Post('bulk-close')
+async bulkClose(@Body() body: { ids: number[] }) {
+  const http = await useControllerContext().instantiate(MoostHttp)
+  for (const batch of chunk(body.ids, 100)) {
+    await http.invoke('POST', '/issues/close', { body: { ids: batch } })
+  }
+}
+```
+
+Runs another route's full pipeline **inside the current request** and resolves to the handler's return value (or rejects with its error — a guard's `reply(new HttpError(...))` included). Unlike `fetch()`, no new request is built: the route reads the caller's request, headers and authorization directly, so custom identity headers and mTLS work without `forwardHeaders`.
+
+| Option | Effect |
+| --- | --- |
+| `body` | The parsed body the route sees (`@Body()`, `useBody().parseBody()`); `@RawBody()` / `rawBody()` get its JSON (or the string / `Buffer` itself) |
+| `rawBody` | Raw bytes instead of the derived ones; with no `body`, they are parsed by `contentType` |
+| `contentType` | What `useBody().is()` checks — default derived from `body` (`application/json` for objects) |
+| `isolate` | Slots / `defineWook` composables of the caller the route must compute for itself instead of reading through |
+| `prepare` | `(ctx) => void` — called with the route's child context before it runs: seed extra slots, or keep `ctx` to read what the route left in it after `invoke()` settled |
+
+What the invoked route gets of its own: its body (never the caller's — an empty body when no `body`/`rawBody` is given), route params, controller context (`useControllerContext()`), interceptor state and a `FOR_EVENT` DI scope released as soon as its handler settles. What it shares: the request object, headers, URL and query string of the caller.
+
+-   **DO** use it to delegate to another controller's route in-process (batches, fan-out) when the route must run its own guards, pipes and validation.
+-   **DON'T** expect response side effects — status, headers and cookies the route sets go to a detached response and are discarded. Writing to `useResponse().getRawRes()` directly would still hit the caller's socket.
+-   **DON'T** rely on `useRequest().url`, query params or `content-length` inside the invoked route — they describe the caller's request.
+-   Rejects with `HttpError(404)` when no route matches `method` + `path` (`path` is the full mounted path, global prefix included).
+
+To call another controller's *methods* (not a route) as that controller, see [`withControllerContext()`](/moost/di/#running-code-as-another-controller).
+
 ### Header forwarding
 
 When called from within an existing HTTP context (e.g. during SSR rendering), identity headers (`authorization`, `cookie`, `accept-language`, `x-forwarded-for`, `x-request-id`) are automatically forwarded from the calling request to the programmatic request. Explicitly set headers take priority. `Set-Cookie` headers produced by the inner call propagate back onto the calling request's response.

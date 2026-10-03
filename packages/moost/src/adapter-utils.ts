@@ -1,10 +1,10 @@
 // oxlint-disable complexity
-import type { EventContext, Logger } from '@wooksjs/event-core'
-import { cached, current, getContextInjector, useLogger } from '@wooksjs/event-core'
+import type { Logger } from '@wooksjs/event-core'
+import { current, getContextInjector, useLogger } from '@wooksjs/event-core'
 
 import { setControllerContext } from './composables'
+import { registerEventScope, useScopeId } from './event-scope'
 import type { InterceptorHandler } from './interceptor-handler'
-import { getMoostInfact } from './metadata'
 import { isThenable } from './shared-utils'
 import type { TContextInjectorHook } from './types'
 
@@ -39,38 +39,6 @@ export interface TMoostEventHandlerOptions<T> {
   targetPath: string
   controllerPrefix?: string
   handlerType: string
-}
-
-// Monotonic scope ID counter — avoids randomUUID() crypto overhead.
-// On overflow, increment alphabetic prefix and reset counter.
-let _scopeChar = 'a'
-let _scopeNum = 0
-function nextScopeId(): string {
-  if (_scopeNum >= Number.MAX_SAFE_INTEGER) {
-    _scopeNum = 0
-    _scopeChar =
-      _scopeChar === 'z' ? 'a' : String.fromCodePoint((_scopeChar.codePointAt(0) ?? 97) + 1)
-  }
-  return `__moost_${_scopeChar}_${++_scopeNum}`
-}
-
-const scopeIdSlot = cached(() => nextScopeId())
-
-/**
- * Composable returning the moost DI scope ID of the current event. Generated on first call
- * and cached on the event context itself — never inherited from a parent context, so a child
- * event (a workflow run started with `eventContext`, a WebSocket message) owns its scope
- * instead of sharing, and later releasing, its parent's.
- */
-export const useScopeId = (ctx?: EventContext): string => (ctx ?? current()).getOwn(scopeIdSlot)
-
-/** Registers a DI scope for the given ID and returns an unscope function. */
-export function registerEventScope(scopeId: string) {
-  const infact = getMoostInfact()
-  infact.registerScope(scopeId)
-  return () => {
-    infact.unregisterScope(scopeId)
-  }
 }
 
 const noop = () => {}

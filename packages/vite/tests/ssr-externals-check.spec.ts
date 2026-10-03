@@ -60,6 +60,9 @@ describe('compilePackagePatterns', () => {
     }
     expect(matches(patterns, '@atscript/db')).toBe(true)
     expect(matches(patterns, '@atscript/typescript')).toBe(true)
+    expect(matches(patterns, '@prostojs/infact')).toBe(true)
+    expect(matches(patterns, '@prostojs/mate')).toBe(true)
+    expect(matches(patterns, '@prostojs/logger')).toBe(false)
     expect(matches(patterns, 'lodash')).toBe(false)
     expect(matches(patterns, '@acme/db')).toBe(false)
   })

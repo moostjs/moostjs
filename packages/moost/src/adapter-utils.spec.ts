@@ -10,7 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { TInterceptorDef } from './decorators'
 import type { TInterceptorDefFactory } from './decorators/interceptor.decorator'
-import { defineMoostEventHandler, useScopeId } from './adapter-utils'
+import { defineMoostEventHandler } from './adapter-utils'
+import { useScopeId } from './event-scope'
 import { InterceptorHandler } from './interceptor-handler'
 import { getMoostInfact } from './metadata/infact'
 

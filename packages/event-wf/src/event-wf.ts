@@ -8,7 +8,13 @@ import type {
 } from '@wooksjs/event-wf'
 import { createWfApp, handleWfOutletRequest, WooksWf } from '@wooksjs/event-wf'
 import type { Moost, TMoostAdapter, TMoostAdapterOptions } from 'moost'
-import { defineMoostEventHandler, getMoostInfact, setControllerContext, useScopeId } from 'moost'
+import {
+  defineMoostEventHandler,
+  getMoostInfact,
+  MOOST_ADAPTER_BRAND,
+  setControllerContext,
+  useScopeId,
+} from 'moost'
 
 import { getWfMate } from './meta-types'
 
@@ -34,6 +40,9 @@ const LOGGER_TITLE = 'moost-wf'
  * ```
  */
 export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta> {
+  /** Names this adapter for DI independently of class identity (see `MOOST_ADAPTER_BRAND`). */
+  static readonly [MOOST_ADAPTER_BRAND] = '@moostjs/event-wf/MoostWf'
+
   public readonly name = 'workflow'
 
   protected wfApp: WooksWf<T, IR>

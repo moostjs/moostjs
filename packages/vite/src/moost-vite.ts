@@ -5,7 +5,11 @@ import type { EnvironmentModuleGraph, PluginOption, ResolvedConfig } from 'vite'
 import { createServerModuleRunner } from 'vite'
 import MagicString from 'magic-string'
 
-import { createAdapterDetector } from './adapter-detector'
+import {
+  ADAPTER_VIRTUAL_PREFIX,
+  createAdapterDetector,
+  loadAdapterVirtualModule,
+} from './adapter-detector'
 import { captureMoostInit, patchMoostHandlerLogging } from './moost-logging'
 import { EJECT_ALL, mergeCleanup, moostRestartCleanup, VITE_ID_KEY } from './restart-cleanup'
 import type { TRestartCleanup } from './restart-cleanup'
@@ -15,8 +19,10 @@ import {
   findSplitPackages,
   formatSplitPackagesWarning,
   npmPackageName,
+  PLUGIN_NO_EXTERNAL,
   RUNTIME_PACKAGE_PATTERNS,
 } from './ssr-externals-check'
+import { findDevSplitPackages, formatDevSplitPackagesWarning } from './ssr-externals-dev-check'
 import {
   DEFAULT_SSR_HEAD,
   DEFAULT_SSR_OUTLET,
@@ -219,11 +225,15 @@ export interface TMoostViteDevOptions {
    * (`vite serve`) is unaffected: Vite's default externalizer continues
    * to handle node_modules, which is required so CJS-only packages like
    * `@vue/server-renderer` can be loaded by Node's ESM/CJS interop
-   * instead of evaluated by Vite's ESM-only SSR module runner.
+   * instead of evaluated by Vite's ESM-only SSR module runner. It also keeps
+   * the moost/wooks runtime a single (Node-loaded) copy shared by app code and
+   * natively loaded dependencies — don't put the runtime in `ssr.noExternal`
+   * for dev.
    */
   ssrExternal?: string[]
   /**
-   * Verify the production SSR build for split shared-state packages.
+   * Verify the SSR module graph for split shared-state packages — in the
+   * production build and on the dev server.
    *
    * After the middleware-mode `vite build`, the plugin compares what ended up
    * inside `dist/server` (the bundled packages) with the bare imports left in
@@ -233,12 +243,18 @@ export interface TMoostViteDevOptions {
    * and `instanceof` checks stop matching in production only — so the build
    * prints a warning naming the package and the fix.
    *
-   * Watched by default: `moost`, `@moostjs/*`, `wooks`, `@wooksjs/*` and
-   * `@atscript/*`. Pass `{ packages: [...] }` to watch more: an exact package
-   * name (`'lodash'`), a scope/prefix ending with `/` (`'@acme/'`), or a
-   * `RegExp`.
+   * On `vite serve` (both modes) the same walk runs against the dev SSR config:
+   * an externalized dependency (loaded natively by Node) that depends on a
+   * watched package the SSR module runner inlines — forced by `ssr.noExternal`,
+   * or a linked workspace package — gets a second copy in dev, and the server
+   * prints a warning at startup.
    *
-   * Default: `true`. Set `false` to silence the check.
+   * Watched by default: `moost`, `@moostjs/*`, `wooks`, `@wooksjs/*`,
+   * `@prostojs/infact`, `@prostojs/mate` and `@atscript/*`. Pass
+   * `{ packages: [...] }` to watch more: an exact package name (`'lodash'`), a
+   * scope/prefix ending with `/` (`'@acme/'`), or a `RegExp`.
+   *
+   * Default: `true`. Set `false` to silence both checks.
    */
   ssrExternalCheck?: boolean | TSSRExternalCheckOptions
 }
@@ -339,6 +355,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const ssrOutlet = options.ssrOutlet || DEFAULT_SSR_OUTLET
   const ssrState = options.ssrState || DEFAULT_SSR_STATE
   const ssrHead = options.ssrHead || DEFAULT_SSR_HEAD
+  const splitCheckPatterns = compilePackagePatterns(
+    typeof options.ssrExternalCheck === 'object' ? options.ssrExternalCheck.packages : undefined,
+  )
   /**
    * Boot-identity stamps (dev-only "mongrel state" diagnostic — a stale pipeline
    * presents as security middleware silently switched off). `bootGeneration` is
@@ -579,16 +598,18 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         // literally — but always include `@moostjs/vite` so the `define:`
         // substitutions in `prod-server.mjs` still land.
         const isBuild = env.command === 'build'
-        const ourPlugin = /^@moostjs\/vite($|\/)/
         const userNoExternal = cfg.ssr?.noExternal
         let ssrNoExternal: true | (string | RegExp)[] =
           userNoExternal === true
             ? true
             : userNoExternal !== undefined
-              ? [...(Array.isArray(userNoExternal) ? userNoExternal : [userNoExternal]), ourPlugin]
+              ? [
+                  ...(Array.isArray(userNoExternal) ? userNoExternal : [userNoExternal]),
+                  PLUGIN_NO_EXTERNAL,
+                ]
               : isBuild
                 ? true
-                : [ourPlugin]
+                : [PLUGIN_NO_EXTERNAL]
 
         // In build, concat the consumer's explicit `ssr.external` (string list)
         // with the plugin's `ssrExternal` option (for native bindings etc.).
@@ -604,8 +625,8 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         // moost + wooks rely on per-module Symbol slot keys (cached()/key()). If
         // the same logical package is reachable on two paths — bundled in one place,
         // externalized in another — each path mints its own Symbols and event-context
-        // lookups (useRequest/useHeaders/useAuthorization) read `undefined` at runtime
-        // (prod only; dev dedupes via the SSR module runner).
+        // lookups (useRequest/useHeaders/useAuthorization) read `undefined` at runtime.
+        // (Dev keeps the runtime external — Node's single copy — see the dev check.)
         //
         // The bundle-everything default (`noExternal: true`, i.e. true / undefined-in-
         // build above) already yields one instance. The split only appears once the
@@ -748,11 +769,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         root: cfg.root,
         externalIds,
         bundledPackages,
-        patterns: compilePackagePatterns(
-          typeof options.ssrExternalCheck === 'object'
-            ? options.ssrExternalCheck.packages
-            : undefined,
-        ),
+        patterns: splitCheckPatterns,
       })
       if (splits.length > 0) {
         cfg.logger.warn(`\n[${PLUGIN_NAME}] ${formatSplitPackagesWarning(splits)}\n`)
@@ -790,11 +807,12 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
     },
 
     /**
-     * Resolves our "virtual:vite-id" module.
+     * Resolves our "virtual:vite-id" module and the adapter re-export modules
+     * the detector loads adapters through (`ADAPTER_VIRTUAL_PREFIX`).
      */
     resolveId(id) {
-      if (id === 'virtual:vite-id') {
-        return '\0virtual:vite-id'
+      if (id === 'virtual:vite-id' || id.startsWith(ADAPTER_VIRTUAL_PREFIX)) {
+        return `\0${id}`
       }
     },
 
@@ -803,6 +821,10 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
      * It exports a `__VITE_ID(id)` function that stamps a class with its module id (`readViteId`).
      */
     load(id) {
+      const adapterModule = loadAdapterVirtualModule(id)
+      if (adapterModule !== undefined) {
+        return { code: adapterModule, map: null }
+      }
       if (id === '\0virtual:vite-id') {
         return {
           code: `
@@ -902,6 +924,18 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
             reloadPromise = runReload()
           }
           await reloadPromise
+        }
+      }
+
+      // Dev counterpart of the post-build split check (see `ssrExternalCheck`).
+      if (options.ssrExternalCheck !== false) {
+        const splits = findDevSplitPackages({
+          root: server.config.root,
+          config: server.environments.ssr.config.resolve,
+          patterns: splitCheckPatterns,
+        })
+        if (splits.length > 0) {
+          server.config.logger.warn(`\n[${PLUGIN_NAME}] ${formatDevSplitPackagesWarning(splits)}\n`)
         }
       }
 

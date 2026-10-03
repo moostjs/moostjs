@@ -1,9 +1,7 @@
-import { execFile } from 'node:child_process'
-import { existsSync, readdirSync, statSync } from 'node:fs'
-import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { promisify } from 'node:util'
 import { beforeAll, describe, expect, it } from 'vitest'
+
+import { assertFreshBuilds, runDriver } from './driver-harness'
 
 /**
  * Integration test for the scoped hot reload behavior of the moost-vite plugin.
@@ -86,48 +84,15 @@ function expectAllRebuilt({ before, after }: { before: THealth; after: THealth }
 }
 
 const DRIVER = fileURLToPath(new URL('hot-update.driver.mjs', import.meta.url))
-const DIST = fileURLToPath(new URL('../dist/index.mjs', import.meta.url))
-const SRC = fileURLToPath(new URL('../src', import.meta.url))
-// The fixture app imports the BUILT `moost` (it is externalized in dev, see the
-// driver), so a stale core build means missing `@MoostDispose`, not a red test.
-const MOOST_DIST = fileURLToPath(new URL('../../moost/dist/index.mjs', import.meta.url))
-const MOOST_SRC = fileURLToPath(new URL('../../moost/src', import.meta.url))
-
-/** Newest mtime across the plugin sources — guards against testing a stale build. */
-function newestSrcMtime(dir: string): number {
-  let newest = 0
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const abs = join(dir, entry.name)
-    newest = Math.max(newest, entry.isDirectory() ? newestSrcMtime(abs) : statSync(abs).mtimeMs)
-  }
-  return newest
-}
 
 let report: TReport
 
 describe('moost-vite scoped hot reload', () => {
   beforeAll(async () => {
-    if (!existsSync(DIST)) {
-      throw new Error('dist/index.mjs missing — run `pnpm build vite` first')
-    }
-    if (statSync(DIST).mtimeMs < newestSrcMtime(SRC)) {
-      throw new Error('dist/index.mjs is older than src — run `pnpm build vite` first')
-    }
-    if (!existsSync(MOOST_DIST)) {
-      throw new Error('moost/dist/index.mjs missing — run `pnpm build moost` first')
-    }
-    if (statSync(MOOST_DIST).mtimeMs < newestSrcMtime(MOOST_SRC)) {
-      throw new Error('moost/dist/index.mjs is older than src — run `pnpm build moost` first')
-    }
-    const { stdout } = await promisify(execFile)('node', [DRIVER], {
-      timeout: 180_000,
-      maxBuffer: 10 * 1024 * 1024,
-    })
-    const line = stdout.split('\n').find((l) => l.startsWith('__RESULT__'))
-    if (!line) {
-      throw new Error(`driver produced no result. Output:\n${stdout}`)
-    }
-    report = JSON.parse(line.slice('__RESULT__'.length)) as TReport
+    // The fixture app imports the BUILT `moost` (it is externalized in dev, see the
+    // driver), so a stale core build means missing `@MoostDispose`, not a red test.
+    assertFreshBuilds(['vite', 'moost'])
+    report = await runDriver<TReport>(DRIVER, [], 180_000)
   }, 240_000)
 
   it('serves the API, the SSR page and the client module', () => {

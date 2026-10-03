@@ -7,6 +7,7 @@ import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
 import { createEventContext } from '@wooksjs/event-core'
 import { Hookable } from 'hookable'
 
+import { adapterProvideToken, getAdapterBrand } from './adapter-brand'
 import { bindControllerMethods } from './binding/bind-controller'
 import type { TInitHook } from './binding/bind-types'
 import type { TInheritanceAuditMode } from './binding/inheritance-audit'
@@ -338,6 +339,10 @@ export class Moost extends Hookable {
       const constructor = getConstructor(a)
       if (constructor) {
         this.setProvideRegistry(createProvideRegistry([constructor as TClassConstructor, () => a]))
+        const brand = getAdapterBrand(constructor)
+        if (brand !== undefined) {
+          this.setProvideRegistry(createProvideRegistry([adapterProvideToken(brand), () => a]))
+        }
       }
       if (typeof a.getProvideRegistry === 'function') {
         this.setProvideRegistry(a.getProvideRegistry())

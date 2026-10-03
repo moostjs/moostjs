@@ -9,6 +9,7 @@ import {
   customMetricAttrsKey,
   customSpanAttrsKey,
   otelRouteKey,
+  otelSpanKey,
   otelStartTimeKey,
   useOtelContext,
 } from './context'
@@ -140,6 +141,15 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       return
     }
     const ctx = current()
+    if (!ctx.hasOwn(otelSpanKey) && ctx.has(otelSpanKey)) {
+      // A nested invocation (a child context such as `MoostHttp.invoke()`) sees its parent
+      // event's span only through the parent — never rename or re-attribute that span, nor
+      // start event metrics for it.
+      if (name !== 'Controller:registered') {
+        ctx.set(otelRouteKey, route)
+      }
+      return
+    }
     const { getSpan } = useOtelContext(ctx)
     if (name === 'Handler:not_found') {
       const chm = this.getControllerHandlerMeta()

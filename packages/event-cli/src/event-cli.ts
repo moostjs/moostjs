@@ -8,7 +8,7 @@ import type {
   TMoostAdapterOptions,
   TMoostParamsMetadata,
 } from 'moost'
-import { defineMoostEventHandler, setInfactLoggingOptions } from 'moost'
+import { defineMoostEventHandler, MOOST_ADAPTER_BRAND, setInfactLoggingOptions } from 'moost'
 import type { TCliClassMeta } from './meta-types'
 import { getCliMate } from './meta-types'
 
@@ -66,6 +66,9 @@ const LOGGER_TITLE = 'moost-cli'
  * ```
  */
 export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
+  /** Names this adapter for DI independently of class identity (see `MOOST_ADAPTER_BRAND`). */
+  static readonly [MOOST_ADAPTER_BRAND] = '@moostjs/event-cli/MoostCli'
+
   public readonly name = 'cli'
 
   protected cliApp: WooksCli
