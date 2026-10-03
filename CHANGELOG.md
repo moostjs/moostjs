@@ -1,3 +1,12 @@
+## [0.6.44](https://github.com/moostjs/moostjs/compare/v0.6.43...v0.6.44) (2026-10-03)
+
+
+### Bug Fixes
+
+* **vite:** dev split check ignores devDependencies (build plugins) ([4d4d66b](https://github.com/moostjs/moostjs/commit/4d4d66bc4c49ad8ac1a1ac25dcb51a1c8730e3e1))
+
+
+
 ## [0.6.43](https://github.com/moostjs/moostjs/compare/v0.6.42...v0.6.43) (2026-10-03)
 
 
