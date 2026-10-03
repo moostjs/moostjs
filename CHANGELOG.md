@@ -1,3 +1,12 @@
+## [0.6.43](https://github.com/moostjs/moostjs/compare/v0.6.42...v0.6.43) (2026-10-03)
+
+
+### Features
+
+* **moost:** withControllerContext, MoostHttp.invoke, adapter brand, single dev adapter copy ([67ad514](https://github.com/moostjs/moostjs/commit/67ad514a786ca98609c44b01850901fec0db1e20))
+
+
+
 ## [0.6.42](https://github.com/moostjs/moostjs/compare/v0.6.41...v0.6.42) (2026-09-30)
 
 
