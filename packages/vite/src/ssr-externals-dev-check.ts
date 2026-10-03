@@ -75,19 +75,18 @@ export function createDevInlineCheck(
   }
 }
 
-/** Package names `root` depends on directly, from every dependency group of its package.json. */
+/**
+ * Package names `root` depends on at runtime — `devDependencies` are left out, like
+ * the build check does: they are build tooling (Vite plugins such as
+ * `unplugin-atscript`) that Node loads for Vite itself, never next to app code.
+ */
 function rootDependencies(root: string): string[] {
   const pkg = readPkgJson(root)
   if (!pkg) {
     return []
   }
   const names = new Set<string>()
-  for (const group of [
-    pkg.dependencies,
-    pkg.devDependencies,
-    pkg.peerDependencies,
-    pkg.optionalDependencies,
-  ]) {
+  for (const group of [pkg.dependencies, pkg.peerDependencies, pkg.optionalDependencies]) {
     for (const dep of Object.keys(group ?? {})) {
       names.add(dep)
     }

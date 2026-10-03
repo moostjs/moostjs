@@ -340,7 +340,7 @@ Two configurations make the runner evaluate its own copy next to Node's:
 - **The runtime listed in `ssr.noExternal`** (or `noExternal: true`) for `vite serve`. Don't — keep it dev-external; put a list you need for the build behind `command === 'build'`.
 - **A linked workspace package** (`workspace:*`, `link:`) — Vite inlines packages that resolve outside `node_modules`. List it in `ssr.external` when an installed dependency imports it as well.
 
-The dev server checks this at startup (same `ssrExternalCheck` option and watched set as the build) and names each natively loaded package that depends on an inlined one:
+The dev server checks this at startup (same `ssrExternalCheck` option and watched set as the build) and names each natively loaded package that depends on an inlined one. Like the build check it walks your `dependencies` (plus peer/optional), not `devDependencies` — build tooling such as Vite plugins never runs next to app code:
 
 ```text
 [moost-vite] These packages are loaded natively by Node in dev, but depend on packages Vite's SSR module runner evaluates its own copy of (ssr.noExternal, or a linked workspace package):

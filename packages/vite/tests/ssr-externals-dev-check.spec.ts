@@ -28,7 +28,7 @@ describe('dev split check', () => {
         '@moostjs/event-http': '*',
         '@moostjs/vite': '*',
       },
-      devDependencies: { 'linked-lib': '*', vue: '*' },
+      devDependencies: { 'linked-lib': '*', vue: '*', 'build-plugin': '*' },
     })
     pkg(join(nm, 'moost'), 'moost')
     pkg(join(nm, '@moostjs/event-http'), '@moostjs/event-http', {
@@ -38,6 +38,8 @@ describe('dev split check', () => {
       peerDependencies: { '@moostjs/event-http': '*', moost: '*' },
     })
     pkg(join(nm, 'vue'), 'vue')
+    // a build-time Vite plugin (devDependency) that depends on a runtime package
+    pkg(join(nm, 'build-plugin'), 'build-plugin', { dependencies: { '@moostjs/event-http': '*' } })
     pkg(join(nm, '@moostjs/vite'), '@moostjs/vite', { peerDependencies: { moost: '*' } })
     // a linked workspace package: resolves outside node_modules
     pkg(join(root, 'packages/linked-lib'), 'linked-lib', { dependencies: { moost: '*' } })
@@ -76,6 +78,14 @@ describe('dev split check', () => {
       config: { external: [], noExternal: ['@moostjs/event-http', PLUGIN_NO_EXTERNAL] },
     })
     expect(found).toEqual([{ name: 'some-db-lib', via: [], splitDeps: ['@moostjs/event-http'] }])
+  })
+
+  it('ignores devDependencies: build tooling is never loaded next to app code', () => {
+    const found = findDevSplitPackages({
+      root,
+      config: { external: [], noExternal: ['@moostjs/event-http', PLUGIN_NO_EXTERNAL] },
+    })
+    expect(found.map((s) => s.name)).not.toContain('build-plugin')
   })
 
   it('reports an inlined moost against the plugin itself', () => {
