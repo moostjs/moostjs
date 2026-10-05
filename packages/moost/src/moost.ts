@@ -1,6 +1,6 @@
 // oxlint-disable max-params
 import type { TProvideRegistry, TReplaceRegistry } from '@prostojs/infact'
-import { createProvideRegistry, Infact } from '@prostojs/infact'
+import { createProvideRegistry, getClassKey, Infact } from '@prostojs/infact'
 import type { TConsoleBase } from '@prostojs/logger'
 import { ProstoLogger } from '@prostojs/logger'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
@@ -153,6 +153,17 @@ function isControllersGroup(
   )
 }
 
+/** Options of `setProvideRegistry` / `setReplaceRegistry`. @since 0.6.45 */
+export interface TRegistryMergeOptions {
+  /**
+   * `true` (default): entries replace existing ones for the same token.
+   * `false`: register a lowest-precedence default, used only when neither the app subclass's
+   * class-level decorator nor a normal `set*Registry()` entry exists for the token — regardless
+   * of call order.
+   */
+  override?: boolean
+}
+
 /**
  * ## Moost
  * Main moostjs class that serves as a shell for Moost Adapters
@@ -224,6 +235,11 @@ export class Moost extends Hookable {
   )
 
   protected replace: TReplaceRegistry = {}
+
+  /** Lowest-precedence layers, filled by `set*Registry(reg, { override: false })`. */
+  protected defaultProvide: TProvideRegistry = {}
+
+  protected defaultReplace: TReplaceRegistry = {}
 
   protected unregisteredControllers: TControllerRegistration[] = []
 
@@ -526,10 +542,8 @@ export class Moost extends Hookable {
   }
 
   protected async bindControllers() {
-    const meta = getMoostMate()
-    const thisMeta = meta.read(this)
-    const provide = { ...thisMeta?.provide, ...this.provide }
-    const replace = { ...thisMeta?.replace, ...this.replace }
+    const provide = this.appProvideRegistry()
+    const replace = this.appReplaceRegistry()
     const globalPrefix = this.options?.globalPrefix || ''
     for (const { controller, prependPrefix, replaceOwnPrefix } of this.unregisteredControllers) {
       await this.bindController(
@@ -633,7 +647,7 @@ export class Moost extends Hookable {
       const prefix =
         typeof replaceOwnPrefix === 'string' ? replaceOwnPrefix : classMeta.controller?.prefix
       const mergedProvide = { ...provide, ...classMeta.provide }
-      const mergedReplace = { ...this.replace, ...classMeta.replace }
+      const mergedReplace = { ...this.appReplaceRegistry(), ...classMeta.replace }
       for (const ic of classMeta.importController) {
         if (ic.typeResolver) {
           const isConstr = isConstructor(ic.typeResolver)
@@ -733,9 +747,12 @@ export class Moost extends Hookable {
    * controller — it flows parent → child through `@ImportController`, never
    * to siblings.
    * @param provide - Provide Registry (use createProvideRegistry from '\@prostojs/infact')
+   * @param opts - `{ override: false }` registers a default: used only when neither `@Provide`
+   *   on the app subclass nor a normal `setProvideRegistry` entry exists for the token,
+   *   regardless of call order. @since 0.6.45
    * @returns
    */
-  setProvideRegistry(provide: TProvideRegistry) {
+  setProvideRegistry(provide: TProvideRegistry, opts?: TRegistryMergeOptions) {
     if (this.initialized) {
       this.logger.warn(
         '[moost] setProvideRegistry() called after init() — already-bound controllers will not ' +
@@ -743,7 +760,11 @@ export class Moost extends Hookable {
           'on a parent controller.',
       )
     }
-    this.provide = { ...this.provide, ...provide }
+    if (opts?.override === false) {
+      this.defaultProvide = { ...this.defaultProvide, ...provide }
+    } else {
+      this.provide = { ...this.provide, ...provide }
+    }
     return this
   }
 
@@ -754,17 +775,64 @@ export class Moost extends Hookable {
    * replace registry once when binding controllers, so replacements added
    * later are never seen by already-bound controllers.
    * @param replace - Replace Registry (use createReplaceRegistry from '\@prostojs/infact')
+   * @param opts - `{ override: false }` registers a default: used only when neither `@Replace`
+   *   on the app subclass nor a normal `setReplaceRegistry` entry exists for the class,
+   *   regardless of call order. @since 0.6.45
    * @returns
    */
-  setReplaceRegistry(replace: TReplaceRegistry) {
+  setReplaceRegistry(replace: TReplaceRegistry, opts?: TRegistryMergeOptions) {
     if (this.initialized) {
       this.logger.warn(
         '[moost] setReplaceRegistry() called after init() — already-bound controllers will not ' +
           'see these replacements. Register replacements before init().',
       )
     }
-    this.replace = { ...this.replace, ...replace }
+    if (opts?.override === false) {
+      this.defaultReplace = { ...this.defaultReplace, ...replace }
+    } else {
+      this.replace = { ...this.replace, ...replace }
+    }
     return this
+  }
+
+  /**
+   * Effective app-level replace registry, lowest to highest precedence: defaults
+   * (`override: false`), `@Replace` on the app subclass, `setReplaceRegistry()` entries.
+   * A controller's own `@Replace` is NOT app-level (it only reaches that controller's direct imports).
+   */
+  protected appReplaceRegistry(): TReplaceRegistry {
+    return { ...this.defaultReplace, ...getMoostMate().read(this)?.replace, ...this.replace }
+  }
+
+  /** Effective app-level provide registry (same layering as `appReplaceRegistry`). */
+  protected appProvideRegistry(): TProvideRegistry {
+    return { ...this.defaultProvide, ...getMoostMate().read(this)?.provide, ...this.provide }
+  }
+
+  /**
+   * The class `type` is replaced with app-wide (one hop, like the DI container), or `undefined`.
+   * Works before and after `init()`; never warns. Per-controller `@Replace` is not reported.
+   * @since 0.6.45
+   */
+  getReplacement<T>(type: TClassConstructor<T>): TClassConstructor<T> | undefined {
+    return this.appReplaceRegistry()[getClassKey(type)] as TClassConstructor<T> | undefined
+  }
+
+  /**
+   * `getReplacement(type) !== undefined`.
+   * @since 0.6.45
+   */
+  hasReplacement(type: TClassConstructor): boolean {
+    return this.getReplacement(type) !== undefined
+  }
+
+  /**
+   * Frozen shallow copy of the effective app-level replace registry
+   * (keys are `getClassKey(Class)` symbols). Mutating it never affects the app.
+   * @since 0.6.45
+   */
+  getReplaceRegistry(): Readonly<TReplaceRegistry> {
+    return Object.freeze(this.appReplaceRegistry())
   }
 
   /**

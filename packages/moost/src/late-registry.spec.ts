@@ -6,9 +6,9 @@ import type { TMoostAdapter } from './moost'
 import { Moost } from './moost'
 import { createCaptureLogger } from './tests/capture-logger.artifacts'
 
-/** Peeks at the protected registries to assert merge behavior stays unchanged. */
+/** Peeks at the protected provide registry to assert merge behavior stays unchanged. */
 function getRegistries(app: Moost) {
-  return app as unknown as { provide: Record<string, unknown>; replace: Record<symbol, unknown> }
+  return app as unknown as { provide: Record<string, unknown> }
 }
 
 describe('D5 late registry guard', () => {
@@ -52,8 +52,7 @@ describe('D5 late registry guard', () => {
     expect(warnings).toHaveLength(1)
     expect(warnings[0]).toContain('setReplaceRegistry() called after init()')
     expect(warnings[0]).toContain('already-bound controllers will not see these replacements')
-    const key = Object.getOwnPropertySymbols(replace)[0]
-    expect(getRegistries(app).replace[key]).toBe(Replacement)
+    expect(app.getReplacement(Original)).toBe(Replacement)
   })
 
   it('setReplaceRegistry before init() stays silent', async () => {

@@ -156,6 +156,20 @@ class MyAdapter implements TMoostAdapter<TMeta> {
 app.setReplaceRegistry(createReplaceRegistry([DatabaseService, MockDatabaseService]))
 ```
 
+Register a lowest-precedence default with `{ override: false }` (since 0.6.45). It is used only when neither `@Replace` on the `Moost` subclass nor a normal `setReplaceRegistry()` entry exists, regardless of call order:
+
+```ts
+app.setReplaceRegistry(createReplaceRegistry([DatabaseService, InMemoryDatabase]), {
+  override: false,
+})
+
+app.getReplacement(DatabaseService) // effective app-level replacement (defaults included), one hop
+app.hasReplacement(DatabaseService) // boolean
+app.getReplaceRegistry() // frozen copy, keys are getClassKey(Class)
+```
+
+`setProvideRegistry(reg, { override: false })` is the provider equivalent. Per-controller `@Replace` is not app-level and is not reported by the getters.
+
 ### Scoped provide via controller hierarchy
 
 `@Provide` on a parent controller is visible to all `@ImportController` descendants.

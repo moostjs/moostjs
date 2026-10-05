@@ -154,7 +154,9 @@ Key imports: `import { MoostDispose, disposeInstances } from 'moost'`. `disposeI
 | `applyGlobalInterceptors(...items)` | class ctors, `TInterceptorDef`, or `TInterceptorData` |
 | `applyGlobalPipes(...pipes)` | `TPipeFn` or `TPipeData` |
 | `setProvideRegistry(reg)` | merges DI providers |
-| `setReplaceRegistry(reg)` | DI class replacements |
+| `setReplaceRegistry(reg, opts?)` | DI class replacements; `opts.override: false` = register a default (0.6.45; also on `setProvideRegistry`) |
+| `getReplacement(Class)` / `hasReplacement(Class)` | app-level replacement lookup (0.6.45) |
+| `getReplaceRegistry()` | frozen copy of app-level registry (0.6.45) |
 | `getLogger(topic?)` | scoped logger |
 | `getControllersOverview()` | introspection — returns `TControllerOverview[]` (type exported from `moost`) |
 | `getGlobalInterceptorHandler()` | for not-found paths in custom adapters |

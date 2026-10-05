@@ -111,6 +111,28 @@ This is especially useful for:
 - **Feature toggles** — swap implementations at startup
 - **Third-party controllers** — override dependencies you can't modify directly
 
+### Inspecting replacements / registering defaults
+
+_Since 0.6.45._ Read the app-wide replace registry without touching its internals:
+
+```ts
+app.getReplacement(EmailService)   // MockEmailService | undefined (one hop, like the DI container)
+app.hasReplacement(EmailService)   // boolean
+app.getReplaceRegistry()           // frozen copy; keys are getClassKey(Class) symbols
+```
+
+These report the **app-level** registry: `setReplaceRegistry()` entries plus `@Replace` on your `Moost` app subclass, plus any defaults. A controller's own `@Replace` only affects its direct imports and is not reported. The getters work before and after `init()`.
+
+To register a *default* (plugins, presets, test harnesses), pass `{ override: false }`. A default is used only when neither `@Replace` on your app subclass nor a normal `setReplaceRegistry()` entry exists for that class, regardless of call order:
+
+```ts
+app.setReplaceRegistry(createReplaceRegistry([EmailService, ConsoleEmailService]), {
+  override: false,
+})
+```
+
+`setProvideRegistry(reg, { override: false })` works the same way for providers.
+
 ## Custom Scopes
 
 Beyond the built-in `SINGLETON` and `FOR_EVENT` scopes, you can define custom named scopes with associated variables using `defineInfactScope`. Classes injected via `@InjectFromScope` are instantiated within that scope, and `@InjectScopeVars` lets them access the scope's variables.
