@@ -83,7 +83,7 @@ class ApiController {}
 
 ### `@Replace(from, to)` — class
 
-Substitute one class with another. Scope is narrow: `@Replace` on a controller applies to its **directly imported** `@ImportController` children (and their DI graphs) — not grandchildren, and not the decorated controller's own constructor. For app-wide or deep-tree replacement use `app.setReplaceRegistry(...)`.
+Substitute one class with another. Scope is narrow: `@Replace` on a controller applies to its **directly imported** `@ImportController` children (and their DI graphs) — not grandchildren, and not the decorated controller's own constructor. For app-wide or deep-tree replacement use `app.setReplaceRegistry(...)` or `@Replace` on the `Moost` app subclass (since 0.6.45 the app subclass's `@Replace` reaches nested `@ImportController` controllers at every depth; before that it did not).
 
 ### `@Circular(() => Type)` — param only
 
@@ -197,7 +197,7 @@ unscope() // cleans up FOR_EVENT instances
 - SINGLETON constructors run in a synthetic context during `init()` — composables reading event data (`useRequest`, etc.) don't work there.
 - FOR_EVENT requires an active event context — cannot be instantiated outside one.
 - `@Circular` works on params only, not properties.
-- Provide registries merge down the `@ImportController` chain; `@Replace` reaches only direct children — `app.setReplaceRegistry()` is the app-wide mechanism.
+- Provide registries merge down the `@ImportController` chain; a controller's `@Replace` reaches only direct children; `app.setReplaceRegistry()` or `@Replace` on the app subclass (since 0.6.45) is the app-wide mechanism.
 - The DI container runs pipes when resolving constructor params/properties, so the resolve pipe must be in the pipeline (it is, by default via `sharedPipes`).
 
 ## Key imports

@@ -106,6 +106,8 @@ class TestController {
 The `@Replace` decorator does **not** redirect the decorated class's own constructor injections — the replacement registry it declares only applies to controllers imported from it via `@ImportController`. To replace a class app-wide, use `app.setReplaceRegistry()` (or decorate your custom `Moost` app subclass).
 :::
 
+_Since 0.6.45._ `@Replace` on your `Moost` app subclass now also reaches controllers nested at every depth under `@ImportController` (children, grandchildren, and so on). Earlier versions documented this but only applied it to the app's own graph and direct imports.
+
 This is especially useful for:
 - **Testing** — inject mocks without changing consumer code
 - **Feature toggles** — swap implementations at startup

@@ -15,7 +15,6 @@ const core = [{
     avatar: 'https://www.github.com/mav-rik.png',
     name: 'Artem Maltsev',
     title: 'Creator',
-    // org: 'Booking.com',
     // orgLink: '',
     desc: 'Fullstack Software Engineer',
     links: [
