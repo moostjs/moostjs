@@ -1,3 +1,12 @@
+## [0.6.45](https://github.com/moostjs/moostjs/compare/v0.6.44...v0.6.45) (2026-10-06)
+
+
+### Features
+
+* **moost:** replace-registry introspection and override:false default registrations ([dcd4b33](https://github.com/moostjs/moostjs/commit/dcd4b338515d3fff8824a1d7b9a111085fbb1770))
+
+
+
 ## [0.6.44](https://github.com/moostjs/moostjs/compare/v0.6.43...v0.6.44) (2026-10-03)
 
 
