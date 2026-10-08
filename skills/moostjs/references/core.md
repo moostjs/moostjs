@@ -56,7 +56,8 @@ During `init()`:
 2. Controller methods scanned for handler metadata.
 3. `adapter.bindHandler(opts)` called per handler.
 4. `@MoostInit` methods run (post-bind, complete overview) — see below.
-5. `adapter.onInit(moost)` called last.
+5. `app.addInitHook` functions run in the same pass as `@MoostInit` (see below).
+6. `adapter.onInit(moost)` called last.
 
 ## App init (`@MoostInit`)
 
@@ -85,6 +86,18 @@ class AuthController {
 | 7 | Async hooks awaited; a throwing hook rejects `init()` (fail-fast). |
 
 Key imports: `import { MoostInit, InjectMoost } from 'moost'`. `@InjectMoost` injects the running `Moost`; constructor injection of `Moost` also works (it's in the provide registry).
+
+### Programmatic hooks (`app.addInitHook`)
+
+`app.addInitHook(fn, { priority? })` (since 0.6.46) is the non-decorator form, for `FOR_EVENT` controllers, injected-only classes and library code that gets `Moost` via DI. `fn(app)` runs in the same pass and context as `@MoostInit` hooks (priority ascending, default 0, then registration order; before `adapter.onInit`; throw rejects `init()`).
+
+| Registered | Behavior |
+|---|---|
+| before the pass (also from a controller constructor during bind) | queued, runs in the pass |
+| during the pass (from another hook) | runs later in the same pass |
+| after the pass | runs immediately (async); failure is logged, not thrown |
+
+No de-duplication (same fn twice runs twice); re-runs on re-init like `@MoostInit` hooks.
 
 ### Resolving a handler's mounted path
 

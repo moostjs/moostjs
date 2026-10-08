@@ -82,4 +82,4 @@ Below is a representative diagram illustrating the lifecycle of a Moost event.
 
 Whether you’re validating input data, enforcing security policies, logging metrics, or formatting output, understanding and leveraging these lifecycle stages ensures that your Moost application remains maintainable, testable, and adaptable to evolving requirements.
 
-> This page describes the **per-event** lifecycle. For one-time setup that runs at boot — after controllers are bound and before adapters start serving — see [Application Init (`@MoostInit`)](/moost/app-init).
+> This page describes the **per-event** lifecycle. For one-time setup that runs at boot — after controllers are bound and before adapters start serving — see [Application Init (`@MoostInit`)](/moost/app-init), or `app.addInitHook()` for the programmatic form.

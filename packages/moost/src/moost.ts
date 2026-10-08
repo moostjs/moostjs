@@ -9,7 +9,7 @@ import { Hookable } from 'hookable'
 
 import { adapterProvideToken, getAdapterBrand } from './adapter-brand'
 import { bindControllerMethods } from './binding/bind-controller'
-import type { TInitHook } from './binding/bind-types'
+import type { TFnInitHook, TInitHook } from './binding/bind-types'
 import type { TInheritanceAuditMode } from './binding/inheritance-audit'
 import { auditInheritance } from './binding/inheritance-audit'
 import type { TParamAuditFinding, TParamAuditMode } from './binding/param-audit'
@@ -229,6 +229,8 @@ export class Moost extends Hookable {
 
   protected initHooks: TInitHook[] = []
 
+  protected initHookPhase: 'pending' | 'running' | 'done' = 'pending'
+
   protected provide: TProvideRegistry = createProvideRegistry(
     [Infact, getMoostInfact],
     [Mate, getMoostMate],
@@ -364,6 +366,7 @@ export class Moost extends Hookable {
         this.setProvideRegistry(a.getProvideRegistry())
       }
     }
+    this.initHookPhase = 'pending'
     this.unregisteredControllers.unshift({ controller: this })
     let auditError: string | undefined
     try {
@@ -390,26 +393,85 @@ export class Moost extends Hookable {
   }
 
   /**
-   * Runs every `@MoostInit`-decorated controller method exactly once, after all
-   * controllers are bound (complete `getControllersOverview()`) and before the
-   * `adapter.onInit` loop. Hooks run in ascending `priority`, then registration
-   * order. Each runs on its controller's SINGLETON instance inside a synthetic
-   * init context (no interceptors; params resolve via the RESOLVE pipe only).
-   * A throwing hook rejects `init()` (fail-fast).
+   * Runs every init hook exactly once, after all controllers are bound
+   * (complete `getControllersOverview()`) and before the `adapter.onInit`
+   * loop: `@MoostInit` controller methods and functions registered with
+   * {@link addInitHook}. Hooks run in ascending `priority`, then registration
+   * order. Each runs inside a synthetic init context (no interceptors; params
+   * of `@MoostInit` methods resolve via the RESOLVE pipe only). Hooks added
+   * while the pass runs are picked up. A throwing hook rejects `init()`
+   * (fail-fast).
    */
   protected async runInitHooks() {
-    if (this.initHooks.length === 0) {
-      return
+    this.initHookPhase = 'running'
+    const done = new Set<TInitHook>()
+    try {
+      for (;;) {
+        let next: TInitHook | undefined
+        for (const hook of this.initHooks) {
+          // strict `<`: the first-registered hook wins priority ties
+          if (!done.has(hook) && (!next || hook.priority < next.priority)) {
+            next = hook
+          }
+        }
+        if (!next) {
+          break
+        }
+        done.add(next)
+        await this.runInitHook(next)
+      }
+    } finally {
+      this.initHookPhase = 'done'
     }
-    const hooks = this.initHooks.toSorted((a, b) => a.priority - b.priority)
-    for (const hook of hooks) {
-      await createEventContext({ logger: this.logger }, async () => {
-        const instance = await hook.getInstance()
-        setControllerContext(instance, hook.method as keyof typeof instance, '', {
-          prefix: hook.computedPrefix,
-        })
-        const args = hook.resolveArgs ? await hook.resolveArgs() : []
-        await (instance as Record<string, TAnyFn>)[hook.method](...args)
+  }
+
+  protected async runInitHook(hook: TInitHook) {
+    await createEventContext({ logger: this.logger }, async () => {
+      if (hook.kind === 'fn') {
+        setControllerContext(this, 'init' as keyof this, '', { prefix: '' })
+        await (hook.fn as (app: this) => unknown)(this)
+        return
+      }
+      const instance = await hook.getInstance()
+      setControllerContext(instance, hook.method as keyof typeof instance, '', {
+        prefix: hook.computedPrefix,
+      })
+      const args = hook.resolveArgs ? await hook.resolveArgs() : []
+      await (instance as Record<string, TAnyFn>)[hook.method](...args)
+    })
+  }
+
+  /**
+   * ### addInitHook
+   * Programmatic counterpart of `@MoostInit`: runs `fn` once during `init()`,
+   * after every controller is bound (complete `getControllersOverview()`) and
+   * before the adapters' `onInit`, in the same pass as `@MoostInit` hooks:
+   * ascending `priority` (default 0), then registration order. Runs inside the
+   * same synthetic init context (controller context = the app; no
+   * interceptors, no request composables). A throwing hook rejects `init()`.
+   *
+   * May be called at any time:
+   * - before the hook pass starts (including from a controller constructor
+   *   during binding) — queued;
+   * - while the pass runs (from another hook) — runs later in the same pass;
+   * - after the pass finished — runs immediately (asynchronously, in its own
+   *   init context); a failure is logged, since there is no `init()` left to
+   *   reject.
+   *
+   * No de-duplication: registering the same function twice runs it twice.
+   * Hooks re-run on re-init exactly like `@MoostInit` hooks.
+   * @since 0.6.46
+   */
+  public addInitHook(fn: (app: this) => unknown, opts?: { priority?: number }): void {
+    const hook: TInitHook = {
+      kind: 'fn',
+      priority: opts?.priority ?? 0,
+      fn: fn as TFnInitHook['fn'],
+    }
+    this.initHooks.push(hook)
+    if (this.initHookPhase === 'done') {
+      this.runInitHook(hook).catch((error: unknown) => {
+        this.logger.error(`Late init hook failed: ${errorMessage(error)}`)
       })
     }
   }

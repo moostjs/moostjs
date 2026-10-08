@@ -25,14 +25,24 @@ export interface TBindControllerOptions {
 }
 
 /**
- * A `@MoostInit`-decorated controller method, collected at bind time and run
- * once by `Moost.init()` after all controllers are bound. Interceptors are not
- * applied; params resolve through the RESOLVE pipe only.
+ * An init hook collected for `Moost.init()`: either a `@MoostInit`-decorated
+ * controller method (collected at bind time) or a function registered with
+ * `Moost.addInitHook`. Interceptors are not applied; params of method hooks
+ * resolve through the RESOLVE pipe only.
  */
-export interface TInitHook {
+export type TInitHook = TMethodInitHook | TFnInitHook
+
+export interface TMethodInitHook {
+  kind?: 'method'
   priority: number
   method: string
   computedPrefix: string
   getInstance: () => Promise<TObject> | TObject
   resolveArgs?: () => unknown[] | Promise<unknown[]>
+}
+
+export interface TFnInitHook {
+  kind: 'fn'
+  priority: number
+  fn: (app: never) => unknown
 }

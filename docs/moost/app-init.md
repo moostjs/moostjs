@@ -62,6 +62,28 @@ Both inject the running `Moost` instance:
 - **Constructor injection** — `Moost` is in the provide registry, so `constructor(private moost: Moost) {}`
   works on any singleton controller.
 
+## Programmatic hooks (`app.addInitHook`)
+
+`app.addInitHook(fn, { priority? })` is the programmatic counterpart of `@MoostInit`, for code that cannot decorate a controller method — a `FOR_EVENT` controller, a class that is only injected, or library code that receives the app through DI.
+
+```ts
+@Injectable()
+class Publisher {
+  constructor(app: Moost) {
+    app.addInitHook((moost) => {
+      moost.getLogger('publisher').log(`wired ${moost.getControllersOverview().length} controllers`)
+    }, { priority: -10 })
+  }
+}
+```
+
+- **Same pass as `@MoostInit`.** Hooks run after all controllers are bound and before `adapter.onInit`, in ascending `priority` (default `0`), then registration order, in the same init context (controller context is the app; no request composables). `fn` receives the app. A throwing hook rejects `init()`.
+- **Before the pass** (including from a controller constructor during bind) the hook is queued.
+- **During the pass** (from another hook) it runs later in the same pass, ordered among the hooks that have not run yet.
+- **After the pass** it runs immediately, asynchronously. A failure is logged through the app logger; there is no `init()` left to reject. This is the case for `FOR_EVENT` controllers and lazily created singletons.
+- **No de-duplication.** Registering the same function twice runs it twice; guard with your own flag if needed.
+- **Re-init.** Like `@MoostInit` hooks, registered hooks run again on every `init()` of the same app.
+
 ## Resolving a handler path
 
 Deriving a handler's *actual* mounted path is common enough that Moost ships a helper for it, so you don't navigate `getControllersOverview()` by hand (and don't trip over the multiplicities below). Three forms, smallest first:
@@ -103,7 +125,8 @@ Pass `opts.predicate` to narrow by event-specific criteria without coupling core
 | **Transform/Validate pipes** | **Not** applied — only the resolve pipe runs. Injected values are not validated or transformed.                                          |
 | **Async**        | Each hook is awaited.                                                                                                                                |
 | **Errors**       | Fail-fast: a throwing hook rejects `init()`. A broken one-time setup is a boot-time misconfiguration you want loud.                                  |
-| **vs `adapter.onInit`** | `@MoostInit` runs **before** adapter `onInit`, so an adapter's `onInit` can observe state an init hook produced.                              |
+| **vs `adapter.onInit`** | `@MoostInit` and `addInitHook` hooks run **before** adapter `onInit`, so an adapter's `onInit` can observe state an init hook produced.       |
+| **vs `addInitHook`** | `addInitHook` is the programmatic form: works from any code holding the app (no decorated controller needed) and also accepts late registration (runs immediately). |
 
 ```ts
 @MoostInit({ priority: -10 }) // runs before default-priority hooks
@@ -115,6 +138,7 @@ earlySetup() {}
 - **DO** use it for one-time setup that depends on the complete overview — deriving paths, warming caches, validating config.
 - **DO** put the result somewhere request handlers can read it (an injectable holder), rather than recomputing per request.
 - **DO** make a hook idempotent when its singleton can outlive a dev-server reload (it has no `Moost` dependency) — it runs again for every new app.
+- **DO** use `app.addInitHook` in library code that cannot decorate a controller (`FOR_EVENT` controllers, injected-only classes).
 - **DON'T** put `@MoostInit` on a class that is only injected — hooks are collected from registered controllers; register the class or move the hook to one.
 - **DON'T** call request-scoped composables (`useRequest`, `useHeaders`, `useRouteParams`, `useCookies`) — there is no event at init; they will fail.
 - **DON'T** put `@MoostInit` on a `FOR_EVENT` controller — it throws at bind. Use a SINGLETON.
