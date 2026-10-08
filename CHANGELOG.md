@@ -1,3 +1,12 @@
+## [0.6.47](https://github.com/moostjs/moostjs/compare/v0.6.46...v0.6.47) (2026-10-08)
+
+
+### Bug Fixes
+
+* **moost:** addInitHook after init runs once without being stored ([4fc4114](https://github.com/moostjs/moostjs/commit/4fc41149ddc6450df44c7321841d53d11856157b))
+
+
+
 ## [0.6.46](https://github.com/moostjs/moostjs/compare/v0.6.45...v0.6.46) (2026-10-08)
 
 
