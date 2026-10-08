@@ -1,3 +1,12 @@
+## [0.6.46](https://github.com/moostjs/moostjs/compare/v0.6.45...v0.6.46) (2026-10-08)
+
+
+### Features
+
+* **moost:** app.addInitHook — programmatic init hooks in the @MoostInit pass ([c2a9a9c](https://github.com/moostjs/moostjs/commit/c2a9a9c7d5163ed612f1c469d56323fdfcfb2d2d))
+
+
+
 ## [0.6.45](https://github.com/moostjs/moostjs/compare/v0.6.44...v0.6.45) (2026-10-06)
 
 
