@@ -80,9 +80,9 @@ class Publisher {
 - **Same pass as `@MoostInit`.** Hooks run after all controllers are bound and before `adapter.onInit`, in ascending `priority` (default `0`), then registration order, in the same init context (controller context is the app; no request composables). `fn` receives the app. A throwing hook rejects `init()`.
 - **Before the pass** (including from a controller constructor during bind) the hook is queued.
 - **During the pass** (from another hook) it runs later in the same pass, ordered among the hooks that have not run yet.
-- **After the pass** it runs immediately, asynchronously. A failure is logged through the app logger; there is no `init()` left to reject. This is the case for `FOR_EVENT` controllers and lazily created singletons.
-- **No de-duplication.** Registering the same function twice runs it twice; guard with your own flag if needed.
-- **Re-init.** Like `@MoostInit` hooks, registered hooks run again on every `init()` of the same app.
+- **After the pass** it runs once, immediately and asynchronously, and is **not stored**. A failure is logged through the app logger; there is no `init()` left to reject. This is the case for `FOR_EVENT` controllers (constructed per request) and lazily created singletons.
+- **No de-duplication.** Registering the same function twice runs it twice. A per-request caller (e.g. a `FOR_EVENT` constructor) runs its hook on every construction, so guard non-idempotent work with your own flag.
+- **Re-init.** Hooks registered before or during a pass run again on every `init()` of the same app, like `@MoostInit` hooks. Late hooks do not: to have a hook run on every future init, register it before `init()`.
 
 ## Resolving a handler path
 
@@ -126,7 +126,7 @@ Pass `opts.predicate` to narrow by event-specific criteria without coupling core
 | **Async**        | Each hook is awaited.                                                                                                                                |
 | **Errors**       | Fail-fast: a throwing hook rejects `init()`. A broken one-time setup is a boot-time misconfiguration you want loud.                                  |
 | **vs `adapter.onInit`** | `@MoostInit` and `addInitHook` hooks run **before** adapter `onInit`, so an adapter's `onInit` can observe state an init hook produced.       |
-| **vs `addInitHook`** | `addInitHook` is the programmatic form: works from any code holding the app (no decorated controller needed) and also accepts late registration (runs immediately). |
+| **vs `addInitHook`** | `addInitHook` is the programmatic form: works from any code holding the app (no decorated controller needed) and also accepts late registration (runs once immediately, not stored, so not re-run on re-init). |
 
 ```ts
 @MoostInit({ priority: -10 }) // runs before default-priority hooks

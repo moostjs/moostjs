@@ -18,12 +18,14 @@ npm create moost@latest [name] -- [--http|--cli|--ws|--ssr] [--wf] [--oxc] [--fo
 ```
 
 Project-type flags — pass at most ONE (passing several falls back to the interactive type select):
+
 - `--http` — HTTP server with `@moostjs/event-http`
 - `--cli` — CLI with `@moostjs/event-cli`
 - `--ws` — standalone WebSocket app with `@moostjs/event-ws` (combined with `--http` it means the WebSocket add-on instead, see below)
 - `--ssr` — Vue SSR/SPA with `@moostjs/vite` (the flag also enables SSR and skips the SSR/SPA toggle)
 
 Add-on / other flags — each pre-selects the answer and skips the matching interactive toggle:
+
 - `--ws` (with `--http`) — WebSocket add-on on top of the HTTP app
 - `--wf` — workflow example (applied for HTTP projects)
 - `--oxc` — oxlint + oxfmt tooling
@@ -52,6 +54,7 @@ adapter.listen(3000)           // adapter-specific; may come before or after ini
 ```
 
 During `init()`:
+
 1. Adapter `getProvideRegistry()` entries merged into DI.
 2. Controller methods scanned for handler metadata.
 3. `adapter.bindHandler(opts)` called per handler.
@@ -68,22 +71,23 @@ import { Moost, Controller, MoostInit, InjectMoost } from 'moost'
 
 @Controller('auth')
 class AuthController {
-  @MoostInit({ priority: 0 })            // lower priority runs first; default 0
-  init(@InjectMoost() moost: Moost) {    // or constructor-inject Moost
+  @MoostInit({ priority: 0 }) // lower priority runs first; default 0
+  init(@InjectMoost() moost: Moost) {
+    // or constructor-inject Moost
     const overview = moost.getControllersOverview() // COMPLETE here
   }
 }
 ```
 
-| # | Invariant |
-|---|---|
-| 1 | Runs after all `bindHandler` calls, before `adapter.onInit` — `getControllersOverview()` is complete (incl. `handlers[].registeredAs[].path`). A SINGLETON constructor runs *during* bind and sees a PARTIAL overview — use `@MoostInit` instead. |
-| 2 | Runs exactly once per `init()` — per APP, not per instance. A singleton KEPT across a dev reload (no `Moost`/adapter/rebuilt dep in its ctor — see [vite.md](vite.md#gotchas)) runs its hooks AGAIN on the same instance for each new app → make such hooks idempotent. |
-| 3 | SINGLETON controllers only, and only REGISTERED ones (`registerControllers` / `@ImportController`) — hooks are collected at bind; a `@MoostInit` on a class that is only injected never runs. `@MoostInit` on a `FOR_EVENT` controller throws at bind. |
-| 4 | Args resolve via the RESOLVE pipe ONLY — resolver-based decorators (`@InjectMoost`/`@Resolve`/`@Const`/`@HandlerPaths`) work; `@Inject` is a no-op on method params (yields `undefined` — it works only on constructor params); TRANSFORM/VALIDATE pipes and interceptors do NOT run. |
-| 5 | Runs in a synthetic init context — kind-specific request composables (`useRequest`/`useHeaders`/`useRouteParams`/`useCookies`) fail (no request event data); context-based composables (`useLogger`, `useControllerContext`, `useHandlerPaths`) work, as do DI and `app.getLogger()`. |
-| 6 | Ordered by `priority` ascending (default 0) across ALL controllers, then registration order. |
-| 7 | Async hooks awaited; a throwing hook rejects `init()` (fail-fast). |
+| #   | Invariant                                                                                                                                                                                                                                                                             |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Runs after all `bindHandler` calls, before `adapter.onInit` — `getControllersOverview()` is complete (incl. `handlers[].registeredAs[].path`). A SINGLETON constructor runs _during_ bind and sees a PARTIAL overview — use `@MoostInit` instead.                                     |
+| 2   | Runs exactly once per `init()` — per APP, not per instance. A singleton KEPT across a dev reload (no `Moost`/adapter/rebuilt dep in its ctor — see [vite.md](vite.md#gotchas)) runs its hooks AGAIN on the same instance for each new app → make such hooks idempotent.               |
+| 3   | SINGLETON controllers only, and only REGISTERED ones (`registerControllers` / `@ImportController`) — hooks are collected at bind; a `@MoostInit` on a class that is only injected never runs. `@MoostInit` on a `FOR_EVENT` controller throws at bind.                                |
+| 4   | Args resolve via the RESOLVE pipe ONLY — resolver-based decorators (`@InjectMoost`/`@Resolve`/`@Const`/`@HandlerPaths`) work; `@Inject` is a no-op on method params (yields `undefined` — it works only on constructor params); TRANSFORM/VALIDATE pipes and interceptors do NOT run. |
+| 5   | Runs in a synthetic init context — kind-specific request composables (`useRequest`/`useHeaders`/`useRouteParams`/`useCookies`) fail (no request event data); context-based composables (`useLogger`, `useControllerContext`, `useHandlerPaths`) work, as do DI and `app.getLogger()`. |
+| 6   | Ordered by `priority` ascending (default 0) across ALL controllers, then registration order.                                                                                                                                                                                          |
+| 7   | Async hooks awaited; a throwing hook rejects `init()` (fail-fast).                                                                                                                                                                                                                    |
 
 Key imports: `import { MoostInit, InjectMoost } from 'moost'`. `@InjectMoost` injects the running `Moost`; constructor injection of `Moost` also works (it's in the provide registry).
 
@@ -91,17 +95,17 @@ Key imports: `import { MoostInit, InjectMoost } from 'moost'`. `@InjectMoost` in
 
 `app.addInitHook(fn, { priority? })` (since 0.6.46) is the non-decorator form, for `FOR_EVENT` controllers, injected-only classes and library code that gets `Moost` via DI. `fn(app)` runs in the same pass and context as `@MoostInit` hooks (priority ascending, default 0, then registration order; before `adapter.onInit`; throw rejects `init()`).
 
-| Registered | Behavior |
-|---|---|
-| before the pass (also from a controller constructor during bind) | queued, runs in the pass |
-| during the pass (from another hook) | runs later in the same pass |
-| after the pass | runs immediately (async); failure is logged, not thrown |
+| Registered                                                       | Behavior                                                                 |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| before the pass (also from a controller constructor during bind) | queued, runs in the pass                                                 |
+| during the pass (from another hook)                              | runs later in the same pass                                              |
+| after the pass                                                   | runs once immediately (async), NOT stored; failure is logged, not thrown |
 
-No de-duplication (same fn twice runs twice); re-runs on re-init like `@MoostInit` hooks.
+No de-duplication (same fn twice runs twice; per-request callers such as `FOR_EVENT` constructors should guard non-idempotent work themselves). Hooks registered before/during a pass re-run on re-init like `@MoostInit` hooks; late ones do not, so register before `init()` to get a hook on every init.
 
 ### Resolving a handler's mounted path
 
-Common `@MoostInit` task: get a handler's *actual* composed path (e.g. to scope a cookie). Don't hand-walk `getControllersOverview()` — use the helpers (all yield **all distinct** paths; `getHandlerPaths` returns `string[]`, `useHandlerPaths` is async and must be awaited):
+Common `@MoostInit` task: get a handler's _actual_ composed path (e.g. to scope a cookie). Don't hand-walk `getControllersOverview()` — use the helpers (all yield **all distinct** paths; `getHandlerPaths` returns `string[]`, `useHandlerPaths` is async and must be awaited):
 
 ```ts
 import { getHandlerPaths, useHandlerPaths } from 'moost'
@@ -111,12 +115,12 @@ import { getHandlerPaths, useHandlerPaths } from 'moost'
 getHandlerPaths(moost, AuthController, 'refresh')                      // pure fn, anywhere
 ```
 
-| # | Invariant |
-|---|---|
-| 1 | Returns ALL distinct mounted paths — a method can resolve to several (multi-prefix `@ImportController`, multiple verbs, multiple `registeredAs`). Don't assume one. |
-| 2 | `[]` when nothing matches — check and warn at boot. |
-| 3 | `opts` is `TGetHandlerPathsOptions` (exported from `moost`): `opts.type` filters by event type (`'HTTP'`); `opts.predicate(h)` narrows by transport detail (e.g. HTTP verb `h.handler.method`) without coupling core to a transport. |
-| 4 | `@HandlerPaths(method?)`/`useHandlerPaths(method?)` default `method` to the current context method — in `@MoostInit` that's the init method, so pass the handler method name explicitly. |
+| #   | Invariant                                                                                                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Returns ALL distinct mounted paths — a method can resolve to several (multi-prefix `@ImportController`, multiple verbs, multiple `registeredAs`). Don't assume one.                                                                  |
+| 2   | `[]` when nothing matches — check and warn at boot.                                                                                                                                                                                  |
+| 3   | `opts` is `TGetHandlerPathsOptions` (exported from `moost`): `opts.type` filters by event type (`'HTTP'`); `opts.predicate(h)` narrows by transport detail (e.g. HTTP verb `h.handler.method`) without coupling core to a transport. |
+| 4   | `@HandlerPaths(method?)`/`useHandlerPaths(method?)` default `method` to the current context method — in `@MoostInit` that's the init method, so pass the handler method name explicitly.                                             |
 
 ## App dispose (`@MoostDispose`)
 
@@ -125,27 +129,29 @@ Teardown counterpart of `@MoostInit`: release what a singleton owns (cache clien
 ```ts
 import { Injectable, MoostDispose } from 'moost'
 
-@Injectable()                              // works on any SINGLETON — not just controllers
+@Injectable() // works on any SINGLETON — not just controllers
 class CacheClient {
-  @MoostDispose({ priority: 0 })           // lower priority runs first; default 0; NO arguments
-  async close() { await this.client.quit() }
+  @MoostDispose({ priority: 0 }) // lower priority runs first; default 0; NO arguments
+  async close() {
+    await this.client.quit()
+  }
 }
 
-await app.dispose()                        // graceful shutdown; adapters first, then hooks
+await app.dispose() // graceful shutdown; adapters first, then hooks
 ```
 
 Graceful shutdown wiring (since 0.6.37): `app.disposeOnSignals()` — default `['SIGTERM','SIGINT']`, returns an unregister fn. NEVER hand-write `process.once(sig, () => app.dispose())` in the entry: under the vite dev server the entry re-executes per reload, so that stacks one listener per dead app (Node's listener-leak warning at 10) and Ctrl-C then disposes the FIRST app. `disposeOnSignals()` keeps ONE listener per signal per process (state on `globalThis`) and re-targets it at the newest app; signals union across calls. On signal: remove the listeners FIRST, then `dispose()`, then re-raise the same signal → Node's default exit status (143/130), NOT `exit(0)`. Second signal while disposing → Node's default handling (exit 128+n; the listeners are already removed). A rejecting `dispose()` warns and the signal is re-raised anyway.
 
-| # | Invariant |
-|---|---|
-| 1 | Two triggers, same hooks: `app.dispose()` and a `@moostjs/vite` HMR eject. Process signals NEVER fire on HMR — a resource leaking one handle per dev reload means its owner lacks a `@MoostDispose`. |
-| 2 | At most once per instance, ever (tracked per instance): a second `dispose()`, or an eject followed by a shutdown, runs nothing. `dispose()` returns the first call's promise. |
-| 3 | SINGLETON controllers AND `@Injectable()` singletons (hooks are discovered from live instances at dispose time, not at bind). On a `FOR_EVENT` **controller** it throws at bind; on a `FOR_EVENT` **injectable** it is never invoked. |
-| 4 | Order: every adapter's `onDispose(moost)` in registration order (stop intake), THEN instance hooks by ascending `priority`, ties in discovery order. All awaited, sequentially. |
-| 5 | Hook takes NO arguments (no pipes, no resolvers) — inject what it needs in the constructor. |
-| 6 | Errors are best effort: every remaining hook still runs; `dispose()` then rejects with an `AggregateError` naming each failing `Class.method`; an HMR eject only warns and keeps reloading. |
-| 7 | No `@MoostDispose` method but `[Symbol.asyncDispose]()` (preferred) or `[Symbol.dispose]()` present → that is used as the single priority-0 hook. |
-| 8 | `dispose()` does NOT clear DI registries or metadata caches — it only runs teardown. |
+| #   | Invariant                                                                                                                                                                                                                             |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Two triggers, same hooks: `app.dispose()` and a `@moostjs/vite` HMR eject. Process signals NEVER fire on HMR — a resource leaking one handle per dev reload means its owner lacks a `@MoostDispose`.                                  |
+| 2   | At most once per instance, ever (tracked per instance): a second `dispose()`, or an eject followed by a shutdown, runs nothing. `dispose()` returns the first call's promise.                                                         |
+| 3   | SINGLETON controllers AND `@Injectable()` singletons (hooks are discovered from live instances at dispose time, not at bind). On a `FOR_EVENT` **controller** it throws at bind; on a `FOR_EVENT` **injectable** it is never invoked. |
+| 4   | Order: every adapter's `onDispose(moost)` in registration order (stop intake), THEN instance hooks by ascending `priority`, ties in discovery order. All awaited, sequentially.                                                       |
+| 5   | Hook takes NO arguments (no pipes, no resolvers) — inject what it needs in the constructor.                                                                                                                                           |
+| 6   | Errors are best effort: every remaining hook still runs; `dispose()` then rejects with an `AggregateError` naming each failing `Class.method`; an HMR eject only warns and keeps reloading.                                           |
+| 7   | No `@MoostDispose` method but `[Symbol.asyncDispose]()` (preferred) or `[Symbol.dispose]()` present → that is used as the single priority-0 hook.                                                                                     |
+| 8   | `dispose()` does NOT clear DI registries or metadata caches — it only runs teardown.                                                                                                                                                  |
 
 Key imports: `import { MoostDispose, disposeInstances } from 'moost'`. `disposeInstances(instances, { logger?, onError?: 'warn' \| 'throw' })` → `Promise<{ hooks, errors, disposed }>` runs the same hooks for a set of objects you own (what the vite plugin calls on ejected instances).
 
@@ -158,21 +164,21 @@ Key imports: `import { MoostDispose, disposeInstances } from 'moost'`. `disposeI
 
 ### Methods
 
-| Method | Notes |
-|---|---|
-| `adapter<T>(a: T): T` | attach adapter; returns the adapter |
-| `registerControllers(...ctrls)` | classes / instances / `[prefix, ctrl]` tuples |
-| `init(): Promise<void>` | must be awaited |
-| `dispose(): Promise<void>` | graceful shutdown — adapters' `onDispose`, then `@MoostDispose` hooks; idempotent. See [App dispose](#app-dispose-moostdispose) |
-| `applyGlobalInterceptors(...items)` | class ctors, `TInterceptorDef`, or `TInterceptorData` |
-| `applyGlobalPipes(...pipes)` | `TPipeFn` or `TPipeData` |
-| `setProvideRegistry(reg)` | merges DI providers |
-| `setReplaceRegistry(reg, opts?)` | DI class replacements; `opts.override: false` = register a default (0.6.45; also on `setProvideRegistry`) |
-| `getReplacement(Class)` / `hasReplacement(Class)` | app-level replacement lookup (0.6.45) |
-| `getReplaceRegistry()` | frozen copy of app-level registry (0.6.45) |
-| `getLogger(topic?)` | scoped logger |
-| `getControllersOverview()` | introspection — returns `TControllerOverview[]` (type exported from `moost`) |
-| `getGlobalInterceptorHandler()` | for not-found paths in custom adapters |
+| Method                                            | Notes                                                                                                                           |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `adapter<T>(a: T): T`                             | attach adapter; returns the adapter                                                                                             |
+| `registerControllers(...ctrls)`                   | classes / instances / `[prefix, ctrl]` tuples                                                                                   |
+| `init(): Promise<void>`                           | must be awaited                                                                                                                 |
+| `dispose(): Promise<void>`                        | graceful shutdown — adapters' `onDispose`, then `@MoostDispose` hooks; idempotent. See [App dispose](#app-dispose-moostdispose) |
+| `applyGlobalInterceptors(...items)`               | class ctors, `TInterceptorDef`, or `TInterceptorData`                                                                           |
+| `applyGlobalPipes(...pipes)`                      | `TPipeFn` or `TPipeData`                                                                                                        |
+| `setProvideRegistry(reg)`                         | merges DI providers                                                                                                             |
+| `setReplaceRegistry(reg, opts?)`                  | DI class replacements; `opts.override: false` = register a default (0.6.45; also on `setProvideRegistry`)                       |
+| `getReplacement(Class)` / `hasReplacement(Class)` | app-level replacement lookup (0.6.45)                                                                                           |
+| `getReplaceRegistry()`                            | frozen copy of app-level registry (0.6.45)                                                                                      |
+| `getLogger(topic?)`                               | scoped logger                                                                                                                   |
+| `getControllersOverview()`                        | introspection — returns `TControllerOverview[]` (type exported from `moost`)                                                    |
+| `getGlobalInterceptorHandler()`                   | for not-found paths in custom adapters                                                                                          |
 
 ### `@Controller(prefix?)`
 
@@ -196,7 +202,9 @@ class AppController {}
 ```ts
 class MyApp extends Moost {
   @Get('hello/:name')
-  hello(@Param('name') name: string) { return `Hello, ${name}!` }
+  hello(@Param('name') name: string) {
+    return `Hello, ${name}!`
+  }
 }
 const app = new MyApp()
 app.adapter(new MoostHttp()).listen(3000)
@@ -210,7 +218,9 @@ await app.init()
 class GreetController {
   @Get(':name')
   @Cli(':name')
-  greet(@Param('name') name: string) { return `Hello, ${name}!` }
+  greet(@Param('name') name: string) {
+    return `Hello, ${name}!`
+  }
 }
 ```
 

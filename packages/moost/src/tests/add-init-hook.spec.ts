@@ -193,4 +193,27 @@ describe('Moost.addInitHook', () => {
     new PerEvent(app)
     await done
   })
+
+  it('does not store late hooks: they run once and not again on re-init', async () => {
+    let early = 0
+    let late = 0
+    const app = new Moost()
+    app.addInitHook(() => {
+      early++
+    })
+    await app.init()
+    const lateHook = () => {
+      late++
+    }
+    for (let i = 0; i < 20; i++) {
+      app.addInitHook(lateHook)
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(late).toBe(20)
+    expect((app as unknown as { initHooks: unknown[] }).initHooks).toHaveLength(1)
+
+    await app.init()
+    expect(early).toBe(2)
+    expect(late).toBe(20)
+  })
 })

@@ -454,12 +454,17 @@ export class Moost extends Hookable {
    * - before the hook pass starts (including from a controller constructor
    *   during binding) — queued;
    * - while the pass runs (from another hook) — runs later in the same pass;
-   * - after the pass finished — runs immediately (asynchronously, in its own
-   *   init context); a failure is logged, since there is no `init()` left to
+   * - after the pass finished — runs once, immediately (asynchronously, in its
+   *   own init context) and is NOT stored, so it does not run again on
+   *   re-init and per-request callers (`FOR_EVENT` constructors) do not grow
+   *   the hook list. A failure is logged, since there is no `init()` left to
    *   reject.
    *
-   * No de-duplication: registering the same function twice runs it twice.
-   * Hooks re-run on re-init exactly like `@MoostInit` hooks.
+   * No de-duplication: registering the same function twice runs it twice
+   * (per-request callers should guard non-idempotent work themselves). Hooks
+   * registered before or during a pass re-run on re-init exactly like
+   * `@MoostInit` hooks; to get a hook on every future init, register it
+   * before `init()`.
    * @since 0.6.46
    */
   public addInitHook(fn: (app: this) => unknown, opts?: { priority?: number }): void {
@@ -468,12 +473,14 @@ export class Moost extends Hookable {
       priority: opts?.priority ?? 0,
       fn: fn as TFnInitHook['fn'],
     }
-    this.initHooks.push(hook)
     if (this.initHookPhase === 'done') {
+      // late: run once, never stored (FOR_EVENT callers would grow the list per request)
       this.runInitHook(hook).catch((error: unknown) => {
         this.logger.error(`Late init hook failed: ${errorMessage(error)}`)
       })
+      return
     }
+    this.initHooks.push(hook)
   }
 
   /**
