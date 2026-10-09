@@ -1,3 +1,12 @@
+## [0.6.48](https://github.com/moostjs/moostjs/compare/v0.6.47...v0.6.48) (2026-10-09)
+
+
+### Performance Improvements
+
+* **moost:** cached interceptor defs, lazy event scope, bind-time pipe metas; fix pipes and injector ([421bbb3](https://github.com/moostjs/moostjs/commit/421bbb329f2de3033c0543e37866c5694652b976))
+
+
+
 ## [0.6.47](https://github.com/moostjs/moostjs/compare/v0.6.46...v0.6.47) (2026-10-08)
 
 
