@@ -33,7 +33,7 @@ The root span that wraps the entire event lifecycle. Created when an event enter
 | **Attributes** | See [controller attributes](#controller-attributes) below |
 | **Metrics** | Event duration histogram is recorded when this span ends |
 
-For HTTP events, the root span comes from the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`): the `SpanInjector` attaches to its server span rather than creating a duplicate. Without one (no HTTP instrumentation, or an in-process request) it creates its own `SERVER` root span — see [HTTP instrumentation](/otel/setup#http-instrumentation), including the note on versions up to 0.6.49.
+For HTTP events, the root span comes from the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`): the `SpanInjector` attaches to its server span rather than creating a duplicate. Without one it creates its own — a `SERVER` root span without HTTP instrumentation, an `INTERNAL` child for an in-process request — see [HTTP instrumentation](/otel/setup#http-instrumentation), including the note on versions up to 0.6.49.
 
 For non-HTTP events (CLI, Workflow), the `SpanInjector` creates a span named `"{EventType} Event"` (e.g. `CLI Event`, `WF Event`).
 
@@ -118,7 +118,8 @@ The root span is renamed after the controller is resolved to include meaningful 
 
 - **HTTP events:** `{HTTP_METHOD} {route}` (e.g. `GET /users/:id`)
 - **Other events:** `{EventType} {route}` (e.g. `CLI users list`, `WF process-order`)
-- **Unresolved routes:** `{EventType} <unresolved>` when no route was matched
+- **Unmatched HTTP requests (404):** the bare method (e.g. `GET`) — never the raw URL, which would make span names unbounded
+- **Unresolved routes (other events):** `{EventType} <unresolved>`
 
 Routes run inside a running event (`MoostHttp.invoke()`) never rename or re-attribute the calling event's root span and record no event metrics of their own; their lifecycle spans (`Interceptors:before`, `Handler:{path}`, …) appear as children of the caller's span.
 

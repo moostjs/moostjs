@@ -29,7 +29,7 @@ Each metric data point includes these attributes:
 
 ### HTTP-specific attributes
 
-For HTTP events, two additional attributes are recorded (the status code is captured automatically — no extra setup), and `route` falls back to the raw URL when no route matched:
+For HTTP events, two additional attributes are recorded (the status code is captured automatically — no extra setup). An unmatched request (404) has no `route` — the raw URL is never used, so scanners and ids cannot blow up the metric's cardinality:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|

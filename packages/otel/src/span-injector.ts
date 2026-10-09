@@ -1,6 +1,6 @@
 import type { Span } from '@opentelemetry/api'
 import { SpanKind, trace } from '@opentelemetry/api'
-import type { OutgoingHttpHeaders, ServerResponse } from 'http'
+import type { ServerResponse } from 'http'
 import type { TContextInjectorHook } from 'moost'
 import {
   ContextInjector,
@@ -75,20 +75,16 @@ function readHandlerOtelMeta(controller: object | undefined, method: string | un
 const claimedSpans = new WeakSet<Span>()
 
 /**
- * The active server span of the http instrumentation, when no Moost event owns it yet.
- * Anything else active (a lifecycle span of a running event, a client span) is a parent,
- * not the request's own span.
+ * Whether the active span is the server span of the http instrumentation, not yet owned by a
+ * Moost event. Anything else active (a lifecycle span of a running event, a client span) is a
+ * parent, not the request's own span.
  */
-function getInstrumentationServerSpan(): Span | undefined {
-  const active = trace.getActiveSpan()
-  if (
-    active &&
-    !claimedSpans.has(active) &&
-    (active as Span & { kind?: SpanKind }).kind === SpanKind.SERVER
-  ) {
-    return active
-  }
-  return undefined
+function isInstrumentationServerSpan(span: Span | undefined): span is Span {
+  return (
+    !!span &&
+    !claimedSpans.has(span) &&
+    (span as Span & { kind?: SpanKind }).kind === SpanKind.SERVER
+  )
 }
 
 /**
@@ -139,21 +135,11 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     const res = this.getResponse()
     if (res) {
       const originalWriteHead = res.writeHead
-      Object.assign(res, {
-        writeHead: (
-          arg0: number,
-          arg1?: string | OutgoingHttpHeaders,
-          arg2?: OutgoingHttpHeaders,
-        ) => {
-          res._statusCode = arg0
-          const headers =
-            typeof arg2 === 'object' ? arg2 : typeof arg1 === 'object' ? arg1 : undefined
-          res._contentLength = headers?.['content-length'] ? Number(headers['content-length']) : 0
-          return originalWriteHead.apply(res, [arg0, arg1, arg2] as unknown as Parameters<
-            typeof originalWriteHead
-          >)
-        },
-      })
+      // also catches the implicit `writeHead(statusCode)` of a bare `res.end()`
+      res.writeHead = ((...args: Parameters<typeof originalWriteHead>) => {
+        res._statusCode = args[0]
+        return originalWriteHead.apply(res, args)
+      }) as typeof originalWriteHead
     }
   }
 
@@ -167,12 +153,17 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       this.patchRsponse()
     }
     // An HTTP event attaches to the server span of the http instrumentation
-    // (`@opentelemetry/instrumentation-http`) instead of creating a duplicate. Without one
-    // (no instrumentation, in-process `request()`, SSR render inside a handler) it starts its own.
-    const attached = isHttp ? getInstrumentationServerSpan() : undefined
+    // (`@opentelemetry/instrumentation-http`) instead of creating a duplicate. Without one it
+    // starts its own: a SERVER root when nothing is active (no instrumentation), else an INTERNAL
+    // child (in-process `request()`, SSR render inside a handler — not a network request).
+    const active = isHttp ? trace.getActiveSpan() : undefined
+    const attached = isInstrumentationServerSpan(active) ? active : undefined
     const span =
       attached ??
-      tracer.startSpan(`${eventType} Event`, isHttp ? { kind: SpanKind.SERVER } : undefined)
+      tracer.startSpan(
+        `${eventType} Event`,
+        isHttp && !active ? { kind: SpanKind.SERVER } : undefined,
+      )
     claimedSpans.add(span)
     registerSpan(span)
     return this.withSpan(span, cb, {
@@ -241,8 +232,8 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       if (span) {
         const eventType = this.getEventType()
         if (eventType === httpKind.name) {
-          const req = this.getRequest()
-          span.updateName(`${req?.method || ''} ${req?.url}`)
+          // the method only — a raw URL would make span names unbounded (scanners, ids)
+          span.updateName(this.getRequest()?.method || 'HTTP')
         }
       }
       this.startEventMetrics(chm.attrs, route)
@@ -315,9 +306,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       'moost.is_error': error ? 1 : 0,
     } as Record<string, string | number>
     if (a['moost.event_type'] === httpKind.name) {
-      if (!attrs.route) {
-        attrs.route = this.getRequest()?.url || ''
-      }
+      // no raw-URL fallback for an unmatched route: it would make the metric unbounded
       attrs['http.status_code'] = this.getResponse()?._statusCode || 0
       attrs['moost.is_error'] = attrs['moost.is_error'] || attrs['http.status_code'] > 399 ? 1 : 0
     }
@@ -337,7 +326,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       const response = current().get(httpKind.keys.response)
       return (response as unknown as { getRawRes: (p?: boolean) => ServerResponse })?.getRawRes(
         true,
-      ) as ServerResponse & { _statusCode?: number; _contentLength?: number }
+      ) as ServerResponse & { _statusCode?: number }
     } catch {
       return undefined
     }

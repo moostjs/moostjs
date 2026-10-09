@@ -23,6 +23,7 @@ import {
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
 import { useOtelContext } from './context'
+import { OtelIgnoreSpan } from './otel.decorators'
 import { SpanInjector } from './span-injector'
 
 /** Minimal AsyncLocalStorage context manager (what `@opentelemetry/context-async-hooks` provides). */
@@ -69,6 +70,14 @@ class UsersController {
 
   @Get('nested/:id')
   async nested() {
+    const res = await httpAdapter.getHttpApp().request('/users/inner')
+    return { inner: (await res!.json()) as unknown }
+  }
+
+  // no lifecycle spans: the handler runs with the event's root span itself active
+  @Get('quiet/:id')
+  @OtelIgnoreSpan()
+  async quiet() {
     const res = await httpAdapter.getHttpApp().request('/users/inner')
     return { inner: (await res!.json()) as unknown }
   }
@@ -177,17 +186,26 @@ describe('SpanInjector — HTTP events', () => {
     })
   })
 
-  it('renames the attached span to the raw URL when no route matched', async () => {
-    const res = await fetch(`${instrumentedBase}/nope`)
+  it('names the span after the method only when no route matched — never the raw URL', async () => {
+    const res = await fetch(`${instrumentedBase}/nope/12345?q=1`)
     expect(res.status).toBe(404)
-    const root = await waitForSpan('GET /nope')
+    const root = await waitForSpan('GET')
     expect(root).toBeDefined()
     expect(root!.instrumentationScope.name).toBe('fake-instrumentation-http')
+    expect(exporter.getFinishedSpans().some((s) => s.name.includes('/nope'))).toBe(false)
     await vi.waitFor(() => expect(recordMetric).toHaveBeenCalled())
-    expect(recordMetric.mock.calls[0][1]).toMatchObject({
-      'http.status_code': 404,
-      'moost.is_error': 1,
-    })
+    const attrs = recordMetric.mock.calls[0][1] as Record<string, unknown>
+    expect(attrs).toMatchObject({ 'http.status_code': 404, 'moost.is_error': 1 })
+    expect(attrs.route).toBeUndefined()
+  })
+
+  it('names its own root span after the method for an unmatched route', async () => {
+    const res = await fetch(`${bareBase}/nope/12345`)
+    expect(res.status).toBe(404)
+    const root = await waitForSpan('GET')
+    expect(root).toBeDefined()
+    expect(root!.instrumentationScope.name).toBe('moost-tracer')
+    expect(root!.kind).toBe(SpanKind.SERVER)
   })
 
   it('creates its own SERVER root span when no http instrumentation span is active', async () => {
@@ -211,8 +229,23 @@ describe('SpanInjector — HTTP events', () => {
     const inner = spanNamed('GET /users/:id')
     expect(inner).toBeDefined()
     expect(inner!.instrumentationScope.name).toBe('moost-tracer')
+    // an in-process request is not a network request: no second SERVER span in the trace
+    expect(inner!.kind).toBe(SpanKind.INTERNAL)
     expect(inner!.spanContext().traceId).toBe(root!.spanContext().traceId)
     expect(inner!.attributes['moost.handler']).toBe('getUser')
+  })
+
+  it('an in-process request run directly under the claimed server span never re-claims it', async () => {
+    const res = await fetch(`${instrumentedBase}/users/quiet/1`)
+    expect(res.status).toBe(200)
+    const root = await waitForSpan('GET /users/quiet/:id')
+    expect(root).toBeDefined()
+    expect(root!.instrumentationScope.name).toBe('fake-instrumentation-http')
+    expect(root!.attributes['moost.handler']).toBe('quiet')
+    const inner = spanNamed('GET /users/:id')
+    expect(inner).toBeDefined()
+    expect(inner!.instrumentationScope.name).toBe('moost-tracer')
+    expect(parentId(inner!)).toBe(root!.spanContext().spanId)
   })
 })
 

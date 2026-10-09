@@ -200,10 +200,10 @@ registerInstrumentations({
 })
 ```
 
-When there is no instrumentation server span to attach to — HTTP instrumentation is not registered, or the request is served in-process (`request()` / `fetch()` on the HTTP app, an SSR render inside a handler) — the `SpanInjector` creates its own `SERVER` root span, named the same way. For non-HTTP event types (CLI, Workflow, custom), the `SpanInjector` always creates the root span itself (named `"{EventType} Event"`).
+When there is no instrumentation server span to attach to — HTTP instrumentation is not registered, or the request is served in-process (`request()` / `fetch()` on the HTTP app, an SSR render inside a handler) — the `SpanInjector` creates its own span, named the same way: a `SERVER` root span when no span is active, otherwise an `INTERNAL` child (an in-process request is not a network request, so the trace never gets a second `SERVER` span). An unmatched request (404) is named after the method only (e.g. `GET`). For non-HTTP event types (CLI, Workflow, custom), the `SpanInjector` always creates the root span itself (named `"{EventType} Event"`).
 
 ::: warning Versions up to 0.6.49
-The HTTP check never matched in `@moostjs/otel` 0.6.0 – 0.6.49: every HTTP event started its own `http Event` span (renamed `http {route}`, e.g. `http /users/:id`) as a child of the instrumentation's server span, which kept its bare method name, and the HTTP metric attributes (`http.status_code`, raw-URL `route` fallback) were never recorded. An unmatched route also threw from the request listener while tracing was enabled. If your dashboards or alerts match on `http /…` span names, switch them to `{METHOD} {route}`.
+The HTTP check never matched in `@moostjs/otel` 0.6.0 – 0.6.49: every HTTP event started its own `http Event` span (renamed `http {route}`, e.g. `http /users/:id`) as a child of the instrumentation's server span, which kept its bare method name, and the `http.status_code` metric attribute was never recorded. An unmatched route also threw from the request listener while tracing was enabled. If your dashboards or alerts match on `http /…` span names, switch them to `{METHOD} {route}`.
 :::
 
 ::: info
