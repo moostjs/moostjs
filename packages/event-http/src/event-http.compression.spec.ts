@@ -1,9 +1,18 @@
 import { request as httpRequest } from 'node:http'
 import { brotliDecompressSync, gunzipSync } from 'node:zlib'
 
+import { createEventContext } from '@wooksjs/event-core'
 import type { TWooksHttpOptions } from '@wooksjs/event-http'
 import { HttpError } from '@wooksjs/event-http'
-import { Controller, defineBeforeInterceptor, Intercept, Moost, TInterceptorPriority } from 'moost'
+import type { TInterceptorDef } from 'moost'
+import {
+  Controller,
+  defineBeforeInterceptor,
+  getMoostMate,
+  Intercept,
+  Moost,
+  TInterceptorPriority,
+} from 'moost'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { Compress, Get } from './decorators'
@@ -68,6 +77,27 @@ class OffController {
   override() {
     return big
   }
+
+  @Get('override-opts')
+  @Compress({ gzipLevel: 1 })
+  overrideOpts() {
+    return big
+  }
+}
+
+@Controller('opts-ctrl')
+@Compress({ encodings: ['br'], threshold: 1_000_000 })
+class OptsController {
+  @Get('inherit')
+  inherit() {
+    return big
+  }
+
+  @Get('override')
+  @Compress()
+  override() {
+    return big
+  }
 }
 
 interface TRawResponse {
@@ -111,7 +141,7 @@ async function startApp(opts?: TWooksHttpOptions) {
   const app = new Moost()
   const http = new MoostHttp(opts)
   app.adapter(http)
-  app.registerControllers(PlainController, OffController)
+  app.registerControllers(PlainController, OffController, OptsController)
   await app.init()
   await http.listen(0)
   const { port } = http.getHttpApp().getServer()!.address() as { port: number }
@@ -209,10 +239,40 @@ describe('@Compress with app-level compression on', () => {
     expect(res.body.toString()).toBe(bigJson)
   })
 
+  it('method-level @Compress(true) under class-level @Compress(false) uses the app settings', async () => {
+    const res = await getRaw(`${base}/off-ctrl/override`)
+    expect(res.encoding).toBe('gzip')
+    expect(decode(res)).toBe(bigJson)
+  })
+
+  it('method-level @Compress(options) under class-level @Compress(false) layers over the app settings', async () => {
+    const res = await getRaw(`${base}/off-ctrl/override-opts`)
+    expect(res.encoding).toBe('gzip')
+    expect(decode(res)).toBe(bigJson)
+  })
+
+  it('method-level @Compress replaces a class-level options object instead of layering on it', async () => {
+    const res = await getRaw(`${base}/opts-ctrl/override`)
+    // class sets gzip-only + huge threshold; method @Compress() must start from the app settings
+    expect(res.encoding).toBe('gzip')
+    expect(decode(res)).toBe(bigJson)
+    const inherited = await getRaw(`${base}/opts-ctrl/inherit`)
+    expect(inherited.encoding).toBeUndefined()
+  })
+
   it('@Compress(options) layers over the app settings', async () => {
     // threshold above the body size — sent as is
     const skipped = await getRaw(`${base}/high-threshold`)
     expect(skipped.encoding).toBeUndefined()
     expect(skipped.body.toString()).toBe(bigJson)
+  })
+})
+
+describe('@Compress outside an HTTP event', () => {
+  it('is a no-op for non-HTTP events of a mixed controller (CLI, workflow, …)', () => {
+    const def = getMoostMate().read(OffController)?.interceptors?.[0]?.handler as TInterceptorDef
+    const logger = { info() {}, warn() {}, error() {}, debug() {} } as never
+    expect(def.before).toBeTypeOf('function')
+    expect(() => createEventContext({ logger }, () => def.before?.(() => {}))).not.toThrow()
   })
 })

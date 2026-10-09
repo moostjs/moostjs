@@ -91,7 +91,7 @@ Since 0.6.49 (wooks 0.7.28). OFF by default. App-level: `new MoostHttp({ compres
 @Compress(false) // class: every handler
 class ReportsController {
   @Get('full')
-  @Compress() // method wins over class; true = app settings or defaults
+  @Compress() // method replaces class (not layered on it); true = app settings or defaults
   full() {
     return bigReport()
   }
@@ -104,7 +104,7 @@ class ReportsController {
 // runtime: useResponse().setCompression(false)  (from @wooksjs/event-http)
 ```
 
-`@Compress(value = true)` = `BEFORE_ALL` before-interceptor calling `useResponse().setCompression(value)` → runs before guards/arg resolution, so it also covers guard/pipe/handler error responses. Re-exported: `isCompressibleType`, types `THttpCompressionOptions`, `THttpCompressionEncoding`.
+`@Compress(value = true)` = `BEFORE_ALL` before-interceptor calling `useResponse().setCompression(value)` → runs before guards/arg resolution, so it also covers guard/pipe/handler error responses. 404s follow the app setting; non-HTTP events of a mixed controller are skipped. Re-exported: `isCompressibleType`, types `THttpCompressionOptions`, `THttpCompressionEncoding`.
 
 Never compressed: streams / fetch `Response` bodies, `text/event-stream`, `HEAD`, `204`/`206`/`304`, bodies with `Content-Encoding` already set, `Cache-Control: no-transform`, in-process `fetch()`/`invoke()`/SSR local fetch. Adds `Vary: Accept-Encoding`; weakens a strong `ETag`. Full rules: https://wooks.moost.org/webapp/compression.html
 

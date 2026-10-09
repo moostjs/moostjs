@@ -209,7 +209,7 @@ export class ReportsController {
 | `false` | Never compress this response |
 | options object | Compress with these settings layered over the app settings (or the defaults) |
 
-A method-level `@Compress` wins over a class-level one. The override is applied before guards and argument resolution, so it also covers error responses from guards, pipes and the handler.
+A method-level `@Compress` replaces a class-level one — options are layered over the app settings, never over the class value. The override is applied before guards and argument resolution, so it also covers error responses from guards, pipes and the handler. Unmatched routes (404) follow the app setting.
 
 For a decision made at runtime, call the wooks composable inside the handler:
 
