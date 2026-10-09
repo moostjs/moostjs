@@ -1,18 +1,9 @@
 import { request as httpRequest } from 'node:http'
 import { brotliDecompressSync, gunzipSync } from 'node:zlib'
 
-import { createEventContext } from '@wooksjs/event-core'
 import type { TWooksHttpOptions } from '@wooksjs/event-http'
 import { HttpError } from '@wooksjs/event-http'
-import type { TInterceptorDef } from 'moost'
-import {
-  Controller,
-  defineBeforeInterceptor,
-  getMoostMate,
-  Intercept,
-  Moost,
-  TInterceptorPriority,
-} from 'moost'
+import { Controller, defineBeforeInterceptor, Intercept, Moost, TInterceptorPriority } from 'moost'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { Compress, Get } from './decorators'
@@ -265,14 +256,5 @@ describe('@Compress with app-level compression on', () => {
     const skipped = await getRaw(`${base}/high-threshold`)
     expect(skipped.encoding).toBeUndefined()
     expect(skipped.body.toString()).toBe(bigJson)
-  })
-})
-
-describe('@Compress outside an HTTP event', () => {
-  it('is a no-op for non-HTTP events of a mixed controller (CLI, workflow, …)', () => {
-    const def = getMoostMate().read(OffController)?.interceptors?.[0]?.handler as TInterceptorDef
-    const logger = { info() {}, warn() {}, error() {}, debug() {} } as never
-    expect(def.before).toBeTypeOf('function')
-    expect(() => createEventContext({ logger }, () => def.before?.(() => {}))).not.toThrow()
   })
 })

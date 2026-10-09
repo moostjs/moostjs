@@ -20,6 +20,10 @@ The return value of a handler determines the response:
 Web `ReadableStream` is not special-cased — it would be JSON-serialized like a plain object. Wrap it with `Readable.fromWeb()` from `node:stream` or return it inside a fetch `Response`.
 :::
 
+::: info Mixed controllers
+The response decorators on this page (`@SetStatus`, `@SetHeader`, `@SetCookie`, `@Compress`) act on HTTP events only. On a controller that also handles CLI commands, workflow steps or WebSocket messages, those events are skipped — a workflow started from an HTTP handler never touches that request's response.
+:::
+
 ## Setting status codes
 
 ### Static — `@SetStatus`

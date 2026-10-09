@@ -327,6 +327,9 @@ importers:
         specifier: workspace:^
         version: link:../moost
     devDependencies:
+      '@moostjs/event-wf':
+        specifier: workspace:^
+        version: link:../event-wf
       vitest:
         specifier: 3.2.7
         version: 3.2.7(@types/node@26.1.2)(jiti@1.21.0)(lightningcss@1.33.0)(tsx@4.23.1)

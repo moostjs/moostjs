@@ -1,7 +1,9 @@
-import { current, key } from '@wooksjs/event-core'
+import { key } from '@wooksjs/event-core'
 import type { HttpResponse, THttpCompressionOptions } from '@wooksjs/event-http'
-import { httpKind, useResponse } from '@wooksjs/event-http'
+import { useResponse } from '@wooksjs/event-http'
 import { defineBeforeInterceptor, Intercept, TInterceptorPriority } from 'moost'
+
+import { forHttpEvents } from './http-only'
 
 /** Compression settings of the response before the first `@Compress` of the event ran. */
 const compressionBase = key<HttpResponse['compression']>('moost.http.compressionBase')
@@ -44,19 +46,18 @@ const compressionBase = key<HttpResponse['compression']>('moost.http.compression
  */
 export const Compress = (value: boolean | THttpCompressionOptions = true) =>
   Intercept(
-    defineBeforeInterceptor(() => {
-      const ctx = current()
-      if (!ctx.has(httpKind.keys.response)) {
-        return // a non-HTTP event (CLI, workflow, …) of a mixed controller
-      }
-      const response = useResponse(ctx)
-      // class-level then method-level run in that order: reset to the base so the most
-      // specific @Compress wins outright (own slot — a local fetch has its own response)
-      if (ctx.hasOwn(compressionBase)) {
-        response.setCompression(ctx.getOwn(compressionBase))
-      } else {
-        ctx.setOwn(compressionBase, response.compression)
-      }
-      response.setCompression(value)
-    }, TInterceptorPriority.BEFORE_ALL),
+    defineBeforeInterceptor(
+      forHttpEvents((ctx) => {
+        const response = useResponse(ctx)
+        // class-level then method-level run in that order: reset to the base so the most
+        // specific @Compress wins outright (own slot — an invoke() child has its own response)
+        if (ctx.hasOwn(compressionBase)) {
+          response.setCompression(ctx.getOwn(compressionBase))
+        } else {
+          ctx.setOwn(compressionBase, response.compression)
+        }
+        response.setCompression(value)
+      }),
+      TInterceptorPriority.BEFORE_ALL,
+    ),
   )

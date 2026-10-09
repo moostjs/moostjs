@@ -57,7 +57,7 @@ export class UploadController {
 }
 ```
 
-These decorators work on both handlers and controllers. When applied to a controller, all handlers inherit the limits.
+These decorators work on both handlers and controllers. When applied to a controller, all handlers inherit the limits. They act on HTTP events only — CLI, workflow and WebSocket events of the same controller are skipped (so are the global helpers below).
 
 ## Global interceptors
 

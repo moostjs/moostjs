@@ -1,38 +1,52 @@
 import { useRequest } from '@wooksjs/event-http'
 import { defineBeforeInterceptor, Intercept, TInterceptorPriority } from 'moost'
 
+import { forHttpEvents } from './http-only'
+
 /**
  * Creates an interceptor that sets the maximum allowed inflated body size in bytes.
+ * Non-HTTP events are left alone.
  *
  * @param n - Maximum body size in bytes after decompression.
  * @returns Interceptor def to enforce the limit.
  */
 export const globalBodySizeLimit = (n: number) =>
-  defineBeforeInterceptor(() => {
-    useRequest().setMaxInflated(n)
-  }, TInterceptorPriority.BEFORE_ALL)
+  defineBeforeInterceptor(
+    forHttpEvents((ctx) => {
+      useRequest(ctx).setMaxInflated(n)
+    }),
+    TInterceptorPriority.BEFORE_ALL,
+  )
 
 /**
  * Creates an interceptor that sets the maximum allowed compressed body size in bytes.
+ * Non-HTTP events are left alone.
  *
  * @param n - Maximum body size in bytes before decompression.
  * @returns Interceptor def to enforce the limit.
  */
 export const globalCompressedBodySizeLimit = (n: number) =>
-  defineBeforeInterceptor(() => {
-    useRequest().setMaxCompressed(n)
-  }, TInterceptorPriority.BEFORE_ALL)
+  defineBeforeInterceptor(
+    forHttpEvents((ctx) => {
+      useRequest(ctx).setMaxCompressed(n)
+    }),
+    TInterceptorPriority.BEFORE_ALL,
+  )
 
 /**
  * Creates an interceptor that sets the timeout for reading the request body.
+ * Non-HTTP events are left alone.
  *
  * @param n - Timeout in milliseconds.
  * @returns Interceptor def to enforce the timeout.
  */
 export const globalBodyReadTimeoutMs = (n: number) =>
-  defineBeforeInterceptor(() => {
-    useRequest().setReadTimeoutMs(n)
-  }, TInterceptorPriority.BEFORE_ALL)
+  defineBeforeInterceptor(
+    forHttpEvents((ctx) => {
+      useRequest(ctx).setReadTimeoutMs(n)
+    }),
+    TInterceptorPriority.BEFORE_ALL,
+  )
 
 /**
  * Decorator to limit the maximum inflated body size for the request. Default: 10 MB

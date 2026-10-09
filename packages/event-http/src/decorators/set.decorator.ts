@@ -3,20 +3,22 @@ import { useResponse } from '@wooksjs/event-http'
 import type { TInterceptorDef } from 'moost'
 import { Intercept, TInterceptorPriority } from 'moost'
 
+import { forHttpEvents } from './http-only'
+
 const setHeaderInterceptor = (
   name: string,
   value: string,
   opts?: { force?: boolean; status?: number; when?: 'always' | 'error' | 'ok' },
 ): TInterceptorDef => {
-  const cb = () => {
-    const response = useResponse()
+  const cb = forHttpEvents((ctx) => {
+    const response = useResponse(ctx)
     if (
       (!response.getHeader(name) || opts?.force) &&
       (!opts?.status || opts.status === response.status)
     ) {
       response.setHeader(name, value)
     }
-  }
+  })
   const def: TInterceptorDef = { priority: TInterceptorPriority.AFTER_ALL }
   if (opts?.when !== 'error') {
     def.after = cb
@@ -73,12 +75,12 @@ const setCookieInterceptor = (
   value: string,
   attrs?: TCookieAttributesInput,
 ): TInterceptorDef => ({
-  after() {
-    const response = useResponse()
+  after: forHttpEvents((ctx) => {
+    const response = useResponse(ctx)
     if (!response.getCookie(name)) {
       response.setCookie(name, value, attrs)
     }
-  },
+  }),
   priority: TInterceptorPriority.AFTER_ALL,
 })
 
@@ -111,12 +113,12 @@ const setStatusInterceptor = (
   code: number,
   opts?: { force?: boolean },
 ): TInterceptorDef => ({
-  after() {
-    const response = useResponse()
+  after: forHttpEvents((ctx) => {
+    const response = useResponse(ctx)
     if (!response.status || opts?.force) {
       response.status = code
     }
-  },
+  }),
   priority: TInterceptorPriority.AFTER_ALL,
 })
 

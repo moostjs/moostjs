@@ -104,7 +104,7 @@ class ReportsController {
 // runtime: useResponse().setCompression(false)  (from @wooksjs/event-http)
 ```
 
-`@Compress(value = true)` = `BEFORE_ALL` before-interceptor calling `useResponse().setCompression(value)` → runs before guards/arg resolution, so it also covers guard/pipe/handler error responses. 404s follow the app setting; non-HTTP events of a mixed controller are skipped. Re-exported: `isCompressibleType`, types `THttpCompressionOptions`, `THttpCompressionEncoding`.
+`@Compress(value = true)` = `BEFORE_ALL` before-interceptor calling `useResponse().setCompression(value)` → runs before guards/arg resolution, so it also covers guard/pipe/handler error responses. 404s follow the app setting; non-HTTP events are skipped (gotcha 5). Re-exported: `isCompressibleType`, types `THttpCompressionOptions`, `THttpCompressionEncoding`.
 
 Never compressed: streams / fetch `Response` bodies, `text/event-stream`, `HEAD`, `204`/`206`/`304`, bodies with `Content-Encoding` already set, `Cache-Control: no-transform`, in-process `fetch()`/`invoke()`/SSR local fetch. Adds `Vary: Accept-Encoding`; weakens a strong `ETag`. Full rules: https://wooks.moost.org/webapp/compression.html
 
@@ -148,4 +148,5 @@ Uncaught exceptions → HTTP 500. Format (JSON vs HTML) adapts to the `Accept` h
 2. `@SetCookie` won't overwrite a cookie already set in the response.
 3. `@SetHeader` won't overwrite a header already set (e.g. via `@HeaderRef`) unless `force: true`; default `when` is `'ok'` (success-only) — use `'always'` or `'error'` to run on errors.
 4. Ref decorators return Proxy objects — mutate `.value`, not a plain field.
-5. Global limit interceptors apply to every handler.
+5. `@SetStatus` / `@SetHeader` / `@SetCookie` / `@Compress` / body-limit decorators and `global…` limits act on HTTP events only — CLI / workflow / WS events of a mixed controller (also a workflow started from an HTTP handler with `eventContext`) are skipped, never touching the parent request/response.
+6. Global limit interceptors apply to every HTTP handler.
