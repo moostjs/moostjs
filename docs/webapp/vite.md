@@ -131,9 +131,68 @@ environments: {
 
 Your `entry-server.ts` `render(url)` can return per-page `<head>` tags plus an HTTP status and headers, not just HTML and state — see [the render contract](/webapp/ssr#the-render-contract). See [Vue + Moost (SSR)](/webapp/ssr) for the full guide.
 
+## Compression and Caching
+
+Since `0.6.49`, the production build compresses static files ahead of time, and the generated server sends cache headers. Both are on by default in middleware mode, so a plain `vite build` + `node dist/server/server.js` gets them without any configuration.
+
+**Precompression.** After the client build, the plugin writes a brotli (`.br`, quality 11) and a gzip (`.gz`, level 9) copy next to every compressible file in `dist/client/` — JS, CSS, HTML, SVG, JSON, text, XML, WASM — including files copied from `public/`. Files under 1 KiB, source maps (only devtools fetch them), images and already-compressed formats (`woff2`, `png`, …) are skipped, and a copy is kept only when it is smaller than the original. The server picks the copy the browser accepts (`Accept-Encoding`) and answers with `Content-Encoding` and `Vary: Accept-Encoding`. Brotli 11 is too slow to run per request, but it runs once at build time.
+
+**Cache headers.** The server sets `Cache-Control` by what it serves:
+
+| Response | `Cache-Control` |
+|---|---|
+| Hashed files under the client `build.assetsDir` (`/assets/…`) | `public, max-age=31536000, immutable` |
+| Every other static file (`public/` copies, `favicon.ico`, …) | `no-cache` — revalidated through the `ETag`, unchanged files answer `304` |
+| HTML: the SPA fallback page and SSR-rendered pages | `no-cache` |
+
+A `Cache-Control` set by your own middleware, by the app or by the SSR render's `headers` always wins. A request for `/index.html` is answered by the SPA fallback or the SSR render, like any other page URL, never by serving the template file as is.
+
+Tune or disable both from the plugin options:
+
+```ts
+moostVite({
+  entry: '/src/main.ts',
+  middleware: true,
+  prefix: '/api',
+  precompress: { gzip: false, threshold: 2048 }, // or `false` to skip the step
+  cacheControl: { files: 'public, max-age=3600' }, // or `false` for no Cache-Control
+})
+```
+
+| `precompress` field | Default | Effect |
+|---|---|---|
+| `brotli` | `true` | write and serve `.br` copies |
+| `gzip` | `true` | write and serve `.gz` copies |
+| `threshold` | `1024` | skip files smaller than this many bytes |
+| `include` | text-like extensions | `RegExp` tested against the path relative to `dist/client/` |
+
+| `cacheControl` field | Default | Effect |
+|---|---|---|
+| `assets` | `'public, max-age=31536000, immutable'` | hashed files under `assetsDir`; `false` sends none |
+| `assetsDir` | the client `build.assetsDir` (`'assets'`) | the hashed directory; `''` (assets at the build root) puts every file under `files` |
+| `files` | `'no-cache'` | every other static file; `false` sends none |
+| `html` | `'no-cache'` | SPA fallback and SSR pages; `false` sends none |
+
+The same settings can be overridden at runtime in a [custom server entry](#custom-server-entry): `createSSRServer({ precompressed, cacheControl })`. There, `precompressed: false` stops the server from looking for `.br`/`.gz` copies, and a `cacheControl` object is merged over the plugin option.
+
+**Dynamic responses.** API responses and SSR-rendered HTML are produced per request, so precompression does not cover them.
+
+- **API responses:** since `0.6.49` (wooks `0.7.28`) the HTTP adapter compresses them itself. Turn it on in your app with `new MoostHttp({ compression: true })` and control single handlers with `@Compress()` / `@Compress(false)`. See [Response compression](/webapp/response#response-compression).
+- **SSR-rendered HTML** is sent by the generated server, outside the Moost app, so the adapter option does not cover it. To compress it, add a compression middleware in a custom server entry (`app.use(compression())`, see below). Precompressed static files and API responses compressed by the adapter already carry `Content-Encoding`, and such middleware leaves them alone. It does compress the API responses the adapter left alone, `@Compress(false)` ones included — mount it so it skips the API prefix if you rely on `@Compress(false)`.
+
+::: warning
+- Keep unhashed files out of `public/assets/` (or whatever `assetsDir` is): they would be cached as `immutable` and never refreshed.
+- The precompression step runs as a `buildApp` hook after the app build. It runs even when you set your own `builder.buildApp`, as long as that function builds the client environment.
+- Building with another compression plugin is harmless: a file that already has a `.br`/`.gz` copy is left alone.
+:::
+
+::: info Version note
+Up to and including `0.6.48`, the generated server sent no `Cache-Control` and no `ETag` (so no `304`), never served compressed files, and in SSR mode answered `GET /index.html` with the raw template, unfilled `<!--ssr-outlet-->` markers included.
+:::
+
 ## Custom Server Entry
 
-By default, `vite build` auto-generates a minimal production server. If you need custom middleware (compression, auth, logging), provide your own server file:
+By default, `vite build` auto-generates a minimal production server. If you need custom middleware (compression of SSR responses, auth, logging), provide your own server file:
 
 ```ts
 moostVite({
@@ -152,11 +211,11 @@ Your `server.ts` uses `createSSRServer` from `@moostjs/vite/server`:
 import { createSSRServer } from '@moostjs/vite/server'
 
 const app = await createSSRServer()
-// app.use(compression())
+// app.use(compression()) // compresses SSR HTML; static files are precompressed, API responses use MoostHttp({ compression })
 await app.listen()
 ```
 
-`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `host`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead` — in production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?, host?)`.
+`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `host`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead`, `ssrFetchForwarding`, and (production only, since `0.6.49`) `precompressed` and `cacheControl` — see [Compression and Caching](#compression-and-caching). In production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?, host?)`.
 
 **Port and bind address.** In production, `listen(port?, host?)` resolves each value from the first one that is set:
 
@@ -242,6 +301,8 @@ Earlier versions awaited only the entry's module evaluation: a rejecting `init()
 | `ssrHead` | `string` | `'<!--ssr-head-->'` | HTML placeholder for SSR-rendered `<head>` tags — place inside `<head>` (see [render contract](/webapp/ssr#the-render-contract)) |
 | `serverEntry` | `string` | — | Custom production server entry file (e.g. `'./server.ts'`) |
 | `ssrExternal` | `string[]` | — | Packages to keep external in the middleware-mode SSR build (concatenated with `cfg.ssr.external`). See [SSR Bundle Size](#ssr-bundle-size). |
+| `precompress` | `boolean \| object` | `true` | Since `0.6.49`. Middleware mode: write `.br`/`.gz` copies of compressible client files after `vite build` and serve them from the generated server. See [Compression and Caching](#compression-and-caching). |
+| `cacheControl` | `boolean \| object` | `true` | Since `0.6.49`. Middleware mode: `Cache-Control` policy of the generated server (`immutable` hashed assets, `no-cache` for other files and HTML). See [Compression and Caching](#compression-and-caching). |
 | `ssrExternalCheck` | `boolean \| { packages?: (string \| RegExp)[] }` | `true` | Warn after the middleware-mode SSR build when an externalized package depends on a **bundled** shared-state package (`moost`, `@moostjs/*`, `wooks`, `@wooksjs/*`, `@prostojs/infact`, `@prostojs/mate`, `@atscript/*` by default), and at dev-server startup when one depends on a package the SSR module runner **inlines**. `{ packages: [...] }` watches more — an exact name (`'lodash'`), a scope prefix (`'@acme/'`) or a `RegExp`. See [Keep consumers on the same side](#keep-consumers-on-the-same-side-as-the-shared-packages) and [Dev server: one runtime copy](#dev-server-one-runtime-copy). |
 
 ::: tip

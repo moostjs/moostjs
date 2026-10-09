@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { resolve } from 'node:path'
-import type { EnvironmentModuleGraph, PluginOption, ResolvedConfig } from 'vite'
+import type { EnvironmentModuleGraph, PluginOption, ResolvedConfig, UserConfig } from 'vite'
 import { createServerModuleRunner } from 'vite'
 import MagicString from 'magic-string'
 
@@ -23,6 +23,10 @@ import {
   RUNTIME_PACKAGE_PATTERNS,
 } from './ssr-externals-check'
 import { findDevSplitPackages, formatDevSplitPackagesWarning } from './ssr-externals-dev-check'
+import { precompressDir } from './precompress'
+import type { TPrecompressOptions } from './precompress'
+import { resolvePrecompressed } from './prod-static'
+import type { TCacheControlOptions, TPrecompressedOptions } from './prod-static'
 import {
   DEFAULT_SSR_HEAD,
   DEFAULT_SSR_OUTLET,
@@ -257,6 +261,45 @@ export interface TMoostViteDevOptions {
    * Default: `true`. Set `false` to silence both checks.
    */
   ssrExternalCheck?: boolean | TSSRExternalCheckOptions
+  /**
+   * Precompress the client build (middleware mode, `vite build`): after the
+   * client environment is built, write a brotli (`.br`, quality 11) and a gzip
+   * (`.gz`, level 9) sibling next to every compressible file (js, css, html,
+   * svg, json, txt, xml, wasm, … — not source maps, images or woff fonts) of at least
+   * 1 KiB, keeping a variant only when it is smaller than the original. Files
+   * copied from `public/` are included.
+   *
+   * The generated production server serves the variant the client accepts
+   * (`Accept-Encoding`) with `Content-Encoding` and `Vary: Accept-Encoding`.
+   * Costs some build time (brotli 11 is slow but runs once) and dist size.
+   *
+   * Runs as a `buildApp` hook after the app build, so it also applies when you
+   * provide your own `builder.buildApp`. Pass `{ brotli, gzip, threshold,
+   * include }` to tune it.
+   *
+   * Default: `true`. Set `false` to skip it (and to stop the generated server
+   * from looking for variants).
+   */
+  precompress?: boolean | TPrecompressOptions
+  /**
+   * `Cache-Control` policy baked into the generated production server
+   * (middleware mode):
+   * - hashed files under the client `build.assetsDir` (`/assets/…`):
+   *   `public, max-age=31536000, immutable`;
+   * - every other static file (`public/` copies, `favicon.ico`, …): `no-cache`,
+   *   revalidated through the `ETag` (`304 Not Modified`);
+   * - HTML (SPA fallback, SSR pages): `no-cache`.
+   *
+   * A `Cache-Control` set by a user middleware, the app or the SSR render's
+   * `headers` is never overridden. Keep unhashed files out of `public/assets/`
+   * — they would be cached as immutable. Override per class with
+   * `{ assets, files, html }` (a header value, or `false` for none) or move the
+   * hashed directory with `assetsDir`; `createSSRServer({ cacheControl })`
+   * overrides it at runtime.
+   *
+   * Default: `true`. Set `false` to send no `Cache-Control` from the server.
+   */
+  cacheControl?: boolean | TCacheControlOptions
 }
 
 /** Extra packages the SSR split check should watch on top of its defaults. */
@@ -355,6 +398,26 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const ssrOutlet = options.ssrOutlet || DEFAULT_SSR_OUTLET
   const ssrState = options.ssrState || DEFAULT_SSR_STATE
   const ssrHead = options.ssrHead || DEFAULT_SSR_HEAD
+  const precompress = options.precompress ?? true
+  /** The variants the generated prod server negotiates (`__MOOST_PRECOMPRESS__`). */
+  const precompressedVariants: TPrecompressedOptions | false =
+    precompress === false ? false : resolvePrecompressed(undefined, precompress)
+  /** The cache policy baked into the prod server (`__MOOST_CACHE_CONTROL__`). */
+  const bakedCacheControl = (cfg: UserConfig): TCacheControlOptions | false => {
+    const cacheControl = options.cacheControl ?? true
+    if (cacheControl === false) {
+      return false
+    }
+    const custom = cacheControl === true ? {} : cacheControl
+    return {
+      ...custom,
+      assetsDir:
+        custom.assetsDir ??
+        cfg.environments?.client?.build?.assetsDir ??
+        cfg.build?.assetsDir ??
+        'assets',
+    }
+  }
   const splitCheckPatterns = compilePackagePatterns(
     typeof options.ssrExternalCheck === 'object' ? options.ssrExternalCheck.packages : undefined,
   )
@@ -571,6 +634,8 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           __MOOST_SSR_OUTLET__: JSON.stringify(ssrOutlet),
           __MOOST_SSR_STATE__: JSON.stringify(ssrState),
           __MOOST_SSR_HEAD__: JSON.stringify(ssrHead),
+          __MOOST_PRECOMPRESS__: JSON.stringify(precompressedVariants),
+          __MOOST_CACHE_CONTROL__: JSON.stringify(bakedCacheControl(cfg)),
         }
 
         // Build inputs: server entry + Moost backend entry are always included,
@@ -723,6 +788,35 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           },
         },
       }
+    },
+
+    /**
+     * Precompress the client build (see `precompress`). A `post` buildApp hook
+     * runs after the config-level `builder.buildApp` — the plugin's own or a
+     * consumer override — so the client output (incl. `public/` copies) is final.
+     */
+    buildApp: {
+      order: 'post',
+      async handler(builder) {
+        const client = builder.environments.client
+        if (!options.middleware || precompress === false || !client?.isBuilt) {
+          return
+        }
+        const { root, build } = client.config
+        if (build.write === false) {
+          return
+        }
+        const result = await precompressDir(resolve(root, build.outDir), {
+          ...(precompress === true ? {} : precompress),
+          // With SSR the root index.html is a template, never served as a file.
+          exclude: options.ssrEntry ? (rel) => rel === 'index.html' : undefined,
+        })
+        if (result.files > 0) {
+          client.logger.info(
+            `[${PLUGIN_NAME}] precompressed ${result.files} client files (${result.brotli} .br, ${result.gzip} .gz)`,
+          )
+        }
+      },
     },
 
     /**

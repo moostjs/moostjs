@@ -1,9 +1,10 @@
 # HTTP Response Control — @moostjs/event-http
 
-Set status, headers, cookies, body limits, errors. Setup/routing: [event-http.md](event-http.md). Auth: [http-auth.md](http-auth.md).
+Set status, headers, cookies, compression, body limits, errors. Setup/routing: [event-http.md](event-http.md). Auth: [http-auth.md](http-auth.md).
 
 - [Static decorators](#static-decorators)
 - [Refs (dynamic)](#refs-dynamic)
+- [Response compression](#response-compression)
 - [Body limits](#body-limits)
 - [HttpError](#httperror)
 - [Types](#types)
@@ -80,6 +81,34 @@ header.value = `generated-${Date.now()}`
 cookie.value = generateToken()
 attrs.value  = { maxAge: '1h', httpOnly: true, secure: true }
 ```
+
+## Response compression
+
+Since 0.6.49 (wooks 0.7.28). OFF by default. App-level: `new MoostHttp({ compression: true | THttpCompressionOptions })` (passed to wooks `createHttpApp`). Options: `threshold` (1024 B), `encodings` (`['br', 'gzip']`, client q-values decide, order breaks ties), `brotliQuality` (4), `gzipLevel` (6), `filter(contentType, response)` (default `isCompressibleType` — text/JSON/XML/JS/SVG/NDJSON/WASM, not `text/event-stream`).
+
+```ts
+@Controller('reports')
+@Compress(false) // class: every handler
+class ReportsController {
+  @Get('full')
+  @Compress() // method wins over class; true = app settings or defaults
+  full() {
+    return bigReport()
+  }
+  @Get('arch')
+  @Compress({ brotliQuality: 6, threshold: 4096 }) // layered over app settings
+  arch() {
+    return archive()
+  }
+}
+// runtime: useResponse().setCompression(false)  (from @wooksjs/event-http)
+```
+
+`@Compress(value = true)` = `BEFORE_ALL` before-interceptor calling `useResponse().setCompression(value)` → runs before guards/arg resolution, so it also covers guard/pipe/handler error responses. Re-exported: `isCompressibleType`, types `THttpCompressionOptions`, `THttpCompressionEncoding`.
+
+Never compressed: streams / fetch `Response` bodies, `text/event-stream`, `HEAD`, `204`/`206`/`304`, bodies with `Content-Encoding` already set, `Cache-Control: no-transform`, in-process `fetch()`/`invoke()`/SSR local fetch. Adds `Vary: Accept-Encoding`; weakens a strong `ETag`. Full rules: https://wooks.moost.org/webapp/compression.html
+
+**BREACH**: body with a secret (CSRF/session token, API key) + attacker-influenced text (reflected query) → `@Compress(false)` on that handler, or split secret and reflected input into separate responses. Compress in ONE layer (adapter OR proxy/`compression()` middleware) — a Connect `compression()` middleware still compresses `@Compress(false)` responses.
 
 ## Body limits
 

@@ -88,6 +88,10 @@ Limits are applied in this order (later wins):
 3. Controller-level decorators (`@BodySizeLimit` on class)
 4. Handler-level decorators (`@BodySizeLimit` on method)
 
+## Response compression and BREACH
+
+Response compression (`new MoostHttp({ compression })`, `@Compress()`, since `0.6.49`) is off by default. When you turn it on, keep responses that carry a secret next to attacker-influenced text uncompressed with `@Compress(false)` — see [Response compression](./response#response-compression).
+
 ## 404 handling
 
 When no route matches a request, Moost runs the response through the global interceptor chain before returning a `404 Resource Not Found` error. This means your global error handlers and logging interceptors will catch 404s too.

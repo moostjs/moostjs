@@ -217,7 +217,7 @@ Runs `node dist/server/server.js` — production server with static file serving
 
 ## Custom server entry
 
-If you need custom middleware in production (compression, auth, logging), see the [Custom Server Entry](/webapp/vite#custom-server-entry) section in the Vite Plugin docs.
+Static files are precompressed at build time and the generated server sets cache headers (SSR pages get `Cache-Control: no-cache` unless `render()` returns one) — see [Compression and Caching](/webapp/vite#compression-and-caching). If you need custom middleware in production (compression of SSR/API responses, auth, logging), see the [Custom Server Entry](/webapp/vite#custom-server-entry) section in the Vite Plugin docs.
 
 ## Related
 

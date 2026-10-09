@@ -1,6 +1,6 @@
 # Responses & Errors
 
-Moost converts your handler's return value into an HTTP response automatically. This page covers response formats, status codes, headers, cookies, error handling, and raw response access.
+Moost converts your handler's return value into an HTTP response automatically. This page covers response formats, status codes, headers, cookies, compression, error handling, and raw response access.
 
 ## Automatic response handling
 
@@ -143,6 +143,95 @@ login(
     return { ok: true }
 }
 ```
+
+## Response compression
+
+Since `0.6.49` (wooks `0.7.28`), the HTTP adapter can compress response bodies with brotli or gzip, picking the coding from the request's `Accept-Encoding` header. It is **off by default**. Turn it on with the `compression` option of `MoostHttp`, which is passed to wooks' `createHttpApp`:
+
+```ts
+import { MoostHttp } from '@moostjs/event-http'
+import { Moost } from 'moost'
+
+const app = new Moost()
+void app.adapter(new MoostHttp({ compression: true })).listen(3000)
+void app.init()
+```
+
+`compression: true` uses the defaults: bodies of at least 1 KB with a compressible `Content-Type` (text, JSON, XML, JavaScript, SVG, …), brotli preferred over gzip. Pass an object to change them:
+
+```ts
+new MoostHttp({
+    compression: {
+        threshold: 2048,     // bytes, default 1024
+        encodings: ['gzip'], // default ['br', 'gzip']
+        brotliQuality: 4,    // default 4
+        gzipLevel: 6,        // default 6
+        // filter: (contentType, response) => boolean — default isCompressibleType
+    },
+})
+```
+
+Streams, `text/event-stream`, `HEAD`, `204`/`304`, responses that already have `Content-Encoding` and in-process calls ([local fetch](./fetch)) are never compressed. The wooks guide [Response Compression](https://wooks.moost.org/webapp/compression.html) covers the full rules: what gets compressed, `Vary` and `ETag` handling, pre-serialized JSON and performance.
+
+### Per handler — `@Compress`
+
+`@Compress()` overrides the app setting for a handler or, on a class, for every handler of the controller:
+
+```ts
+import { Compress, Get } from '@moostjs/event-http'
+import { Controller } from 'moost'
+
+@Controller('reports')
+export class ReportsController {
+    @Get('full')
+    @Compress() // compress even when the app has compression off
+    full() {
+        return buildLargeReport()
+    }
+
+    @Get('archive')
+    @Compress({ brotliQuality: 6, threshold: 4096 }) // layered over the app settings
+    archive() {
+        return buildArchive()
+    }
+
+    @Get('session')
+    @Compress(false) // carries a token next to reflected input — never compress (BREACH)
+    session() {
+        return { token, echo: query }
+    }
+}
+```
+
+| Argument | Effect |
+|---|---|
+| none / `true` | Compress with the app settings, or the defaults when the app has compression off |
+| `false` | Never compress this response |
+| options object | Compress with these settings layered over the app settings (or the defaults) |
+
+A method-level `@Compress` wins over a class-level one. The override is applied before guards and argument resolution, so it also covers error responses from guards, pipes and the handler.
+
+For a decision made at runtime, call the wooks composable inside the handler:
+
+```ts
+import { useResponse } from '@wooksjs/event-http'
+
+@Get('search')
+search(@Query('q') q: string) {
+    if (containsSecret) useResponse().setCompression(false)
+    return results
+}
+```
+
+`isCompressibleType` (the default `filter`) and the `THttpCompressionOptions` / `THttpCompressionEncoding` types are re-exported from `@moostjs/event-http`.
+
+::: warning BREACH
+Compression leaks information through the response size. When a body contains a **secret** (CSRF token, API key, session token) **and** text an attacker can influence (a reflected query parameter, a search term), the secret can be recovered from compressed sizes. Put `@Compress(false)` on such handlers, or keep secrets and reflected input in separate responses. See [Security: BREACH](https://wooks.moost.org/webapp/compression.html#security-breach) in the wooks guide.
+:::
+
+::: tip
+Compress in one layer only. If a reverse proxy or a Connect `compression()` middleware already compresses API responses, leave the adapter's `compression` off.
+:::
 
 ## Error handling
 

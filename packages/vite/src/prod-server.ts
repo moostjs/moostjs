@@ -1,6 +1,15 @@
 import { once } from 'node:events'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Server } from 'node:net'
+import type { TCacheControlOptions, TPrecompressedOptions, TSpaShell } from './prod-static'
+import {
+  createStaticHandler,
+  loadSpaShell,
+  presetHeader,
+  resolveCacheControl,
+  resolvePrecompressed,
+  sendSpaShell,
+} from './prod-static'
 import type { TSSRHttpContextRunner, TSSRRender, TSSRRenderResult } from './utils'
 import {
   DEFAULT_SSR_HEAD,
@@ -13,6 +22,7 @@ import {
 } from './utils'
 
 export type { TSSRRender, TSSRRenderContext, TSSRRenderResult } from './utils'
+export type { TCacheControlOptions, TPrecompressedOptions } from './prod-static'
 
 type TMiddleware = (req: IncomingMessage, res: ServerResponse, next: () => void) => void
 
@@ -49,6 +59,24 @@ export interface TSSRServerOptions {
    * Set to `false` to keep SSR self-calls anonymous. Default: `true`.
    */
   ssrFetchForwarding?: boolean
+  /**
+   * Production only. Serve the precompressed `<file>.br` / `<file>.gz` siblings
+   * written by the plugin's `precompress` build step to clients that accept
+   * them (`Content-Encoding` + `Vary: Accept-Encoding`). Applies to static
+   * files and the SPA fallback page.
+   * Default: baked from the plugin's `precompress` option (on).
+   */
+  precompressed?: boolean | TPrecompressedOptions
+  /**
+   * Production only. `Cache-Control` policy: hashed files under the assets
+   * directory are `immutable` for a year, other static files and HTML pages
+   * are `no-cache` (revalidated through the `ETag`). A `Cache-Control` already
+   * set by a middleware, the app or the SSR render is never overridden.
+   * An object is merged over the plugin's `cacheControl` option; `false` sends
+   * no `Cache-Control` from the server.
+   * Default: baked from the plugin's `cacheControl` option (on).
+   */
+  cacheControl?: boolean | TCacheControlOptions
 }
 
 export interface TSSRServer {
@@ -72,6 +100,8 @@ declare const __MOOST_SSR_OUTLET__: string
 declare const __MOOST_SSR_STATE__: string
 declare const __MOOST_SSR_HEAD__: string
 declare const __MOOST_SSR_FORWARDING__: boolean
+declare const __MOOST_PRECOMPRESS__: TPrecompressedOptions | false
+declare const __MOOST_CACHE_CONTROL__: TCacheControlOptions | false
 
 /** URL of the address the server actually bound (wildcard binds print as localhost). */
 function serverUrl(server: Server): string {
@@ -196,6 +226,14 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   )
   const ssrForwarding =
     (opts.ssrFetchForwarding as boolean | undefined) ?? __MOOST_SSR_FORWARDING__ ?? true
+  const variants = resolvePrecompressed(
+    __MOOST_PRECOMPRESS__,
+    opts.precompressed as boolean | TPrecompressedOptions | undefined,
+  )
+  const cache = resolveCacheControl(
+    __MOOST_CACHE_CONTROL__,
+    opts.cacheControl as boolean | TCacheControlOptions | undefined,
+  )
   const defaultPort = (opts.port as number) || Number(process.env.PORT) || 3000
   const defaultHost = (opts.host as string | undefined) ?? process.env.HOST
 
@@ -263,43 +301,49 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
     enableLocalFetch(moostHttpRef.instance)
   }
 
-  // Static file serving
-  const sirvModule = await import('sirv')
-  const sirv = sirvModule.default
-  const serve = sirv(path.resolve(clientDir), { extensions: [] })
+  // SPA shell + its precompressed siblings (SSR renders every page instead)
+  const spaShell: TSpaShell = render
+    ? { html: template }
+    : await loadSpaShell(clientDir, template, variants)
+
+  /** HTML page fallback: SSR render or the SPA shell. */
+  const servePage = async (req: IncomingMessage, res: ServerResponse) => {
+    if (req.method !== 'GET') {
+      res.statusCode = 404
+      res.end()
+      return
+    }
+    try {
+      if (render) {
+        const result = await renderSSRPage({
+          render,
+          url: req.url || '/',
+          req,
+          res,
+          http: ssrForwarding ? (moostHttpRef.instance as TSSRHttpContextRunner | null) : null,
+        })
+        // Before the render's own headers, which may override it.
+        if (cache?.html) {
+          presetHeader(res, 'Cache-Control', cache.html)
+        }
+        sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
+      } else {
+        sendSpaShell(req, res, spaShell, cache)
+      }
+    } catch (error: any) {
+      console.error(error)
+      res.statusCode = 500
+      res.end(error.message)
+    }
+  }
 
   // Static assets → sirv, then SSR render or SPA fallback
-  const serveStatic = (req: IncomingMessage, res: ServerResponse) => {
-    const url = req.url || '/'
-    serve(req, res, async () => {
-      if (req.method !== 'GET') {
-        res.statusCode = 404
-        res.end()
-        return
-      }
-      try {
-        if (render) {
-          const result = await renderSSRPage({
-            render,
-            url,
-            req,
-            res,
-            http: ssrForwarding ? (moostHttpRef.instance as TSSRHttpContextRunner | null) : null,
-          })
-          sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
-        } else {
-          // SPA fallback — serve index.html for client-side routing
-          res.statusCode = 200
-          res.setHeader('Content-Type', 'text/html')
-          res.end(template)
-        }
-      } catch (error: any) {
-        console.error(error)
-        res.statusCode = 500
-        res.end(error.message)
-      }
-    })
-  }
+  const serveStatic = await createStaticHandler(
+    path.resolve(clientDir),
+    variants,
+    cache,
+    (req, res) => void servePage(req, res),
+  )
 
   return {
     use(mw) {

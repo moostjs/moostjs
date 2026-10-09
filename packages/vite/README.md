@@ -151,9 +151,18 @@ The three markers (`ssrOutlet`, `ssrState`, `ssrHead`) are plain string replacem
 
 Omit `ssrEntry` and Vite serves the app as a standard SPA. The production build still generates a server that serves static files and API routes — it just skips server-side rendering.
 
+### Compression and Caching
+
+Since `0.6.49`, in middleware mode the production build and the generated server handle static compression and caching by default:
+
+- **Precompression** (`precompress`, default on): after the client build, `.br` (brotli 11) and `.gz` (gzip 9) copies are written next to compressible files in `dist/client/` (js, css, html, svg, json, txt, xml, wasm — not source maps; files of at least 1 KiB, kept only when smaller). The server serves the copy the browser accepts, with `Content-Encoding` and `Vary: Accept-Encoding`. Tune with `{ brotli, gzip, threshold, include }` or disable with `false`.
+- **Cache headers** (`cacheControl`, default on): hashed files under `build.assetsDir` (`/assets/…`) get `public, max-age=31536000, immutable`; other static files and HTML pages (SPA fallback, SSR) get `no-cache`, and static files revalidate through their `ETag` (`304`). A `Cache-Control` set by your middleware, the app or the SSR render is never overridden. Override per class with `{ assets, assetsDir, files, html }` or disable with `false`.
+
+`createSSRServer({ precompressed, cacheControl })` overrides both at runtime. Dynamic responses are not covered: compress API responses in the app with `new MoostHttp({ compression: true })` and `@Compress()` (`@moostjs/event-http` 0.6.49+), and SSR HTML with a compression middleware in a custom server entry. Keep unhashed files out of `public/assets/`: they would be cached as immutable. Details: [Compression and Caching](https://moost.org/webapp/vite#compression-and-caching).
+
 ### Custom Server Entry
 
-By default, `vite build` auto-generates a minimal production server. If you need custom middleware (compression, auth, logging), provide your own server file:
+By default, `vite build` auto-generates a minimal production server. If you need custom middleware (compression of SSR responses, auth, logging), provide your own server file:
 
 ```ts
 moostVite({
@@ -170,7 +179,7 @@ moostVite({
 import { createSSRServer } from '@moostjs/vite/server'
 
 const app = await createSSRServer()
-// app.use(compression())
+// app.use(compression()) // SSR HTML; static files are precompressed, API uses MoostHttp({ compression })
 await app.listen()
 ```
 
@@ -270,6 +279,8 @@ The plugin injects a `__VITE_ID` decorator on `@Injectable` and `@Controller` cl
 | `ssrHead`          | `string`                                         | `'<!--ssr-head-->'`    | HTML placeholder for SSR-rendered `<head>` tags (place inside `<head>`)                                                                                                                                                                                                                                                                                     |
 | `serverEntry`      | `string`                                         | —                      | Custom production server entry file (e.g. `'./server.ts'`)                                                                                                                                                                                                                                                                                                  |
 | `ssrExternal`      | `string[]`                                       | —                      | Packages to keep external in the SSR build (middleware mode, `vite build` only). Concatenated with `cfg.ssr.external`. See [SSR Bundle Size](#ssr-bundle-size).                                                                                                                                                                                             |
+| `precompress`      | `boolean \| object`                              | `true`                 | Since `0.6.49`. Middleware mode: write `.br`/`.gz` copies of compressible client files after `vite build`; the generated server negotiates them. See [Compression and Caching](#compression-and-caching).                                                                                                                                                   |
+| `cacheControl`     | `boolean \| object`                              | `true`                 | Since `0.6.49`. Middleware mode: `Cache-Control` policy of the generated server (`immutable` hashed assets, `no-cache` for other files and HTML). See [Compression and Caching](#compression-and-caching).                                                                                                                                                  |
 | `ssrExternalCheck` | `boolean \| { packages?: (string \| RegExp)[] }` | `true`                 | Warn after the middleware-mode SSR build when an externalized package depends on a bundled shared-state package (`moost`, `@moostjs/*`, `wooks`, `@wooksjs/*`, `@prostojs/infact`/`mate`, `@atscript/*`), and at dev-server startup when one depends on a package the SSR runner inlines; `packages` watches more. See [SSR Bundle Size](#ssr-bundle-size). |
 
 Options marked "backend mode only" are ignored when `middleware: true` — the user's `vite.config.ts` controls build/server configuration in middleware mode.

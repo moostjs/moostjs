@@ -12,6 +12,7 @@ HTTP adapter for Moost. Bridges Moost's decorator-driven controller system with 
 - `src/decorators/resolve.decorator.ts` — `Body`, `Query`, `Header`, `Cookie`, `Url`, `Method`, `Req`, `Res`, `Authorization`, `StatusRef`, `HeaderRef`, `CookieRef`, etc.
 - `src/decorators/set.decorator.ts` — `SetHeader`, `SetCookie`, `SetStatus` (interceptor-based)
 - `src/decorators/limits.decorator.ts` — `BodySizeLimit`, `CompressedBodySizeLimit`, `BodyReadTimeoutMs`
+- `src/decorators/compress.decorator.ts` — `Compress` (per-handler/controller `useResponse().setCompression()` at `BEFORE_ALL`; app-level setting is the wooks `compression` option passed through `new MoostHttp({ compression })`)
 
 ## Architecture
 

@@ -42,7 +42,7 @@ await app.init()
 
 ```ts
 new MoostHttp()                       // create a new WooksHttp
-new MoostHttp(wooksHttpOptions)       // forwarded to createHttpApp
+new MoostHttp(wooksHttpOptions)       // forwarded to createHttpApp (incl. `compression`, see http-response.md)
 new MoostHttp(existingWooksHttp)      // reuse an instance
 ```
 
@@ -196,7 +196,7 @@ teardown()  // restore original fetch
 
 ## Re-exports
 
-From `@moostjs/event-http`: `httpKind`, `HttpError`, `useHttpContext`, `prerenderJson` (re-exported from `@wooksjs/event-http`; `prerenderJson(obj, { etag?: true })` serializes a long-lived response object once and reuses the JSON whenever a handler returns that same object — with `etag`, a matching `If-None-Match` on a GET/HEAD 200 answers `304`; never mutate a registered object). `MoostHttp` implements `TMoostAdapter<THttpHandlerMeta>` — `THttpHandlerMeta` (`{ method, path }`) is exported for code that inspects or extends the adapter.
+From `@moostjs/event-http`: `httpKind`, `HttpError`, `useHttpContext`, `isCompressibleType` (default compression filter, see [http-response.md](http-response.md#response-compression)), `prerenderJson` (re-exported from `@wooksjs/event-http`; `prerenderJson(obj, { etag?: true })` serializes a long-lived response object once and reuses the JSON whenever a handler returns that same object — with `etag`, a matching `If-None-Match` on a GET/HEAD 200 answers `304`; never mutate a registered object). `MoostHttp` implements `TMoostAdapter<THttpHandlerMeta>` — `THttpHandlerMeta` (`{ method, path }`) is exported for code that inspects or extends the adapter.
 
 ## Gotchas
 

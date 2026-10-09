@@ -1,3 +1,5 @@
 export { moostVite } from './moost-vite'
 export type { TMoostViteDevOptions } from './moost-vite'
+export type { TPrecompressOptions } from './precompress'
+export type { TCacheControlOptions } from './prod-static'
 export type { TSSRRender, TSSRRenderContext, TSSRRenderResult } from './utils'
