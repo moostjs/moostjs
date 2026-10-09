@@ -1,3 +1,12 @@
+## [0.6.49](https://github.com/moostjs/moostjs/compare/v0.6.48...v0.6.49) (2026-10-09)
+
+
+### Features
+
+* vite precompression + asset cache headers, @Compress decorator, wooks 0.7.28 ([2c5d00d](https://github.com/moostjs/moostjs/commit/2c5d00d5943f229e3bdad6b6160aed71c08d3f80))
+
+
+
 ## [0.6.48](https://github.com/moostjs/moostjs/compare/v0.6.47...v0.6.48) (2026-10-09)
 
 
