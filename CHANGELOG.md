@@ -1,3 +1,15 @@
+## [0.6.50](https://github.com/moostjs/moostjs/compare/v0.6.49...v0.6.50) (2026-10-09)
+
+
+### Bug Fixes
+
+* **event-http:** @Compress method-level replaces class-level, skip non-HTTP events ([bc6890b](https://github.com/moostjs/moostjs/commit/bc6890bfff7939793b5dd7c0f8d65e72c6d8a2c5))
+* **event-http:** HTTP-only decorators skip non-HTTP events, incl. workflow children of a request ([a1cecd2](https://github.com/moostjs/moostjs/commit/a1cecd27d9a24e4dce43af5447c891501fbbb741))
+* **otel:** attach HTTP events to the instrumentation server span (httpKind.name), tolerate 404s ([9264d0f](https://github.com/moostjs/moostjs/commit/9264d0f7c8c059b10c8ce119e01746ef653c11fb))
+* **otel:** bounded 404 span name/metric route, INTERNAL span for in-process HTTP requests ([5e792f0](https://github.com/moostjs/moostjs/commit/5e792f0d31beab6b1a5e4e744dd6ae0ed97feacc))
+
+
+
 ## [0.6.49](https://github.com/moostjs/moostjs/compare/v0.6.48...v0.6.49) (2026-10-09)
 
 
