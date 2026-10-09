@@ -1,9 +1,13 @@
 import type { TClassConstructor, TObject } from './common-types'
 import { useControllerContext } from './composables'
 import type { TMoostMetadata, TMoostParamsMetadata } from './metadata'
-import type { TPipeData } from './pipes'
+import type { TPipeData, TPipeMetas } from './pipes'
 import { runPipes } from './pipes/run-pipes'
 import { isThenable } from './shared-utils'
+
+/** `metas.instantiate` of a handler argument: resolves through the current controller's DI. */
+const instantiateFromController = <T extends TObject>(t: TClassConstructor<T>) =>
+  useControllerContext().instantiate(t)
 
 /**
  * Builds an argument-resolver function from pre-computed per-parameter pipe lists.
@@ -24,27 +28,26 @@ export function resolveArguments(
   if (argsPipes.length === 0) {
     return undefined
   }
+  // The pipe metas of each parameter depend on binding only: built once, shared by every call.
+  const params = argsPipes.map(({ meta: paramMeta, pipes }, index) => ({
+    pipes,
+    metas: {
+      classMeta: context.classMeta,
+      methodMeta: context.methodMeta,
+      paramMeta,
+      type: context.type,
+      key: context.key,
+      index,
+      targetMeta: paramMeta,
+      instantiate: instantiateFromController,
+    } as TPipeMetas,
+  }))
   return () => {
     const args: unknown[] = []
     let hasAsync = false
-    for (let i = 0; i < argsPipes.length; i++) {
-      const { pipes, meta: paramMeta } = argsPipes[i]
-      const result = runPipes(
-        pipes,
-        undefined,
-        {
-          classMeta: context.classMeta,
-          methodMeta: context.methodMeta,
-          paramMeta,
-          type: context.type,
-          key: context.key,
-          index: i,
-          targetMeta: paramMeta,
-          instantiate: <T extends TObject>(t: TClassConstructor<T>) =>
-            useControllerContext().instantiate(t),
-        },
-        'PARAM',
-      )
+    for (let i = 0; i < params.length; i++) {
+      const { pipes, metas } = params[i]
+      const result = runPipes(pipes, undefined, metas, 'PARAM')
       if (!hasAsync && isThenable(result)) {
         hasAsync = true
       }

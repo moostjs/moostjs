@@ -50,7 +50,7 @@
     "vitest": "3.2.7"
   },
   "peerDependencies": {
-    "@prostojs/infact": "^0.6.0",
+    "@prostojs/infact": "^0.6.1",
     "@wooksjs/event-core": "catalog:",
     "moost": "workspace:^"
   }

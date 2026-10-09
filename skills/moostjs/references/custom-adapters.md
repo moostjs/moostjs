@@ -76,7 +76,7 @@ const fn = defineMoostEventHandler({
 Lifecycle inside `fn()`:
 
 ```
-scope register (useScopeId + registerEventScope) → logger setup → hooks.init
+scope held (registered in the DI container on the first FOR_EVENT resolution) → hooks.init
   → getControllerInstance() → setControllerContext
   → interceptor before (reply() short-circuits)
   → resolveArgs() → handler (or callControllerMethod)
@@ -91,7 +91,7 @@ scope register (useScopeId + registerEventScope) → logger setup → hooks.init
 | Field           | Notes                                                                                                                                                                                                          |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `scopeId`       | the event's DI scope ID                                                                                                                                                                                        |
-| `logger`        | event logger                                                                                                                                                                                                   |
+| `logger`        | event logger, derived on first read (a prototype getter: destructure it or read `opts.logger` — spreading `{ ...opts }` drops it)                                                                              |
 | `unscope()`     | the adapter's release of the DI scope with `manualUnscope: true` — idempotent; see [Scope management](#scope-management)                                                                                       |
 | `method?`       | the controller method name — available in BOTH `init` and `end`                                                                                                                                                |
 | `instance?`     | exists on the type but is NEVER populated by `defineMoostEventHandler` — to reach the controller instance in `hooks.end`, capture it via `getControllerInstance()` or `useControllerContext().getController()` |
@@ -304,7 +304,7 @@ Small helpers adapter authors may need:
 - `isThenable(v)` — type guard for `PromiseLike`; use it to keep your dispatch sync-first like `defineMoostEventHandler` does
 - `mergeSorted(a, b)` — merges arrays of `{ priority }` items into one priority-sorted list (how pipe/interceptor levels combine)
 - `getGlobalWooks()` / `clearGlobalWooks()` — access/reset the global Wooks app registry (re-exported from `wooks`; `clearGlobalWooks` is useful between tests or on HMR cleanup)
-- `ContextInjector`, `getContextInjector()`, `replaceContextInjector()`, `resetContextInjector()` — the tracing hook (re-exported from `@wooksjs/event-core`); `defineMoostEventHandler` wraps lifecycle stages through the active injector, and `@moostjs/otel` installs its span injector via `replaceContextInjector`
+- `ContextInjector`, `getContextInjector()`, `replaceContextInjector()`, `resetContextInjector()` — the tracing hook (re-exported from `@wooksjs/event-core`); `defineMoostEventHandler` wraps lifecycle stages through the injector active for each event (read per event, so one installed after `init()` applies to bound handlers too), and `@moostjs/otel` installs its span injector via `replaceContextInjector`
 
 ## Gotchas
 

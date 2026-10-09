@@ -1,7 +1,17 @@
 export * from './module-identity'
 export * from './adapter-utils'
 export { MOOST_ADAPTER_BRAND } from './adapter-brand'
-export * from './event-scope'
+export type {
+  TForkEventContextOptions,
+  TIsolatedSlot,
+  TWithControllerContextOptions,
+} from './event-scope'
+export {
+  forkEventContext,
+  registerEventScope,
+  useScopeId,
+  withControllerContext,
+} from './event-scope'
 export { getInstanceOwnMethods, getInstanceOwnProps } from './binding/utils'
 export type { TDisposeError, TDisposeOptions, TDisposeResult } from './dispose'
 export { disposeInstances } from './dispose'

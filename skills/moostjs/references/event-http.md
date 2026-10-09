@@ -196,7 +196,7 @@ teardown()  // restore original fetch
 
 ## Re-exports
 
-From `@moostjs/event-http`: `httpKind`, `HttpError`, `useHttpContext` (re-exported from `@wooksjs/event-http`). `MoostHttp` implements `TMoostAdapter<THttpHandlerMeta>` — `THttpHandlerMeta` (`{ method, path }`) is exported for code that inspects or extends the adapter.
+From `@moostjs/event-http`: `httpKind`, `HttpError`, `useHttpContext`, `prerenderJson` (re-exported from `@wooksjs/event-http`; `prerenderJson(obj, { etag?: true })` serializes a long-lived response object once and reuses the JSON whenever a handler returns that same object — with `etag`, a matching `If-None-Match` on a GET/HEAD 200 answers `304`; never mutate a registered object). `MoostHttp` implements `TMoostAdapter<THttpHandlerMeta>` — `THttpHandlerMeta` (`{ method, path }`) is exported for code that inspects or extends the adapter.
 
 ## Gotchas
 

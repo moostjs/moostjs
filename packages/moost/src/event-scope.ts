@@ -1,5 +1,11 @@
 import type { Accessor, EventContext } from '@wooksjs/event-core'
-import { cached, current, EventContext as WooksEventContext, run } from '@wooksjs/event-core'
+import {
+  cached,
+  current,
+  EventContext as WooksEventContext,
+  run,
+  tryGetCurrent,
+} from '@wooksjs/event-core'
 
 import { setControllerContext } from './composables/controller.composable'
 import { getMoostInfact } from './metadata'
@@ -18,7 +24,30 @@ function nextScopeId(): string {
   return `__moost_${_scopeChar}_${++_scopeNum}`
 }
 
-const scopeIdSlot = cached(() => nextScopeId())
+/**
+ * The DI scope of an event. A handler lifecycle holds it without touching the DI container:
+ * the scope is registered on the first `FOR_EVENT` resolution that needs it, so the many
+ * events that never resolve a `FOR_EVENT` class skip registering and dropping it.
+ * @internal
+ */
+export interface TEventScope {
+  readonly id: string
+  /** A handler lifecycle holds the scope: the next `FOR_EVENT` resolution registers it. */
+  held: boolean
+  /** Registered in the DI container (on demand, or directly — see {@link syncEventScope}). */
+  registered: boolean
+}
+
+const eventScopeSlot = cached(
+  (): TEventScope => ({ id: nextScopeId(), held: false, registered: false }),
+)
+
+/**
+ * The DI scope of an event (see {@link useScopeId}) — cached on the event context itself.
+ * @internal
+ */
+export const getEventScope = (ctx?: EventContext): TEventScope =>
+  (ctx ?? current()).getOwn(eventScopeSlot)
 
 /**
  * Composable returning the moost DI scope ID of the current event. Generated on first call
@@ -26,7 +55,58 @@ const scopeIdSlot = cached(() => nextScopeId())
  * event (a workflow run started with `eventContext`, a WebSocket message) owns its scope
  * instead of sharing, and later releasing, its parent's.
  */
-export const useScopeId = (ctx?: EventContext): string => (ctx ?? current()).getOwn(scopeIdSlot)
+export const useScopeId = (ctx?: EventContext): string => getEventScope(ctx).id
+
+/**
+ * Holds the event scope for a handler lifecycle — registering it, deferred to the first
+ * `FOR_EVENT` resolution (see {@link resolveEventScopeId}). Returns the release, which drops
+ * the scope like the release of an eager registration.
+ * @internal
+ */
+export function holdEventScopeLazily(scope: TEventScope): () => void {
+  scope.held = true
+  return () => {
+    scope.held = false
+    if (scope.registered) {
+      scope.registered = false
+      getMoostInfact().unregisterScope(scope.id)
+    }
+  }
+}
+
+/**
+ * The scope id a `FOR_EVENT` resolution in the current event uses: a held scope is registered
+ * in the DI container now, on first use.
+ * @internal
+ */
+export function resolveEventScopeId(): string {
+  const scope = getEventScope()
+  if (scope.held && !scope.registered) {
+    scope.registered = true
+    getMoostInfact().registerScope(scope.id)
+  }
+  return scope.id
+}
+
+/**
+ * Keeps the current event's scope state in step with a direct `registerScope` /
+ * `unregisterScope` of its id on the moost DI container — `registerEventScope(useScopeId())`,
+ * or an adapter's `cleanup: () => getMoostInfact().unregisterScope(useScopeId())`. As with an
+ * eager registration: a registered scope is dropped with the handler lifecycle, and an
+ * unregistered one stays gone for the rest of the lifecycle (a later `FOR_EVENT` resolution
+ * fails instead of registering it again — and leaking it, when nothing releases it after).
+ * @internal
+ */
+export function syncEventScope(scopeId: string | symbol, registered: boolean): void {
+  const ctx = tryGetCurrent()
+  const scope = ctx?.hasOwn(eventScopeSlot) ? ctx.getOwn(eventScopeSlot) : undefined
+  if (scope?.id === scopeId) {
+    scope.registered = registered
+    if (!registered) {
+      scope.held = false
+    }
+  }
+}
 
 /** Registers a DI scope for the given ID and returns an unscope function. */
 export function registerEventScope(scopeId: string) {
@@ -150,7 +230,7 @@ export function withControllerContext<T extends object, R>(
     ctx: child,
   })
   if (opts?.shareScope !== false) {
-    child.setOwn(scopeIdSlot, useScopeId(parent))
+    child.setOwn(eventScopeSlot, getEventScope(parent))
     return run(child, fn)
   }
   const release = registerEventScope(useScopeId(child))

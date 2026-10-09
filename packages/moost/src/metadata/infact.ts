@@ -1,17 +1,16 @@
 import type { TInfactClassMeta } from '@prostojs/infact'
-import { Infact } from '@prostojs/infact'
 import { getConstructor } from '@prostojs/mate'
 import { useLogger } from '@wooksjs/event-core'
 
-import { useScopeId } from '../event-scope'
+import { resolveEventScopeId } from '../event-scope'
 import type { TFunction } from '../common-types'
 import { getDefaultLogger } from '../logger'
-import type { TPipeData } from '../pipes'
 import { runPipes } from '../pipes/run-pipes'
 import type { TInfactErrorDetail } from './diagnostics'
 import { findTokenProviders, formatInfactErrorContext, formatScopeHint } from './diagnostics'
 import type { TMoostMetadata, TMoostParamsMetadata } from './moost-metadata'
 import { getMoostMate } from './moost-metadata'
+import { MoostInfact } from './moost-infact'
 
 const sharedMoostInfact = getNewMoostInfact()
 const INFACT_BANNER = `${__DYE_DIM__ + __DYE_MAGENTA__}infact`
@@ -56,10 +55,6 @@ export function getInfactSingletonInstances(
   return Object.getOwnPropertySymbols(registry)
     .map((k) => registry[k])
     .filter(Boolean)
-}
-
-interface TCustom {
-  pipes?: TPipeData[]
 }
 
 const scopeVarsMap = new Map<string | symbol, unknown>()
@@ -214,7 +209,7 @@ export function onInfactEvent(
  * Get Infact instance (used for Dependency Injections)
  */
 export function getNewMoostInfact() {
-  const infactInstance = new Infact<TMoostMetadata, TMoostMetadata, TMoostParamsMetadata, TCustom>({
+  const infactInstance = new MoostInfact({
     describeClass(classConstructor) {
       const meta = getMoostMate().read(classConstructor)
       return {
@@ -223,7 +218,7 @@ export function getNewMoostInfact() {
         constructorParams: meta?.params || [],
         provide: meta?.provide,
         properties: meta?.properties || [],
-        scopeId: meta?.injectable === 'FOR_EVENT' ? useScopeId() : undefined,
+        scopeId: meta?.injectable === 'FOR_EVENT' ? resolveEventScopeId() : undefined,
       } as unknown as TInfactClassMeta<TMoostParamsMetadata> & TMoostMetadata
     },
 

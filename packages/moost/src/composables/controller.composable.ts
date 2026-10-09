@@ -9,10 +9,16 @@ import { getDefaultLogger } from '../logger'
 import { getMoostInfact, getMoostMate } from '../metadata'
 import { globalKey } from './global-key'
 
-const controllerInstanceKey = globalKey<unknown>('controller.instance')
-const controllerMethodKey = globalKey<string>('controller.method')
-const controllerRouteKey = globalKey<string>('controller.route')
-const controllerPrefixKey = globalKey<string>('controller.prefix')
+/** The controller context of an event — one slot, written once per dispatch. */
+interface TControllerContextRecord {
+  instance: unknown
+  method: string
+  route: string
+  /** `undefined` = never set on this context chain (`getPrefix()` throws, as an unset key). */
+  prefix: string | undefined
+}
+
+const controllerContextKey = globalKey<TControllerContextRecord>('controller.context')
 
 /**
  * Sets the controller context for the current event scope.
@@ -25,11 +31,20 @@ export function setControllerContext<T>(
   opts?: { prefix?: string; ctx?: EventContext },
 ) {
   const _ctx = opts?.ctx || current()
-  _ctx.set(controllerInstanceKey, controller)
-  _ctx.set(controllerMethodKey, method as string)
-  _ctx.set(controllerRouteKey, route)
-  if (opts?.prefix !== undefined) {
-    _ctx.set(controllerPrefixKey, opts.prefix)
+  let prefix = opts?.prefix
+  if (prefix === undefined && _ctx.has(controllerContextKey)) {
+    // no prefix given: the previously set one stays in effect
+    prefix = _ctx.get(controllerContextKey).prefix
+  }
+  _ctx.set(controllerContextKey, { instance: controller, method: method as string, route, prefix })
+}
+
+/** Reads the controller context; throws the per-field "not set" error when there is none. */
+function readControllerContext(ctx: EventContext, field: string): TControllerContextRecord {
+  try {
+    return ctx.get(controllerContextKey)
+  } catch {
+    throw new Error(`Key "controller.${field}" is not set`)
   }
 }
 
@@ -69,10 +84,16 @@ function brandedAdapterFor(controller: object, c: TClassConstructor<unknown>): o
 export function useControllerContext<T extends object>(ctx?: EventContext) {
   const _ctx = ctx || current()
 
-  const getController = () => _ctx.get(controllerInstanceKey) as T
-  const getMethod = () => _ctx.get(controllerMethodKey) as string | undefined
-  const getRoute = () => _ctx.get(controllerRouteKey)
-  const getPrefix = () => _ctx.get(controllerPrefixKey)
+  const getController = () => readControllerContext(_ctx, 'instance').instance as T
+  const getMethod = () => readControllerContext(_ctx, 'method').method as string | undefined
+  const getRoute = () => readControllerContext(_ctx, 'route').route
+  const getPrefix = () => {
+    const { prefix } = readControllerContext(_ctx, 'prefix')
+    if (prefix === undefined) {
+      throw new Error('Key "controller.prefix" is not set')
+    }
+    return prefix
+  }
   // todo: add generic types to getControllerMeta
   const getControllerMeta = <TT extends object>() =>
     getMoostMate<TT, TT, TT>().read(getController())

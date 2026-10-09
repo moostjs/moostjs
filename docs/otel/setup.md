@@ -43,6 +43,10 @@ enableOtelForMoost()
 
 This replaces Moost's default context injector with the `SpanInjector`. Call it once, **after** registering the tracer provider and **before** creating your Moost application instance.
 
+::: tip
+Moost reads the active context injector on every event, so an injector installed (or reset) after `app.init()` also applies to handlers that are already bound. Up to 0.6.47 bound handlers kept the injector that was active when they were bound.
+:::
+
 ### Initialization order
 
 Regardless of how you configure the SDK, the order matters:

@@ -673,10 +673,8 @@ export class Moost extends Hookable {
     // getInstance - instance factory for resolving SINGLETON and FOR_EVENT instance
     const getInstance = instance
       ? () => instance!
-      : async (): Promise<TObject> =>
-          (await infact.get(controller as TClassConstructor<TAny>, {
-            ...infactOpts,
-          })) as Promise<TObject>
+      : (): Promise<TObject> =>
+          infact.get(controller as TClassConstructor<TAny>, infactOpts) as Promise<TObject>
 
     const classConstructor = isConstructor(controller)
       ? controller

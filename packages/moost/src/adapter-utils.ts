@@ -3,7 +3,8 @@ import type { Logger } from '@wooksjs/event-core'
 import { current, getContextInjector, useLogger } from '@wooksjs/event-core'
 
 import { setControllerContext } from './composables'
-import { registerEventScope, useScopeId } from './event-scope'
+import type { TEventScope } from './event-scope'
+import { getEventScope, holdEventScopeLazily } from './event-scope'
 import type { InterceptorHandler } from './interceptor-handler'
 import { isThenable } from './shared-utils'
 import type { TContextInjectorHook } from './types'
@@ -44,14 +45,50 @@ export interface TMoostEventHandlerOptions<T> {
 const noop = () => {}
 
 /**
- * Registers an event's DI scope, held by its handler lifecycle and, with `adapterHolds`, by
- * the adapter too. Each release is idempotent; the scope is dropped once every holder let go,
- * so an adapter signal that fires early (a client disconnect mid-handler) cannot pull the
- * scope from under a running handler. Built outside the handler closure so a long-lived
- * adapter listener (the response 'close' of a streamed body) retains only the scope.
+ * The hook options of one event. `logger` is a prototype getter: the topic logger is only
+ * derived when a hook reads it (an own accessor property would deopt the object instead).
  */
-function holdEventScope(scopeId: string, adapterHolds: boolean) {
-  const drop = registerEventScope(scopeId)
+class EventHookOptions<T> implements TMoostEventHandlerHookOptions<T> {
+  declare scopeId: string
+  declare unscope: () => void
+  declare method?: keyof T
+  declare getResponse: () => unknown
+  declare reply: (r: unknown) => void
+  declare instance?: T
+  declare protected _getLogger: () => Logger
+
+  // oxlint-disable-next-line max-params -- internal, built once per event
+  constructor(
+    scopeId: string,
+    unscope: () => void,
+    method: keyof T | undefined,
+    getResponse: () => unknown,
+    reply: (r: unknown) => void,
+    getLogger: () => Logger,
+  ) {
+    this.scopeId = scopeId
+    this.unscope = unscope
+    this.method = method
+    this.getResponse = getResponse
+    this.reply = reply
+    this._getLogger = getLogger
+  }
+
+  get logger(): Logger {
+    return this._getLogger()
+  }
+}
+
+/**
+ * Holds an event's DI scope (registered on demand, see `holdEventScopeLazily`) by its handler
+ * lifecycle and, with `adapterHolds`, by the adapter too. Each release is idempotent; the
+ * scope is dropped once every holder let go, so an adapter signal that fires early (a client
+ * disconnect mid-handler) cannot pull the scope from under a running handler. Built outside
+ * the handler closure so a long-lived adapter listener (the response 'close' of a streamed
+ * body) retains only the scope.
+ */
+function holdEventScope(scope: TEventScope, adapterHolds: boolean) {
+  const drop = holdEventScopeLazily(scope)
   let holders = adapterHolds ? 2 : 1
   const hold = () => {
     let held = true
@@ -81,7 +118,6 @@ function holdEventScope(scopeId: string, adapterHolds: boolean) {
  * handler invocation, and cleanup — optimised for sync-first execution.
  */
 export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>) {
-  const ci = getContextInjector<TContextInjectorHook>()
   const manualUnscope = !!options.manualUnscope
   // Pre-compute strings used in ci.with() to avoid per-request template literal creation
   const handlerSpanName = `Handler:${options.targetPath}` as 'Handler'
@@ -91,26 +127,31 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
   }
 
   return () => {
+    // read per event: a context injector replaced after init() applies to bound handlers too
+    const ci = getContextInjector<TContextInjectorHook>()
     const ctx = current()
-    const scopeId = useScopeId(ctx)
-    // useLogger(topic, ctx) derives a child logger via createTopic when supported,
-    // falling back to the base logger otherwise
-    const logger = useLogger(options.loggerTitle, ctx)
-    const { unscope, releaseLifecycle, failLifecycle } = holdEventScope(scopeId, manualUnscope)
+    const scope = getEventScope(ctx)
+    const scopeId = scope.id
+    const { unscope, releaseLifecycle, failLifecycle } = holdEventScope(scope, manualUnscope)
 
     let response: unknown
+    // Lazy logger — derived only when an error is logged or a hook reads it
+    let logger: Logger | undefined
+    // useLogger(topic, ctx) derives a child logger via createTopic when supported,
+    // falling back to the base logger otherwise
+    const getLogger = () => (logger ??= useLogger(options.loggerTitle, ctx))
     // Lazy hookOptions — only allocated when hooks actually need them
     let hookOptions: TMoostEventHandlerHookOptions<T> | undefined
 
     function getHookOptions(): TMoostEventHandlerHookOptions<T> {
-      return (hookOptions ??= {
+      return (hookOptions ??= new EventHookOptions<T>(
         scopeId,
-        logger,
         unscope,
-        method: options.controllerMethod,
-        getResponse: () => response,
-        reply: (r: unknown) => (response = r),
-      })
+        options.controllerMethod,
+        () => response,
+        (r: unknown) => (response = r),
+        getLogger,
+      ))
     }
 
     let interceptorHandler: InterceptorHandler | undefined
@@ -181,7 +222,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           }
         } catch (error) {
           if (options.logErrors) {
-            logger.error(String(error))
+            getLogger().error(String(error))
           }
           response = error
           raise = true
@@ -208,7 +249,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
           args = argsResult as unknown[]
         } catch (error) {
           if (options.logErrors) {
-            logger.error(String(error))
+            getLogger().error(String(error))
           }
           response = error
           raise = true
@@ -244,7 +285,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
             },
             (error: unknown) => {
               if (options.logErrors) {
-                logger.error(error as string)
+                getLogger().error(error as string)
               }
               response = error
               raise = true
@@ -255,7 +296,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
         response = handlerResult
       } catch (error) {
         if (options.logErrors) {
-          logger.error(error as string)
+          getLogger().error(error as string)
         }
         response = error
         raise = true
@@ -266,7 +307,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
 
     function handleError(error: unknown): unknown {
       if (options.logErrors) {
-        logger.error(String(error))
+        getLogger().error(String(error))
       }
       response = error
       raise = true
@@ -294,7 +335,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
             },
             (error: unknown) => {
               if (options.logErrors) {
-                logger.error(String(error))
+                getLogger().error(String(error))
               }
               throw error
             },

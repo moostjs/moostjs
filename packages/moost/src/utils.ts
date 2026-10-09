@@ -16,6 +16,8 @@ const mate = getMoostMate()
 
 const noInterceptors = () => undefined
 
+const isForEvent = (instance: TObject) => mate.read(instance)?.injectable === 'FOR_EVENT'
+
 interface TInterceptorMethods {
   before?: string
   after?: string
@@ -88,8 +90,16 @@ function createClassInterceptorFactory(opts: {
   resolvers: Record<string, TArgsResolver | undefined>
   getTargetInstance: () => Promise<TObject> | TObject
   pipes: TPipeData[]
+  /** `false` for a `FOR_EVENT` interceptor class: a fresh instance (and def) per event. */
+  cacheable: boolean
 }): TInterceptorDefFactory {
   const infact = getMoostInfact()
+  // The interceptor class' own DI (constructor params, props) resolves through its merged pipes
+  const customData = { pipes: opts.pipes }
+  // A non-FOR_EVENT interceptor resolves to one instance per target: build its def once per
+  // target instance. Bind-time state — a re-init / HMR rebinds and starts over; a failed
+  // resolution is never cached.
+  const defs = opts.cacheable ? new WeakMap<TObject, TInterceptorDef>() : undefined
 
   function buildDef(instance: TObject): TInterceptorDef {
     const def: TInterceptorDef = {}
@@ -131,15 +141,30 @@ function createClassInterceptorFactory(opts: {
   }
 
   function fromTarget(targetInstance: TObject): TInterceptorDef | Promise<TInterceptorDef> {
-    const result = infact.getForInstance(
-      targetInstance,
-      opts.handler as TClassConstructor<TAny>,
-      { customData: { pipes: opts.pipes } },
-    )
-    if (isThenable(result)) {
-      return (result as Promise<TObject>).then(buildDef)
+    const cached = defs?.get(targetInstance)
+    if (cached) {
+      return cached
     }
-    return buildDef(result as TObject)
+    // Like `getForInstance`, but keeping the interceptor's merged pipes as `customData`
+    const registries = infact.getInstanceRegistries(targetInstance)
+    const result = infact.get(opts.handler as TClassConstructor<TAny>, {
+      provide: registries.provide || {},
+      replace: registries.replace,
+      customData,
+    })
+    const remember = (instance: TObject) => {
+      const def = buildDef(instance)
+      // Not for a FOR_EVENT interceptor (a `replace` registry may have swapped one in), nor for
+      // a FOR_EVENT target — a fresh target per event would only churn the map
+      if (defs && !isForEvent(instance) && !isForEvent(targetInstance)) {
+        defs.set(targetInstance, def)
+      }
+      return def
+    }
+    if (isThenable(result)) {
+      return (result as Promise<TObject>).then(remember)
+    }
+    return remember(result as TObject)
   }
 
   return () => {
@@ -197,6 +222,7 @@ export function getIterceptorHandlerFactory(
         resolvers,
         getTargetInstance,
         pipes: mergedPipes,
+        cacheable: classMeta.injectable !== 'FOR_EVENT',
       }),
       name,
       spanName,

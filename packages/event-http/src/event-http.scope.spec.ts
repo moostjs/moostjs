@@ -3,9 +3,11 @@ import { Readable } from 'node:stream'
 import { useResponse } from '@wooksjs/event-http'
 import {
   Controller,
+  current,
   getMoostInfact,
   Injectable,
   Moost,
+  run,
   useControllerContext,
   useScopeId,
 } from 'moost'
@@ -76,16 +78,26 @@ class ScopeController {
 }
 
 function makeStream(chunks: number) {
+  const ctx = current()
   const scopeId = useScopeId()
   let i = 0
   const stream = new Readable({
     read() {
       setTimeout(() => {
-        probe.scopeAliveWhileStreaming.push(scopes().has(scopeId))
-        if (i === 1) {
-          probe.started.resolve(undefined)
-        }
-        this.push(i++ < chunks ? `chunk-${i};` : null)
+        // the event's DI scope is alive: a FOR_EVENT resolution in the event still works
+        // (registering the scope on demand — released() then checks it is dropped again)
+        void run(ctx, resolvePrincipal)
+          .then(
+            () => scopes().has(scopeId),
+            () => false,
+          )
+          .then((alive) => {
+            probe.scopeAliveWhileStreaming.push(alive)
+            if (i === 1) {
+              probe.started.resolve(undefined)
+            }
+            this.push(i++ < chunks ? `chunk-${i};` : null)
+          })
       }, 5)
     },
   })

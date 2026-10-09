@@ -19,12 +19,18 @@ export function Resolve<T extends TObject = TEmpty>(
 ): ParameterDecorator & PropertyDecorator {
   return (target, key, index?) => {
     const i = typeof index === 'number' ? index : undefined
+    // The label target (target, key, index) is fixed per decoration: fill it on the first
+    // resolution only — later calls would find it set and do nothing but a metadata read.
+    let labelFilled = false
     getMoostMate().decorate('resolver', (metas, level) => {
-      let newLabel = label
-      if (!newLabel && level === 'PROP' && typeof metas.key === 'string') {
-        newLabel = metas.key
+      if (!labelFilled) {
+        labelFilled = true
+        let newLabel = label
+        if (!newLabel && level === 'PROP' && typeof metas.key === 'string') {
+          newLabel = metas.key
+        }
+        fillLabel(target, key || '', i, newLabel)
       }
-      fillLabel(target, key || '', i, newLabel)
       return resolver(metas as TPipeMetas<T>, level)
     })(target, key, i!)
   }

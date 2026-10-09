@@ -47,7 +47,8 @@ const holdScopeUntilResponseCloses = {
     if (res.closed) {
       unscope() // the client was already gone
     } else {
-      res.once('close', unscope)
+      // 'close' fires once per response and unscope is idempotent: no once() wrapper needed
+      res.on('close', unscope)
     }
   },
 }

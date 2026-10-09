@@ -1,8 +1,17 @@
 import type { Span } from '@opentelemetry/api'
-import { createEventContext, current, forkEventContext, run, setControllerContext } from 'moost'
+import {
+  createEventContext,
+  current,
+  Description,
+  forkEventContext,
+  getMoostMate,
+  run,
+  setControllerContext,
+} from 'moost'
 import { describe, expect, it, vi } from 'vitest'
 
 import { useOtelContext } from './context'
+import { OtelIgnoreMeter, OtelIgnoreSpan } from './otel.decorators'
 import { SpanInjector } from './span-injector'
 
 const logger = { info() {}, warn() {}, error() {}, debug() {} }
@@ -59,6 +68,55 @@ describe('SpanInjector — nested invocations', () => {
         expect(useOtelContext().getSpan()).toBe(childSpan)
       })
       expect(useOtelContext(parent).getSpan()).toBe(parentSpan)
+    })
+  })
+})
+
+describe('SpanInjector — handler metadata', () => {
+  @OtelIgnoreMeter()
+  class MetaController {
+    @OtelIgnoreSpan()
+    @Description('ignored one')
+    ignored() {}
+
+    @Description('traced one')
+    traced() {}
+  }
+
+  it('reads class + method otel metadata per (class, method), once', () => {
+    const injector = new SpanInjector()
+    const controller = new MetaController()
+    createEventContext({ logger }, () => {
+      setControllerContext(controller, 'ignored', '/ignored')
+      expect(injector.getIgnoreSpan()).toBe(true)
+      const chm = injector.getControllerHandlerMeta()
+      expect(chm.ignoreSpan).toBe(true)
+      expect(chm.ignoreMeter).toBe(true)
+      expect(chm.attrs).toMatchObject({
+        'moost.controller': 'MetaController',
+        'moost.handler': 'ignored',
+        'moost.handler_description': 'ignored one',
+        'moost.ignore': true,
+        'moost.route': '/ignored',
+      })
+
+      setControllerContext(controller, 'traced', '/traced')
+      expect(injector.getIgnoreSpan()).toBeFalsy()
+      expect(injector.getControllerHandlerMeta().attrs['moost.handler_description']).toBe(
+        'traced one',
+      )
+
+      // cached: repeated lookups (every span of every event) read no metadata
+      const readSpy = vi.spyOn(getMoostMate(), 'read')
+      try {
+        for (let i = 0; i < 3; i++) {
+          injector.getIgnoreSpan()
+          injector.getControllerHandlerMeta()
+        }
+        expect(readSpy).not.toHaveBeenCalled()
+      } finally {
+        readSpy.mockRestore()
+      }
     })
   })
 })

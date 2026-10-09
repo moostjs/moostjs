@@ -168,7 +168,7 @@ class RoleGuard {
 - `after` / `onError` are LIFO — the interceptor whose `before` ran last (highest priority value) runs its `after`/`onError` hook first.
 - The `priority` arg on `@Intercept()` overrides the class's own priority.
 - Global interceptors also run for not-found handlers via `getGlobalInterceptorHandler()`.
-- Only `TInterceptorDef` objects and `@Interceptor` classes can be registered — passing a bare factory function (`() => ({ before() {} })`) throws `Invalid interceptor ... must be TInterceptorDef or @Interceptor class` at bind time. `@Interceptor` classes ARE (re)instantiated per event internally, so each event gets fresh hook bindings.
+- Only `TInterceptorDef` objects and `@Interceptor` classes can be registered — passing a bare factory function (`() => ({ before() {} })`) throws `Invalid interceptor ... must be TInterceptorDef or @Interceptor class` at bind time. A SINGLETON `@Interceptor` class is resolved once per guarded controller instance and its hook bindings are reused (a later event runs them without a DI lookup); a `FOR_EVENT` one (or one a replace registry swaps for a `FOR_EVENT` class) is resolved per event. Class-level `@Pipe` on an interceptor class also applies to its own constructor/property DI.
 
 ## Key imports
 

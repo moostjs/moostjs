@@ -179,6 +179,8 @@ class RequestScopedInterceptor {
 }
 ```
 
+A singleton interceptor is resolved through DI once per controller it guards and then reused, so its hooks run without a DI lookup on every event. A `FOR_EVENT` interceptor is created anew for each event. Pipes applied to the interceptor class (`@Pipe(...)` on the class) apply to its own constructor parameters and properties too, not only to its hook method arguments.
+
 ## Applying Interceptors
 
 ### Per handler

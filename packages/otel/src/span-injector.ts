@@ -2,7 +2,14 @@ import type { Span } from '@opentelemetry/api'
 import { SpanKind, trace } from '@opentelemetry/api'
 import type { OutgoingHttpHeaders, ServerResponse } from 'http'
 import type { TContextInjectorHook } from 'moost'
-import { ContextInjector, current, eventTypeKey, getConstructor, useControllerContext } from 'moost'
+import {
+  ContextInjector,
+  current,
+  eventTypeKey,
+  getConstructor,
+  getMoostMate,
+  useControllerContext,
+} from 'moost'
 import { httpKind } from '@moostjs/event-http'
 
 import {
@@ -20,6 +27,49 @@ import { withSpan } from './utils'
 const tracer = trace.getTracer('moost-tracer')
 
 type TAttributes = Record<string, string | number | boolean>
+
+/** The otel-relevant metadata of one controller method — static per (class, method). */
+interface THandlerOtelMeta {
+  ignoreSpan?: boolean
+  ignoreMeter?: boolean
+  controllerName?: string
+  description?: string
+  label?: string
+  id?: string
+}
+
+const NO_CONTROLLER_META: THandlerOtelMeta = {}
+
+/** Per (controller class, method) cache of {@link THandlerOtelMeta}: two metadata reads once, not per span. */
+const handlerOtelMetaCache = new WeakMap<Function, Map<string | undefined, THandlerOtelMeta>>()
+
+function readHandlerOtelMeta(controller: object | undefined, method: string | undefined) {
+  if (!controller) {
+    return NO_CONTROLLER_META
+  }
+  const ctor = getConstructor(controller)
+  let byMethod = handlerOtelMetaCache.get(ctor)
+  if (!byMethod) {
+    byMethod = new Map()
+    handlerOtelMetaCache.set(ctor, byMethod)
+  }
+  let meta = byMethod.get(method)
+  if (!meta) {
+    const mate = getMoostMate<TOtelMate, TOtelMate, TOtelMate>()
+    const cMeta = mate.read(controller)
+    const mMeta = mate.read(controller, method)
+    meta = {
+      ignoreSpan: cMeta?.otelIgnoreSpan || mMeta?.otelIgnoreSpan,
+      ignoreMeter: cMeta?.otelIgnoreMeter || mMeta?.otelIgnoreMeter,
+      controllerName: ctor.name,
+      description: mMeta?.description,
+      label: mMeta?.label,
+      id: mMeta?.id,
+    }
+    byMethod.set(method, meta)
+  }
+  return meta
+}
 
 /** Context injector that wraps Moost lifecycle hooks with OpenTelemetry spans and records metrics. */
 export class SpanInjector extends ContextInjector<TContextInjectorHook> {
@@ -98,29 +148,24 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
   }
 
   getIgnoreSpan() {
-    const { getMethodMeta, getControllerMeta } = useControllerContext()
-    const cMeta = getControllerMeta<TOtelMate>()
-    const mMeta = getMethodMeta<TOtelMate>()
-    return cMeta?.otelIgnoreSpan || mMeta?.otelIgnoreSpan
+    const { getController, getMethod } = useControllerContext()
+    return readHandlerOtelMeta(getController() as object | undefined, getMethod()).ignoreSpan
   }
 
   getControllerHandlerMeta() {
-    const { getMethod, getMethodMeta, getController, getControllerMeta, getRoute } =
-      useControllerContext()
+    const { getMethod, getController, getRoute } = useControllerContext()
     const methodName = getMethod()
-    const controller = getController() as object | undefined
-    const cMeta = controller ? getControllerMeta<TOtelMate>() : undefined
-    const mMeta = controller ? getMethodMeta<TOtelMate>() : undefined
+    const meta = readHandlerOtelMeta(getController() as object | undefined, methodName)
     return {
-      ignoreMeter: cMeta?.otelIgnoreMeter || mMeta?.otelIgnoreMeter,
-      ignoreSpan: cMeta?.otelIgnoreSpan || mMeta?.otelIgnoreSpan,
+      ignoreMeter: meta.ignoreMeter,
+      ignoreSpan: meta.ignoreSpan,
       attrs: {
-        'moost.controller': controller ? getConstructor(controller).name : undefined,
+        'moost.controller': meta.controllerName,
         'moost.handler': methodName,
-        'moost.handler_description': mMeta?.description,
-        'moost.handler_label': mMeta?.label,
-        'moost.handler_id': mMeta?.id,
-        'moost.ignore': cMeta?.otelIgnoreSpan || mMeta?.otelIgnoreSpan,
+        'moost.handler_description': meta.description,
+        'moost.handler_label': meta.label,
+        'moost.handler_id': meta.id,
+        'moost.ignore': meta.ignoreSpan,
         'moost.route': getRoute(),
         'moost.event_type': this.getEventType(),
       },

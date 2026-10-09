@@ -11,11 +11,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { TInterceptorDef } from './decorators'
 import type { TInterceptorDefFactory } from './decorators/interceptor.decorator'
 import { defineMoostEventHandler } from './adapter-utils'
-import { useScopeId } from './event-scope'
+import { registerEventScope, useScopeId } from './event-scope'
 import { InterceptorHandler } from './interceptor-handler'
 import { getMoostInfact } from './metadata/infact'
 
 const testLogger = { info() {}, warn() {}, error() {}, debug() {} }
+
+/**
+ * Runs `handler` in a fresh event whose DI scope is registered — as after a `FOR_EVENT`
+ * resolution (the lifecycle registers its scope on demand) — so the lifecycle's release of
+ * the scope shows on `infact.unregisterScope`.
+ */
+const inRegisteredScope = <R>(handler: () => R): R =>
+  createEventContext({ logger: testLogger }, () => {
+    registerEventScope(useScopeId())
+    return handler()
+  })
 
 interface TCiCall {
   name: string
@@ -82,9 +93,7 @@ describe('defineMoostEventHandler', () => {
         },
       })
 
-      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow(
-        'controller instantiation failed',
-      )
+      expect(() => inRegisteredScope(handler)).toThrow('controller instantiation failed')
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
@@ -102,9 +111,7 @@ describe('defineMoostEventHandler', () => {
         getControllerInstance: () => ({}),
       })
 
-      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow(
-        'interceptor handler failed',
-      )
+      expect(() => inRegisteredScope(handler)).toThrow('interceptor handler failed')
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
@@ -125,7 +132,7 @@ describe('defineMoostEventHandler', () => {
         },
       })
 
-      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow('hook init failed')
+      expect(() => inRegisteredScope(handler)).toThrow('hook init failed')
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
@@ -144,9 +151,7 @@ describe('defineMoostEventHandler', () => {
         },
       })
 
-      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow(
-        'controller instantiation failed',
-      )
+      expect(() => inRegisteredScope(handler)).toThrow('controller instantiation failed')
 
       // with manualUnscope, the outer catch should not call unscope
       expect(unregisterSpy).not.toHaveBeenCalled()
@@ -170,7 +175,7 @@ describe('defineMoostEventHandler', () => {
         controllerMethod: 'myMethod' as keyof typeof instance,
       })
 
-      const result = await createEventContext({ logger: testLogger }, handler)
+      const result = await inRegisteredScope(handler)
 
       expect(result).toBe('ok')
       expect(unregisterSpy).toHaveBeenCalled()
@@ -192,7 +197,7 @@ describe('defineMoostEventHandler', () => {
         controllerMethod: 'run' as never,
       })
 
-      const result = createEventContext({ logger: testLogger }, handler)
+      const result = inRegisteredScope(handler)
       adapterUnscope() // e.g. the client disconnected mid-handler
       adapterUnscope() // idempotent
       expect(unregisterSpy).not.toHaveBeenCalled()
@@ -216,7 +221,7 @@ describe('defineMoostEventHandler', () => {
         controllerMethod: 'run' as never,
       })
 
-      expect(await createEventContext({ logger: testLogger }, handler)).toBe('ok')
+      expect(await inRegisteredScope(handler)).toBe('ok')
       expect(unregisterSpy).not.toHaveBeenCalled()
       adapterUnscope()
       expect(unregisterSpy).toHaveBeenCalledTimes(1)
@@ -253,7 +258,7 @@ describe('defineMoostEventHandler', () => {
         ...opts,
       })
 
-      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow('boom')
+      await expect(inRegisteredScope(handler)).rejects.toThrow('boom')
       expect(unregisterSpy).toHaveBeenCalledTimes(1)
     })
 
@@ -275,9 +280,7 @@ describe('defineMoostEventHandler', () => {
         controllerMethod: 'run' as never,
       })
 
-      await expect(createEventContext({ logger: testLogger }, handler)).rejects.toThrow(
-        'after boom',
-      )
+      await expect(inRegisteredScope(handler)).rejects.toThrow('after boom')
       expect(unregisterSpy).toHaveBeenCalledTimes(1)
     })
   })
@@ -325,7 +328,7 @@ describe('defineMoostEventHandler', () => {
         controllerMethod: 'myMethod' as never,
       })
 
-      expect(() => createEventContext({ logger: testLogger }, handler)).toThrow('Forbidden')
+      expect(() => inRegisteredScope(handler)).toThrow('Forbidden')
 
       expect(unregisterSpy).toHaveBeenCalled()
     })
@@ -451,6 +454,30 @@ describe('defineMoostEventHandler', () => {
 
       expect(() => createEventContext({ logger: testLogger }, handler)).toThrow('not recovered')
       expect(def.error).toHaveBeenCalledWith(handlerError, expect.any(Function))
+    })
+  })
+
+  describe('context injector replaced after the handler was defined', () => {
+    afterEach(() => {
+      resetContextInjector()
+    })
+
+    it('a bound handler uses the injector installed later (read per event)', () => {
+      const handler = defineMoostEventHandler({
+        loggerTitle: 'test',
+        targetPath: '/late',
+        handlerType: 'HTTP',
+        controllerMethod: 'run' as never,
+        getControllerInstance: () => ({ run: () => 'ok' }),
+        getIterceptorHandler: () => undefined,
+      })
+      expect(createEventContext({ logger: testLogger }, handler)).toBe('ok')
+
+      const spyCi = createSpyCi()
+      replaceContextInjector(spyCi as unknown as ContextInjector<string>)
+      expect(createEventContext({ logger: testLogger }, handler)).toBe('ok')
+      expect(spyCi.hookCalls).toEqual([{ method: 'HTTP', name: 'Controller:registered' }])
+      expect(spyCi.withCalls.map((c) => c.name)).toEqual(['Handler:/late'])
     })
   })
 
