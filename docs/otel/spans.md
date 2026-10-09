@@ -33,7 +33,7 @@ The root span that wraps the entire event lifecycle. Created when an event enter
 | **Attributes** | See [controller attributes](#controller-attributes) below |
 | **Metrics** | Event duration histogram is recorded when this span ends |
 
-For HTTP events, the root span is designed to come from the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`), with the `SpanInjector` attaching to it rather than creating a duplicate.
+For HTTP events, the root span comes from the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`): the `SpanInjector` attaches to its server span rather than creating a duplicate. Without one (no HTTP instrumentation, or an in-process request) it creates its own `SERVER` root span — see [HTTP instrumentation](/otel/setup#http-instrumentation), including the note on versions up to 0.6.49.
 
 For non-HTTP events (CLI, Workflow), the `SpanInjector` creates a span named `"{EventType} Event"` (e.g. `CLI Event`, `WF Event`).
 

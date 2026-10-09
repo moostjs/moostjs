@@ -71,6 +71,43 @@ function readHandlerOtelMeta(controller: object | undefined, method: string | un
   return meta
 }
 
+/** Root spans already owned by a Moost event — never attached to (renamed, re-attributed) twice. */
+const claimedSpans = new WeakSet<Span>()
+
+/**
+ * The active server span of the http instrumentation, when no Moost event owns it yet.
+ * Anything else active (a lifecycle span of a running event, a client span) is a parent,
+ * not the request's own span.
+ */
+function getInstrumentationServerSpan(): Span | undefined {
+  const active = trace.getActiveSpan()
+  if (
+    active &&
+    !claimedSpans.has(active) &&
+    (active as Span & { kind?: SpanKind }).kind === SpanKind.SERVER
+  ) {
+    return active
+  }
+  return undefined
+}
+
+/**
+ * The controller context of the current event, or `undefined` while no handler is resolved yet
+ * (an unmatched route reports `Handler:not_found` before any controller context exists).
+ */
+function readControllerContext() {
+  const cc = useControllerContext()
+  try {
+    return {
+      controller: cc.getController() as object | undefined,
+      method: cc.getMethod(),
+      route: cc.getRoute(),
+    }
+  } catch {
+    return undefined
+  }
+}
+
 /** Context injector that wraps Moost lifecycle hooks with OpenTelemetry spans and records metrics. */
 export class SpanInjector extends ContextInjector<TContextInjectorHook> {
   metrics = getMoostMetrics()
@@ -125,21 +162,23 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       return cb()
     }
     const { registerSpan } = useOtelContext()
-    let span = trace.getActiveSpan()
-    if (eventType === httpKind.kind) {
-      // http span is expected to be created by http instrumentation
+    const isHttp = eventType === httpKind.name
+    if (isHttp) {
       this.patchRsponse()
-    } else {
-      span = tracer.startSpan(`${eventType} Event`)
     }
-    if (span) {
-      registerSpan(span)
-      return this.withSpan(span, cb, {
-        withMetrics: true,
-        endSpan: eventType !== httpKind.kind,
-      })
-    }
-    return cb()
+    // An HTTP event attaches to the server span of the http instrumentation
+    // (`@opentelemetry/instrumentation-http`) instead of creating a duplicate. Without one
+    // (no instrumentation, in-process `request()`, SSR render inside a handler) it starts its own.
+    const attached = isHttp ? getInstrumentationServerSpan() : undefined
+    const span =
+      attached ??
+      tracer.startSpan(`${eventType} Event`, isHttp ? { kind: SpanKind.SERVER } : undefined)
+    claimedSpans.add(span)
+    registerSpan(span)
+    return this.withSpan(span, cb, {
+      withMetrics: true,
+      endSpan: !attached,
+    })
   }
 
   getEventType() {
@@ -148,14 +187,14 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
   }
 
   getIgnoreSpan() {
-    const { getController, getMethod } = useControllerContext()
-    return readHandlerOtelMeta(getController() as object | undefined, getMethod()).ignoreSpan
+    const cc = readControllerContext()
+    return readHandlerOtelMeta(cc?.controller, cc?.method).ignoreSpan
   }
 
   getControllerHandlerMeta() {
-    const { getMethod, getController, getRoute } = useControllerContext()
-    const methodName = getMethod()
-    const meta = readHandlerOtelMeta(getController() as object | undefined, methodName)
+    const cc = readControllerContext()
+    const methodName = cc?.method
+    const meta = readHandlerOtelMeta(cc?.controller, methodName)
     return {
       ignoreMeter: meta.ignoreMeter,
       ignoreSpan: meta.ignoreSpan,
@@ -166,7 +205,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
         'moost.handler_label': meta.label,
         'moost.handler_id': meta.id,
         'moost.ignore': meta.ignoreSpan,
-        'moost.route': getRoute(),
+        'moost.route': cc?.route,
         'moost.event_type': this.getEventType(),
       },
     }
@@ -201,7 +240,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       const span = getSpan()
       if (span) {
         const eventType = this.getEventType()
-        if (eventType === httpKind.kind) {
+        if (eventType === httpKind.name) {
           const req = this.getRequest()
           span.updateName(`${req?.method || ''} ${req?.url}`)
         }
@@ -216,7 +255,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       const span = getSpan()
       if (span) {
         span.setAttributes(chm.attrs)
-        if (chm.attrs['moost.event_type'] === httpKind.kind) {
+        if (chm.attrs['moost.event_type'] === httpKind.name) {
           span.updateName(`${this.getRequest()?.method || ''} ${_route || '<unresolved>'}`)
         } else {
           span.updateName(`${chm.attrs['moost.event_type']} ${_route || '<unresolved>'}`)
@@ -275,7 +314,7 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       'moost.event_type': a['moost.event_type'],
       'moost.is_error': error ? 1 : 0,
     } as Record<string, string | number>
-    if (a['moost.event_type'] === httpKind.kind) {
+    if (a['moost.event_type'] === httpKind.name) {
       if (!attrs.route) {
         attrs.route = this.getRequest()?.url || ''
       }

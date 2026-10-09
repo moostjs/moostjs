@@ -189,7 +189,7 @@ For custom tooling that needs to read these flags, `getOtelMate()` returns the s
 
 ## HTTP instrumentation
 
-For HTTP events, `@moostjs/otel` is designed to have the root span created by the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`): the `SpanInjector` attaches to the existing HTTP span rather than creating a new one, and patches the response to capture status codes for metrics.
+For HTTP events, `@moostjs/otel` expects the root span to be created by the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`): the `SpanInjector` attaches to that server span rather than creating a new one — renames it to `{METHOD} {route}` (e.g. `GET /users/:id`) and sets the [controller attributes](/otel/spans#controller-attributes) on it — and patches the response to capture status codes for metrics. The instrumentation ends the span; attributes from `customSpanAttr()` are not applied to it.
 
 ```ts
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http'
@@ -200,7 +200,11 @@ registerInstrumentations({
 })
 ```
 
-For non-HTTP event types (CLI, Workflow, custom), the `SpanInjector` creates the root span itself (named `"{EventType} Event"`).
+When there is no instrumentation server span to attach to — HTTP instrumentation is not registered, or the request is served in-process (`request()` / `fetch()` on the HTTP app, an SSR render inside a handler) — the `SpanInjector` creates its own `SERVER` root span, named the same way. For non-HTTP event types (CLI, Workflow, custom), the `SpanInjector` always creates the root span itself (named `"{EventType} Event"`).
+
+::: warning Versions up to 0.6.49
+The HTTP check never matched in `@moostjs/otel` 0.6.0 – 0.6.49: every HTTP event started its own `http Event` span (renamed `http {route}`, e.g. `http /users/:id`) as a child of the instrumentation's server span, which kept its bare method name, and the HTTP metric attributes (`http.status_code`, raw-URL `route` fallback) were never recorded. An unmatched route also threw from the request listener while tracing was enabled. If your dashboards or alerts match on `http /…` span names, switch them to `{METHOD} {route}`.
+:::
 
 ::: info
 The `moost.event_type` attribute value for HTTP events is the lowercase `http`.
