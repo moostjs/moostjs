@@ -1,3 +1,12 @@
+## [0.6.51](https://github.com/moostjs/moostjs/compare/v0.6.50...v0.6.51) (2026-10-10)
+
+
+### Features
+
+* **otel:** middleware mode — attach to the host server span, http.route, no spans for host-served requests (wooks 0.7.29) ([5366963](https://github.com/moostjs/moostjs/commit/53669639e86ba330c7097ce271e6816cdd9be060))
+
+
+
 ## [0.6.50](https://github.com/moostjs/moostjs/compare/v0.6.49...v0.6.50) (2026-10-09)
 
 
