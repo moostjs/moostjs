@@ -33,7 +33,7 @@ The root span that wraps the entire event lifecycle. Created when an event enter
 | **Attributes** | See [controller attributes](#controller-attributes) below |
 | **Metrics** | Event duration histogram is recorded when this span ends |
 
-For HTTP events, the root span comes from the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`): the `SpanInjector` attaches to its server span rather than creating a duplicate. Without one it creates its own — a `SERVER` root span without HTTP instrumentation, an `INTERNAL` child for an in-process request — see [HTTP instrumentation](/otel/setup#http-instrumentation), including the note on versions up to 0.6.49.
+For HTTP events, the root span comes from the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`): the `SpanInjector` attaches to its server span rather than creating a duplicate. Without one it creates its own — a `SERVER` root span without HTTP instrumentation, an `INTERNAL` child for an in-process request — see [HTTP instrumentation](/otel/setup#http-instrumentation), including the note on versions up to 0.6.49. When Moost runs as a middleware of a host app, see [Middleware mode](/otel/setup#middleware-mode).
 
 For non-HTTP events (CLI, Workflow), the `SpanInjector` creates a span named `"{EventType} Event"` (e.g. `CLI Event`, `WF Event`).
 
@@ -109,6 +109,7 @@ When a controller and handler are resolved, the `SpanInjector` sets these attrib
 | `moost.handler_label` | From `@Label()` decorator | `'Get User'` |
 | `moost.handler_id` | From `@Id()` decorator | `'users.get'` |
 | `moost.route` | Resolved route path | `/users/:id` |
+| `http.route` | HTTP only: the route, including the mount path of a host app in [middleware mode](/otel/setup#middleware-mode) | `/users/:id` |
 | `moost.event_type` | Event type | `http`, `CLI`, `WF` |
 | `moost.ignore` | Set by `@OtelIgnoreSpan()` | `true` (absent when not ignored) |
 
@@ -116,7 +117,7 @@ When a controller and handler are resolved, the `SpanInjector` sets these attrib
 
 The root span is renamed after the controller is resolved to include meaningful route information:
 
-- **HTTP events:** `{HTTP_METHOD} {route}` (e.g. `GET /users/:id`)
+- **HTTP events:** `{HTTP_METHOD} {route}` (e.g. `GET /users/:id`; prefixed with the host's mount path in [middleware mode](/otel/setup#middleware-mode))
 - **Other events:** `{EventType} {route}` (e.g. `CLI users list`, `WF process-order`)
 - **Unmatched HTTP requests (404):** the bare method (e.g. `GET`) — never the raw URL, which would make span names unbounded
 - **Unresolved routes (other events):** `{EventType} <unresolved>`

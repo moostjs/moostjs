@@ -189,7 +189,7 @@ For custom tooling that needs to read these flags, `getOtelMate()` returns the s
 
 ## HTTP instrumentation
 
-For HTTP events, `@moostjs/otel` expects the root span to be created by the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`): the `SpanInjector` attaches to that server span rather than creating a new one — renames it to `{METHOD} {route}` (e.g. `GET /users/:id`) and sets the [controller attributes](/otel/spans#controller-attributes) on it — and patches the response to capture status codes for metrics. The instrumentation ends the span; attributes from `customSpanAttr()` are not applied to it.
+For HTTP events, `@moostjs/otel` expects the root span to be created by the OpenTelemetry HTTP instrumentation (`@opentelemetry/instrumentation-http`): the `SpanInjector` attaches to that server span rather than creating a new one — renames it to `{METHOD} {route}` (e.g. `GET /users/:id`), sets `http.route` and the [controller attributes](/otel/spans#controller-attributes) on it, and reports the route to the instrumentation, so its own `http.server.request.duration` metric carries `http.route` too — and patches the response to capture status codes for metrics. The instrumentation ends the span; attributes from `customSpanAttr()` are not applied to it.
 
 ```ts
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http'
@@ -200,7 +200,7 @@ registerInstrumentations({
 })
 ```
 
-When there is no instrumentation server span to attach to — HTTP instrumentation is not registered, or the request is served in-process (`request()` / `fetch()` on the HTTP app, an SSR render inside a handler) — the `SpanInjector` creates its own span, named the same way: a `SERVER` root span when no span is active, otherwise an `INTERNAL` child (an in-process request is not a network request, so the trace never gets a second `SERVER` span). An unmatched request (404) is named after the method only (e.g. `GET`). For non-HTTP event types (CLI, Workflow, custom), the `SpanInjector` always creates the root span itself (named `"{EventType} Event"`).
+When there is no instrumentation server span to attach to — HTTP instrumentation is not registered, or the request is served in-process (`request()` / `fetch()` on the HTTP app, an SSR render inside a handler) — the `SpanInjector` creates its own span, named the same way: a `SERVER` root span when no span is active, otherwise an `INTERNAL` child (an in-process request is not a network request, so the trace never gets a second `SERVER` span). An unmatched request (404) is named after the method only (e.g. `GET`), and so is an HTTP context that never routes (`withHttpContext()`, e.g. an SSR render). For non-HTTP event types (CLI, Workflow, custom), the `SpanInjector` always creates the root span itself (named `"{EventType} Event"`).
 
 ::: warning Versions up to 0.6.49
 The HTTP check never matched in `@moostjs/otel` 0.6.0 – 0.6.49: every HTTP event started its own `http Event` span (renamed `http {route}`, e.g. `http /users/:id`) as a child of the instrumentation's server span, which kept its bare method name, and the `http.status_code` metric attribute was never recorded. An unmatched route also threw from the request listener while tracing was enabled. If your dashboards or alerts match on `http /…` span names, switch them to `{METHOD} {route}`.
@@ -208,6 +208,43 @@ The HTTP check never matched in `@moostjs/otel` 0.6.0 – 0.6.49: every HTTP eve
 
 ::: info
 The `moost.event_type` attribute value for HTTP events is the lowercase `http`.
+:::
+
+## Middleware mode
+
+When Moost runs as a middleware of a host app — Express, Connect, a custom Node server, or [`@moostjs/vite`](/webapp/vite) with `middleware: true` — it traces only the requests it serves. Mount it with `getServerCb(onNoMatch)` so requests no Moost route matches go on to the host:
+
+```ts
+import express from 'express'
+import { MoostHttp } from '@moostjs/event-http'
+
+const http = new MoostHttp()
+// ... app.adapter(http), registerControllers, init
+
+const nextFor = new WeakMap<object, () => void>()
+const moost = http.getServerCb((req) => nextFor.get(req)?.())
+
+const server = express()
+server.use('/api', (req, res, next) => {
+  nextFor.set(req, next)
+  moost(req, res)
+})
+```
+
+No Moost-specific setup is needed: register the HTTP instrumentation as in [HTTP instrumentation](#http-instrumentation). Instrumentation for the host framework (`@opentelemetry/instrumentation-express`, `-connect`) is optional and works alongside.
+
+| Setup | What you get for a request Moost serves |
+|---|---|
+| HTTP instrumentation (+ host framework instrumentation) | The instrumentation's server span is renamed `GET /api/users/:id` and gets `http.route` and the controller attributes — even when the host's middleware span is the active one. Moost's lifecycle spans nest under that middleware span. No second `SERVER` span. |
+| No HTTP instrumentation | Moost creates its own `SERVER` root span, named the same way. |
+
+- **Requests the host serves** produce no Moost span, no span rename and no `moost.event.duration` metric: a request no Moost route matches never starts a Moost event, so static assets and host routes are left untouched.
+- **Mount path.** When the host strips a mount path from `req.url` (`server.use('/api', ...)`), the span name and `http.route` include the mount (`/api/users/:id`) if the host framework's instrumentation reported it; without that instrumentation they carry the route as Moost sees it (`/users/:id`). `moost.route` and the metric's `route` are always the Moost route.
+- **Host code calling Moost in-process** (`http.request('/users/1')` from a host route, an SSR render's API fetch) gets an `INTERNAL` child span — it never renames the host's server span.
+- **An SSR render** run through `withHttpContext()` for a page the host serves attaches to the request's server span (or starts the `SERVER` root span without instrumentation), so its in-process API fetches nest under it. The render itself never routes, so it records no `moost.event.duration` metric (its API fetches do).
+
+::: warning Versions up to 0.6.50
+In middleware mode, every request — including those Moost handed over to the host — started a Moost event: without HTTP instrumentation each one produced a `GET` `SERVER` span and a `moost.event.duration` metric with `http.status_code: 0`; with Express instrumentation each one produced an `INTERNAL` `GET` span. Under Express instrumentation a request Moost served got an `INTERNAL` `GET /users/:id` span while the server span kept the host's name (`GET`, or the mount path such as `GET /api`). With HTTP instrumentation only, host code calling Moost in-process (e.g. an SSR render's API fetch without context forwarding) attached to the host's server span and renamed it after the API route. `http.route` was never set by Moost, and an HTTP context that never routed was named `http Event`.
 :::
 
 ## Exporter examples

@@ -145,6 +145,13 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     return this.httpApp
   }
 
+  /**
+   * Returns a Node.js request listener for a custom server, or a middleware for a host app.
+   *
+   * With `onNoMatch` (middleware mode) a request no route matches is handed to `onNoMatch`
+   * before any Moost event starts — it belongs to the host app, so it gets no event context,
+   * DI scope, interceptors or tracing.
+   */
   public getServerCb(onNoMatch?: (req: IncomingMessage, res: ServerResponse) => void) {
     return this.httpApp.getServerCb(onNoMatch)
   }

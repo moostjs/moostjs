@@ -23,7 +23,7 @@ Each metric data point includes these attributes:
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `route` | `string` | The matched route (e.g. `/users/:id`) |
+| `route` | `string` | The matched route (e.g. `/users/:id`) — as Moost sees it, without a host app's mount path in [middleware mode](/otel/setup#middleware-mode), where requests Moost hands over to the host record no metric |
 | `moost.event_type` | `string` | Event type: `http`, `CLI`, `WF`, etc. |
 | `moost.is_error` | `number` | `1` if the event resulted in an error, `0` otherwise |
 

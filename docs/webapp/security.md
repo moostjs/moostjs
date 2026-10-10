@@ -121,3 +121,19 @@ This is useful for:
 - **Serverless functions** — pass the callback to your serverless framework
 - **Custom HTTPS** — create an `https.createServer` with your own certificates
 - **Testing** — use with libraries like `supertest`
+
+### As a middleware of a host app
+
+Pass an `onNoMatch(req, res)` callback to hand requests no Moost route matches back to the host app (Express, Connect, a custom server):
+
+```ts
+const nextFor = new WeakMap<object, () => void>()
+const moost = http.getServerCb((req) => nextFor.get(req)?.())
+
+expressApp.use((req, res, next) => {
+  nextFor.set(req, next)
+  moost(req, res)
+})
+```
+
+A request no route matches goes to `onNoMatch` before any Moost event starts: no global interceptors, DI scope or [tracing](/otel/setup#middleware-mode) run for it, and composables (`useRequest()`, …) are not available inside `onNoMatch` — use the raw `req`/`res` it receives. Up to 0.6.50 `onNoMatch` ran inside a Moost HTTP event context.

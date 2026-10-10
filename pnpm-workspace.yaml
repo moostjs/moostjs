@@ -3,11 +3,11 @@ packages:
   - explorations/*
 
 catalog:
-  '@wooksjs/event-core': ^0.7.28
-  '@wooksjs/event-http': ^0.7.28
-  '@wooksjs/event-cli': ^0.7.28
-  '@wooksjs/event-wf': ^0.7.28
-  '@wooksjs/event-ws': ^0.7.28
-  '@wooksjs/http-body': ^0.7.28
-  '@wooksjs/http-static': ^0.7.28
-  wooks: ^0.7.28
+  '@wooksjs/event-core': ^0.7.29
+  '@wooksjs/event-http': ^0.7.29
+  '@wooksjs/event-cli': ^0.7.29
+  '@wooksjs/event-wf': ^0.7.29
+  '@wooksjs/event-ws': ^0.7.29
+  '@wooksjs/http-body': ^0.7.29
+  '@wooksjs/http-static': ^0.7.29
+  wooks: ^0.7.29

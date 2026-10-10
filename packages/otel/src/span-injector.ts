@@ -1,6 +1,8 @@
 import type { Span } from '@opentelemetry/api'
-import { SpanKind, trace } from '@opentelemetry/api'
-import type { ServerResponse } from 'http'
+import { context, SpanKind, trace } from '@opentelemetry/api'
+import type { RPCMetadata } from '@opentelemetry/core'
+import { getRPCMetadata, RPCType } from '@opentelemetry/core'
+import type { IncomingMessage, ServerResponse } from 'http'
 import type { TContextInjectorHook } from 'moost'
 import {
   ContextInjector,
@@ -8,9 +10,11 @@ import {
   eventTypeKey,
   getConstructor,
   getMoostMate,
+  globalKey,
   useControllerContext,
 } from 'moost'
 import { httpKind } from '@moostjs/event-http'
+import { Socket } from 'net'
 
 import {
   customMetricAttrsKey,
@@ -74,17 +78,55 @@ function readHandlerOtelMeta(controller: object | undefined, method: string | un
 /** Root spans already owned by a Moost event — never attached to (renamed, re-attributed) twice. */
 const claimedSpans = new WeakSet<Span>()
 
+/** A host server span an HTTP event attached to. */
+interface THostServerSpan {
+  span: Span
+  /** The http instrumentation's RPC metadata of the request — Moost reports its route through it. */
+  rpc?: RPCMetadata
+  /** The mount path a host app (Express, Connect) stripped from `req.url`: prefixes the route. */
+  mount: string
+}
+
+const otelHostSpanKey = globalKey<THostServerSpan>('otel.hostSpan')
+
 /**
- * Whether the active span is the server span of the http instrumentation, not yet owned by a
- * Moost event. Anything else active (a lifecycle span of a running event, a client span) is a
- * parent, not the request's own span.
+ * The server span of the http instrumentation (`@opentelemetry/instrumentation-http`) for this
+ * network request, when no Moost event owns it yet.
+ *
+ * The instrumentation publishes it as the request's RPC metadata, so it is found even when a host
+ * app's middleware span (Express instrumentation) is active, not the server span itself. Without
+ * RPC metadata only an active SERVER span qualifies — anything else active (a lifecycle span of a
+ * running event, a client span) is a parent, not the request's own span. An in-process request
+ * (`fetch()` / `request()` on the HTTP app) runs on a fake socket and never attaches: it is not
+ * the network request the server span stands for.
  */
-function isInstrumentationServerSpan(span: Span | undefined): span is Span {
-  return (
-    !!span &&
-    !claimedSpans.has(span) &&
-    (span as Span & { kind?: SpanKind }).kind === SpanKind.SERVER
-  )
+function getHostServerSpan(req: IncomingMessage | undefined): THostServerSpan | undefined {
+  if (!(req?.socket instanceof Socket)) {
+    return undefined
+  }
+  const rpc = getRPCMetadata(context.active())
+  if (rpc?.type === RPCType.HTTP && rpc.span) {
+    return claimedSpans.has(rpc.span)
+      ? undefined
+      : { span: rpc.span, rpc, mount: getMountRoute(req, rpc) }
+  }
+  const active = trace.getActiveSpan() as (Span & { kind?: SpanKind }) | undefined
+  return active?.kind === SpanKind.SERVER && !claimedSpans.has(active)
+    ? { span: active, mount: '' }
+    : undefined
+}
+
+/**
+ * The route template a host app mounted Moost under, when it stripped that path from `req.url`
+ * (`app.use('/api', moostMiddleware)`): the route the host's own instrumentation reported
+ * for the request so far. Empty when Moost sees the whole path.
+ */
+function getMountRoute(req: IncomingMessage & { originalUrl?: string }, rpc: RPCMetadata) {
+  const path = (url: string | undefined) => url?.split('?')[0]
+  if (!req.originalUrl || path(req.originalUrl) === path(req.url) || !rpc.route) {
+    return ''
+  }
+  return rpc.route.replace(/\/+$/, '')
 }
 
 /**
@@ -149,27 +191,36 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     }
     const { registerSpan } = useOtelContext()
     const isHttp = eventType === httpKind.name
+    const req = isHttp ? this.getRequest() : undefined
     if (isHttp) {
       this.patchRsponse()
     }
     // An HTTP event attaches to the server span of the http instrumentation
     // (`@opentelemetry/instrumentation-http`) instead of creating a duplicate. Without one it
     // starts its own: a SERVER root when nothing is active (no instrumentation), else an INTERNAL
-    // child (in-process `request()`, SSR render inside a handler — not a network request).
-    const active = isHttp ? trace.getActiveSpan() : undefined
-    const attached = isInstrumentationServerSpan(active) ? active : undefined
+    // child (in-process `request()`, SSR render inside a handler — not a network request), named
+    // after the method until routing names it (an HTTP context without routing keeps that name).
+    const host = getHostServerSpan(req)
+    const active = trace.getActiveSpan()
     const span =
-      attached ??
+      host?.span ??
       tracer.startSpan(
-        `${eventType} Event`,
+        isHttp ? req?.method || 'HTTP' : `${eventType} Event`,
         isHttp && !active ? { kind: SpanKind.SERVER } : undefined,
       )
     claimedSpans.add(span)
     registerSpan(span)
-    return this.withSpan(span, cb, {
-      withMetrics: true,
-      endSpan: !attached,
-    })
+    if (host) {
+      current().set(otelHostSpanKey, host)
+    }
+    const opts = { withMetrics: true, endSpan: !host }
+    if (host && active && active !== host.span) {
+      // The server span is an ancestor (a host app's middleware span is active): keep the
+      // active span, so Moost's spans nest under the host middleware that runs Moost.
+      const outer = context.active()
+      return this.withSpan(span, () => context.with(outer, cb), opts)
+    }
+    return this.withSpan(span, cb, opts)
   }
 
   getEventType() {
@@ -247,7 +298,18 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
       if (span) {
         span.setAttributes(chm.attrs)
         if (chm.attrs['moost.event_type'] === httpKind.name) {
-          span.updateName(`${this.getRequest()?.method || ''} ${_route || '<unresolved>'}`)
+          const host = ctx.has(otelHostSpanKey) ? ctx.get(otelHostSpanKey) : undefined
+          const httpRoute = _route ? `${host?.mount || ''}${_route}` : undefined
+          span.updateName(`${this.getRequest()?.method || ''} ${httpRoute || '<unresolved>'}`)
+          if (httpRoute) {
+            span.setAttribute('http.route', httpRoute)
+            if (host?.rpc) {
+              // the http instrumentation names its span and sets `http.route` on it and on its
+              // request metrics from this when the response finishes — overriding the mount
+              // route a host app's instrumentation reported
+              host.rpc.route = httpRoute
+            }
+          }
         } else {
           span.updateName(`${chm.attrs['moost.event_type']} ${_route || '<unresolved>'}`)
         }
@@ -297,6 +359,11 @@ export class SpanInjector extends ContextInjector<TContextInjectorHook> {
     const ctx = current()
     const route = ctx.has(otelRouteKey) ? ctx.get(otelRouteKey) : undefined
     const startTime = ctx.has(otelStartTimeKey) ? ctx.get(otelStartTimeKey) : undefined
+    if (startTime === undefined && route === undefined && a['moost.event_type'] === httpKind.name) {
+      // an HTTP context that never routed (`withHttpContext()`, e.g. an SSR render of a page the
+      // host serves) is no handled request: its duration and status would be meaningless
+      return
+    }
     const duration = Date.now() - (startTime || Date.now() - 1)
     const customAttrs = ctx.has(customMetricAttrsKey) ? ctx.get(customMetricAttrsKey) : {}
     const attrs = {

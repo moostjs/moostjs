@@ -15,7 +15,7 @@ const response = await http.fetch(new Request('http://localhost/api/hello/world'
 // Response | null
 ```
 
-Accepts a Web Standard `Request`. Returns a `Response` if a route matched, or `null` if no route exists.
+Accepts a Web Standard `Request`. Returns a `Response` if a route matched, or `null` if no route exists — decided before any event starts, with the request body left unread, so the `Request` can still be sent elsewhere.
 
 ### `http.request(input, init?)`
 
@@ -85,7 +85,7 @@ A bare list like `forwardHeaders: ['cloudfront-viewer-address']` **replaces** th
 
 ## SSR Local Fetch
 
-`enableLocalFetch` patches `globalThis.fetch` so that local requests are routed in-process through Moost. External URLs pass through to real HTTP. If no Moost route matches, the call falls back to the original `fetch`.
+`enableLocalFetch` patches `globalThis.fetch` so that local requests are routed in-process through Moost. External URLs pass through to real HTTP. If no Moost route matches, the call falls back to the original `fetch` (up to 0.6.50, a `Request` with a body failed there with `Body has already been read`).
 
 ```ts
 import { enableLocalFetch } from '@moostjs/event-http'
@@ -125,7 +125,7 @@ With `@moostjs/vite`, every SSR render runs inside an HTTP event context seeded 
 - **Trace continuity** — `x-request-id` flows from the page request through every SSR self-call.
 - **`Set-Cookie` propagation** — cookies set by API handlers during the render (session touch/refresh) land on the page response.
 
-Opt out with `ssrFetchForwarding: false` in the [plugin options](/webapp/vite#options) (or in `createSSRServer()` options for a custom server entry) — SSR self-calls are then anonymous, as they were on `@moostjs/vite` ≤ 0.6.30.
+Opt out with `ssrFetchForwarding: false` in the [plugin options](/webapp/vite#options) (or in `createSSRServer()` options for a custom server entry) — SSR self-calls are then anonymous. (Up to 0.6.50 the opt-out did not hold when the page request had gone through Moost first — in dev, and in production without `prefix` — because unmatched requests were handed on from inside a Moost HTTP context.)
 
 ### Custom production servers
 

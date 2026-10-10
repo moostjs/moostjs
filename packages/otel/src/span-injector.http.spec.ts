@@ -1,8 +1,7 @@
-import { AsyncLocalStorage } from 'node:async_hooks'
 import { createServer } from 'node:http'
 import type { Server } from 'node:http'
 
-import type { Context, ContextManager, Span } from '@opentelemetry/api'
+import type { Span } from '@opentelemetry/api'
 import { context, ROOT_CONTEXT, SpanKind, trace } from '@opentelemetry/api'
 import {
   BasicTracerProvider,
@@ -25,32 +24,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { useOtelContext } from './context'
 import { OtelIgnoreSpan } from './otel.decorators'
 import { SpanInjector } from './span-injector'
-
-/** Minimal AsyncLocalStorage context manager (what `@opentelemetry/context-async-hooks` provides). */
-class AlsContextManager implements ContextManager {
-  private als = new AsyncLocalStorage<Context>()
-  active() {
-    return this.als.getStore() ?? ROOT_CONTEXT
-  }
-  with<A extends unknown[], F extends (...args: A) => ReturnType<F>>(
-    ctx: Context,
-    fn: F,
-    thisArg?: ThisParameterType<F>,
-    ...args: A
-  ): ReturnType<F> {
-    return this.als.run(ctx, () => fn.apply(thisArg, args))
-  }
-  bind<T>(_ctx: Context, target: T): T {
-    return target
-  }
-  enable() {
-    return this
-  }
-  disable() {
-    this.als.disable()
-    return this
-  }
-}
+import { AlsContextManager } from './tests/als-context-manager.artifacts'
 
 const exporter = new InMemorySpanExporter()
 const provider = new BasicTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] })
@@ -159,6 +133,7 @@ describe('SpanInjector — HTTP events', () => {
     expect(root!.kind).toBe(SpanKind.SERVER)
     expect(root!.instrumentationScope.name).toBe('fake-instrumentation-http')
     expect(root!.attributes).toMatchObject({
+      'http.route': '/users/:id',
       'moost.controller': 'UsersController',
       'moost.handler': 'getUser',
       'moost.route': '/users/:id',

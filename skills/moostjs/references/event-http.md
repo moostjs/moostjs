@@ -50,8 +50,8 @@ new MoostHttp(existingWooksHttp)      // reuse an instance
 |---|---|---|
 | `listen(port?, ...)` | `Promise<void>` | Node `server.listen` overloads |
 | `getHttpApp()` | `WooksHttp` | underlying engine |
-| `getServerCb(onNoMatch?)` | `RequestListener` | for custom HTTP/HTTPS servers |
-| `fetch(request)` | `Promise<Response \| null>` | in-process route invocation (SSR) |
+| `getServerCb(onNoMatch?)` | `RequestListener` | for custom HTTP/HTTPS servers; with `onNoMatch(req, res)` = middleware mode: an unmatched request goes to `onNoMatch` BEFORE any Moost event starts (no interceptors/DI scope/tracing; composables unavailable inside it — use raw `req`/`res`) |
+| `fetch(request)` | `Promise<Response \| null>` | in-process route invocation (SSR); `null` = no route, decided before any event starts, body left unread |
 | `request(input, init?)` | `Promise<Response \| null>` | convenience fetch; relative paths prefixed with `http://localhost` |
 | `invoke(method, path, { body?, rawBody?, contentType?, isolate?, prepare? })` | `Promise<R>` | run another route's full pipeline INSIDE the current request; resolves to the handler's value / rejects with its error (guard `reply(err)` too); 404 `HttpError` when no route. See gotcha 9 |
 | `withHttpContext(req, res, fn)` | `Promise<{ result, response }>` | run `fn` inside an HTTP context seeded from a real `(req, res)`, no route dispatch — nested `fetch()` inherits identity; ≥ 0.7.20 wooks (see [Local fetch / SSR](#local-fetch--ssr)) |
@@ -186,7 +186,7 @@ for (const cookie of response.getSetCookieStrings()) res.appendHeader('set-cooki
 
 ### `enableLocalFetch(http)` — patch `globalThis.fetch`
 
-Routes `/…` through MoostHttp; non-matching requests fall through to the original fetch.
+Routes `/…` through MoostHttp; non-matching requests fall through to the original fetch with the body intact (up to 0.6.50 a `Request` with a body failed there: `Body has already been read`).
 
 ```ts
 const teardown = enableLocalFetch(http)
