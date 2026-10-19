@@ -19,7 +19,7 @@ const route = useRoute()
 
 const activeTab = ref('http')
 const tiltDeg = ref(2)
-const perfTarget = 95304
+const perfTarget = 102250
 const perfDisplay = ref('0')
 const perfStripRef = ref(null)
 const perfIconRef = ref(null)
@@ -33,8 +33,8 @@ function animateNumber(target, duration = 1000) {
         // ease-out cubic: decelerates toward the end
         const eased = 1 - Math.pow(1 - progress, 3)
         const current = Math.round(eased * target)
-        const str = String(current).padStart(5, '0')
-        perfDisplay.value = str.slice(0, 2) + ',' + str.slice(2)
+        const str = String(current).padStart(String(target).length, '0')
+        perfDisplay.value = str.replace(/\B(?=(\d{3})+$)/g, ',')
         if (progress < 1) {
             requestAnimationFrame(update)
         } else {
@@ -239,7 +239,7 @@ const features = [
                     </div>
                     <div class="perf-content">
                         <div class="perf-number"><span class="perf-value">{{ perfDisplay }}</span> <span class="perf-unit">req/s</span></div>
-                        <div class="perf-text">Traffic-mix throughput on a 22-route SaaS benchmark — 1.31x the throughput of NestJS + Fastify; the DI layer costs 4.8% on top of Wooks.</div>
+                        <div class="perf-text">Traffic-mix throughput on a 22-route SaaS benchmark — 1.39x the throughput of NestJS + Fastify; the DI layer costs 11.6% on top of Wooks, against 36.5% for NestJS on top of Fastify.</div>
                     </div>
                     <a ref="perfLinkRef" href="/webapp/benchmarks" class="perf-link">See benchmarks &rarr;</a>
                 </div>

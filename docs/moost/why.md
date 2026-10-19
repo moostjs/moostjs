@@ -30,7 +30,7 @@ HTTP, CLI, WebSocket, and workflows all share the same core: controllers, DI, in
 
 ### A small DI layer
 
-In a realistic SaaS API benchmark, Moost's DI layer costs **4.8%** of throughput on top of Wooks, against about 15–33% for NestJS on top of Fastify or Express. Moost is faster than NestJS on cookie-authenticated reads, 404s and auth failures; NestJS (Fastify) is faster on large JSON bodies, login, wildcard routes and the header-auth small POST. Details in the [benchmark results](/webapp/benchmarks).
+In a realistic SaaS API benchmark, Moost's DI layer costs **11.6%** of throughput on top of Wooks, against 36.5% for NestJS on top of Fastify and 23.1% on top of Express, and Moost has 1.39x the throughput of NestJS (Fastify). Moost is faster than NestJS on cookie-authenticated reads, cookie-auth JSON bodies, 404s and auth failures; NestJS (Fastify) is faster on login, wildcard routes and the header-auth routes with params or a body. Details in the [benchmark results](/webapp/benchmarks).
 
 ## When to Choose Moost
 
