@@ -28,12 +28,18 @@ const frameworkColors: Record<string, string> = {
   'Moost': '#6366f1',
   'NestJS (Fastify)': '#ef4444',
   'NestJS (Express)': '#f59e0b',
+  'Wooks (no DI)': '#a5b4fc',
+  'Fastify (no DI)': '#fca5a5',
+  'Express (no DI)': '#fcd34d',
 }
 
 const frameworkColorsDark: Record<string, string> = {
   'Moost': '#818cf8',
   'NestJS (Fastify)': '#f87171',
   'NestJS (Express)': '#fbbf24',
+  'Wooks (no DI)': '#4f46e5',
+  'Fastify (no DI)': '#b91c1c',
+  'Express (no DI)': '#b45309',
 }
 
 const isDark = ref(false)

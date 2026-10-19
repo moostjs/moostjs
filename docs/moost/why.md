@@ -28,9 +28,9 @@ Moost's metadata layer ([`@prostojs/mate`](https://github.com/prostojs/mate)) ma
 
 HTTP, CLI, WebSocket, and workflows all share the same core: controllers, DI, interceptors, pipes. Write an auth guard once, use it everywhere. Adapters handle the transport differences so your business logic doesn't have to.
 
-### Fast by default
+### A small DI layer
 
-Moost's DI layer adds roughly **half the overhead** of NestJS's. Combined with Wooks' lazy parsing, it's consistently faster across realistic workloads. Details in the [benchmark results](/webapp/benchmarks).
+In a realistic SaaS API benchmark, Moost's DI layer costs **4.8%** of throughput on top of Wooks, against about 15–33% for NestJS on top of Fastify or Express. Moost is faster than NestJS on cookie-authenticated reads, 404s and auth failures; NestJS (Fastify) is faster on large JSON bodies, login, wildcard routes and the header-auth small POST. Details in the [benchmark results](/webapp/benchmarks).
 
 ## When to Choose Moost
 

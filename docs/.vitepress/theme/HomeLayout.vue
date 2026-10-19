@@ -19,7 +19,7 @@ const route = useRoute()
 
 const activeTab = ref('http')
 const tiltDeg = ref(2)
-const perfTarget = 66049
+const perfTarget = 95304
 const perfDisplay = ref('0')
 const perfStripRef = ref(null)
 const perfIconRef = ref(null)
@@ -239,7 +239,7 @@ const features = [
                     </div>
                     <div class="perf-content">
                         <div class="perf-number"><span class="perf-value">{{ perfDisplay }}</span> <span class="perf-unit">req/s</span></div>
-                        <div class="perf-text">21-route SaaS benchmark — about 10% ahead of NestJS + Fastify on weighted throughput.</div>
+                        <div class="perf-text">Traffic-mix throughput on a 22-route SaaS benchmark — 1.31x the throughput of NestJS + Fastify; the DI layer costs 4.8% on top of Wooks.</div>
                     </div>
                     <a ref="perfLinkRef" href="/webapp/benchmarks" class="perf-link">See benchmarks &rarr;</a>
                 </div>
