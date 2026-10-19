@@ -176,11 +176,11 @@ importers:
         version: link:../../packages/moost
     devDependencies:
       '@atscript/core':
-        specifier: ^0.1.107
-        version: 0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+        specifier: ^0.1.108
+        version: 0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       '@atscript/typescript':
-        specifier: ^0.1.107
-        version: 0.1.107(@atscript/core@0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(wooks@0.7.30)
+        specifier: ^0.1.108
+        version: 0.1.108(@atscript/core@0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(wooks@0.7.30)
       '@moostjs/vite':
         specifier: workspace:^
         version: link:../../packages/vite
@@ -191,8 +191,8 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       unplugin-atscript:
-        specifier: ^0.1.107
-        version: 0.1.107(@atscript/core@0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@atscript/typescript@0.1.107(@atscript/core@0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(wooks@0.7.30))
+        specifier: ^0.1.108
+        version: 0.1.108(@atscript/core@0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@atscript/typescript@0.1.108(@atscript/core@0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(wooks@0.7.30))
       unplugin-swc:
         specifier: ^1.5.9
         version: 1.5.9(@swc/core@1.10.15)(rollup@4.62.3)
@@ -492,15 +492,15 @@ importers:
 
 packages:
 
-  '@atscript/core@0.1.107':
-    resolution: {integrity: sha512-wXzPWOjN/UJ+9+6nPOWzG1yqdVq3F6sysW1VrJsNuvt3Orlmfnm564AGid1TGhvsL7nLFk8+vN2fL2TwwpvF0A==}
+  '@atscript/core@0.1.108':
+    resolution: {integrity: sha512-CZiqSJTkz5ZprDsiI1hgKoh7fVOrwR7Cu2a0e2ZbFcqAETHZ7lQMHU/UMh/a0gEZJneGn4hH0+zqaohTWtOq5g==}
 
-  '@atscript/typescript@0.1.107':
-    resolution: {integrity: sha512-956haDIgF/D+/DUHXV9ixrxIi2q3byOr6xLRqklc7QWcyp0MHZwnfog95jZnSnqmnd+/IpubRs5Rq572GnDsPA==}
+  '@atscript/typescript@0.1.108':
+    resolution: {integrity: sha512-fxn3UeGftWaO61vunHOT8q7oVdDzY5ETAUk1fTTkkiywmTlt4clLY6J7QCykTTblFnbHaKcWbYrLAEJC6f8Bhg==}
     hasBin: true
     peerDependencies:
-      '@atscript/core': ^0.1.107
-      '@atscript/db': ^0.1.157
+      '@atscript/core': ^0.1.108
+      '@atscript/db': ^0.1.159
     peerDependenciesMeta:
       '@atscript/db':
         optional: true
@@ -3068,11 +3068,11 @@ packages:
   unist-util-visit@5.1.0:
     resolution: {integrity: sha512-m+vIdyeCOpdr/QeQCu2EzxX/ohgS8KbnPDgFni4dQsfSCtpz8UqDyY5GjRru8PDKuYn7Fq19j1CQ+nJSsGKOzg==}
 
-  unplugin-atscript@0.1.107:
-    resolution: {integrity: sha512-ciP/RyfAvqVdgmXWGycA+J3xgh016X2Ga9l7NtbZGODKzKnM1CYn8OV3MfUx16kfor/hSs5ZqHk96WA+Mw0U0g==}
+  unplugin-atscript@0.1.108:
+    resolution: {integrity: sha512-fAU3D5awK0fa9qtssT1RjvMqKxZcJmTDcsSVlXYi651vm/LIHmjwbwhaO1vYM3Cv7Dzh5aeZrHbVTBkeSc79XA==}
     peerDependencies:
-      '@atscript/core': ^0.1.107
-      '@atscript/typescript': ^0.1.107
+      '@atscript/core': ^0.1.108
+      '@atscript/typescript': ^0.1.108
 
   unplugin-swc@1.5.9:
     resolution: {integrity: sha512-RKwK3yf0M+MN17xZfF14bdKqfx0zMXYdtOdxLiE6jHAoidupKq3jGdJYANyIM1X/VmABhh1WpdO+/f4+Ol89+g==}
@@ -3336,7 +3336,7 @@ packages:
 
 snapshots:
 
-  '@atscript/core@0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
+  '@atscript/core@0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
     dependencies:
       '@prostojs/parser': 0.6.0
       defu: 6.1.7
@@ -3346,9 +3346,9 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  '@atscript/typescript@0.1.107(@atscript/core@0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(wooks@0.7.30)':
+  '@atscript/typescript@0.1.108(@atscript/core@0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(wooks@0.7.30)':
     dependencies:
-      '@atscript/core': 0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      '@atscript/core': 0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
       '@moostjs/event-cli': 0.6.52(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(moost@0.6.52)(wooks@0.7.30)
       moost: 0.6.52
     transitivePeerDependencies:
@@ -5455,10 +5455,10 @@ snapshots:
       unist-util-is: 6.0.1
       unist-util-visit-parents: 6.0.2
 
-  unplugin-atscript@0.1.107(@atscript/core@0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@atscript/typescript@0.1.107(@atscript/core@0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(wooks@0.7.30)):
+  unplugin-atscript@0.1.108(@atscript/core@0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@atscript/typescript@0.1.108(@atscript/core@0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(wooks@0.7.30)):
     dependencies:
-      '@atscript/core': 0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
-      '@atscript/typescript': 0.1.107(@atscript/core@0.1.107(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(wooks@0.7.30)
+      '@atscript/core': 0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
+      '@atscript/typescript': 0.1.108(@atscript/core@0.1.108(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.7.30)(wooks@0.7.30)
       unplugin: 2.3.11
 
   unplugin-swc@1.5.9(@swc/core@1.10.15)(rollup@4.62.3):
