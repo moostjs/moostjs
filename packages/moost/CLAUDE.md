@@ -22,7 +22,7 @@ Core framework package. Contains the Moost class, decorator system, DI integrati
 
 **`@Controller` auto-sets `@Injectable`.** The `Controller` decorator calls `insureInjectable` internally — no need to also add `@Injectable()`.
 
-**Interceptor after/onError use LIFO ordering.** Callbacks `.unshift()` into the array, creating an onion/wrap pattern where inner interceptors run closer to the handler.
+**Interceptor after/onError use LIFO ordering, as ONE chain.** Each def's after+error pair is `.unshift()`ed into one list, creating an onion/wrap pattern where inner interceptors run closer to the handler. `fireAfter(value, raised)` walks it over the CURRENT value: an `Error` runs the def's `error` fn, else its `after` fn; a throw (or an Error reply) switches to error mode (`raised`), a non-Error reply recovers; every hook gets the chain's entry value as 3rd arg (`original`, class hooks: `useInterceptOriginal()`).
 
 **`resolvePipe` is the bridge between decorators and argument resolution.** All param decorators (`@Param`, `@Resolve`, `@Const`) set a `resolver` function in metadata. The built-in resolve pipe (at `RESOLVE` priority) invokes it. Without this pipe, nothing resolves.
 

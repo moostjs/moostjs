@@ -22,7 +22,6 @@
     "@moostjs/event-http": "^{{ version }}",
     "@moostjs/vite": "^{{ version }}",
     "moost": "^{{ version }}",
-    "sirv": "^3.0.2",
     "vue": "^3.5.0",
     "vue-router": "^4.5.0"
   },

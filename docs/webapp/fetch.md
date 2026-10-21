@@ -8,7 +8,7 @@ outline: deep
 
 ## API
 
-### `http.fetch(request)`
+### `http.fetch(request, peer?)`
 
 ```ts
 const response = await http.fetch(new Request('http://localhost/api/hello/world'))
@@ -16,6 +16,31 @@ const response = await http.fetch(new Request('http://localhost/api/hello/world'
 ```
 
 Accepts a Web Standard `Request`. Returns a `Response` if a route matched, or `null` if no route exists — decided before any event starts, with the request body left unread, so the `Request` can still be sent elsewhere.
+
+#### Serving a fetch runtime
+
+`fetch()` is also how a Moost app serves a fetch-based runtime (Bun, Deno, an edge platform): the runtime hands you a `Request` and expects a `Response`. A `Request` carries no connection, so pass the client's address as `peer` — without it the client is unknown: `@Ip()` is `''`, an address-list or predicate `trustProxy` trusts nothing, and `protocol()` / `host()` come from the request URL.
+
+```ts
+// Bun
+Bun.serve({
+  fetch: async (req, server) =>
+    (await http.fetch(req, { remoteAddress: server.requestIP(req)?.address })) ??
+    new Response('Not found', { status: 404 }),
+})
+
+// Deno
+Deno.serve(async (req, info) =>
+  (await http.fetch(req, { remoteAddress: info.remoteAddr.hostname })) ??
+  new Response('Not found', { status: 404 }),
+)
+```
+
+`peer` is `{ remoteAddress?: string; encrypted?: boolean }` (`TFetchPeer`): `remoteAddress` is the connection's peer (the client, or the proxy in front — configure `trustProxy` as for a Node server), `encrypted` whether the connection is TLS (default: the URL scheme). A call made **while serving another request** (SSR self-fetch) needs no `peer`: it inherits the caller's client address, protocol, host and locale.
+
+::: warning Version note
+Up to and including `0.6.53` (wooks `0.7.x`), `fetch()` took no `peer` and a programmatic request reported the fake client address `127.0.0.1`.
+:::
 
 ### `http.request(input, init?)`
 

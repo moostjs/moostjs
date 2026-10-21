@@ -39,7 +39,7 @@ describe('moost', () => {
     // })
     it('must assign @Patch handler', async () => {
       const response = await request.send('PATCH', 'patchMethod')
-      expect(response.status()).toBe(202)
+      expect(response.status()).toBe(200)
       expect(await response.body()).toEqual('@Patch method called')
     })
     it('must assign @Post handler', async () => {
@@ -49,7 +49,7 @@ describe('moost', () => {
     })
     it('must assign @Delete handler', async () => {
       const response = await request.send('DELETE', 'deleteMethod')
-      expect(response.status()).toBe(202)
+      expect(response.status()).toBe(200)
       expect(await response.body()).toEqual('@Delete method called')
     })
     it('must return 404 when sending GET request to @Post handler', async () => {

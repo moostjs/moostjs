@@ -51,8 +51,11 @@ export function Before(): MethodDecorator {
  * ## @After
  * ### Method Decorator
  * Marks a method as an after-phase interceptor hook.
- * Runs after successful handler execution.
- * Use @Response() param for the handler result, @Overtake() for the reply fn.
+ * Runs when the current value of the after/error chain is not an Error.
+ * Use @Response() param for the current value, @Overtake() for the reply fn,
+ * `useInterceptOriginal()` for the value that entered the chain.
+ * Throwing (or replying with an Error) hands the error to the error hooks
+ * of the interceptors that run after this one.
  */
 export function After(): MethodDecorator {
   return getMoostMate().decorate('interceptorHook', 'after')
@@ -62,8 +65,10 @@ export function After(): MethodDecorator {
  * ## @OnError
  * ### Method Decorator
  * Marks a method as an error-phase interceptor hook.
- * Runs when the handler throws or returns an Error.
- * Use @Response() param for the error, @Overtake() for the reply fn.
+ * Runs when the current value of the after/error chain is an Error — the handler
+ * threw or returned one, or an earlier after/error hook raised or replied one.
+ * Use @Response() param for the error, @Overtake() for the reply fn
+ * (a non-Error reply recovers the chain).
  */
 export function OnError(): MethodDecorator {
   return getMoostMate().decorate('interceptorHook', 'error')
@@ -82,9 +87,9 @@ export function Overtake(): ParameterDecorator {
 /**
  * ## @Response
  * ### Parameter Decorator
- * Injects the handler result into an interceptor method parameter.
- * In @After methods, this is the successful response.
- * In @OnError methods, this is the Error that was thrown.
+ * Injects the current value of the after/error chain into an interceptor method parameter:
+ * the handler result (or error) as replaced by the hooks that ran before this one.
+ * In @After methods, this is the response; in @OnError methods, the Error.
  */
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export function Response(): ParameterDecorator {

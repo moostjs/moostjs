@@ -1,4 +1,4 @@
-import { useRouteParams } from '@wooksjs/event-core'
+import { useLocale, useRouteParams } from '@wooksjs/event-core'
 
 import type { TEmpty, TObject } from '../common-types'
 import { getMoostMate } from '../metadata/moost-metadata'
@@ -69,6 +69,21 @@ export function Params() {
     getMoostMate().decorate('paramSource', 'ROUTE'),
     Resolve(() => useRouteParams().params, 'params'),
   )
+}
+
+/**
+ * Get the locale of the current event (`useLocale().get()`), for any event kind.
+ *
+ * Moost only carries the locale: the app decides how it is chosen (for HTTP, the
+ * `resolveLocale` option of `MoostHttp`, typically with `useAcceptLanguage().negotiate()`;
+ * or `useLocale().set()` in an interceptor) and how text is translated (see `setTranslator`).
+ * A workflow or other child event reads the locale of the event that started it.
+ * Resolves `undefined` when no locale is set.
+ * @decorator
+ * @paramType string | undefined
+ */
+export function Locale() {
+  return Resolve(() => useLocale().get(), 'locale')
 }
 
 /**

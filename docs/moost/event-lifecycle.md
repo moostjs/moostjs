@@ -52,12 +52,12 @@ Below is a representative diagram illustrating the lifecycle of a Moost event.
 <div id="step8" style="transform: translateY(-70px)" />
 
 8. **Run Interceptors ‘after’ Hooks**
-    If the handler succeeded, Moost executes the "after" hooks of [interceptors](/moost/interceptors). This could involve adding headers, logging success, or modifying the response. Errors here also lead to Step 10.
+    If the handler succeeded, Moost executes the "after" hooks of [interceptors](/moost/interceptors). This could involve adding headers, logging success, or modifying the response. Each hook sees the response as replaced by the hooks before it. An error thrown here (or replied as the response) switches the remaining interceptors to their ‘error’ hooks (Step 9) — see [the after/error chain](/moost/interceptors#the-after-error-chain).
 
 <div id="step9" style="transform: translateY(-70px)" />
 
 9. **Run Interceptors ‘error’ Hooks**
-   If the handler failed, [interceptors’](/moost/interceptors) "error" hooks allow transforming or logging the error, and possibly returning an alternate response. If an error arises in the error hooks, Moost moves to Step 10.
+   If the handler failed (or an earlier ‘after’/‘error’ hook raised an error), [interceptors’](/moost/interceptors) "error" hooks allow transforming or logging the error, and possibly returning an alternate response — a non-Error response recovers, and the remaining interceptors run their ‘after’ hooks. If the chain ends on an error, Moost moves to Step 10.
 
 <div id="step10" style="transform: translateY(-70px)" />
 

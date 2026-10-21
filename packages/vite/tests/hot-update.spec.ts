@@ -44,7 +44,16 @@ type TChainProbe = TProbe<{
 }>
 
 interface TReport {
-  baseline: { health: THealth; page: string; clientMod: string }
+  baseline: {
+    health: THealth
+    page: string
+    clientMod: string
+    apiMiss: TProbe<{ statusCode: number }>
+    pageMiss: TProbe<unknown>
+    mountFile: TProbe<unknown>
+    mountFileHead: { status: number; length: string | null }
+    mountMiss: TProbe<{ statusCode: number }>
+  }
   clientOnly: { first: THealth; second: THealth; clientMod: string }
   renderGraph: { page: string; health: THealth }
   serverGraph: { health: THealth }
@@ -100,6 +109,22 @@ describe('moost-vite scoped hot reload', () => {
     expect(report.baseline.health.json).toMatchObject({ ok: true, boot: 1, value: 'v1', tag: 'a' })
     expect(report.baseline.page).toContain('NOTE_v1')
     expect(report.baseline.clientMod).toContain('toast_v1')
+  })
+
+  it('answers an unmatched route under the prefix with the JSON 404, not the SSR page', () => {
+    expect(report.baseline.apiMiss.status).toBe(404)
+    expect(report.baseline.apiMiss.json).toMatchObject({ statusCode: 404 })
+    // outside the mount, the frontend still answers
+    expect(report.baseline.pageMiss.status).toBe(200)
+    expect(report.baseline.pageMiss.text).not.toContain('statusCode')
+  })
+
+  it('serves a public file under a prefix mount, and the JSON 404 for a missing one', () => {
+    expect(report.baseline.mountFile.status).toBe(200)
+    expect(report.baseline.mountFile.text).toContain('Contact: mailto:security@example.com')
+    expect(report.baseline.mountFileHead.status).toBe(200)
+    expect(report.baseline.mountMiss.status).toBe(404)
+    expect(report.baseline.mountMiss.json).toMatchObject({ statusCode: 404 })
   })
 
   it('keeps the API alive when a client-only module changes', () => {

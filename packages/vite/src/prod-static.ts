@@ -1,6 +1,12 @@
+import { statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { join } from 'node:path'
+import { join, resolve, sep } from 'node:path'
+
+type THandler = (req: IncomingMessage, res: ServerResponse) => void
+
+/** A static handler: `fallback` (default: the page) answers requests that match no file. */
+type TStaticHandler = (req: IncomingMessage, res: ServerResponse, fallback?: THandler) => void
 
 /**
  * `Cache-Control` policy of the generated production server. Each value is a
@@ -103,6 +109,51 @@ function requestPathname(url: string): string {
 }
 
 /**
+ * The no-match handler of an API mount (a `prefix` without `prefixFallthrough`): a GET/HEAD
+ * that names a static file is served (`tryStatic`, with `notFound` for a miss); anything else
+ * gets Moost's own 404 — never the SPA shell or an SSR page.
+ */
+export function apiMountNoMatch(
+  tryStatic: (req: IncomingMessage, res: ServerResponse, miss: THandler) => void,
+  notFound: THandler,
+): THandler {
+  return (req, res) => {
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      tryStatic(req, res, notFound)
+    } else {
+      notFound(req, res)
+    }
+  }
+}
+
+/** Resolved public-dir roots (`publicDir` is fixed per dev server). */
+const publicRoots = new Map<string, string>()
+
+/**
+ * Whether `url` names a file inside `publicDir` (Vite's `public/`), for the dev server: a GET
+ * under an API mount that no route matched is served from there before Moost's 404.
+ */
+export function isPublicFile(publicDir: string | undefined, url: string): boolean {
+  if (!publicDir) {
+    return false
+  }
+  let root = publicRoots.get(publicDir)
+  if (!root) {
+    root = resolve(publicDir)
+    publicRoots.set(publicDir, root)
+  }
+  const file = resolve(root, `.${requestPathname(url)}`)
+  if (file !== root && !file.startsWith(root + sep)) {
+    return false // escapes the public dir (`..`)
+  }
+  try {
+    return statSync(file, { throwIfNoEntry: false })?.isFile() ?? false
+  } catch {
+    return false // e.g. ENOTDIR: a file used as a directory
+  }
+}
+
+/**
  * The root `index.html` (and precompressed siblings) is the SPA/SSR template:
  * it is never served as a static file, but by the SPA/SSR fallback (in SSR mode
  * a raw template would leak its unfilled `<!--ssr-outlet-->` placeholders).
@@ -200,19 +251,17 @@ export function sendSpaShell(
   res.end(body)
 }
 
-type THandler = (req: IncomingMessage, res: ServerResponse) => void
-
 /**
  * Static file serving (sirv) with the cache policy and the precompressed
  * variants; requests that match no file — and the root `index.html` template —
- * go to `servePage` (SSR render or SPA shell).
+ * go to `fallback`, by default `servePage` (SSR render or SPA shell).
  */
 export async function createStaticHandler(
   clientDir: string,
   variants: { brotli: boolean; gzip: boolean },
   cache: TResolvedCacheControl | null,
   servePage: THandler,
-): Promise<THandler> {
+): Promise<TStaticHandler> {
   const { default: sirv } = await import('sirv')
   const negotiate = variants.brotli || variants.gzip
   /** The `Vary` each response should carry: sirv overwrites it with a bare `Accept-Encoding`. */
@@ -231,10 +280,10 @@ export async function createStaticHandler(
     },
   })
 
-  return (req, res) => {
+  return (req, res, fallback = servePage) => {
     const pathname = requestPathname(req.url || '/')
     if (isIndexTemplatePath(pathname)) {
-      servePage(req, res)
+      fallback(req, res)
       return
     }
     // Preset (not via sirv's setHeaders) so the 304 sirv answers on an ETag
@@ -254,7 +303,7 @@ export async function createStaticHandler(
       for (const undo of restore) {
         undo()
       }
-      servePage(req, res)
+      fallback(req, res)
     })
   }
 }

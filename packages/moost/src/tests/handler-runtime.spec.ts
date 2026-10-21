@@ -9,50 +9,10 @@ import { Before, Controller, Injectable, Intercept, Interceptor, Pipe } from '..
 import { Const } from '../decorators/resolve.decorator'
 import { withControllerContext } from '../event-scope'
 import { getMoostInfact } from '../metadata'
-import type { TMoostAdapter, TMoostAdapterOptions } from '../moost'
 import { Moost } from '../moost'
 import { createReplaceRegistry } from '@prostojs/infact'
 import { isThenable } from '../shared-utils'
-import { FakeGet } from './fake-route.artifacts'
-
-const testLogger = { info() {}, warn() {}, error() {}, debug() {} }
-
-/** Binds every FAKE handler to a moost event handler, runnable by its path. */
-function capturingAdapter() {
-  const handlers = new Map<string, () => unknown>()
-  const adapter: TMoostAdapter<unknown> = {
-    name: 'capture',
-    bindHandler<T extends object>(opts: TMoostAdapterOptions<unknown, T>) {
-      for (const h of opts.handlers) {
-        const path = `/${opts.prefix}/${h.path ?? ''}`.replace(/\/+/g, '/')
-        handlers.set(
-          path,
-          defineMoostEventHandler({
-            loggerTitle: 'test',
-            getIterceptorHandler: opts.getIterceptorHandler,
-            getControllerInstance: opts.getInstance,
-            controllerMethod: opts.method,
-            resolveArgs: opts.resolveArgs,
-            targetPath: path,
-            handlerType: 'FAKE',
-          }),
-        )
-      }
-    },
-  }
-  /** Runs the handler of `path` in a fresh event; returns what it returns (sync or a promise). */
-  const call = (path: string) => createEventContext({ logger: testLogger }, handlers.get(path)!)
-  return { adapter, call }
-}
-
-async function boot(...controllers: Function[]) {
-  const { adapter, call } = capturingAdapter()
-  const app = new Moost()
-  app.adapter(adapter)
-  app.registerControllers(...controllers)
-  await app.init()
-  return { app, call }
-}
+import { boot, capturingAdapter, FakeGet, testLogger } from './fake-route.artifacts'
 
 describe('class interceptors (@Interceptor)', () => {
   afterEach(() => {

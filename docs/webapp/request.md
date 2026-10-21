@@ -37,7 +37,7 @@ curl "http://localhost:3000/search?q=moost&limit=10"
 # { "query": "moost", "params": { "q": "moost", "limit": "10" } }
 ```
 
-`@Query('name')` returns `undefined` if the parameter is missing. `@Query()` returns `undefined` (not an empty object) when there are no query parameters at all.
+`@Query('name')` returns `undefined` if the parameter is missing. `@Query()` returns an empty object `{}` when there are no query parameters at all, so a query DTO with only optional fields validates as is, and a missing required field is reported per field. (Up to and including `0.6.53` it returned `undefined`.)
 
 ## Headers
 
@@ -158,13 +158,52 @@ import { Get, Ip, IpList } from '@moostjs/event-http'
 
 @Get('client')
 client(
-    @Ip() ip: string,                          // direct client IP
-    @Ip({ trustProxy: true }) realIp: string,  // considers x-forwarded-for
-    @IpList() ips: { remoteIp: string, forwarded: string[] }, // remote IP + x-forwarded-for chain
+    @Ip() ip: string,                          // client IP, per the app's trustProxy setting
+    @IpList() ips: { remoteIp: string, forwarded: string[] }, // raw: socket peer + x-forwarded-for chain
 ) {
-    return { ip, realIp, ips }
+    return { ip, ips }
 }
 ```
+
+`@Ip()` follows the app-level `trustProxy` option. By default no proxy is trusted and `@Ip()` is the socket peer — forwarding headers are ignored, because any client can send them. Behind a reverse proxy or load balancer, tell the HTTP adapter what to trust:
+
+```ts
+import { MoostHttp } from '@moostjs/event-http'
+
+const http = new MoostHttp({
+    trustProxy: 1,            // one proxy in front (Caddy, nginx, a cloud load balancer)
+    // trustProxy: ['loopback', '10.0.0.0/8'],   // or: the proxies' addresses / CIDRs
+    // trustProxy: (addr, hop) => hop < 2,        // or: a predicate
+    // proxyHeaders: 'forwarded',                 // read RFC 7239 `Forwarded` instead of X-Forwarded-*
+})
+```
+
+The client is the right-most `X-Forwarded-For` hop that is not trusted. The same setting drives `useRequest().protocol()` and `host()` (`X-Forwarded-Proto` / `X-Forwarded-Host`). IPv4-mapped addresses (`::ffff:10.0.0.5`) are returned as plain IPv4, and `@Ip()` is `''` when the client is unknown (an in-process [fetch](./fetch) without a peer, or a malformed entry written by a trusted proxy). `@IpList()` returns the raw, unvalidated values — never use it for access decisions.
+
+::: warning Deprecated: `@Ip({ trustProxy: true })`
+The per-decorator option now trusts exactly **one** proxy hop (the right-most `X-Forwarded-For` entry). Up to and including `0.6.53` it took the left-most entry, which any client can forge. Configure `trustProxy` on `MoostHttp` and use `@Ip()` instead.
+:::
+
+## Locale
+
+`@Locale()` (from `moost`) resolves the locale of the current event — `useLocale().get()`, or `undefined` when nothing set one. Moost only carries the locale; your app decides how it is chosen, and translates with its own i18n library (see [Translating text](/moost/i18n)):
+
+```ts
+import { Locale } from 'moost'
+import { Get, MoostHttp, useAcceptLanguage } from '@moostjs/event-http'
+
+const http = new MoostHttp({
+    // your policy: e.g. ?lang, a cookie or the user profile first, then Accept-Language
+    resolveLocale: () => useAcceptLanguage().negotiate(['en', 'de', 'fr'], 'en'),
+})
+
+@Get('greeting')
+greeting(@Locale() locale: string) {
+    return locale === 'de' ? 'Hallo' : 'Hello'
+}
+```
+
+`resolveLocale` runs lazily, on the first read in a request. `useAcceptLanguage().negotiate()` adds `Vary: Accept-Language` to the response. A workflow or an in-process `fetch()` started from the request reads the request's locale.
 
 ## Raw Node.js request
 
@@ -195,7 +234,8 @@ raw(@Req() request: IncomingMessage) {
 | `@Url()` | Requested URL | `@moostjs/event-http` |
 | `@Method()` | HTTP method string | `@moostjs/event-http` |
 | `@ReqId()` | Request UUID | `@moostjs/event-http` |
-| `@Ip(opts?)` | Client IP address | `@moostjs/event-http` |
+| `@Ip()` | Client IP address (per the app's `trustProxy`) | `@moostjs/event-http` |
+| `@Locale()` | Locale of the event (`useLocale().get()`) | `moost` |
 | `@IpList()` | `{ remoteIp, forwarded }` IP object | `@moostjs/event-http` |
 | `@Req()` | Raw `IncomingMessage` | `@moostjs/event-http` |
 

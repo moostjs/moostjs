@@ -35,10 +35,15 @@ export interface TDisposeOptions {
   onError?: 'warn' | 'throw'
 }
 
-interface TDisposeHook {
+/**
+ * @internal One dispose hook: `instance[method]`, or `fn` for a plain-function hook
+ * (`Moost.addDisposeHook`, where `instance`/`method` only identify it in failures).
+ */
+export interface TDisposeHook {
   instance: object
   method: string | symbol
   priority: number
+  fn?: () => unknown
 }
 
 /**
@@ -127,7 +132,8 @@ function collectHooks(instance: object): TDisposeHook[] {
 }
 
 async function runHook(hook: TDisposeHook, errors: TDisposeError[], opts?: TDisposeOptions) {
-  const fn = (hook.instance as Record<string | symbol, unknown>)[hook.method] as () => unknown
+  const fn =
+    hook.fn ?? ((hook.instance as Record<string | symbol, unknown>)[hook.method] as () => unknown)
   try {
     await fn.call(hook.instance)
   } catch (error) {
@@ -160,8 +166,20 @@ async function runHook(hook: TDisposeHook, errors: TDisposeError[], opts?: TDisp
  * Instances already disposed (by an earlier call, or by `Moost.dispose()`) are
  * skipped, so passing overlapping sets is safe.
  */
-export async function disposeInstances(
+export function disposeInstances(
   instances: Iterable<object>,
+  opts?: TDisposeOptions,
+): Promise<TDisposeResult> {
+  return disposeWithHooks(instances, [], opts)
+}
+
+/**
+ * @internal {@link disposeInstances} plus function hooks, all in one pass by ascending
+ * `priority` (instance hooks first on ties).
+ */
+export async function disposeWithHooks(
+  instances: Iterable<object>,
+  fnHooks: TDisposeHook[],
   opts?: TDisposeOptions,
 ): Promise<TDisposeResult> {
   const hooks: TDisposeHook[] = []
@@ -177,6 +195,7 @@ export async function disposeInstances(
       hooks.push(...own)
     }
   }
+  hooks.push(...fnHooks)
   const errors: TDisposeError[] = []
   for (const hook of hooks.toSorted((a, b) => a.priority - b.priority)) {
     await runHook(hook, errors, opts)

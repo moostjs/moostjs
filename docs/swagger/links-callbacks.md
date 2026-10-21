@@ -75,7 +75,7 @@ create(@Body() dto: CreateUserDto) { /* ... */ }
 
 ### Status codes
 
-By default, a link attaches to the default success status code for the HTTP method (200 for GET/PUT, 201 for POST, 204 for DELETE). Target a specific status code with the 3-argument form:
+By default, a link attaches to the default success status of the endpoint — the [default response status](./responses#basic-usage) (201 for POST, 200 for other methods, 204 for an endpoint documented without a body). Target a specific status code with the 3-argument form:
 
 ```ts
 @SwaggerLink(201, 'GetCreated', {

@@ -26,6 +26,20 @@ The response decorators on this page (`@SetStatus`, `@SetHeader`, `@SetCookie`, 
 
 ## Setting status codes
 
+Without an explicit status, a response gets:
+
+| Response | Default status |
+|---|---|
+| POST with a body | `201` |
+| GET, PUT, PATCH, DELETE (any other method) with a body | `200` |
+| No body (`undefined` / empty) | `204` |
+
+The rule is exported as `getDefaultHttpStatus(method, hasBody)` and the table as `DEFAULT_HTTP_STATUS` (both from `@moostjs/event-http`) — [`@moostjs/swagger`](/swagger/responses) documents responses with the same rule.
+
+::: warning Version note
+Up to and including `0.6.53` (wooks `0.7.x`), PUT defaulted to `201` and PATCH/DELETE with a body to `202`.
+:::
+
 ### Static — `@SetStatus`
 
 When the status code is always the same:
@@ -98,6 +112,24 @@ test() {
 // Set only on error responses
 @SetHeader('x-error', 'true', { when: 'error' })
 ```
+
+::: warning Error responses are never cached
+Every error response goes out with `Cache-Control: no-store`, and the cache and representation headers set before the failure (`Cache-Control`, `Expires`, `Content-Type`, …) are dropped — including a `cache-control` set through `@SetHeader(…, { when: 'error' })` or `{ when: 'always' }`. Other headers survive (cookies, CORS, `WWW-Authenticate`, `Retry-After`, `Location`, `Vary`, custom headers). For an error that should be cacheable, build the response yourself instead of throwing — set the status and headers with `useResponse()` and return the body:
+
+```ts
+import { useResponse } from '@wooksjs/event-http'
+
+@Get('item/:id')
+item(@Param('id') id: string) {
+    const item = findItem(id)
+    if (!item) {
+        useResponse().setStatus(404).setHeader('cache-control', 'public, max-age=60')
+        return { message: 'Not found' }
+    }
+    return item
+}
+```
+:::
 
 ### Dynamic — `@HeaderRef`
 

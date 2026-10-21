@@ -38,7 +38,7 @@ Moost App → MoostHttp (adapter) → WooksHttp (@wooksjs/event-http) → Node.j
 
 **Path builders for URL generation.** `MoostHttp` stores `pathBuilders` keyed by handler ID (from `@Id()` or method name), enabling programmatic URL construction with parameter substitution.
 
-**`Query()` with no argument returns `undefined` when empty** (not `{}`), making it safe for optional parameter typing.
+**`Query()` with no argument resolves `{}` when the request has no query string** (it was `undefined` up to 0.6.53), so a DTO with all-optional fields validates without `@Optional()`. `Query(name)` resolves `undefined` for a missing item.
 
 **`HEAD` and `OPTIONS` have no convenience wrappers.** Use `HttpMethod('HEAD')` or `HttpMethod('OPTIONS')` directly.
 

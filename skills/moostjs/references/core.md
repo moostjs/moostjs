@@ -8,6 +8,7 @@ Moost lifecycle, controller registration, adapter attachment.
 - [App init (`@MoostInit`)](#app-init-moostinit)
 - [App dispose (`@MoostDispose`)](#app-dispose-moostdispose)
 - [API](#api)
+- [Locale and translation](#locale-and-translation)
 - [Patterns](#patterns)
 - [Gotchas](#gotchas)
 
@@ -147,11 +148,23 @@ Graceful shutdown wiring (since 0.6.37): `app.disposeOnSignals()` — default `[
 | 1   | Two triggers, same hooks: `app.dispose()` and a `@moostjs/vite` HMR eject. Process signals NEVER fire on HMR — a resource leaking one handle per dev reload means its owner lacks a `@MoostDispose`.                                  |
 | 2   | At most once per instance, ever (tracked per instance): a second `dispose()`, or an eject followed by a shutdown, runs nothing. `dispose()` returns the first call's promise.                                                         |
 | 3   | SINGLETON controllers AND `@Injectable()` singletons (hooks are discovered from live instances at dispose time, not at bind). On a `FOR_EVENT` **controller** it throws at bind; on a `FOR_EVENT` **injectable** it is never invoked. |
-| 4   | Order: every adapter's `onDispose(moost)` in registration order (stop intake), THEN instance hooks by ascending `priority`, ties in discovery order. All awaited, sequentially.                                                       |
+| 4   | Order: every adapter's `onDispose(moost)` in registration order (stop intake), THEN in-flight `runDetached` runs are awaited, THEN instance hooks + `addDisposeHook` fns by ascending `priority`, ties in discovery order (instance hooks first). All awaited, sequentially. |
 | 5   | Hook takes NO arguments (no pipes, no resolvers) — inject what it needs in the constructor.                                                                                                                                           |
 | 6   | Errors are best effort: every remaining hook still runs; `dispose()` then rejects with an `AggregateError` naming each failing `Class.method`; an HMR eject only warns and keeps reloading.                                           |
 | 7   | No `@MoostDispose` method but `[Symbol.asyncDispose]()` (preferred) or `[Symbol.dispose]()` present → that is used as the single priority-0 hook.                                                                                     |
 | 8   | `dispose()` does NOT clear DI registries or metadata caches — it only runs teardown.                                                                                                                                                  |
+
+`app.addDisposeHook(fn, { priority? })` — programmatic `@MoostDispose` for what the app itself owns (a timer / sweep / consumer started in an init hook); `fn(app)` runs in the SAME pass as instance hooks (after adapters), ascending `priority` (instance hooks first on ties), awaited, failures collected into the `AggregateError` as `Moost.addDisposeHook(<fn name>)`. Registered after `dispose()` was called → never runs.
+
+### Background work (`app.runDetached`)
+
+```ts
+void this.app.runDetached('welcome-mail', () => this.mailer.sendWelcome(email)) // inject `app: Moost`
+const timer = setInterval(() => void app.runDetached('sweep', sweepExpired), 60_000)
+app.addDisposeHook(() => clearInterval(timer))
+```
+
+`runDetached(name, fn, { logger? })`: fresh ROOT event (kind `detachedKind`, `eventTypeKey` = `'DETACHED'`, NOT a child of the calling request → no request composables, pass data via closure), own `FOR_EVENT` DI scope released when `fn` settles, app as controller context (`useControllerContext().instantiate()` works), otel span `DETACHED <name>`; `dispose()` awaits runs in flight after the adapters stop, before the dispose hooks (runs started later are not awaited). Resolves `fn`'s result or `undefined` on failure — logged (default logger: `app.getLogger(name)`), NEVER rejects. Not a job queue (no persistence/retry/restart recovery) — durable jobs belong in a queue; stop its consumer via `addDisposeHook`.
 
 Key imports: `import { MoostDispose, disposeInstances } from 'moost'`. `disposeInstances(instances, { logger?, onError?: 'warn' \| 'throw' })` → `Promise<{ hooks, errors, disposed }>` runs the same hooks for a set of objects you own (what the vite plugin calls on ejected instances).
 
@@ -170,6 +183,8 @@ Key imports: `import { MoostDispose, disposeInstances } from 'moost'`. `disposeI
 | `registerControllers(...ctrls)`                   | classes / instances / `[prefix, ctrl]` tuples                                                                                   |
 | `init(): Promise<void>`                           | must be awaited                                                                                                                 |
 | `dispose(): Promise<void>`                        | graceful shutdown — adapters' `onDispose`, then `@MoostDispose` hooks; idempotent. See [App dispose](#app-dispose-moostdispose) |
+| `addDisposeHook(fn, { priority? })`               | programmatic dispose hook (same pass as `@MoostDispose`). See [App dispose](#app-dispose-moostdispose)                           |
+| `runDetached(name, fn, { logger? })`              | run `fn` as its own root `DETACHED` event with its own DI scope; never rejects. See [Background work](#background-work-apprundetached) |
 | `applyGlobalInterceptors(...items)`               | class ctors, `TInterceptorDef`, or `TInterceptorData`                                                                           |
 | `applyGlobalPipes(...pipes)`                      | `TPipeFn` or `TPipeData`                                                                                                        |
 | `setProvideRegistry(reg)`                         | merges DI providers                                                                                                             |
@@ -194,6 +209,24 @@ Nest a sub-controller; its prefix is appended to the parent's. `ctrl` may be `()
 @ImportController('v2', UsersControllerV2)
 class AppController {}
 ```
+
+## Locale and translation
+
+Moost ships NO i18n runtime: locale per event + codes on errors + one translate hook; the app brings vue-i18n / i18next / a map.
+
+```ts
+import { Locale, setTranslator, useLocale, useTranslate } from 'moost'
+
+useLocale().get() / .set('de') / .set(() => pick())   // any event kind; children inherit
+@Locale() locale: string | undefined                   // param resolver = useLocale().get()
+setTranslator((text, params, { locale, event }) => catalog[locale ?? '']?.[text]) // process-wide; undefined = keep text; only applies where code calls useTranslate() (moost packages don't yet — opt-in)
+const t = useTranslate(ctx?); t('Name taken', { name }) // translator result or text unchanged (identity when none registered)
+getTranslator()                                          // undefined when none registered → skip per-locale work
+```
+
+- HTTP locale policy: `new MoostHttp({ resolveLocale: () => … useAcceptLanguage().negotiate(['en','de'], 'en') })` — lazy, once per request; `negotiate` adds `Vary: Accept-Language`. `?lang` / cookie / profile precedence is APP policy.
+- `text` = source text as message id (gettext style) or a code (`WF_EXPIRED`, `NAME_TAKEN`); never interpolated by moost.
+- Error bodies: translate in ONE place — `new MoostHttp({ transformErrorBody: (body, err, ctx) => ({ ...body, message: useTranslate(ctx)(body.code ?? body.message, body.params) }) })` (also sees the router 404) or a `CATCH_ERROR` interceptor.
 
 ## Patterns
 

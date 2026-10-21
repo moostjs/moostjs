@@ -17,11 +17,12 @@ const BEFORE_STAGE = { 'moost.interceptor.stage': 'before' }
 const AFTER_STAGE = { 'moost.interceptor.stage': 'after' }
 const ON_ERROR_STAGE = { 'moost.interceptor.stage': 'onError' }
 
-/** A registered after/onError hook of one event. */
-interface TRegisteredHook<F> {
+/** The after/error hooks of one interceptor def, registered for one event. */
+interface TRegisteredHooks {
   /** Pre-computed span name for ci.with(). */
   spanName: string
-  fn: F
+  after?: TInterceptorAfterFn
+  error?: TInterceptorErrorFn
 }
 
 /**
@@ -31,12 +32,16 @@ interface TRegisteredHook<F> {
 export class InterceptorHandler {
   // Fields are `declare`d and assigned in the constructor — one plain store each, instead of
   // the per-field `defineProperty` helper class-field emit costs on every event.
-  // Lazy — undefined until a def with after/error is registered
-  declare protected after: TRegisteredHook<TInterceptorAfterFn>[] | undefined
-
-  declare protected onError: TRegisteredHook<TInterceptorErrorFn>[] | undefined
+  // Lazy — undefined until a def with after/error is registered. Innermost (registered last) first.
+  declare protected hooks: TRegisteredHooks[] | undefined
 
   declare public response?: unknown
+
+  /**
+   * After {@link fireAfter}: whether the final value is raised (thrown) rather than returned.
+   * Set by a hook that throws; cleared by a hook replying a non-Error value.
+   */
+  declare public raised: boolean
 
   declare public responseOverwritten: boolean
 
@@ -46,9 +51,9 @@ export class InterceptorHandler {
 
   constructor(handlers: TInterceptorEntry[]) {
     this.handlers = handlers
-    this.after = undefined
-    this.onError = undefined
+    this.hooks = undefined
     this.response = undefined
+    this.raised = false
     this.responseOverwritten = false
     this._boundReplyFn = undefined
   }
@@ -57,6 +62,9 @@ export class InterceptorHandler {
     return (this._boundReplyFn ??= (reply: unknown) => {
       this.response = reply
       this.responseOverwritten = true
+      if (!(reply instanceof Error)) {
+        this.raised = false // a non-Error reply recovers the chain
+      }
     })
   }
 
@@ -64,12 +72,9 @@ export class InterceptorHandler {
     return this.handlers.length
   }
 
-  get countAfter() {
-    return this.after?.length ?? 0
-  }
-
-  get countOnError() {
-    return this.onError?.length ?? 0
+  /** Number of registered interceptors with an after and/or error hook. */
+  get countHooks() {
+    return this.hooks?.length ?? 0
   }
 
   /**
@@ -81,11 +86,8 @@ export class InterceptorHandler {
     entry: TInterceptorEntry,
     ci: ReturnType<typeof getContextInjector<string>>,
   ): PromiseLike<unknown> | undefined {
-    if (def.after) {
-      ;(this.after ??= []).unshift({ spanName: entry.spanName, fn: def.after })
-    }
-    if (def.error) {
-      ;(this.onError ??= []).unshift({ spanName: entry.spanName, fn: def.error })
+    if (def.after || def.error) {
+      ;(this.hooks ??= []).unshift({ spanName: entry.spanName, after: def.after, error: def.error })
     }
     if (def.before) {
       const result = ci
@@ -183,48 +185,90 @@ export class InterceptorHandler {
     }
   }
 
-  fireAfter(response: unknown): unknown {
+  /**
+   * Runs the after/error hooks as ONE chain over the current value, innermost interceptor
+   * first. Each hook sees the current value (the previous hook's reply) and the `original`
+   * value that entered the chain: a raised value or an `Error` runs the hook's `error` fn,
+   * anything else its `after` fn. A hook that throws (anything), or replies with an `Error`,
+   * switches the rest of the chain to error mode; a non-Error reply recovers it.
+   *
+   * `raised` tells whether `response` was thrown (by the handler or a before hook) rather than
+   * returned; read {@link raised} afterwards for the final value's state.
+   */
+  fireAfter(response: unknown, raised = false): unknown {
     this.response = response
-    const isError = response instanceof Error
-    const handlers = isError ? this.onError : this.after
-    if (!handlers) {
-      return this.response
+    this.raised = raised
+    const hooks = this.hooks
+    if (!hooks) {
+      return response
     }
     const ci = getContextInjector<string>()
-    const stage = isError ? ON_ERROR_STAGE : AFTER_STAGE
-    for (let i = 0; i < handlers.length; i++) {
-      const { spanName, fn } = handlers[i]
-      const result = ci
-        ? ci.with(spanName, stage, () => fn(response as Error & unknown, this.getReplyFn()))
-        : fn(response as Error & unknown, this.getReplyFn())
-      if (isThenable(result)) {
-        return this._fireAfterAsync({ ci, handlers, stage, response }, result, i)
+    for (let i = 0; i < hooks.length; i++) {
+      const pending = this.runHook(ci, hooks[i], response)
+      if (pending) {
+        return this._fireAfterAsync(ci, response, pending, i)
       }
     }
     return this.response
   }
 
+  /**
+   * Runs one interceptor's hook for the current value: its `error` fn while the chain is in
+   * error mode (a raised value — even a thrown non-Error — or an `Error`), else its `after` fn.
+   * A sync throw switches the chain to error mode; an async hook's promise is returned for the
+   * caller to await (its rejection switches to error mode there).
+   */
+  private runHook(
+    ci: ReturnType<typeof getContextInjector<string>>,
+    hook: TRegisteredHooks,
+    original: unknown,
+  ): PromiseLike<unknown> | undefined {
+    const value = this.response
+    const isError = this.raised || value instanceof Error
+    const fn = isError ? hook.error : hook.after
+    if (!fn) {
+      return undefined
+    }
+    let result: unknown
+    try {
+      result = ci
+        ? ci.with(hook.spanName, isError ? ON_ERROR_STAGE : AFTER_STAGE, () =>
+            fn(value as Error & unknown, this.getReplyFn(), original),
+          )
+        : fn(value as Error & unknown, this.getReplyFn(), original)
+    } catch (error) {
+      this.raise(error)
+      return undefined
+    }
+    return isThenable(result) ? (result as PromiseLike<unknown>) : undefined
+  }
+
+  /** A hook threw: the error becomes the current value, raised. */
+  private raise(error: unknown) {
+    this.response = error
+    this.raised = true
+  }
+
   private async _fireAfterAsync(
-    ctx: {
-      ci: ReturnType<typeof getContextInjector<string>>
-      handlers: TRegisteredHook<TInterceptorAfterFn | TInterceptorErrorFn>[]
-      stage: Record<string, string>
-      response: unknown
-    },
+    ci: ReturnType<typeof getContextInjector<string>>,
+    original: unknown,
     pending: PromiseLike<unknown>,
     startIndex: number,
   ) {
-    await pending
-    for (let i = startIndex + 1; i < ctx.handlers.length; i++) {
-      const { spanName, fn } = ctx.handlers[i]
-      if (ctx.ci) {
-        await ctx.ci.with(spanName, ctx.stage, () =>
-          fn(ctx.response as Error & unknown, this.getReplyFn()),
-        )
-      } else {
-        await fn(ctx.response as Error & unknown, this.getReplyFn())
+    const hooks = this.hooks as TRegisteredHooks[]
+    let current: PromiseLike<unknown> | undefined = pending
+    for (let i = startIndex + 1; ; i++) {
+      if (current) {
+        try {
+          await current
+        } catch (error) {
+          this.raise(error) // a rejected hook switches the chain to error mode
+        }
       }
+      if (i >= hooks.length) {
+        return this.response
+      }
+      current = this.runHook(ci, hooks[i], original)
     }
-    return this.response
   }
 }

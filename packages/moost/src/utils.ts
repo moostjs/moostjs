@@ -1,8 +1,8 @@
-import { getContextInjector } from '@wooksjs/event-core'
+import { current, getContextInjector } from '@wooksjs/event-core'
 
 import { getInstanceOwnMethods } from './binding/utils'
 import type { TAny, TClassConstructor, TObject } from './common-types'
-import { setInterceptResult, setOvertake } from './composables'
+import { setInterceptOriginal, setInterceptResult, setOvertake } from './composables'
 import type { TInterceptorDef, TInterceptorDefFactory } from './decorators'
 import { InterceptorHandler } from './interceptor-handler'
 import type { TInterceptorEntry } from './interceptor-handler'
@@ -120,9 +120,11 @@ function createClassInterceptorFactory(opts: {
     if (opts.methods.after) {
       const methodName = opts.methods.after
       const resolveArgs = opts.resolvers[methodName]
-      def.after = (response, reply) => {
-        setOvertake(reply)
-        setInterceptResult(response)
+      def.after = (response, reply, original) => {
+        const ctx = current()
+        setOvertake(reply, ctx)
+        setInterceptResult(response, ctx)
+        setInterceptOriginal(original, ctx)
         return callMethod(instance, methodName, resolveArgs)
       }
     }
@@ -130,9 +132,11 @@ function createClassInterceptorFactory(opts: {
     if (opts.methods.error) {
       const methodName = opts.methods.error
       const resolveArgs = opts.resolvers[methodName]
-      def.error = (error, reply) => {
-        setOvertake(reply)
-        setInterceptResult(error)
+      def.error = (error, reply, original) => {
+        const ctx = current()
+        setOvertake(reply, ctx)
+        setInterceptResult(error, ctx)
+        setInterceptOriginal(original, ctx)
         return callMethod(instance, methodName, resolveArgs)
       }
     }

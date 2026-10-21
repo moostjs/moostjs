@@ -1,6 +1,6 @@
 import { createProvideRegistry } from '@prostojs/infact'
 import type { IncomingMessage, ServerResponse } from 'http'
-import type { TWooksHttpOptions } from '@wooksjs/event-http'
+import type { TFetchPeer, TWooksHttpOptions } from '@wooksjs/event-http'
 import {
   createHttpApp,
   HttpError,
@@ -32,24 +32,52 @@ import {
   run,
 } from 'moost'
 import type { ListenOptions } from 'net'
+import { Socket } from 'net'
 
 /** Marks the child context of {@link MoostHttp.invoke}. */
 const invocationKey = globalKey<true>('moost-http.invocation')
 
+/**
+ * Releases of queued (pipelined) responses per connection: one socket 'close' listener per
+ * connection, however many requests are queued on it.
+ */
+const queuedReleases = new WeakMap<Socket, Set<() => void>>()
+
+function releaseQueued(this: Socket) {
+  const releases = queuedReleases.get(this)
+  queuedReleases.delete(this)
+  releases?.forEach((release) => release())
+}
+
 const holdScopeUntilResponseCloses = {
   init: ({ unscope }: { unscope: () => void }) => {
     const ctx = current()
-    if (ctx.hasOwn(invocationKey)) {
-      unscope() // an invoked route answers its caller — its scope ends with the handler
+    const res = ctx.hasOwn(invocationKey) ? undefined : useResponse(ctx).getRawRes(true)
+    const connection = res && !res.closed ? (res.socket ?? res.req?.socket) : undefined
+    if (!res || !(connection instanceof Socket)) {
+      // The scope ends with the handler: an invoked route answers its caller; the client was
+      // already gone; or an in-process request (`fetch()` / `request()`), whose stand-in
+      // request has no network connection and whose response never emits 'close'.
+      unscope()
       return
     }
-    const res = useResponse(ctx).getRawRes(true)
-    if (res.closed) {
-      unscope() // the client was already gone
-    } else {
+    if (res.socket) {
       // 'close' fires once per response and unscope is idempotent: no once() wrapper needed
       res.on('close', unscope)
+      return
     }
+    // A pipelined HTTP/1.1 request: its response gets the socket only once the responses
+    // ahead of it are done — and never emits 'close' if the client disconnects before that.
+    let releases = queuedReleases.get(connection)
+    if (!releases) {
+      queuedReleases.set(connection, (releases = new Set()))
+      connection.once('close', releaseQueued)
+    }
+    releases.add(unscope)
+    res.on('close', () => {
+      releases.delete(unscope)
+      unscope()
+    })
   },
 }
 
@@ -162,10 +190,19 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
    * argument resolution, pipes, validation, and handler execution.
    *
    * When called from within an existing HTTP context (e.g. during SSR),
-   * identity headers (authorization, cookie) are automatically forwarded.
+   * identity headers (authorization, cookie) are automatically forwarded, and the
+   * inner request inherits the caller's client (`@Ip()`, protocol, host) and locale.
+   *
+   * Serving a fetch runtime (Bun, Deno, edge) with no calling request, pass the connection's
+   * `peer` — without it the client address is unknown (`@Ip()` is `''`) and an address-based
+   * `trustProxy` trusts nothing.
+   *
+   * @param request - A Web Standard Request.
+   * @param peer - `remoteAddress` of the connection (the client, or the proxy in front) and
+   *   `encrypted` (TLS; default: the URL scheme).
    */
-  public fetch(request: Request): Promise<Response | null> {
-    return this.httpApp.fetch(request)
+  public fetch(request: Request, peer?: TFetchPeer): Promise<Response | null> {
+    return this.httpApp.fetch(request, peer)
   }
 
   /**

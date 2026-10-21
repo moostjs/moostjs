@@ -2,6 +2,7 @@
 import type { Logger } from '@wooksjs/event-core'
 import { current, getContextInjector, useLogger } from '@wooksjs/event-core'
 
+import { announceHandler } from './announce'
 import { setControllerContext } from './composables'
 import type { TEventScope } from './event-scope'
 import { getEventScope, holdEventScopeLazily } from './event-scope'
@@ -198,7 +199,7 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
             prefix: options.controllerPrefix,
           },
         )
-        ci?.hook(options.handlerType, 'Controller:registered' as 'Handler:routed')
+        announceHandler(ci, options.handlerType)
       }
 
       interceptorHandler = options.getIterceptorHandler() as InterceptorHandler | undefined
@@ -316,39 +317,26 @@ export function defineMoostEventHandler<T>(options: TMoostEventHandlerOptions<T>
 
     // cleanup runs after interceptors, unscopes, runs hooks, then returns or throws.
     function cleanup(): unknown {
-      // fire after interceptors
-      if (interceptorHandler?.countAfter || interceptorHandler?.countOnError) {
-        // remember the raised error so we can detect recovery via reply() in onError phase
-        const raisedResponse = response
-        const afterResult = ci
-          ? ci.with('Interceptors:after', () => interceptorHandler?.fireAfter(response))
-          : interceptorHandler?.fireAfter(response)
-        if (isThenable(afterResult)) {
-          return (afterResult as PromiseLike<unknown>).then(
-            (r) => {
-              response = r
-              if (raise && response !== raisedResponse) {
-                // an error interceptor recovered via reply() — return a clean response
-                raise = false
-              }
-              return finalize()
-            },
-            (error: unknown) => {
-              if (options.logErrors) {
-                getLogger().error(String(error))
-              }
-              throw error
-            },
-          )
-        }
-        response = afterResult
-        if (raise && response !== raisedResponse) {
-          // an error interceptor recovered via reply() — return a clean response
-          raise = false
-        }
+      // fire the after/error chain (see InterceptorHandler.fireAfter): an error a hook raises
+      // reaches the error hooks of the interceptors after it, a non-Error reply recovers
+      const handler = interceptorHandler
+      if (!handler?.countHooks) {
+        return finalize()
       }
-
-      return finalize()
+      const original = response
+      // the chain never rejects: a hook's error becomes its raised value
+      const settle = () => {
+        response = handler.response
+        if (handler.raised && response !== original && options.logErrors) {
+          getLogger().error(String(response)) // raised by an after/error hook (the original was logged)
+        }
+        raise = handler.raised
+        return finalize()
+      }
+      const chain = ci
+        ? ci.with('Interceptors:after', () => handler.fireAfter(original, raise))
+        : handler.fireAfter(original, raise)
+      return isThenable(chain) ? (chain as PromiseLike<unknown>).then(settle) : settle()
     }
 
     function finalize(): unknown {

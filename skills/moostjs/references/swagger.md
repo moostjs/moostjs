@@ -85,7 +85,7 @@ Moost core decorators feed the spec too: `@Label` → `summary`/schema `title`, 
 
 ## Responses
 
-Default success status by method: GET/PUT → 200, POST → 201, DELETE → 204. Forms:
+Default success status (no explicit code) = the runtime's own rule, `getDefaultHttpStatus(method, hasBody)` from `@wooksjs/event-http`: POST with a body → 201, any other method with a body → 200, no body/schema → 204 (up to and including `0.6.53` swagger used its own table: DELETE → 204). Links with no status attach to that default. Forms:
 
 ```ts
 @SwaggerResponse(UserDto)                       // default status, type shorthand

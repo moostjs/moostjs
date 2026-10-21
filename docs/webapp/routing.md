@@ -205,7 +205,7 @@ Query values arrive as strings (or string arrays). Use [pipes](./resolvers) to t
 ::: warning Gotchas for `@Query()`
 - Keys ending in `[]` become arrays: `?tags[]=a&tags[]=b` → `{ 'tags[]': ['a', 'b'] }`.
 - Repeating a plain key (`?q=a&q=b`) triggers an automatic `400 Duplicate key` response.
-- When there are no query parameters at all, `@Query()` resolves to `undefined`, not `{}`.
+- When there are no query parameters at all, `@Query()` resolves to `{}` (it was `undefined` up to and including `0.6.53`).
 :::
 
 ## Handler return values

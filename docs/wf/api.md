@@ -227,8 +227,49 @@ async flow() {
 ```
 
 ::: info
-Must be called from within an HTTP event context so that wooks HTTP composables are available. Routes through `MoostWf.start()` and `resume()` internally to preserve DI scope cleanup.
+Must be called from within an HTTP event context so that wooks HTTP composables are available. `allow`/`block` are judged on the flow ID `resolveSchemaId()` resolves. Refusals are thrown as `HttpError`s with a `code` — see [Access control and refusals](/wf/outlets#access-control-and-refusals).
 :::
+
+### `resolveSchemaId(id, opts?)`
+
+Resolves a workflow ID, spelled as a caller would pass it to `start()`, to the ID of the registered flow `start()` would run — also what a paused run stores as `state.schemaId`. Returns `undefined` when no flow matches.
+
+```ts
+resolveSchemaId(id: string, opts?: { eventContext?: EventContext }): Promise<string | undefined>
+```
+
+```ts
+await wf.resolveSchemaId('auth/login')  // → '/auth/login' (moost registers flows with a leading slash)
+await wf.resolveSchemaId('user/42')     // → '/user/:id'
+await wf.resolveSchemaId('missing')     // → undefined
+```
+
+To compare a stored `state.schemaId` with your own IDs, normalize both with `normalizeWfId()` (exported from `@moostjs/event-wf`; strips leading slashes).
+
+### `mint(options)`
+
+Starts a workflow **without a request** and persists its first pause exactly as the outlet trigger would, returning a token the trigger resumes — for server-initiated flows: invites, approval links, scheduled reminders.
+
+```ts
+mint(options: WfMintTokenOptions): Promise<WfMintTokenResult>
+```
+
+| Option | Description |
+|--------|-------------|
+| `wfid` | Workflow to start |
+| `context` | Initial workflow context (default `{}`) |
+| `input` | Input for the first step |
+| `state` | The same `state` config as the trigger that will resume the token |
+| `ttl` | Token lifetime in milliseconds (`0` = never expires) |
+| `meta` | Extra `state.meta` to persist |
+| `eventContext` | Parent event context for the run |
+
+Returns `{ token, inputRequired, expiresAt, output }`. `token` is `undefined` when the flow did not pause. No outlet is called — deliver the token yourself. `allow`/`block` are not checked when minting (the server chooses the flow); they apply when the token is resumed.
+
+```ts
+const { token } = await wf.mint({ wfid: 'invite', context: { email }, state, ttl: 7 * 86_400_000 })
+if (token) await sendInvite(email, `https://app.example/invite?wfs=${token}`)
+```
 
 ### `getWfApp()`
 
@@ -237,6 +278,12 @@ Returns the underlying `WooksWf` instance for advanced low-level access.
 ```ts
 getWfApp(): WooksWf<T, IR>
 ```
+
+Runs started directly on it (`getWfApp().start()`, `createOutletHandler(wf.getWfApp())`, `mintWfToken(wf.getWfApp(), …)`) release their DI scope like runs started through `MoostWf` — the adapter replaces the instance's `start` / `resume` with versions that do it. So create an outlet handler from a `WooksWf` you pass in **after** `new MoostWf(wooksWf)` (one made before captured the original methods), or use `wf.handleOutlet()`. A `cleanup` you pass in the run options runs before the scope is released, so it can still resolve `FOR_EVENT` instances.
+
+::: warning Version note
+Up to and including `0.6.53`, only `MoostWf.start()` / `resume()` released a run's `FOR_EVENT` DI scope; a run started on `getWfApp()` left it registered.
+:::
 
 ## Decorators (Outlets)
 
@@ -378,18 +425,23 @@ Configuration for `handleOutlet()`:
 interface WfOutletTriggerConfig {
   allow?: string[]
   block?: string[]
-  state: WfStateStrategy | { strategies: Record<string, WfStateStrategy>; default: string | ((wfid: string) => string) }
+  state: WfStateStrategy | { strategies: Record<string, WfStateStrategy>; default: string | ((wfid: string, flowId: string) => string) }
   outlets: WfOutlet[]
   token?: WfOutletTokenConfig
   wfidName?: string
-  initialContext?: (body: Record<string, unknown> | undefined, wfid: string) => unknown
+  restoreOnError?: boolean | ((error: unknown) => boolean)
+  maxRestores?: number
+  initialContext?: (body: Record<string, unknown> | undefined, wfid: string, flowId: string) => unknown
   onFinished?: (ctx: { context: unknown; schemaId: string }) => unknown
+  around?: (run: () => Promise<unknown>) => Promise<unknown>
+  beforePersist?: (state: WfState, pause: WfPauseRequest) => void | Promise<void>
+  renderEnvelope?: (envelope: unknown, info: WfEnvelopeInfo) => unknown | Promise<unknown>
 }
 ```
 
 ### `WfOutletTriggerDeps`
 
-The `{ start, resume }` dependency callbacks consumed by [`handleWfOutletRequest()`](#handlewfoutletrequest-config-deps). Provided automatically by `MoostWf.handleOutlet()` / `createOutletHandler()` — implement it only for custom trigger wiring.
+The `{ start, resume, resolveSchemaId? }` dependency callbacks consumed by [`handleWfOutletRequest()`](#handlewfoutletrequest-config-deps). Provided automatically by `MoostWf.handleOutlet()` / `createOutletHandler()` — implement it only for custom trigger wiring.
 
 ### `WfOutletTokenConfig`
 

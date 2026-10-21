@@ -1,4 +1,4 @@
-import { Body, Delete, Get, Post, Put, Query } from '@moostjs/event-http'
+import { Body, Delete, Get, Patch, Post, Put, Query } from '@moostjs/event-http'
 import { Controller, Description, Id, Label, Optional, Param } from 'moost'
 
 import {
@@ -274,6 +274,18 @@ export class StatusCodeController {
   @SwaggerResponse({ type: 'string' })
   deleteHandler() {
     return 'deleted'
+  }
+
+  @Patch('patch')
+  @SwaggerResponse({ type: 'string' })
+  patchHandler() {
+    return 'patched'
+  }
+
+  @Post('create')
+  @SwaggerResponse({ type: 'string' })
+  createHandler() {
+    return 'created'
   }
 }
 

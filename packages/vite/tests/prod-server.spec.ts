@@ -472,3 +472,89 @@ describe('createSSRServer (production) — SSR pages', () => {
     expect(asset.headers['cache-control']).toBe('public, max-age=31536000, immutable')
   })
 })
+
+// ─── `prefix` = API mount: unmatched routes under it answer Moost's 404 ───
+
+describe('createSSRServer (production) — prefix is an API mount', () => {
+  it('answers an unmatched route under the prefix with the JSON 404, not the SPA shell', async () => {
+    const server = await start({ host: '127.0.0.1', port: await freePort(), prefix: '/api' })
+    const base = `http://127.0.0.1:${address(server).port}`
+
+    const missing = await fetch(`${base}/api/no-such-route`)
+    expect(missing.status).toBe(404)
+    expect(missing.headers.get('content-type')).toContain('application/json')
+    expect(await missing.json()).toMatchObject({ statusCode: 404 })
+
+    // the mount itself is under the prefix too
+    const mount = await fetch(`${base}/api`)
+    expect(mount.status).toBe(404)
+
+    // outside the mount: the SPA fallback is unchanged
+    const page = await fetch(`${base}/some/client/route`)
+    expect(page.status).toBe(200)
+    expect(await page.text()).toContain('SPA_SHELL')
+  })
+
+  it('serves a static file under a prefix mount (GET and HEAD), the JSON 404 for a missing one', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'moost-prod-mount-'))
+    try {
+      writeFileSync(join(dir, 'index.html'), '<html>SPA_SHELL</html>')
+      mkdirSync(join(dir, '.well-known'))
+      writeFileSync(join(dir, '.well-known', 'security.txt'), 'Contact: mailto:sec@example.com')
+      const app = await createSSRServer({
+        clientDir: dir,
+        entry: () => new MoostHttp().listen(),
+        prefix: ['/api', '/.well-known'],
+      })
+      const server = await app.listen(await freePort(), '127.0.0.1')
+      started.push(server)
+      const base = `http://127.0.0.1:${address(server).port}`
+
+      const file = await fetch(`${base}/.well-known/security.txt`)
+      expect(file.status).toBe(200)
+      expect(await file.text()).toBe('Contact: mailto:sec@example.com')
+
+      const head = await fetch(`${base}/.well-known/security.txt`, { method: 'HEAD' })
+      expect(head.status).toBe(200)
+
+      const missing = await fetch(`${base}/.well-known/missing.txt`)
+      expect(missing.status).toBe(404)
+      expect(await missing.json()).toMatchObject({ statusCode: 404 })
+
+      // only GET/HEAD read static files; other methods get the 404 straight away
+      const post = await fetch(`${base}/.well-known/security.txt`, { method: 'POST' })
+      expect(post.status).toBe(404)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('opts out with prefixFallthrough: unmatched routes under the prefix reach the SPA fallback', async () => {
+    const server = await start({
+      host: '127.0.0.1',
+      port: await freePort(),
+      prefix: '/api',
+      prefixFallthrough: true,
+    })
+    const res = await fetch(`http://127.0.0.1:${address(server).port}/api/no-such-route`)
+    expect(res.status).toBe(200)
+    expect(await res.text()).toContain('SPA_SHELL')
+  })
+
+  it('bakes prefixFallthrough into the generated server', () => {
+    expect(serverDefines({ prefix: '/api' }).__MOOST_PREFIX_FALLTHROUGH__).toBe('false')
+    expect(
+      serverDefines({ prefix: '/api', prefixFallthrough: true }).__MOOST_PREFIX_FALLTHROUGH__,
+    ).toBe('true')
+  })
+})
+
+describe('@moostjs/vite package manifest', () => {
+  it('ships sirv as a regular dependency (the SPA/SSR prod server always imports it)', () => {
+    const pkg = JSON.parse(
+      readFileSync(fileURLToPath(new URL('../package.json', import.meta.url)), 'utf8'),
+    ) as Record<string, Record<string, string> | undefined>
+    expect(pkg.dependencies?.sirv).toBeDefined()
+    expect(pkg.peerDependencies?.sirv).toBeUndefined()
+  })
+})

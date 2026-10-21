@@ -165,9 +165,12 @@ describe('MoostWf adapter — strategy + eventContext forwarding', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .mockImplementation(async () => ({ finished: true }) as any)
 
+    const resolveSpy = vi.spyOn(wf, 'resolveSchemaId').mockResolvedValue('/schemaX')
+
     triggerMock.mockImplementation(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       async (_cfg: any, deps: any) => {
+        expect(await deps.resolveSchemaId('schemaX', { eventContext: 'ctx' })).toBe('/schemaX')
         const opts = { input: 'i', strategy: { name: 'kv' } }
         await deps.start('schemaX', { foo: 1 }, opts)
         await deps.resume({ schemaId: 'schemaX', context: { foo: 2 }, indexes: [0] }, opts)
@@ -187,6 +190,8 @@ describe('MoostWf adapter — strategy + eventContext forwarding', () => {
       { schemaId: 'schemaX', context: { foo: 2 }, indexes: [0] },
       expect.objectContaining({ input: 'i', strategy: { name: 'kv' } }),
     )
+    // allow/block are judged on the registered flow id: the deps resolve it through MoostWf
+    expect(resolveSpy).toHaveBeenCalledWith('schemaX', { eventContext: 'ctx' })
   })
 })
 

@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Server } from 'node:net'
 import type { TCacheControlOptions, TPrecompressedOptions, TSpaShell } from './prod-static'
 import {
+  apiMountNoMatch,
   createStaticHandler,
   loadSpaShell,
   presetHeader,
@@ -34,10 +35,18 @@ export interface TSSRServerOptions {
   /**
    * Override: URL mount(s) for Moost routes (e.g., '/api' or ['/api', '/.well-known']).
    * Requests outside every mount skip the Moost router (optimization/guard).
+   * A prefix is an API mount: an unmatched route under it gets Moost's own
+   * 404 (JSON), never the SPA shell or an SSR page (see `prefixFallthrough`).
    * When omitted (and not baked by the plugin), every request enters Moost first
    * and unmatched routes fall through to static/SSR — same as dev.
    */
   prefix?: string | string[]
+  /**
+   * Override: let unmatched routes under `prefix` fall through to static files
+   * and the SPA/SSR page instead of answering Moost's 404.
+   * Default: baked from the plugin's `prefixFallthrough` option (`false`).
+   */
+  prefixFallthrough?: boolean
   /** Override: port number (default: process.env.PORT || 3000) */
   port?: number
   /** Override: bind address, e.g. '127.0.0.1' (default: process.env.HOST, else all interfaces) */
@@ -96,6 +105,7 @@ export interface TSSRServer {
 declare const __MOOST_ENTRY__: string
 declare const __MOOST_SSR_ENTRY__: string
 declare const __MOOST_PREFIX__: string | string[] | null
+declare const __MOOST_PREFIX_FALLTHROUGH__: boolean
 declare const __MOOST_SSR_OUTLET__: string
 declare const __MOOST_SSR_STATE__: string
 declare const __MOOST_SSR_HEAD__: string
@@ -224,6 +234,8 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   const prefixes = normalizePrefixes(
     (opts.prefix as string | string[] | undefined) ?? __MOOST_PREFIX__,
   )
+  const prefixFallthrough =
+    (opts.prefixFallthrough as boolean | undefined) ?? __MOOST_PREFIX_FALLTHROUGH__ ?? false
   const ssrForwarding =
     (opts.ssrFetchForwarding as boolean | undefined) ?? __MOOST_SSR_FORWARDING__ ?? true
   const variants = resolvePrecompressed(
@@ -255,10 +267,15 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   let captured = false
   const origListen = MoostHttp.prototype.listen
   MoostHttp.prototype.listen = function (...args: any[]) {
-    // No-match falls through to static/SSR — same contract as the dev
-    // middleware's onNoMatch → next(). serveStatic is assigned below, before
-    // any request can reach this callback.
-    moostHandler = this.getServerCb((req, res) => serveStatic(req, res))
+    // A route miss: under an API mount, a static file (GET/HEAD) or Moost's own 404 — never
+    // the SPA/SSR page; otherwise it falls through to static/SSR, the same contract as the
+    // dev middleware's onNoMatch → next(). serveStatic is assigned below, before any request
+    // can reach this callback.
+    moostHandler = this.getServerCb(
+      prefixes && !prefixFallthrough
+        ? apiMountNoMatch((req, res, miss) => serveStatic(req, res, miss), this.getServerCb())
+        : (req, res) => serveStatic(req, res),
+    )
     moostHttpRef.instance = this
     captured = true
     setTimeout(() => args.filter((a: any) => typeof a === 'function').forEach((a: any) => a()), 1)
@@ -362,8 +379,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
           }
 
           // 2. Moost first — gated to the configured mounts when prefix is set
-          //    (pure fast path); unmatched routes inside Moost fall through to
-          //    serveStatic via the no-match callback.
+          //    (pure fast path); a route miss goes to the no-match callback.
           if (moostHandler && (!prefixes || matchesPrefix(url, prefixes))) {
             moostHandler(req, res)
             return

@@ -33,6 +33,25 @@ before (can reply() to short-circuit)
 
 If no `onError` calls `reply()`, the error is re-thrown.
 
+### After/error chain
+
+The after phase is ONE chain over the **current value**, innermost interceptor first:
+
+- each hook gets the current value — the handler result as replaced by the hooks that ran before it (`reply()`), not the original;
+- current value is an `Error` → the interceptor's `error` hook runs, otherwise its `after` hook;
+- an `after`/`error` hook that **throws**, or `reply()`s an `Error`, switches the rest of the chain to error hooks (the thrown error is raised unless a later hook recovers);
+- a non-Error `reply()` recovers the chain — later interceptors run their `after` hooks with it;
+- every hook gets the value that entered the chain as 3rd arg `original` (class-based: `useInterceptOriginal()`) — for loggers/tracing that need the raw handler result.
+
+Consequence: an error raised in an `after` hook reaches only the error hooks of interceptors that run AFTER it in the chain — those with a LOWER priority value (outer). A `CATCH_ERROR` interceptor sees errors from `after` hooks registered at `AFTER_ALL` (they run first), not from `INTERCEPTOR`-level ones. Up to and including `0.6.53` every hook saw the original value and an error thrown in an after hook skipped all error hooks.
+
+Migration (behaviour changed after `0.6.53`):
+
+- an OUTER error-only hook (logger/audit) no longer sees an error an inner `CATCH_ERROR` hook recovered with a non-Error reply — its `after` hook gets the recovered body instead → loggers read `original` (`useInterceptOriginal()`) in `after` too (`if (original instanceof Error) …`);
+- an OUTER `after` envelope (`reply({ data: response })`) now also wraps error bodies produced by `CATCH_ERROR` → skip when `original instanceof Error`;
+- `reply(new HttpError(...))` from an error hook after a handler THROW is now thrown (was returned): same HTTP output, CLI/WF adapters see a throw;
+- a hook throwing a non-Error also switches to error hooks (routing = `raised || value instanceof Error`).
+
 ## @Intercept
 
 ```ts
@@ -61,7 +80,7 @@ app.applyGlobalInterceptors(errorHandler, authGuard, cliHelpInterceptor())
 
 ## Functional API
 
-A `TInterceptorDef` (`import type { TInterceptorDef } from 'moost'`) is a plain object with up to three hooks plus an optional `priority` and `_name`. Hook signatures: `before(reply)`, `after(response, reply)`, `error(error, reply)` — each `void | Promise<void>`; `reply(value)` short-circuits or replaces the response.
+A `TInterceptorDef` (`import type { TInterceptorDef } from 'moost'`) is a plain object with up to three hooks plus an optional `priority` and `_name`. Hook signatures: `before(reply)`, `after(response, reply, original)`, `error(error, reply, original)` — each `void | Promise<void>`; `reply(value)` short-circuits or replaces the response; `response`/`error` is the chain's current value, `original` the value that entered it (see [After/error chain](#after-error-chain)).
 
 ### Helper factories (from `moost`)
 
@@ -91,10 +110,10 @@ class MyInterceptor {
 ```
 
 - `@Overtake()` param decorator — injects the `reply` function.
-- `@Response()` param decorator — injects the handler result (in `@After`) or the Error (in `@OnError`).
+- `@Response()` param decorator — injects the chain's current value: the response (in `@After`) or the Error (in `@OnError`), as replaced by earlier hooks. `useInterceptOriginal()` returns the value that entered the chain.
 - `@Interceptor` auto-adds `@Injectable`.
 
-Composable equivalents (what the decorators read): `useOvertake()` returns the reply fn (`TOvertakeFn`); `useInterceptResult()` returns the current handler result/error. Their `setOvertake`/`setInterceptResult` counterparts are exported for adapters that drive the interceptor chain manually — application code never calls them.
+Composable equivalents (what the decorators read): `useOvertake()` returns the reply fn (`TOvertakeFn`); `useInterceptResult()` returns the chain's current value; `useInterceptOriginal()` the value that entered the chain. Their `setOvertake`/`setInterceptResult`/`setInterceptOriginal` counterparts are exported for adapters that drive the interceptor chain manually — application code never calls them.
 
 ## useControllerContext
 
@@ -164,7 +183,8 @@ class RoleGuard {
 
 - `@Interceptor` auto-adds `@Injectable` — don't double-decorate.
 - `reply()` in `before` skips the handler entirely.
-- `after` receives the raw response; `onError` receives the `Error`.
+- `after` receives the current (possibly replaced) response; `onError` receives the current `Error`; both get the original value as 3rd arg.
+- An error thrown in an `after` hook goes to the `error` hooks of the interceptors that run after it (lower priority value), never to ones that already ran — put an after hook that may throw (e.g. one that runs a workflow) at `AFTER_ALL` so `CATCH_ERROR` interceptors see its errors.
 - `after` / `onError` are LIFO — the interceptor whose `before` ran last (highest priority value) runs its `after`/`onError` hook first.
 - The `priority` arg on `@Intercept()` overrides the class's own priority.
 - Global interceptors also run for not-found handlers via `getGlobalInterceptorHandler()`.
@@ -175,7 +195,8 @@ class RoleGuard {
 ```ts
 import { Intercept, Interceptor, Before, After, OnError, Overtake, Response,
          defineBeforeInterceptor, defineAfterInterceptor, defineErrorInterceptor,
-         defineInterceptor, TInterceptorPriority, useControllerContext } from 'moost'
+         defineInterceptor, TInterceptorPriority, useControllerContext,
+         useInterceptOriginal } from 'moost'
 import type { TInterceptorDef, TOvertakeFn } from 'moost'
 import { HttpError } from '@moostjs/event-http'
 import { useHeaders } from '@wooksjs/event-http'

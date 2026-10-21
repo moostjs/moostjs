@@ -11,6 +11,7 @@ import {
   withControllerContext,
 } from './event-scope'
 import { getMoostInfact } from './metadata/infact'
+import { scopes } from './tests/fake-route.artifacts'
 
 const testLogger = { info() {}, warn() {}, error() {}, debug() {} }
 
@@ -24,10 +25,6 @@ class SourceController {
   check() {
     return useControllerContext().getController()
   }
-}
-
-function scopes() {
-  return (getMoostInfact() as unknown as { scopes: Map<string, unknown> }).scopes
 }
 
 /** Runs `fn` like a moost handler: the event's own DI scope registered for its duration. */

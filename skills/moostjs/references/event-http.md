@@ -46,12 +46,14 @@ new MoostHttp(wooksHttpOptions)       // forwarded to createHttpApp (incl. `comp
 new MoostHttp(existingWooksHttp)      // reuse an instance
 ```
 
+App-level wooks options pass straight through: `trustProxy` (`false` default | hops | IP/CIDR list | `(addr, hop) => boolean` — drives `@Ip()`, `protocol()`, `host()`; see [http-request.md](http-request.md#ip--iplist)), `proxyHeaders` (`'x-forwarded'` | `'forwarded'`), `transformErrorBody(body, error, ctx)` (every error body incl. router 404 — the place to translate by `body.code`), `resolveLocale()` (locale policy for `useLocale()` / `@Locale()`). Re-exported types: `TTrustProxy`, `TTrustProxyFn`, `TProxyHeaders`, `TForwardedInfo`, `TFetchPeer`, `TTransformErrorBody`, `THttpErrorBody`; helpers `useAcceptLanguage`, `DEFAULT_HTTP_STATUS`, `getDefaultHttpStatus`.
+
 | Method | Returns | Notes |
 |---|---|---|
 | `listen(port?, ...)` | `Promise<void>` | Node `server.listen` overloads |
 | `getHttpApp()` | `WooksHttp` | underlying engine |
 | `getServerCb(onNoMatch?)` | `RequestListener` | for custom HTTP/HTTPS servers; with `onNoMatch(req, res)` = middleware mode: an unmatched request goes to `onNoMatch` BEFORE any Moost event starts (no interceptors/DI scope/tracing; composables unavailable inside it — use raw `req`/`res`) |
-| `fetch(request)` | `Promise<Response \| null>` | in-process route invocation (SSR); `null` = no route, decided before any event starts, body left unread |
+| `fetch(request, peer?)` | `Promise<Response \| null>` | in-process route invocation (SSR) / fetch-runtime entry (Bun, Deno, edge); `null` = no route, decided before any event starts, body left unread; `peer: TFetchPeer = { remoteAddress?, encrypted? }` — the connection's peer for a fetch runtime (without it and outside a calling request the client is UNKNOWN: `@Ip()` = `''`, list/predicate `trustProxy` trusts nothing); inside a request it inherits the caller's client + locale |
 | `request(input, init?)` | `Promise<Response \| null>` | convenience fetch; relative paths prefixed with `http://localhost` |
 | `invoke(method, path, { body?, rawBody?, contentType?, isolate?, prepare? })` | `Promise<R>` | run another route's full pipeline INSIDE the current request; resolves to the handler's value / rejects with its error (guard `reply(err)` too); 404 `HttpError` when no route. See gotcha 9 |
 | `withHttpContext(req, res, fn)` | `Promise<{ result, response }>` | run `fn` inside an HTTP context seeded from a real `(req, res)`, no route dispatch — nested `fetch()` inherits identity; ≥ 0.7.20 wooks (see [Local fetch / SSR](#local-fetch--ssr)) |

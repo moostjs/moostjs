@@ -188,7 +188,10 @@ export function Cookie(name: string) {
 }
 
 /**
- * Get Query Item value or the whole parsed Query as an object
+ * Get Query Item value or the whole parsed Query as an object.
+ *
+ * Without `name`, resolves the parsed query — `{}` when the request has no query string.
+ * With `name`, resolves that item's value, or `undefined` when it is absent.
  * @decorator
  * @param name - query item name (optional)
  * @paramType string | object
@@ -206,8 +209,7 @@ export function Query(name?: string): ParameterDecorator {
         const value = p.get(name)
         return value === null ? undefined : value
       }
-      const json = toJson() as TObject
-      return Object.keys(json).length > 0 ? json : undefined
+      return toJson() as TObject
     }, _name),
   )
 }
@@ -259,7 +261,18 @@ export function ReqId() {
 }
 
 /**
- * Get Request IP Address
+ * Get the client IP address.
+ *
+ * Without arguments it follows the app's `trustProxy` setting (`new MoostHttp({ trustProxy })`):
+ * the socket peer when no proxy is trusted (the default), else the right-most untrusted
+ * `X-Forwarded-For` / `Forwarded` hop. IPv4-mapped addresses are returned as plain IPv4;
+ * `''` when the client is unknown (an in-process `fetch()` without a peer, a malformed
+ * forwarding entry from a trusted proxy).
+ *
+ * @param opts - **Deprecated:** `{ trustProxy: true }` trusts exactly ONE proxy hop (the
+ *   right-most `X-Forwarded-For` entry, no longer the forgeable left-most one);
+ *   `{ trustProxy: false }` returns the socket peer. Configure `trustProxy` on `MoostHttp`
+ *   instead and use `@Ip()`.
  * @decorator
  * @paramType string
  */
@@ -268,9 +281,10 @@ export function Ip(opts?: { trustProxy: boolean }) {
 }
 
 /**
- * Get Request IP Address list
+ * Get the raw address list: the socket peer and every `X-Forwarded-For` entry, unvalidated
+ * (client-forgeable — use `@Ip()` for the client address).
  * @decorator
- * @paramType string[]
+ * @paramType { remoteIp: string, forwarded: string[] }
  */
 export function IpList() {
   return Resolve(() => useRequest().getIpList(), 'ipList')

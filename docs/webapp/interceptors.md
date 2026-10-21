@@ -107,6 +107,8 @@ Each helper uses a sensible default:
 
 ::: warning Unwind order
 Only the **before** hooks run in ascending priority order. **After/error** hooks unwind in reverse (onion model): the after hook of a higher-priority interceptor runs *closer to the handler*, so a `BEFORE_ALL` interceptor's after hook fires last — wrapping everything else.
+
+After and error hooks form one chain over the current response: each hook sees what the previous one replied, an after hook that throws hands its error to the error hooks of the interceptors that run after it, and a non-Error reply in an error hook recovers. See [The after/error chain](/moost/interceptors#the-after-error-chain).
 :::
 
 ## Applying interceptors

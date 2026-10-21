@@ -113,20 +113,47 @@ async flow() {
 
 It routes through `MoostWf.start()` and `resume()` internally, so all Moost DI, interceptors, and pipes work normally in your workflow steps.
 
+### Access control and refusals
+
+`allow` and `block` are enforced when a workflow is **started and when it is resumed**, and they are judged on the registered flow ID the request resolves to (`MoostWf.resolveSchemaId()`), not on how the caller spelled `wfid`: `block: ['admin']` also refuses `'/admin'` or `'adm%69n'`. An `allow` entry must equal the registered ID (for a parametric flow, its pattern). `allow: []` admits nothing — omit `allow` for no restriction. A refused resume answers `403` and does not consume the token.
+
+The trigger **throws** its refusals as `HttpError`s with a `code` and an English `message`, so they reach your error interceptors and can be translated by code:
+
+| `code` | Status | When |
+|---|---|---|
+| `WF_MISSING` | 400 | neither `wfs` nor `wfid` was sent |
+| `WF_INVALID` | 400 | `wfid` is not a valid workflow ID |
+| `WF_INVALID_TOKEN` | 410 | the token is malformed or names no configured strategy |
+| `WF_EXPIRED` | 410 | the token's state is gone: expired, already used, or never existed |
+| `WF_FORBIDDEN` | 403 | `allow` / `block` refuses the flow (`params.reason`: `'not-allowed'` or `'blocked'`) |
+| `WF_NOT_FOUND` | 404 | with `allow`/`block` set, `wfid` resolves to no flow |
+| `WF_UNKNOWN_OUTLET` | 500 | a step paused on an outlet the trigger does not have |
+
+The table is exported as `WF_TRIGGER_ERRORS` (type `WfTriggerErrorCode`) from `@moostjs/event-wf`. Clients reading `body.message ?? body.error` work with old and new servers.
+
+::: warning Version note
+Up to and including `0.6.53` (wooks `0.7.x`), refusals were *returned* as `{ error: '…' }` bodies (bypassing error interceptors), `allow` / `block` were not checked on resume, and `allow: []` allowed every workflow.
+:::
+
 ### Configuration
 
 The full `WfOutletTriggerConfig` interface:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `allow` | `string[]` | Whitelist of workflow IDs that can be started. Empty = all allowed |
-| `block` | `string[]` | Blacklist of workflow IDs (checked after `allow`) |
-| `state` | `WfStateStrategy \| { strategies: Record<string, WfStateStrategy>, default: string \| ((wfid) => string) }` | State persistence strategy (required). See [State Strategies](#state-strategies) below. |
+| `allow` | `string[]` | Whitelist of workflow IDs that can be started **or resumed**, matched against the registered flow ID (the pattern for a parametric flow). Omitted = no restriction; **`[]` = nothing allowed** |
+| `block` | `string[]` | Blacklist of workflow IDs (checked after `allow`), on start and resume |
+| `state` | `WfStateStrategy \| { strategies: Record<string, WfStateStrategy>, default: string \| ((wfid, flowId) => string) }` | State persistence strategy (required). See [State Strategies](#state-strategies) below. |
 | `outlets` | `WfOutlet[]` | Registered delivery channels (required) |
 | `token` | `WfOutletTokenConfig` | Token read/write/naming configuration |
 | `wfidName` | `string` | Request parameter name for workflow ID (default: `'wfid'`) |
-| `initialContext` | `(body, wfid) => unknown` | Factory for initial workflow context |
+| `initialContext` | `(body, wfid, flowId) => unknown` | Factory for initial workflow context (`flowId` = the registered flow ID `wfid` resolved to) |
 | `onFinished` | `(ctx) => unknown` | Override the completion response |
+| `restoreOnError` | `boolean \| ((error) => boolean)` | Opt-in: when a resume fails after the token was consumed, re-persist the pre-step state under the same token so it can be retried (at most `maxRestores` times). Rolls back what the step wrote to the context |
+| `maxRestores` | `number` | Limit for `restoreOnError` restores of one token |
+| `around` | `(run) => Promise<unknown>` | Wraps the access checks, start/resume, persist and delivery — e.g. `(run) => db.transaction(run)` to put the state row and the steps' writes in one transaction. `run()` may be called again (retrying transactions) |
+| `beforePersist` | `(state, pause) => void \| Promise<void>` | Called with a paused state right before it is persisted; throw to abort |
+| `renderEnvelope` | `(envelope, info) => unknown` | Maps every body the trigger answers with (pause envelope, finished value), per request — the hook for translating workflow forms (read the locale with `useLocale()`) |
 
 ### Token Configuration
 
@@ -147,7 +174,7 @@ this.wf.handleOutlet({
 
 The `wfs` token is a **workflow session credential**, not a per-step single-use token. With `HandleStateStrategy` it is minted on start and reused on every resume (the engine re-persists under the same handle), so a single `wfs` survives browser refresh, bookmark-and-resume, magic-link reopen on a different device, and lost-connection retry across the entire workflow run.
 
-Every resume still calls `strategy.consume(token)` atomically **before** the step runs — but only as a brief mutex against concurrent resumes. Two tabs racing the same `wfs`: one wins, the other gets HTTP **410 Gone** with body `{ error: 'Invalid or expired workflow state' }`. After the winner re-persists under the same handle, the loser's next attempt succeeds.
+Every resume still calls `strategy.consume(token)` atomically **before** the step runs — but only as a brief mutex against concurrent resumes. Two tabs racing the same `wfs`: one wins, the other gets HTTP **410 Gone** (`code: 'WF_EXPIRED'`, `message: 'Invalid or expired workflow state'`). After the winner re-persists under the same handle, the loser's next attempt succeeds.
 
 With `EncapsulatedStateStrategy` the token IS the state — `consume()` is a stateless no-op, and a copy of the token remains valid for the full TTL. Because the ciphertext is a function of the (now-advanced) state, the response token differs from the request token on every state-mutating resume, so clients on this strategy must always read the renewed `wfs` from each response.
 

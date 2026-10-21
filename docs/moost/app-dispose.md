@@ -96,6 +96,67 @@ app, which makes calling it from a re-executing entry safe.
 hand-written `process.once(signal, ...)` loop in the entry, with the dev-server caveat above.
 :::
 
+## Programmatic hooks (`app.addDisposeHook`)
+
+`app.addDisposeHook(fn, { priority? })` is the programmatic counterpart of `@MoostDispose`, for
+resources the app itself owns rather than a class — a timer or a periodic sweep started in an init
+hook, a consumer started from the entry. `fn` receives the app.
+
+```ts
+app.addInitHook(() => {
+  const timer = setInterval(() => void app.runDetached('sweep-sessions', sweepExpiredSessions), 60_000)
+  app.addDisposeHook(() => clearInterval(timer), { priority: -10 }) // stop the sweep before stores close
+})
+```
+
+It runs in the same pass as the `@MoostDispose` instance hooks — after the adapters stopped intake —
+by ascending `priority` (default `0`; instance hooks first on ties), awaited, with the same error
+handling: a failure is logged, the rest still run, and `dispose()` rejects with an `AggregateError`
+naming `Moost.addDisposeHook(<function name>)`. A hook registered after `dispose()` was called does
+not run.
+
+## Background work (`app.runDetached`)
+
+`app.runDetached(name, fn, { logger? })` runs `fn` as its own event, detached from whatever called
+it — for work after the response (sending a mail, refreshing a cache) and for the runs of a periodic
+sweep:
+
+```ts
+@Controller('users')
+class UsersController {
+  constructor(
+    private readonly app: Moost,
+    private readonly users: UsersRepository,
+    private readonly mailer: Mailer,
+  ) {}
+
+  @Post()
+  async create(@Body() user: TNewUser) {
+    const created = await this.users.insert(user)
+    void this.app.runDetached('welcome-mail', () => this.mailer.sendWelcome(created.email))
+    return created // the response does not wait for the mail
+  }
+}
+```
+
+- **A fresh root event**, not a child of the request: nothing in it is tied to the request's
+  lifetime, and request composables (`useRequest`, `useHeaders`) are not available — pass what `fn`
+  needs in its closure. `current().get(eventTypeKey)` is `'DETACHED'` (`detachedKind`).
+- **Its own `FOR_EVENT` DI scope**, released when `fn` settles; the app is the controller context, so
+  `useControllerContext().instantiate(Service)` works.
+- **Never rejects.** The promise resolves with `fn`'s result, or `undefined` when it fails — the
+  failure is logged (`opts.logger`, default the app logger topic `name`). A forgotten `await` cannot
+  crash the process.
+- **Traced** like any event when OpenTelemetry is set up (a `DETACHED <name>` span).
+- **Awaited on shutdown.** `dispose()` waits for the runs in flight after the adapters stopped and
+  before the dispose hooks run, so they finish against resources that are still open. A run
+  started after that point (e.g. by a timer you have not stopped yet) is not waited for — stop
+  timers early with a low-priority `addDisposeHook`.
+
+It is not a job queue: nothing is persisted, retried, or resumed after a restart. Durable background
+jobs belong in a queue (for example Redis-backed); register its consumer's shutdown with
+`addDisposeHook`.
+
 ## Semantics
 
 | Concern                 | Behavior                                                                                                                                                                                  |
@@ -103,7 +164,7 @@ hand-written `process.once(signal, ...)` loop in the entry, with the dev-server 
 | **When**                | On `Moost.dispose()`, or when the `@moostjs/vite` dev server ejects the instance on hot reload.                                                                                             |
 | **How often**           | At most once per instance, ever — tracked per instance, so a second `dispose()` (or an eject followed by a shutdown) runs nothing. `dispose()` itself is idempotent: later calls return the first call's promise. |
 | **Scope**               | SINGLETON controllers and `@Injectable()` singletons. `@MoostDispose` on a `FOR_EVENT` **controller** throws at bind; on a `FOR_EVENT` **injectable** the hook is never invoked (per-event instances die with their event). |
-| **Ordering**            | Every adapter's `onDispose` first, in registration order; then instance hooks in ascending `priority` (default `0`, lower first), ties in discovery order.                                   |
+| **Ordering**            | Every adapter's `onDispose` first, in registration order; then the `runDetached` runs in flight are awaited; then instance hooks and `addDisposeHook` functions in ascending `priority` (default `0`, lower first), ties in discovery order (instance hooks first). |
 | **Arguments**           | **None.** Disposal tears down an existing instance — inject what it needs in the constructor.                                                                                                |
 | **Async**               | Each hook is awaited, sequentially. Ordered teardown (drain the consumer, *then* close the connection it writes to) is expressed with `priority`.                                            |
 | **Errors**              | Best effort: a throwing hook is logged and every remaining hook still runs. `dispose()` then rejects with an `AggregateError` naming each failing `Class.method`; a hot reload only warns and continues. |

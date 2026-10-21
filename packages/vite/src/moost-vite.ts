@@ -25,7 +25,7 @@ import {
 import { findDevSplitPackages, formatDevSplitPackagesWarning } from './ssr-externals-dev-check'
 import { precompressDir } from './precompress'
 import type { TPrecompressOptions } from './precompress'
-import { resolvePrecompressed } from './prod-static'
+import { apiMountNoMatch, isPublicFile, resolvePrecompressed } from './prod-static'
 import type { TCacheControlOptions, TPrecompressedOptions } from './prod-static'
 import {
   DEFAULT_SSR_HEAD,
@@ -155,7 +155,8 @@ export interface TMoostViteDevOptions {
    * When enabled, Moost runs first and unmatched requests fall through to
    * Vite's default handler (static assets, Vue/React pages, HMR client).
    * With `prefix` configured, requests outside the mount(s) skip the Moost
-   * router entirely (fast path).
+   * router entirely (fast path), and unmatched routes inside a mount get
+   * Moost's 404 (see `prefix`).
    *
    * Use this for fullstack apps where Vite serves the frontend (Vue, React, etc.)
    * and Moost handles API routes.
@@ -167,13 +168,24 @@ export interface TMoostViteDevOptions {
    * URL mount(s) for Moost routes in middleware mode — a single prefix or a
    * list of prefixes. Requests outside every mount skip the Moost router and
    * go straight to the frontend handler (an optimization/guard, in both dev
-   * and the generated prod server). When omitted, every request enters Moost
+   * and the generated prod server). A prefix is an API mount: an unmatched
+   * route under it gets Moost's own 404 (JSON) in dev and production instead
+   * of the SPA shell or an SSR page — set `prefixFallthrough: true` to let it
+   * fall through to the frontend. When omitted, every request enters Moost
    * first and unmatched routes fall through to the frontend.
    * Ignored when `middleware` is `false`.
    *
    * Example: `'/api'` or `['/api', '/.well-known']`
    */
   prefix?: string | string[]
+  /**
+   * Let unmatched routes under `prefix` fall through to the frontend (static
+   * files, SPA shell, SSR page) instead of answering Moost's 404.
+   * Applies in dev and is baked into the generated production server.
+   *
+   * Default: `false`.
+   */
+  prefixFallthrough?: boolean
   /**
    * Vue/React SSR entry module path. Used by the SSR server helper
    * (`@moostjs/vite/server`) for server-side rendering.
@@ -458,9 +470,21 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
             httpCaptured = true
             moostHttpRef.current = this as unknown as TSSRHttpContextRunner
             if (options.middleware) {
-              moostMiddleware = this.getServerCb((req: IncomingMessage) => {
-                pendingNextMap.get(req)?.()
-              })
+              // A request reaching Moost in prefix mode is inside a mount: an API mount answers
+              // a route miss with a public file (Vite serves it) or Moost's own 404; otherwise
+              // the miss goes on to Vite (frontend, static, HMR).
+              const toVite = (req: IncomingMessage) => pendingNextMap.get(req)?.()
+              moostMiddleware = this.getServerCb(
+                prefixes && !options.prefixFallthrough
+                  ? apiMountNoMatch(
+                      (req, res, miss) =>
+                        isPublicFile(resolvedConfig?.publicDir, req.url || '/')
+                          ? toVite(req)
+                          : miss(req, res),
+                      this.getServerCb(),
+                    )
+                  : toVite,
+              )
             } else {
               moostMiddleware = this.getServerCb()
             }
@@ -626,6 +650,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           // `null` (not '/api') when omitted — the prod server must keep the
           // dev contract: no prefix → everything routes through Moost first.
           __MOOST_PREFIX__: JSON.stringify(prefixes ?? null),
+          __MOOST_PREFIX_FALLTHROUGH__: JSON.stringify(options.prefixFallthrough === true),
           // Every define the prod server reads is baked unconditionally: it
           // evaluates them all at startup, SSR or not — a missing one is a
           // ReferenceError in a client-only build. `undefined` = no SSR entry.
@@ -829,6 +854,7 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         ssrEntry: options.ssrEntry,
         serverEntry: options.serverEntry,
         prefix: prefixes,
+        prefixFallthrough: options.prefixFallthrough,
         ssrOutlet: options.ssrOutlet,
         ssrState: options.ssrState,
         ssrHead: options.ssrHead,

@@ -10,15 +10,23 @@ export {
   createOutletHandler,
   createHttpOutlet,
   createEmailOutlet,
+  mintWfToken,
+  normalizeWfId,
   useWfOutlet,
   useWfFinished,
+  WF_TRIGGER_ERRORS,
 } from '@wooksjs/event-wf'
 export type {
+  WfMintTokenOptions,
+  WfMintTokenResult,
   WfOutletTriggerConfig,
   WfOutletTriggerDeps,
   WfOutletTokenConfig,
   WfFinishedResponse,
   WfPauseRequest,
+  WfStartRunner,
+  WfTriggerErrorBody,
+  WfTriggerErrorCode,
 } from '@wooksjs/event-wf'
 
 // Outlet primitives (from @prostojs/wf/outlets)

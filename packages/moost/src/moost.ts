@@ -4,10 +4,11 @@ import { createProvideRegistry, getClassKey, Infact } from '@prostojs/infact'
 import type { TConsoleBase } from '@prostojs/logger'
 import { ProstoLogger } from '@prostojs/logger'
 import { getConstructor, isConstructor, Mate } from '@prostojs/mate'
-import { createEventContext } from '@wooksjs/event-core'
+import { createEventContext, defineEventKind, getContextInjector } from '@wooksjs/event-core'
 import { Hookable } from 'hookable'
 
 import { adapterProvideToken, getAdapterBrand } from './adapter-brand'
+import { announceHandler } from './announce'
 import { bindControllerMethods } from './binding/bind-controller'
 import type { TFnInitHook, TInitHook } from './binding/bind-types'
 import type { TInheritanceAuditMode } from './binding/inheritance-audit'
@@ -18,9 +19,10 @@ import type { TAny, TAnyFn, TClassConstructor, TEmpty, TFunction, TObject } from
 import { setControllerContext } from './composables'
 import type { TInterceptorDef } from './decorators'
 import { TInterceptorPriority } from './decorators'
-import type { TDisposeError } from './dispose'
-import { describeDisposeErrors, disposeInstances, errorMessage } from './dispose'
+import type { TDisposeError, TDisposeHook } from './dispose'
+import { describeDisposeErrors, disposeWithHooks, errorMessage } from './dispose'
 import { registerDisposeOnSignals } from './dispose-signals'
+import { getEventScope, holdEventScopeLazily } from './event-scope'
 import type { InterceptorHandler } from './interceptor-handler'
 import { getDefaultLogger, setDefaultLogger } from './logger'
 import type { TInterceptorData, TMoostHandler, TMoostMetadata } from './metadata'
@@ -31,8 +33,20 @@ import { sharedPipes } from './pipes/shared-pipes'
 import type { TPipeData, TPipeFn } from './pipes/types'
 import { TPipePriority } from './pipes/types'
 import { mergeSorted } from './shared-utils'
-import type { TControllerOverview, THandlerOverview } from './types'
+import type { TContextInjectorHook, TControllerOverview, THandlerOverview } from './types'
 import { getIterceptorHandlerFactory } from './utils'
+
+/**
+ * Event kind of a run started with {@link Moost.runDetached} (`eventTypeKey` = `'DETACHED'`).
+ * Its own event, with no request: HTTP composables are not available inside.
+ */
+export const detachedKind = defineEventKind('DETACHED', {})
+
+/** Options for {@link Moost.runDetached}. */
+export interface TRunDetachedOptions {
+  /** Logger of the run (`useLogger()` inside, and where a failure is logged). Default: `app.getLogger(name)`. */
+  logger?: TConsoleBase
+}
 
 export type { TConsoleBase } from '@prostojs/logger'
 export { ProstoLogger } from '@prostojs/logger'
@@ -268,6 +282,12 @@ export class Moost extends Hookable {
   /** In-flight/settled `dispose()` run — makes disposal idempotent. */
   protected disposePromise?: Promise<void>
 
+  /** Functions registered with {@link addDisposeHook}. */
+  protected disposeHooks: TDisposeHook[] = []
+
+  /** Detached runs in flight — {@link dispose} waits for them before the instance hooks. */
+  protected detachedRuns = new Set<Promise<unknown>>()
+
   constructor(protected options?: TMoostOptions) {
     super()
     this.paramAuditMode = resolveParamAuditMode(options?.diagnostics?.paramTypes)
@@ -484,6 +504,81 @@ export class Moost extends Hookable {
   }
 
   /**
+   * ### addDisposeHook
+   * Programmatic counterpart of `@MoostDispose`: runs `fn(app)` once on
+   * {@link dispose} — after every adapter's `onDispose` (no new work comes in), in the
+   * same pass as the `@MoostDispose` instance hooks, by ascending `priority`
+   * (default 0; instance hooks first on ties). Awaited; a failure is collected into
+   * the `AggregateError` `dispose()` rejects with, after the other hooks ran.
+   *
+   * Use it for resources the app itself owns — a timer, a periodic sweep, a queue
+   * consumer started in an init hook.
+   *
+   * Hooks registered after `dispose()` was called do not run.
+   *
+   * ```ts
+   * app.addInitHook(() => {
+   *   const timer = setInterval(() => void app.runDetached('sweep', sweepExpired), 60_000)
+   *   app.addDisposeHook(() => clearInterval(timer))
+   * })
+   * ```
+   */
+  public addDisposeHook(fn: (app: this) => unknown, opts?: { priority?: number }): void {
+    this.disposeHooks.push({
+      instance: this,
+      method: `addDisposeHook(${fn.name || 'anonymous'})`,
+      priority: opts?.priority ?? 0,
+      fn: () => fn(this),
+    })
+  }
+
+  /**
+   * ### runDetached
+   * Runs `fn` as its own event, detached from the caller: a fresh ROOT event context
+   * (kind {@link detachedKind}, not a child of the calling request, so nothing it does is tied
+   * to the request's lifetime), with its own `FOR_EVENT` DI scope — released when `fn`
+   * settles — and the app as controller context (`useControllerContext().instantiate()` works).
+   * Context-injector instrumentation (OpenTelemetry) sees it as a `DETACHED` event.
+   *
+   * Call it from a handler to do work after the response, without awaiting it. The returned
+   * promise resolves with `fn`'s result, or `undefined` when it fails — a failure is logged
+   * (`opts.logger`, default the app logger topic `name`) and never rejects, so a forgotten
+   * `await` cannot crash the process. It is not a job queue: nothing persists or retries it.
+   *
+   * ```ts
+   * @Post('signup')
+   * signup(@Body() user: TUser) {
+   *   void this.app.runDetached('welcome-mail', () => this.mailer.sendWelcome(user.email))
+   *   return { ok: true }
+   * }
+   * ```
+   */
+  public runDetached<R>(
+    name: string,
+    fn: () => R | Promise<R>,
+    opts?: TRunDetachedOptions,
+  ): Promise<Awaited<R> | undefined> {
+    const logger = opts?.logger ?? this.getLogger(name)
+    const run = createEventContext({ logger }, detachedKind, {}, async () => {
+      const release = holdEventScopeLazily(getEventScope())
+      setControllerContext(this, 'runDetached' as keyof this, '', { prefix: '' })
+      // instrumentation names the event after the run (OpenTelemetry: span `DETACHED <name>`)
+      announceHandler(getContextInjector<TContextInjectorHook>(), detachedKind.name, name)
+      try {
+        return await fn()
+      } catch (error) {
+        logger.error(`Detached run "${name}" failed: ${errorMessage(error)}`, error)
+        return undefined
+      } finally {
+        release()
+      }
+    })
+    this.detachedRuns.add(run)
+    void run.finally(() => this.detachedRuns.delete(run))
+    return run
+  }
+
+  /**
    * ### dispose
    * Graceful shutdown: stops the adapters, then runs every `@MoostDispose`
    * hook of every singleton this app can reach — DI registry singletons
@@ -492,7 +587,8 @@ export class Moost extends Hookable {
    * `[Symbol.dispose]()` method is disposed through that.
    *
    * Order: every adapter's `onDispose` in registration order (stop taking new
-   * work first), then instance hooks by ascending `priority`. Everything is
+   * work first), then the {@link runDetached} runs in flight are awaited, then
+   * instance hooks and {@link addDisposeHook} functions by ascending `priority`. Everything is
    * awaited, failures never stop the run — once all hooks have run, a failed
    * disposal rejects the returned promise with an `AggregateError` naming each
    * failing `Class.method`.
@@ -559,9 +655,16 @@ export class Moost extends Hookable {
 
   /** The one-shot body behind {@link Moost.dispose} (see its docs for the contract). */
   protected async runDispose(): Promise<void> {
+    // hooks registered from here on (e.g. during the awaits below) do not run
+    const fnHooks = [...this.disposeHooks]
     const errors = await this.disposeAdapters()
+    // intake stopped: let the detached runs it started finish against still-open resources
+    await Promise.allSettled(this.detachedRuns)
     const candidates = [...getInfactSingletonInstances(), ...this.singletonInstances]
-    const result = await disposeInstances(candidates, { logger: this.logger, onError: 'warn' })
+    const result = await disposeWithHooks(candidates, fnHooks, {
+      logger: this.logger,
+      onError: 'warn',
+    })
     errors.push(...result.errors)
     this.logger.debug(
       `[moost] disposed: ${this.adapters.length} adapter(s), ${result.hooks} hook(s), ${errors.length} error(s)`,

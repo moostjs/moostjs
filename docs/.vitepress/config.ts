@@ -302,6 +302,10 @@ export default defineConfig({
                             link: '/moost/logging',
                         },
                         {
+                            text: 'Locale and Translation',
+                            link: '/moost/i18n',
+                        },
+                        {
                             text: 'Opentelemetry in Moost',
                             link: '/moost/otel',
                         },

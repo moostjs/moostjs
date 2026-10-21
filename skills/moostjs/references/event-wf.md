@@ -60,6 +60,12 @@ new MoostWf<T, IR>(opts?: WooksWf<T, IR> | TWooksWfOptions, debug?: boolean)
 
 Adapter name is `'workflow'`.
 
+Methods beyond `start`/`resume`/`handleOutlet`:
+
+- `wf.resolveSchemaId(id, { eventContext? })` → registered flow id `start()` would run (`'auth/login'` → `'/auth/login'`, `'user/42'` → `'/user/:id'`) or `undefined`. moost registers flows as `/${path}`, so `state.schemaId` starts with `/`; compare ids with `normalizeWfId()` (strips leading slashes; re-exported).
+- `wf.mint({ wfid, context?, input?, state, ttl?, meta?, eventContext? })` → `{ token, inputRequired, expiresAt, output }` — headless start (no request) persisting the first pause like the trigger; `token` (`<strategy>.<handle>`) resumes through the trigger with the SAME `state` config. No outlet called (deliver the token yourself); `allow`/`block` NOT checked at mint, enforced on resume. `ttl` in **ms**.
+- Run DI scope: every run releases its `FOR_EVENT` scope when it ends/pauses, WHOEVER starts it — `wf.start()`, `wf.getWfApp().start()/resume()`, `createOutletHandler(wf.getWfApp())`, `mintWfToken(wf.getWfApp())` (MoostWf replaces its `WooksWf` instance's `start`/`resume`, so build `createOutletHandler(wooksWf)` AFTER `new MoostWf(wooksWf)` — one built before captured the unpatched methods — or use `wf.handleOutlet()`; a run-option `cleanup` runs BEFORE the scope is released; up to and including `0.6.53` only `MoostWf.start/resume` released it → leaked scopes).
+
 ## Decorators & composables
 
 ### `@Step(path?)`
@@ -277,7 +283,7 @@ Pros: small tokens, server-side revocation, **fail-closed on unexpected errors**
 
 All strategies implement `WfStateStrategy`: `persist(state, { ttl? }, { handle? }): token`, `retrieve(token)`, `consume(token)`. The `handle` override (third arg) is the 0.7.14+ hint for handle reuse; `HandleStateStrategy` honors it, `EncapsulatedStateStrategy` ignores it.
 
-**Named strategy registry (since `@wooksjs/event-wf` 0.7.16).** `state` accepts either a single `WfStateStrategy` (shortcut, auto-promoted under name `'default'`) or `{ strategies: Record<name, WfStateStrategy>, default: name | ((wfid) => name) }`. The active strategy name is embedded in the issued token as `<name>.<raw>`, so resume always picks the strategy that persisted the state — each strategy can have its own independent storage. Names must match `/^[A-Za-z0-9_-]+$/`. The old `(wfid) => WfStateStrategy` function form was removed in this version.
+**Named strategy registry (since `@wooksjs/event-wf` 0.7.16).** `state` accepts either a single `WfStateStrategy` (shortcut, auto-promoted under name `'default'`) or `{ strategies: Record<name, WfStateStrategy>, default: name | ((wfid, flowId) => name) }` (`flowId` = the registered flow id `wfid` resolved to). The active strategy name is embedded in the issued token as `<name>.<raw>`, so resume always picks the strategy that persisted the state — each strategy can have its own independent storage. Names must match `/^[A-Za-z0-9_-]+$/`. The old `(wfid) => WfStateStrategy` function form was removed in this version.
 
 **Swapping strategies mid-run.** A step can call `swapStrategy('kv')` (sugar for `useWfStrategy().swap('kv')`) to escalate from cheap encapsulated state to durable storage right before a long-running pause. The new name applies to the **next** pause — it travels back to the trigger via `output.inputRequired.stateStrategy` and prefixes the issued token. The composable only validates name format; the trigger validates existence at pause time and throws loudly on unknown names. `useWfStrategy().current()` reports the active name. Removed `useWfOutlet().getStateStrategy()` — use `useWfStrategy().current()` instead.
 
@@ -298,7 +304,11 @@ async triggerWorkflow() {
 }
 ```
 
-**`createOutletHandler(wfApp)`** — pre-wired handler factory.
+**`createOutletHandler(wfApp)`** — pre-wired handler factory (wires `resolveSchemaId` too).
+
+**Access control (`allow` / `block`)** — enforced on START and RESUME, judged on the RESOLVED registered flow id (not the caller's spelling): `block: ['admin']` refuses `'/admin'`, `'adm%69n'`, any `ignoreCase` casing and every instance of a parametric flow. `allow` fails closed: an entry must equal the registered id (the pattern for a parametric flow), `allow: []` admits NOTHING (omit `allow` for no restriction). A refused resume → 403 and the token is NOT consumed. With lists set, a `wfid` resolving to no flow → 404. `handleOutlet` wires `resolveSchemaId`.
+
+**Refusals are THROWN `HttpError`s with a `code`** (were returned `{ error }` bodies up to wooks 0.7.x / moost `0.6.53`): `WF_MISSING` / `WF_INVALID` (400), `WF_INVALID_TOKEN` / `WF_EXPIRED` (410), `WF_FORBIDDEN` (403, `params.reason` `'not-allowed' | 'blocked'`, `params.wfid` on start), `WF_NOT_FOUND` (404, `params.wfid`), `WF_UNKNOWN_OUTLET` (500, `params.outlet`). Text is in `body.message` (`body.error` = status text) — clients read `body.message ?? body.error`. They reach error interceptors (translate via `code`). Table: `WF_TRIGGER_ERRORS`, type `WfTriggerErrorCode` (re-exported).
 
 **`createHttpOutlet(opts?)`** — HTTP outlet (pass payload as response). Optional `transform` callback.
 
@@ -307,7 +317,7 @@ async triggerWorkflow() {
 ### Token semantics
 
 - **Stable session credential (since `@wooksjs/event-wf` 0.7.14).** With `HandleStateStrategy` the `wfs` is minted on start, reused across every resume (engine re-persists under the same handle), and dies on finish or unexpected error. With `EncapsulatedStateStrategy` the ciphertext rotates on every state-mutating persist — clients must always read the renewed `wfs` from the response.
-- **`consume()` as concurrent-resume mutex**: every resume calls `strategy.consume(token)` atomically before the step. Two tabs racing the same `wfs`: one wins, the other gets HTTP **410 Gone** with body `{ error: 'Invalid or expired workflow state' }`. After the winner re-persists, the loser's *next* attempt succeeds — the token is alive again.
+- **`consume()` as concurrent-resume mutex**: every resume calls `strategy.consume(token)` atomically before the step. Two tabs racing the same `wfs`: one wins, the other gets a thrown `HttpError` **410 Gone** with `code: 'WF_EXPIRED'` (`message: 'Invalid or expired workflow state'`). After the winner re-persists, the loser's *next* attempt succeeds — the token is alive again.
 - **Fail-closed**: consume fires before the step; re-persist happens only after the step returns. An unexpected throw during resume skips re-persist, the handle is gone, user must restart. Handle expected failures (wrong password, invalid input, rate limit) by returning an outlet signal instead of throwing; the engine re-persists under the same handle on the re-pause, so the same `wfs` keeps working.
 - **Replay protection at workflow layer, not transport.** The record advances after each successful step — a replayed token resumes from the current step, not a previous one. Steps with non-idempotent side effects should guard themselves (idempotency keys, advance counters), not rely on token rotation.
 - **`tokenDelivery`** on `WfOutlet`: `'caller'` (default for `createHttpOutlet`) merges token into HTTP response; `'out-of-band'` (default for `createEmailOutlet`) suppresses body/cookie write so the HTTP caller doesn't receive the token. Custom outlets whose resumer is a different principal than the HTTP caller (SMS, Slack, webhook) MUST declare `'out-of-band'` — otherwise it's a privilege escalation vector.
@@ -322,7 +332,7 @@ async triggerWorkflow() {
 
 All exported from `@moostjs/event-wf` (do not import from `@wooksjs/event-wf` / `@prostojs/wf`):
 
-- **`WfOutletTriggerConfig`** (the `handleOutlet` arg): `state` (strategy or named registry — required), `outlets: WfOutlet[]` (required), `allow?`/`block?` (wfid white/blacklist; empty allow = all), `token?: WfOutletTokenConfig`, `wfidName?` (default `'wfid'`), `initialContext?: (body, wfid) => ctx`, `onFinished?: ({ context, schemaId }) => response`.
+- **`WfOutletTriggerConfig`** (the `handleOutlet` arg): `state` (strategy or named registry — required), `outlets: WfOutlet[]` (required), `allow?`/`block?` (flow-id white/blacklist on start AND resume; omitted `allow` = no restriction, `allow: []` = NOTHING allowed), `token?: WfOutletTokenConfig`, `wfidName?` (default `'wfid'`), `initialContext?: (body, wfid, flowId) => ctx`, `onFinished?: ({ context, schemaId }) => response`.
 - **`WfOutletTokenConfig`**: `read` (default `['body','query','cookie']`), `write` (`'body'` default | `'cookie'`), `name` (default `'wfs'`).
 - **`WfOutlet`** (implement for custom channels): `name`, optional `tokenDelivery: 'caller' | 'out-of-band'` (default `'caller'`), `deliver(req, token)` returning `WfOutletResult | void`. `WfOutletResult` carries `response`/`status`/`headers`/`cookies`; return `void` for out-of-band channels.
 - **`WfOutletRequest`** (what `deliver` receives, what `outlet()` produces): `{ outlet, payload?, target?, template?, context? }`. `WfPauseRequest` = same + `stateStrategy?` (set when a step swapped strategy).

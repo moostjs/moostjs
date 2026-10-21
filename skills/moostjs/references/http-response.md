@@ -14,6 +14,8 @@ Static decorators register `AFTER_ALL`-priority interceptors. Refs are Proxy-bas
 
 ## Static decorators
 
+Default status with none set (wooks `getDefaultHttpStatus(method, hasBody)`, table `DEFAULT_HTTP_STATUS`, both re-exported): POST with a body → `201`, any other method with a body → `200`, no body → `204`. (Up to and including `0.6.53` / wooks `0.7.x`: PUT → 201, PATCH/DELETE → 202.)
+
 ### `@SetStatus(code, opts?)`
 
 ```ts
@@ -146,7 +148,7 @@ Uncaught exceptions → HTTP 500. Format (JSON vs HTML) adapts to the `Accept` h
 
 1. `@SetStatus` registers an `after` hook only — never applied to error responses regardless of `force`. With `force` it overrides any status already set (by the handler via `@StatusRef`/`useResponse()` or by earlier after hooks); without `force` it is a no-op once any status is set.
 2. `@SetCookie` won't overwrite a cookie already set in the response.
-3. `@SetHeader` won't overwrite a header already set (e.g. via `@HeaderRef`) unless `force: true`; default `when` is `'ok'` (success-only) — use `'always'` or `'error'` to run on errors.
+3. `@SetHeader` won't overwrite a header already set (e.g. via `@HeaderRef`) unless `force: true`; default `when` is `'ok'` (success-only) — use `'always'` or `'error'` to run on errors. Error responses are never cacheable: `Cache-Control`/`Expires` and representation headers set before the failure are dropped and `Cache-Control: no-store` is sent — a `cache-control` from `@SetHeader(…, { when: 'error' | 'always' })` included. A cacheable error = build it: `useResponse().setStatus(404).setHeader('cache-control', 'public, max-age=60')` + return the body (handler-built responses are untouched).
 4. Ref decorators return Proxy objects — mutate `.value`, not a plain field.
 5. `@SetStatus` / `@SetHeader` / `@SetCookie` / `@Compress` / body-limit decorators and `global…` limits act on HTTP events only — CLI / workflow / WS events of a mixed controller (also a workflow started from an HTTP handler with `eventContext`) are skipped, never touching the parent request/response.
 6. Global limit interceptors apply to every HTTP handler.

@@ -3,20 +3,17 @@ import type {
   TStepHandler,
   TWfRunOptions,
   TWooksWfOptions,
+  WfMintTokenOptions,
+  WfMintTokenResult,
   WfOutletTriggerConfig,
   WfOutletTriggerDeps,
 } from '@wooksjs/event-wf'
-import { createWfApp, handleWfOutletRequest, WooksWf } from '@wooksjs/event-wf'
-import type { Moost, TMoostAdapter, TMoostAdapterOptions } from 'moost'
-import {
-  defineMoostEventHandler,
-  getMoostInfact,
-  MOOST_ADAPTER_BRAND,
-  setControllerContext,
-  useScopeId,
-} from 'moost'
+import { createWfApp, handleWfOutletRequest, mintWfToken, WooksWf } from '@wooksjs/event-wf'
+import type { EventContext, Moost, TMoostAdapter, TMoostAdapterOptions } from 'moost'
+import { defineMoostEventHandler, MOOST_ADAPTER_BRAND, setControllerContext } from 'moost'
 
 import { getWfMate } from './meta-types'
+import { releaseRunScopes } from './run-scope'
 
 /** Metadata attached to a workflow handler by the adapter. */
 export interface TWfHandlerMeta {
@@ -58,6 +55,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     } else {
       this.wfApp = createWfApp() as WooksWf<T, IR>
     }
+    releaseRunScopes(this.wfApp)
   }
 
   async onNotFound() {
@@ -103,23 +101,56 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
    *
    * Reads `wfid` (workflow ID) and `wfs` (state token) from the HTTP request,
    * starts or resumes the workflow, and dispatches pauses to registered outlets.
+   * `allow`/`block` are judged on the registered flow id the request resolves to
+   * (see {@link MoostWf.resolveSchemaId}).
    *
    * Must be called from within an HTTP event context (e.g. a `@Post` handler)
    * so that wooks HTTP composables are available.
    *
    * @param config - Outlet trigger configuration (allowed workflows, state strategy, outlets, etc.)
-   * @returns The outlet result (form payload + token), finished response, or error.
+   * @returns The outlet result (form payload + token) or the finished response. Refusals
+   *   (missing/invalid/expired token, forbidden or unknown flow) are thrown as `HttpError`s
+   *   with a `code` (`WF_MISSING`, `WF_INVALID_TOKEN`, `WF_EXPIRED`, `WF_FORBIDDEN`, …).
    */
   public handleOutlet(config: WfOutletTriggerConfig): Promise<unknown> {
-    return handleWfOutletRequest(config, {
-      start: (schemaId, context, opts) =>
-        this.start(schemaId, context as T, opts as TWfRunOptions<unknown, T, IR>),
-      resume: (state, opts) =>
-        this.resume(
-          state as { schemaId: string; context: T; indexes: number[] },
-          opts as TWfRunOptions<unknown, T, IR>,
-        ),
-    } as WfOutletTriggerDeps)
+    // MoostWf has the deps' start / resume / resolveSchemaId
+    return handleWfOutletRequest(config, this as unknown as WfOutletTriggerDeps)
+  }
+
+  /**
+   * Resolves a workflow id, spelled as a caller would pass it to `start()` (`'auth/login'`,
+   * `'/auth/login'`, `'user/42'`), to the id of the registered flow `start()` would run
+   * (`'/auth/login'`, `'/user/:id'`) — also what a paused run stores as `state.schemaId`.
+   * Returns `undefined` when no flow matches.
+   *
+   * @param id - Workflow id as a caller spells it.
+   * @param opts - `eventContext`: the parent event `start()` would get (e.g. the HTTP request).
+   */
+  public resolveSchemaId(
+    id: string,
+    opts?: { eventContext?: EventContext },
+  ): Promise<string | undefined> {
+    return this.wfApp.resolveSchemaId(id, opts)
+  }
+
+  /**
+   * Starts a workflow without a request and persists its first pause the way the outlet
+   * trigger does, returning a token the trigger resumes (`<strategy>.<handle>`) — for
+   * server-initiated flows: invites, approval links, scheduled reminders. No outlet is called:
+   * deliver the token yourself. `allow`/`block` are not checked here; they apply on resume.
+   * The run's DI scope is released when it pauses or ends.
+   *
+   * @param options - `wfid`, `context`, `input`, the trigger's `state` config, `ttl` (ms),
+   *   `meta`, and an optional parent `eventContext`.
+   *
+   * @example
+   * ```ts
+   * const { token } = await wf.mint({ wfid: 'invite', context: { email }, state, ttl: 7 * 86_400_000 })
+   * if (token) await sendInvite(email, `https://app.example/invite?wfs=${token}`)
+   * ```
+   */
+  public mint(options: WfMintTokenOptions): Promise<WfMintTokenResult> {
+    return mintWfToken(this as unknown as WfOutletTriggerDeps, options)
   }
 
   /**
@@ -138,12 +169,8 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     initialContext: T,
     opts?: TWfRunOptions<I, T, IR>,
   ): Promise<TFlowOutput<T, I, IR>> {
-    return this.wfApp.start(schemaId, initialContext, {
-      ...opts,
-      cleanup: () => {
-        getMoostInfact().unregisterScope(useScopeId())
-      },
-    })
+    // the run's DI scope is released by the wfApp itself (see releaseRunScopes)
+    return this.wfApp.start(schemaId, initialContext, opts)
   }
 
   /**
@@ -158,12 +185,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     state: { schemaId: string; context: T; indexes: number[] },
     opts?: TWfRunOptions<I, T, IR>,
   ): Promise<TFlowOutput<T, I, IR>> {
-    return this.wfApp.resume(state, {
-      ...opts,
-      cleanup: () => {
-        getMoostInfact().unregisterScope(useScopeId())
-      },
-    })
+    return this.wfApp.resume(state, opts)
   }
 
   bindHandler<T extends object = object>(opts: TMoostAdapterOptions<TWfHandlerMeta, T>): void {

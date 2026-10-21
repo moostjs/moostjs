@@ -84,6 +84,8 @@ ${fail ? "    throw new Error('fixture boot failure')" : '    // this variant bo
  * inside `init()` answers 502 instead of serving half-bound routes.
  */
 const FIXTURE_FILES = {
+  // a public file under an API mount (`prefix` includes '/.well-known')
+  'public/.well-known/security.txt': 'Contact: mailto:security@example.com\n',
   'index.html': `<!doctype html>
 <html>
   <head><title>fixture</title></head>
@@ -400,7 +402,7 @@ try {
       moostVite({
         entry: './src/main.ts',
         middleware: true,
-        prefix: '/api',
+        prefix: ['/api', '/.well-known'],
         ssrEntry: '/src/entry-server.ts',
       }),
     ],
@@ -435,6 +437,15 @@ try {
     health: await getHealth(),
     page: baselinePage.slice(0, 500),
     clientMod: baselineClientMod.slice(0, 200),
+    // `prefix` is an API mount: an unmatched route under it is Moost's JSON 404
+    apiMiss: await getJson('/api/__no_such_route'),
+    pageMiss: await getJson('/__no_such_page'),
+    // a public file under a mount is served; a missing one is Moost's 404
+    mountFile: await getJson('/.well-known/security.txt'),
+    mountFileHead: await fetch(`${baseUrl}/.well-known/security.txt`, { method: 'HEAD' }).then(
+      (res) => ({ status: res.status, length: res.headers.get('content-length') }),
+    ),
+    mountMiss: await getJson('/.well-known/__missing.txt'),
   }
 
   // 2. client-only edit must not kill the API nor reboot the app.

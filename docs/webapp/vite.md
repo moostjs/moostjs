@@ -77,15 +77,24 @@ export default defineConfig({
     moostVite({
       entry: './src/api/main.ts',
       middleware: true,
-      prefix: '/api', // optional: skip Moost for non-API paths
+      prefix: '/api', // optional: the API mount — Moost answers everything under it
     }),
   ],
 })
 ```
 
-The entry file is a standard Moost app (same as backend mode). The `prefix` option is a pure optimization/guard — a single mount or a list of mounts (`prefix: ['/api', '/.well-known']`); requests outside every mount skip the Moost router entirely, in dev and in the generated production server alike.
+The entry file is a standard Moost app (same as backend mode). The `prefix` option declares the API mount(s) — a single mount or a list (`prefix: ['/api', '/.well-known']`):
+
+- requests outside every mount skip the Moost router entirely and go to the frontend;
+- a request under a mount that matches no route gets Moost's own `404` JSON error (through your global interceptors), never the SPA `index.html` or an SSR page — so a mistyped API URL fails like an API call instead of returning HTML with `200`. Static files still win for `GET`/`HEAD`: a file under a mount (`public/.well-known/security.txt` with a `'/.well-known'` mount) is served when no route matches it — from `publicDir` in dev, from the client build in production.
+
+Set `prefixFallthrough: true` to let unmatched routes under the prefix fall through to the frontend instead.
 
 Omitting `prefix` sends every request through Moost first; unmatched routes fall through to the frontend (Vite in dev, static/SSR in prod). Dev and prod route identically either way.
+
+::: warning Version note
+Up to and including `0.6.53`, an unmatched route under `prefix` fell through to the frontend (the SPA shell answered `200`). Set `prefixFallthrough: true` to keep that behaviour.
+:::
 
 ::: warning Version note
 Up to and including `0.6.26`, `prefix` accepted only a single string, and the generated production server silently defaulted an omitted `prefix` to `'/api'` — a config that worked in dev could lose root-mounted routes (e.g. `/.well-known/*`) in production. On those versions, always set `prefix` explicitly.
@@ -127,6 +136,10 @@ environments: {
   },
 },
 ```
+:::
+
+::: warning Version note
+Up to and including `0.6.53`, `sirv` (the static file server of the generated production server) was an optional peer dependency of `@moostjs/vite`: a SPA or SSR build failed with `Could not resolve "sirv"` unless the app listed `sirv` in its own `dependencies`. It is now a regular dependency of `@moostjs/vite`.
 :::
 
 Your `entry-server.ts` `render(url)` can return per-page `<head>` tags plus an HTTP status and headers, not just HTML and state — see [the render contract](/webapp/ssr#the-render-contract). See [Vue + Moost (SSR)](/webapp/ssr) for the full guide.
@@ -215,7 +228,7 @@ const app = await createSSRServer()
 await app.listen()
 ```
 
-`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `port`, `host`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead`, `ssrFetchForwarding`, and (production only, since `0.6.49`) `precompressed` and `cacheControl` — see [Compression and Caching](#compression-and-caching). In production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?, host?)`.
+`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `prefixFallthrough`, `port`, `host`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead`, `ssrFetchForwarding`, and (production only, since `0.6.49`) `precompressed` and `cacheControl` — see [Compression and Caching](#compression-and-caching). In production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?, host?)`.
 
 **Port and bind address.** In production, `listen(port?, host?)` resolves each value from the first one that is set:
 
@@ -294,7 +307,8 @@ Earlier versions awaited only the entry's module evaluation: a rejecting `init()
 | `ssrFetch` | `boolean` | `true` | Enable [SSR local fetch](/webapp/fetch) interception |
 | `ssrFetchForwarding` | `boolean` | `true` | Run each SSR render inside an HTTP context seeded from the page request — SSR self-calls inherit the [viewer's identity](/webapp/fetch#ssr-viewer-identity) and their `Set-Cookie` reaches the page response |
 | `middleware` | `boolean` | `false` | Run Moost as Connect middleware |
-| `prefix` | `string \| string[]` | — | URL mount(s) for middleware mode — requests outside every mount skip the Moost router (fast path); when omitted, every request enters Moost first and unmatched routes fall through to the frontend |
+| `prefix` | `string \| string[]` | — | API mount(s) for middleware mode — requests outside every mount skip the Moost router (fast path), unmatched routes inside a mount get Moost's `404`; when omitted, every request enters Moost first and unmatched routes fall through to the frontend |
+| `prefixFallthrough` | `boolean` | `false` | Let unmatched routes under `prefix` fall through to the frontend (static files, SPA shell, SSR page) instead of answering Moost's `404` |
 | `ssrEntry` | `string` | — | Vue/React SSR entry module (e.g. `'/src/entry-server.ts'`) |
 | `ssrOutlet` | `string` | `'<!--ssr-outlet-->'` | HTML placeholder for SSR-rendered content |
 | `ssrState` | `string` | `'<!--ssr-state-->'` | HTML placeholder for SSR state transfer script |

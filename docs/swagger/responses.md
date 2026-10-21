@@ -4,13 +4,17 @@
 
 ## Basic usage
 
-Pass a type or configuration object (the union is exported as `TSwaggerResponseOpts`). When no status code is given, the generator uses the default for the HTTP method:
+Pass a type or configuration object (the union is exported as `TSwaggerResponseOpts`). When no status code is given, the generator uses the status the runtime answers with when the handler sets none — the same rule (`getDefaultHttpStatus` from `@wooksjs/event-http`), so the spec never disagrees with the server:
 
-| HTTP method | Default status |
+| Response | Default status |
 |-------------|----------------|
-| GET, PUT | 200 |
-| POST | 201 |
-| DELETE | 204 |
+| POST with a body | 201 |
+| GET, PUT, PATCH, DELETE (any other method) with a body | 200 |
+| No body (no schema) | 204 |
+
+::: warning Version note
+Up to and including `0.6.53` the generator used its own table (DELETE → 204, PATCH → 200), which disagreed with the runtime for a DELETE that returns a body.
+:::
 
 ```ts
 import { Param } from 'moost'

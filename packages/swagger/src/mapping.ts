@@ -1,3 +1,4 @@
+import { getDefaultHttpStatus } from '@wooksjs/event-http'
 import type { TControllerOverview } from 'moost'
 
 import type { TFunction } from './common-types'
@@ -199,10 +200,19 @@ export function mapToSwaggerSpec(metadata: TControllerOverview[], options?: TSwa
 
       if (hmeta?.swaggerResponses) {
         for (const [code, responseEntry] of Object.entries(hmeta.swaggerResponses)) {
-          const newCode = code === '0' ? getDefaultStatusCode(handlerMethod) : code
-          for (const [contentType, conf] of Object.entries(responseEntry.content)) {
-            const { response, example } = conf
-            const schema = resolveSwaggerSchemaFromConfig(response)
+          const contents = Object.entries(responseEntry.content).map(([contentType, conf]) => ({
+            contentType,
+            example: conf.example,
+            schema: resolveSwaggerSchemaFromConfig(conf.response),
+          }))
+          const newCode =
+            code === '0'
+              ? getDefaultStatusCode(
+                  handlerMethod,
+                  contents.some((c) => c.schema),
+                )
+              : code
+          for (const { contentType, example, schema } of contents) {
             if (schema) {
               responses = responses || {}
               const schemaWithExample = example !== undefined ? { ...schema, example } : schema
@@ -481,7 +491,7 @@ export function mapToSwaggerSpec(metadata: TControllerOverview[], options?: TSwa
     for (const { endpointSpec, httpMethod, config } of deferredLinks) {
       const statusCode =
         config.statusCode === 0
-          ? String(getDefaultStatusCode(httpMethod))
+          ? String(defaultLinkStatus(endpointSpec, httpMethod))
           : String(config.statusCode)
 
       const link: TOpenApiLink = {}
@@ -1119,15 +1129,20 @@ function cloneSchema(schema: TSwaggerSchema): TSwaggerSchema {
   return JSON.parse(JSON.stringify(schema)) as TSwaggerSchema
 }
 
-function getDefaultStatusCode(httpMethod: string) {
-  const defaultStatusCodes = {
-    GET: 200,
-    PUT: 200,
-    POST: 201,
-    DELETE: 204,
-  }
+/**
+ * The status the runtime answers with when the handler sets none — wooks' own rule
+ * (`getDefaultHttpStatus`): POST with a body → 201, any other method with a body → 200,
+ * no body → 204.
+ */
+function getDefaultStatusCode(httpMethod: string, hasBody = true) {
+  return getDefaultHttpStatus(httpMethod.toUpperCase(), hasBody)
+}
 
-  return defaultStatusCodes[httpMethod.toUpperCase() as keyof typeof defaultStatusCodes] || 200
+/** The default success response a link attaches to: the one the endpoint documents (with or without a body). */
+function defaultLinkStatus(endpointSpec: TEndpointSpec, httpMethod: string) {
+  const withBody = getDefaultStatusCode(httpMethod, true)
+  const noBody = getDefaultStatusCode(httpMethod, false)
+  return !endpointSpec.responses?.[withBody] && endpointSpec.responses?.[noBody] ? noBody : withBody
 }
 
 const STATUS_DESCRIPTIONS: Record<number, string> = {

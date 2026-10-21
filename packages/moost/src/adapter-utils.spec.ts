@@ -362,7 +362,7 @@ describe('defineMoostEventHandler', () => {
       expect(() => createEventContext({ logger: testLogger }, handler)).toThrow('Unauthorized')
 
       // the onError handler from the first interceptor should have been called
-      expect(onErrorSpy).toHaveBeenCalledWith(guardError, expect.any(Function))
+      expect(onErrorSpy).toHaveBeenCalledWith(guardError, expect.any(Function), guardError)
     })
   })
 
@@ -453,7 +453,7 @@ describe('defineMoostEventHandler', () => {
       })
 
       expect(() => createEventContext({ logger: testLogger }, handler)).toThrow('not recovered')
-      expect(def.error).toHaveBeenCalledWith(handlerError, expect.any(Function))
+      expect(def.error).toHaveBeenCalledWith(handlerError, expect.any(Function), handlerError)
     })
   })
 

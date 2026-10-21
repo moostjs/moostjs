@@ -10,6 +10,7 @@ Resolver decorators for incoming HTTP requests. Usable as **parameter** or **pro
 - [@Url / @Method / @ReqId](#url--method--reqid)
 - [@Req / @Res](#req--res)
 - [@Ip / @IpList](#ip--iplist)
+- [@Locale](#locale)
 - [Gotchas](#gotchas)
 
 ## Table
@@ -27,7 +28,8 @@ Resolver decorators for incoming HTTP requests. Usable as **parameter** or **pro
 | `@Url()` | URL string | `@moostjs/event-http` |
 | `@Method()` | HTTP method | `@moostjs/event-http` |
 | `@ReqId()` | request UUID | `@moostjs/event-http` |
-| `@Ip(opts?)` | client IP (`{ trustProxy }` for `x-forwarded-for`) | `@moostjs/event-http` |
+| `@Ip()` | client IP per the app-level `trustProxy` (`new MoostHttp({ trustProxy })`) | `@moostjs/event-http` |
+| `@Locale()` | event locale (`useLocale().get()`; policy = `MoostHttp({ resolveLocale })`) | `moost` |
 | `@IpList()` | `{ remoteIp: string; forwarded: string[] }` | `@moostjs/event-http` |
 | `@Req()` | Node `IncomingMessage` | `@moostjs/event-http` |
 | `@Res(opts?)` | Node `ServerResponse` | `@moostjs/event-http` |
@@ -38,7 +40,7 @@ Resolver decorators for incoming HTTP requests. Usable as **parameter** or **pro
 @Get('search')
 search(
   @Query('q') q: string,                    // single
-  @Query() all: Record<string, string | string[]>, // all (undefined if no query present)
+  @Query() all: Record<string, string | string[]>, // all ({} if no query present)
 ) {}
 // GET /search?q=moost&limit=10 → q='moost', all={q:'moost',limit:'10'}
 ```
@@ -93,14 +95,30 @@ upload(@RawBody() raw: Buffer) {}
 ## @Ip / @IpList
 
 ```ts
-@Ip() ip: string
-@Ip({ trustProxy: true }) realIp: string   // considers x-forwarded-for
-@IpList() ips: { remoteIp: string; forwarded: string[] }  // remote IP + x-forwarded-for chain
+@Ip() ip: string                                          // client IP per the app's trustProxy
+@IpList() ips: { remoteIp: string; forwarded: string[] }  // RAW socket peer + x-forwarded-for chain (forgeable)
+
+new MoostHttp({ trustProxy: 1 })                    // hops | IP/CIDR list (+ 'loopback'/'linklocal'/'uniquelocal') | (addr, hop) => boolean
+new MoostHttp({ trustProxy: 1, proxyHeaders: 'forwarded' }) // RFC 7239 Forwarded instead of X-Forwarded-*
 ```
+
+- Default: no proxy trusted → `@Ip()` = socket peer; forwarding headers ignored. With `trustProxy`: the right-most UNTRUSTED `X-Forwarded-For` hop. Same resolver drives `useRequest().protocol()` / `host()`.
+- IPv4-mapped (`::ffff:10.0.0.5`) → plain IPv4. `''` = unknown client (in-process `fetch()` without a peer; malformed entry from a trusted proxy).
+- `@Ip({ trustProxy: true })` is DEPRECATED: trusts exactly ONE hop (right-most entry). Up to and including `0.6.53` it took the LEFT-most entry — client-forgeable.
+
+## @Locale
+
+```ts
+import { Locale } from 'moost'
+new MoostHttp({ resolveLocale: () => useAcceptLanguage().negotiate(['en', 'de'], 'en') }) // lazy, once per request; adds Vary
+@Get('x') x(@Locale() locale: string | undefined) {}
+```
+
+Kind-agnostic (`useLocale()` from `moost`; workflows / in-process fetch inherit the request's). Moost never translates — see [core.md](core.md#locale-and-translation) for `setTranslator()` / `useTranslate()`.
 
 ## Gotchas
 
-1. `@Query('name')` → `undefined` when missing (not `null` / empty string); `@Query()` → `undefined` (not `{}`) when the query string is empty.
+1. `@Query('name')` → `undefined` when missing (not `null` / empty string); `@Query()` → `{}` when the query string is empty (up to and including `0.6.53`: `undefined`) — an all-optional query DTO validates without `@Optional()`.
 2. `@Query()` values: keys ending in `[]` become `string[]` (`?tags[]=a&tags[]=b` → `{ 'tags[]': ['a','b'] }`); repeating a plain key (`?q=a&q=b`) throws an automatic 400 `Duplicate key`.
 3. `@Header(name)` is an exact key lookup; Node lowercases incoming header names — `@Header('Content-Type')` returns `undefined`. Always pass lowercase names.
 4. `@Res()` without `passthrough` suppresses handler-return processing entirely.

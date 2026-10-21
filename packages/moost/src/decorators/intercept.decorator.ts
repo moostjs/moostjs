@@ -2,13 +2,26 @@ import type { TAny, TClassConstructor } from '../common-types'
 import { getMoostMate } from '../metadata/moost-metadata'
 
 export type TInterceptorBeforeFn = (reply: (response: TAny) => void) => void | Promise<void>
+/**
+ * After hook: runs when the CURRENT value of the after/error chain is not an `Error`.
+ * `response` is the handler result as replaced by the hooks that ran before this one;
+ * `original` is the value that entered the chain. A throw, or a `reply()` with an `Error`,
+ * switches the rest of the chain to error hooks.
+ */
 export type TInterceptorAfterFn = (
   response: TAny,
   reply: (response: TAny) => void,
+  original?: TAny,
 ) => void | Promise<void>
+/**
+ * Error hook: runs when the CURRENT value of the after/error chain is an `Error` — raised by
+ * the handler, a before hook, or an after/error hook that ran before this one. `original` is
+ * the value that entered the chain. A `reply()` with a non-Error value recovers the chain.
+ */
 export type TInterceptorErrorFn = (
   error: Error,
   reply: (response: TAny) => void,
+  original?: TAny,
 ) => void | Promise<void>
 
 /**
@@ -25,7 +38,7 @@ export type TInterceptorErrorFn = (
  *   after(response, reply) {
  *     reply(transform(response))
  *   },
- *   error(error, reply) {
+ *   error(error, reply, original) {
  *     reply(formatError(error))
  *   },
  * }

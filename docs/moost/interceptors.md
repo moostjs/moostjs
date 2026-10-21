@@ -7,7 +7,9 @@ Interceptors hook into the event lifecycle to run logic before and after your ha
 - **Lifecycle Hooks:** Interceptors run at defined points:
   - **Before:** Runs before the handler. Can short-circuit execution via `reply(value)`.
   - **After:** Runs after successful handler execution. Can transform the response.
-  - **Error:** Runs when the handler throws. Can recover with a replacement response.
+  - **Error:** Runs when the handler throws (or an earlier after/error hook raised an error). Can recover with a replacement response.
+
+  After and error hooks form one chain — see [The after/error chain](#the-after-error-chain).
 
 ::: tip
 *Check the [Event Lifecycle Diagram](/moost/event-lifecycle#diagram) to see exactly when interceptors execute.*
@@ -73,6 +75,8 @@ const errorFormatter = defineErrorInterceptor((error, reply) => {
 }, TInterceptorPriority.CATCH_ERROR)
 ```
 
+Every after and error hook also receives a third argument, `original`: the value that entered the after/error chain (the handler's result or error), before any hook replaced it.
+
 ::: warning
 The error parameter is typed `Error`. `HttpError` does **not** expose a `statusCode` property on the instance — the status code lives in its `body` getter (`error.body.statusCode`), so narrow with `instanceof HttpError` first.
 :::
@@ -108,6 +112,51 @@ Each helper uses a sensible default priority:
 | `defineErrorInterceptor` | `CATCH_ERROR` |
 | `defineInterceptor` | `INTERCEPTOR` |
 
+## The after/error chain
+
+After the handler (or a before hook's `reply()`), the after and error hooks run as **one chain over the current value**, innermost interceptor first (the reverse of the before order):
+
+1. Each hook receives the **current** value: the handler result as replaced by the hooks that ran before it. The value that entered the chain is the third argument (`original`).
+2. If the current value is an `Error`, the interceptor's `error` hook runs; otherwise its `after` hook.
+3. A hook that **throws**, or calls `reply()` with an `Error`, switches the rest of the chain to error hooks.
+4. A `reply()` with a non-Error value recovers the chain: the interceptors after it run their `after` hooks with that value.
+5. If the chain ends on a raised error, the error is thrown to the adapter (an error response for HTTP).
+
+```ts
+// innermost: turns a missing record into an HttpError
+const notFound = defineAfterInterceptor((response, reply) => {
+  if (response === null) reply(new HttpError(404))
+}, TInterceptorPriority.AFTER_ALL)
+
+// outer: sees the HttpError raised above, and recovers it
+const errorFormatter = defineErrorInterceptor((error, reply, original) => {
+  reply({ error: error.message, handlerReturned: original })
+}, TInterceptorPriority.CATCH_ERROR)
+```
+
+Since hooks run in the reverse of the priority order, an error raised by an after hook reaches the error hooks of interceptors with a **lower** priority value (outer), not ones that already ran. A `CATCH_ERROR` interceptor sees errors raised by after hooks at `AFTER_ALL`, which run first — put an after hook that may throw there.
+
+::: warning Changed after 0.6.53 — check interceptors that relied on the old behaviour
+Up to and including `0.6.53`, every after/error hook received the original value (a `reply()` did not reach later hooks), the error hooks ran only when the handler failed, and an error thrown in an after hook skipped every error hook. With the chain:
+
+- **An outer error-only hook (a logger, an audit trail) no longer sees an error that an inner hook recovered.** Once a `CATCH_ERROR` hook replies with an error body, the interceptors outside it run their `after` hook with that body, not their `error` hook. A logger that must see every failure should read the third argument, `original` (class-based: `useInterceptOriginal()`), in both hooks:
+
+  ```ts
+  const audit = defineInterceptor({
+    after(response, reply, original) {
+      if (original instanceof Error) logFailure(original) // recovered by an inner interceptor
+    },
+    error(error) {
+      logFailure(error)
+    },
+  }, TInterceptorPriority.BEFORE_ALL)
+  ```
+
+- **An outer `after` envelope now wraps error bodies.** An after hook that wraps responses (`reply({ data: response })`) also wraps the body a `CATCH_ERROR` hook recovered with. Check `original instanceof Error` to skip them.
+- **An Error replied by an error hook stays an error.** After the handler throws, `reply(new HttpError(...))` in an error hook is now thrown, as the handler's error was (it used to be returned). HTTP answers the same; CLI and workflow adapters now see a thrown error.
+- **A hook that throws anything (even a non-Error) switches to error hooks.**
+:::
+
 ## Class-Based Interceptors
 
 When you need dependency injection, define interceptors as classes using the `@Interceptor` decorator with `@Before`, `@After`, and `@OnError` method decorators.
@@ -138,7 +187,7 @@ Moost creates the interceptor through DI, so `AuthService` is injected automatic
 Two parameter decorators let interceptor methods access the reply function and handler result:
 
 - **`@Overtake()`** — injects the reply function. Call it to short-circuit or replace the response.
-- **`@Response()`** — injects the handler result (in `@After`) or the error (in `@OnError`).
+- **`@Response()`** — injects the current value of the after/error chain: the response (in `@After`) or the error (in `@OnError`), as replaced by the hooks that ran before.
 
 ```ts
 import {
@@ -165,7 +214,7 @@ class ErrorHandler {
 ```
 
 ::: tip Composable counterparts
-Anywhere inside the event scope you can also reach these values without decorators: `useOvertake()` (from `moost`) returns the reply function, and `useInterceptResult()` returns the current handler result or error.
+Anywhere inside the event scope you can also reach these values without decorators: `useOvertake()` (from `moost`) returns the reply function, `useInterceptResult()` returns the current value of the chain, and `useInterceptOriginal()` the value that entered it (the handler's own result or error).
 :::
 
 ### DI scopes

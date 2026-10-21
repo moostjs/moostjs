@@ -36,9 +36,19 @@ export * from './metadata'
 export * from './interceptor-handler'
 export * from './composables'
 export * from './define'
-export type { Logger, Key, Cached, EventContext, EventContextOptions } from '@wooksjs/event-core'
+export type { TTranslate, TTranslateContext } from './i18n'
+export { getTranslator, setTranslator, useTranslate } from './i18n'
+export type {
+  Logger,
+  Key,
+  Cached,
+  EventContext,
+  EventContextOptions,
+  TLocaleInput,
+} from '@wooksjs/event-core'
 export {
   current,
+  useLocale,
   useLogger,
   key,
   cached,

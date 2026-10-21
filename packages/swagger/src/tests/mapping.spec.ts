@@ -409,7 +409,7 @@ describe('@SwaggerTag and @Description', () => {
   })
 })
 
-describe('PUT/DELETE status codes', () => {
+describe('default status codes (the wooks runtime defaults)', () => {
   const statusApp = new Moost()
   statusApp.adapter(new MoostHttp())
   statusApp.registerControllers(StatusCodeController)
@@ -427,11 +427,20 @@ describe('PUT/DELETE status codes', () => {
     expect(responses!['0']).toBeUndefined()
   })
 
-  it('must use status 204 for DELETE when no explicit status code', () => {
+  it('must use status 200 for DELETE with a body when no explicit status code', () => {
     const responses = spec.paths['/status-codes/remove'].delete.responses
     expect(responses).toBeDefined()
-    expect(responses!['204']).toBeDefined()
-    expect(responses!['0']).toBeUndefined()
+    expect(Object.keys(responses ?? {})).toEqual(['200'])
+  })
+
+  it('must use status 200 for PATCH with a body when no explicit status code', () => {
+    const responses = spec.paths['/status-codes/patch'].patch.responses
+    expect(Object.keys(responses ?? {})).toEqual(['200'])
+  })
+
+  it('must use status 201 for POST with a body when no explicit status code', () => {
+    const responses = spec.paths['/status-codes/create'].post.responses
+    expect(Object.keys(responses ?? {})).toEqual(['201'])
   })
 })
 

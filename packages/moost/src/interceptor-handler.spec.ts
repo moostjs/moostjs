@@ -97,7 +97,7 @@ describe('InterceptorHandler', () => {
       await handler.before()
 
       expect(order).toEqual([1, 2])
-      expect(handler.countAfter).toBe(2)
+      expect(handler.countHooks).toBe(2)
     })
 
     it('must short-circuit when factory before calls reply', async () => {
@@ -126,7 +126,7 @@ describe('InterceptorHandler', () => {
 
       const handler = new InterceptorHandler([{ handler: factory, name: 'async' }])
       await handler.before()
-      expect(handler.countAfter).toBe(1)
+      expect(handler.countHooks).toBe(1)
     })
   })
 
@@ -142,8 +142,7 @@ describe('InterceptorHandler', () => {
       await handler.before()
 
       expect(def.before).toHaveBeenCalledOnce()
-      expect(handler.countAfter).toBe(1)
-      expect(handler.countOnError).toBe(1)
+      expect(handler.countHooks).toBe(1)
     })
 
     it('must short-circuit when before calls reply', async () => {
@@ -161,7 +160,7 @@ describe('InterceptorHandler', () => {
       const response = await handler.before()
 
       expect(response).toBe('early')
-      expect(handler.countAfter).toBe(0) // second never registered
+      expect(handler.countHooks).toBe(0) // second never registered
     })
   })
 
@@ -213,8 +212,7 @@ describe('InterceptorHandler', () => {
       const handler = new InterceptorHandler([{ handler: def, name: 'both' }])
       await handler.before()
 
-      expect(handler.countAfter).toBe(1)
-      expect(handler.countOnError).toBe(1)
+      expect(handler.countHooks).toBe(1)
 
       await handler.fireAfter('ok')
       expect(afterFn).toHaveBeenCalledOnce()
