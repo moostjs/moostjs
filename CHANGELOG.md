@@ -1,5 +1,36 @@
 # [0.7.0](https://github.com/moostjs/moostjs/compare/v0.6.53...v0.7.0) (2026-10-21)
 
+Minor release: breaking changes below. All packages now build on wooks 0.8.0.
+
+### Breaking changes
+
+- **wooks 0.8.0** (all its breaking changes apply; see the [wooks 0.8.0 changelog](https://github.com/wooksjs/wooksjs/blob/main/CHANGELOG.md)): PUT/PATCH/DELETE with a body default to 200; numeric durations are seconds; proxies are untrusted by default and `@Ip({ trustProxy: true })` is deprecated (one hop, right-most `X-Forwarded-For`; configure `trustProxy` on the app instead); workflow trigger refusals are thrown `HttpError`s with a `code`; `allow: []` denies every workflow and `allow`/`block` apply on resume too; error responses carry `Cache-Control: no-store` (this replaces a `cache-control` set with `@SetHeader(…, { when: 'error' | 'always' })`); programmatic `fetch()` without a peer has an unknown client address.
+- **`@moostjs/event-wf`** requires `@prostojs/wf` ^0.3.0. `MoostWf` wraps its `WooksWf` instance's `start`/`resume` so every run releases its scope: create `createOutletHandler(wooksWf)` after `new MoostWf(wooksWf)`, or use `MoostWf.handleOutlet`.
+- **Interceptors:** after and error hooks run as one chain over the current value, innermost first. Each hook sees the previous hook's result (the original is the optional third argument, or `useInterceptOriginal()`).
+  - An outer error-only hook (logger, audit) no longer sees an error that an inner hook recovered with a non-Error `reply()`; read `original` in its `after` hook instead.
+  - An outer `after` envelope also wraps error bodies produced by error hooks.
+  - An Error replied by an error hook after a handler throw is now thrown (HTTP output is unchanged; CLI and workflow adapters see a throw).
+  - An error thrown in an after hook (also a non-Error) reaches the error hooks of the interceptors after it.
+  - Internal `InterceptorHandler` API: `after`/`onError` are replaced by `hooks`, `fireAfter(response, raised)`, `raised` and `countHooks`.
+- **`@moostjs/event-http`:** `@Query()` resolves `{}` instead of `undefined` when there is no query string.
+- **`@moostjs/vite`:** an unmatched route under `prefix` returns Moost's JSON 404 (after a static-file attempt for GET/HEAD) instead of the SPA or SSR page. `prefixFallthrough: true` keeps the old behaviour.
+- **`@moostjs/swagger`:** default response codes follow the runtime rule (POST with a body 201, other methods with a body 200, no body 204).
+- **`dispose()`** awaits in-flight `runDetached` runs before the dispose hooks and ignores hooks registered after `dispose()` was called.
+
+### Features
+
+- `app.runDetached(name, fn)` (work outside any request, with its own event scope) and `app.addDisposeHook(fn, { priority })`.
+- `@Locale()`, `useLocale`, and a translate hook: `setTranslator(fn)` / `useTranslate()` (the app brings its own i18n library).
+- `MoostWf.mint()`, `MoostWf.resolveSchemaId()`, `normalizeWfId` re-export; re-exports of the new wooks 0.8 types and helpers.
+- `MoostHttp.fetch(request, { remoteAddress })` for fetch runtimes.
+
+### Fixes
+
+- In-process `request()`/`fetch()` and pipelined HTTP/1.1 requests release their DI scope correctly (no leak; one `'close'` listener per connection).
+- Workflow run scopes are released whoever starts the run; a run's `cleanup` runs before its scope is released.
+- `sirv` is a regular dependency of `@moostjs/vite`.
+- Errors raised by error hooks are logged under `logErrors`.
+
 
 
 ## [0.6.53](https://github.com/moostjs/moostjs/compare/v0.6.52...v0.6.53) (2026-10-19)
