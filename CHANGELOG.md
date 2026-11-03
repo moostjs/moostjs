@@ -1,3 +1,12 @@
+## [0.7.2](https://github.com/moostjs/moostjs/compare/v0.7.1...v0.7.2) (2026-11-03)
+
+
+### Bug Fixes
+
+* **moost:** interceptors, pipes and auth transports accumulate along extends under @Inherit(), so a subclass guard no longer drops the base error mapping ([4a080f3](https://github.com/moostjs/moostjs/commit/4a080f38b9a8e9e3f1018bbfcc8761be69b4aaab))
+
+
+
 ## [0.7.1](https://github.com/moostjs/moostjs/compare/v0.7.0...v0.7.1) (2026-11-03)
 
 
