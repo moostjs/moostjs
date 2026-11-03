@@ -1021,11 +1021,11 @@ packages:
   '@kurkle/color@0.3.4':
     resolution: {integrity: sha512-M5UknZPHRu3DEDWoipU6sE8PdkZ6Z/S+v4dD+Ke8IaNlpdSQah50lz1KtcFBa2vsdOnwbbnxJwVM4wty6udA5w==}
 
-  '@moostjs/event-cli@0.7.0':
-    resolution: {integrity: sha512-OtLEfKa2zgtZePGkK/YWtlNeiWfiaD02L8H2Bm0TYx+8zz+8pKYu70dcBI9HrwqEuGrXjCM+ek4NS6Am+M+4KA==}
+  '@moostjs/event-cli@0.7.1':
+    resolution: {integrity: sha512-vOFc3gycWzmkrlDgpwR9AQstIc6xffJzPCVBgfSHwjxrkH2thqI2BSeF9jzo4RUwYlHwk5kkCakWzlLleiXx/g==}
     peerDependencies:
       '@wooksjs/event-core': ^0.8.0
-      moost: ^0.7.0
+      moost: ^0.7.1
       wooks: ^0.8.0
 
   '@napi-rs/wasm-runtime@1.2.0':
@@ -2714,8 +2714,8 @@ packages:
   minisearch@7.2.0:
     resolution: {integrity: sha512-dqT2XBYUOZOiC5t2HRnwADjhNS2cecp9u+TJRiJ1Qp/f5qjkeT5APcGPjHw+bz89Ms8Jp+cG4AlE+QZ/QnDglg==}
 
-  moost@0.7.0:
-    resolution: {integrity: sha512-MQ5YV6bfVLrP0uYCZrBz7p8Lbc2fIY3EwZMfwlCmGnxPA+6ajRE3KH2ceXWBBOluf/m8rQ17rWi2Jm9dVEGniA==}
+  moost@0.7.1:
+    resolution: {integrity: sha512-uEzaTVrWQUGKPPKy0ryEPlTztsbMciuu7lrImSe4deTuSNhegUWKFsXMGjYm56wwch/Awxy2qYPDlUymsdyqGA==}
 
   mrmime@2.0.1:
     resolution: {integrity: sha512-Y3wQdFg2Va6etvQ5I82yUhGdsKrcYox6p7FfL1LbK2J4V01F9TGlepTIhnK24t7koZibmg82KGglhA1XK5IsLQ==}
@@ -3336,8 +3336,8 @@ snapshots:
   '@atscript/typescript@0.2.3(@atscript/core@0.2.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1))(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.0)(wooks@0.8.0)':
     dependencies:
       '@atscript/core': 0.2.3(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)
-      '@moostjs/event-cli': 0.7.0(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.0)(moost@0.7.0)(wooks@0.8.0)
-      moost: 0.7.0
+      '@moostjs/event-cli': 0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.0)(moost@0.7.1)(wooks@0.8.0)
+      moost: 0.7.1
     transitivePeerDependencies:
       - '@prostojs/logger'
       - '@prostojs/router'
@@ -3697,11 +3697,11 @@ snapshots:
 
   '@kurkle/color@0.3.4': {}
 
-  '@moostjs/event-cli@0.7.0(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.0)(moost@0.7.0)(wooks@0.8.0)':
+  '@moostjs/event-cli@0.7.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.0)(moost@0.7.1)(wooks@0.8.0)':
     dependencies:
       '@wooksjs/event-cli': 0.8.0(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.0)(wooks@0.8.0)
       '@wooksjs/event-core': 0.8.0
-      moost: 0.7.0
+      moost: 0.7.1
       wooks: 0.8.0
     transitivePeerDependencies:
       - '@prostojs/logger'
@@ -4984,7 +4984,7 @@ snapshots:
 
   minisearch@7.2.0: {}
 
-  moost@0.7.0:
+  moost@0.7.1:
     dependencies:
       '@prostojs/infact': 0.6.1
       '@prostojs/logger': 0.4.3
