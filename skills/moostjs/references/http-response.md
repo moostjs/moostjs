@@ -46,6 +46,8 @@ Only sets if the cookie hasn't been set yet in the response.
 
 `TCookieAttributesInput`: `maxAge`, `expires`, `domain`, `path`, `secure`, `httpOnly`, `sameSite`, etc.
 
+Durations (cookie `maxAge`, `setCacheControl({ maxAge, sMaxage })`, `setAge()`): time string (`'1h'`, `'1.5h'`, `'1d12h'`) or a number of **SECONDS**; rendered as whole seconds; cookie `maxAge <= 0` → `Max-Age=0`. Bare digit strings (`'3600'`), `''`, `'15x'`, non-finite numbers throw `TypeError`. Up to and including `0.6.53` (wooks `0.7.x`) numbers were milliseconds — drop any `* 1000`.
+
 ## Refs (dynamic)
 
 ### `@StatusRef()`
@@ -136,9 +138,12 @@ app.applyGlobalInterceptors(
 ```ts
 throw new HttpError(404, 'Not Found')
 throw new HttpError(422, { message: 'Validation failed', errors: [...] })
+throw new HttpError(409, { message: `Name "${name}" taken`, code: 'NAME_TAKEN', params: { name } })
 ```
 
-Uncaught exceptions → HTTP 500. Format (JSON vs HTML) adapts to the `Accept` header.
+Object body needs `message`; optional `code` (UPPER_SNAKE, for clients/translation) + `params` (message values); other fields pass through. Rendered body = your fields + `statusCode` + `error` (status text); `statusCode` in your body is not needed. `HttpError<T extends object>`; rendered type `THttpErrorBody<T>` (re-exported). Rewrite every error body (router 404 + non-HttpError 500 included) with `new MoostHttp({ transformErrorBody(body, error, ctx) })` — result must be a plain object with numeric `statusCode` + string `message`, else ignored and logged; translate by `body.code` there ([core.md](core.md#locale-and-translation)). Uncaught exceptions → HTTP 500. Format (JSON vs HTML) adapts to the `Accept` header.
+
+Conditional requests (automatic, no opt-in): a GET/HEAD `200` with an `ETag` (handler-set or prerendered) or `Last-Modified` → `304` on matching `If-None-Match` / `If-Modified-Since`; a GET/HEAD that would be 2xx → `412` (error body, `no-store`) when `If-Match` (strong compare; compressed responses carry a WEAK tag → `setCompression(false)` on optimistic-concurrency GETs) / `If-Unmodified-Since` fails. Up to and including `0.6.53` only a prerendered ETag gave `304` and a handler-set `ETag` disabled it. Rules: https://wooks.moost.org/webapp/composables/response.html#conditional-get-304
 
 ## Types
 

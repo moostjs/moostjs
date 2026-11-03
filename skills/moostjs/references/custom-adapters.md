@@ -64,7 +64,7 @@ const fn = defineMoostEventHandler({
   controllerName: opts.controllerName,
   callControllerMethod: undefined, // override default invocation
   resolveArgs: opts.resolveArgs, // may be undefined for no-arg handlers
-  logErrors: false,
+  logErrors: false, // true → log handler/arg/interceptor errors AND an error a hook raises in the after/error chain
   manualUnscope: false, // true => scope also waits for the adapter's unscope()
   hooks: { init, end }, // see below
   targetPath: '/api/users/:id', // full path for logging/tracing

@@ -35,7 +35,7 @@ const cacheInterceptor = defineBeforeInterceptor((reply) => {
 
 ### After interceptor
 
-Use `defineAfterInterceptor` to run logic after the handler succeeds. Receives the handler's response; call `reply(newValue)` to replace it:
+Use `defineAfterInterceptor` to run logic after the handler succeeds. Receives the current response (the handler's, as replaced by the after hooks that ran before it); call `reply(newValue)` to replace it:
 
 ```ts
 import { defineAfterInterceptor, TInterceptorPriority } from 'moost'
@@ -47,7 +47,7 @@ const wrapper = defineAfterInterceptor((response, reply) => {
 
 ### Error interceptor
 
-Use `defineErrorInterceptor` to handle errors. Receives the thrown error; call `reply(value)` to send a custom error response:
+Use `defineErrorInterceptor` to handle errors. Receives the current error (thrown by the handler, a before hook, or an inner after/error hook); call `reply(value)` to send a custom error response:
 
 ```ts
 import { defineErrorInterceptor, TInterceptorPriority } from 'moost'

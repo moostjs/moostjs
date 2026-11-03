@@ -233,6 +233,10 @@ export default defineConfig({
                             text: 'Moost Flavors',
                             link: '/moost/',
                         },
+                        {
+                            text: 'Upgrading to 0.7',
+                            link: '/moost/upgrade-0-7',
+                        },
                     ],
                 },
                 {

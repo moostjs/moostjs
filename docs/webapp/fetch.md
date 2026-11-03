@@ -146,7 +146,7 @@ Set `ssrFetch: false` when running behind Nitro or another framework that manage
 With `@moostjs/vite`, every SSR render runs inside an HTTP event context seeded from the incoming page request — in dev and in the generated production server alike. [Header forwarding](#header-forwarding) therefore applies to every SSR self-call with **zero app code**:
 
 - **Auth-aware SSR** — an SSR fetch to a cookie- or bearer-guarded endpoint authenticates as the page viewer, so pages can server-render user-specific data.
-- **Per-viewer rate limiting** — interceptors keying on IP or identity see the real viewer, not the synthetic in-process request. Without this, every SSR self-call across your whole fleet buckets under one `ip:127.0.0.1` subject — a single shared budget that a default per-IP rule turns into a site-wide SSR cap.
+- **Per-viewer rate limiting** — interceptors keying on IP or identity see the real viewer, not the synthetic in-process request. Without this, every SSR self-call across your whole fleet has an unknown client address (`@Ip()` is `''`; `127.0.0.1` up to and including `0.6.53`) and buckets under one subject — a single shared budget that a default per-IP rule turns into a site-wide SSR cap.
 - **Trace continuity** — `x-request-id` flows from the page request through every SSR self-call.
 - **`Set-Cookie` propagation** — cookies set by API handlers during the render (session touch/refresh) land on the page response.
 

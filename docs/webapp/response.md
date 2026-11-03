@@ -162,6 +162,12 @@ login() {
 `@SetCookie` won't overwrite a cookie that was already set in the response. This prevents accidental overwrites when multiple decorators or interceptors set the same cookie.
 :::
 
+`maxAge` takes a time string (`'1h'`, `'30m'`, `'1.5h'`, `'1d12h'`) or a number of **seconds**. The same units apply to `maxAge` / `sMaxage` of a `Cache-Control` object (`useResponse().setCacheControl()`, [static files](./static)). Values render as whole seconds; a cookie `maxAge` of `0` or less renders `Max-Age=0`. A string that is not a time string — including a bare digit string such as `'3600'` — throws a `TypeError`.
+
+::: warning Version note
+Up to and including `0.6.53` (wooks `0.7.x`), a numeric duration was read as milliseconds (`maxAge: 86400` rendered `max-age=86.4`). Remove any `* 1000` you added for that.
+:::
+
 ### Dynamic — `@CookieRef`
 
 ```ts
@@ -299,12 +305,11 @@ secret() {
 
 ### Detailed error responses
 
-Pass an object for structured error bodies:
+Pass an object for structured error bodies. It needs a `message`; any other fields are sent as given:
 
 ```ts
 throw new HttpError(422, {
     message: 'Validation failed',
-    statusCode: 422,
     errors: [
         { field: 'email', message: 'Invalid email format' },
         { field: 'age', message: 'Must be a positive number' },
@@ -312,7 +317,43 @@ throw new HttpError(422, {
 })
 ```
 
-The response format (JSON or HTML) adapts based on the request's `Accept` header.
+The response body is your object plus `statusCode` (the status you threw) and `error` (the status text). The response format (JSON or HTML) adapts based on the request's `Accept` header.
+
+### Error codes and params
+
+Give clients something stable to branch on: `code` is a machine-readable identifier (UPPER_SNAKE), `params` holds the values the message refers to:
+
+```ts
+throw new HttpError(409, {
+    message: `Name "${name}" is taken`,
+    code: 'NAME_TAKEN',
+    params: { name },
+})
+// → 409 { statusCode: 409, error: 'Conflict', message: 'Name "x" is taken', code: 'NAME_TAKEN', params: { name: 'x' } }
+```
+
+To rewrite every error body in one place — the router's 404 and unexpected 500s included — pass `transformErrorBody(body, error, ctx)` to `MoostHttp`. It is the natural place to translate messages by `code`; see [Internationalization](/moost/i18n). The workflow trigger's refusals use the same shape (`WF_EXPIRED`, `WF_FORBIDDEN`, … — see [Outlets](/wf/outlets)).
+
+### Conditional requests
+
+A GET/HEAD `200` that carries an `ETag` or `Last-Modified` header is answered with `304 Not Modified` when the request's `If-None-Match` / `If-Modified-Since` matches — no opt-in. A GET/HEAD that would succeed answers `412 Precondition Failed` when `If-Match` / `If-Unmodified-Since` does not hold (rendered like any error). Set the validators in the handler:
+
+```ts
+import { useResponse } from '@wooksjs/event-http'
+
+@Get('doc/:id')
+async doc(@Param('id') id: string) {
+    const doc = await loadDoc(id)
+    useResponse().setHeader('etag', `"${doc.version}"`).setHeader('cache-control', 'private, no-cache')
+    return doc
+}
+```
+
+The full rules (weak/strong comparison, compression and `ETag`, lost-update protection) are in the wooks guide: [Conditional GET](https://wooks.moost.org/webapp/composables/response.html#conditional-get-304).
+
+::: warning Version note
+Up to and including `0.6.53` (wooks `0.7.x`), only a prerendered `ETag` produced a `304`, an `ETag` set by the handler disabled it, and GET/HEAD ignored `If-Match` / `If-Unmodified-Since`.
+:::
 
 ### Error interceptors
 
