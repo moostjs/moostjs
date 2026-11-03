@@ -32,7 +32,6 @@ catalogs:
       version: 0.8.0
 
 overrides:
-  minimatch: ^11.0.1
   handlebars: '>=4.7.10'
   picomatch@>=4: '>=4.0.4'
   defu: '>=6.1.5'
@@ -266,8 +265,8 @@ importers:
         specifier: workspace:^
         version: link:../event-cli
       '@prostojs/rewrite':
-        specifier: ^0.2.3
-        version: 0.2.3
+        specifier: ^0.2.4
+        version: 0.2.4
       '@wooksjs/event-cli':
         specifier: 'catalog:'
         version: 0.8.0(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.0)(wooks@0.8.0)
@@ -1472,8 +1471,8 @@ packages:
   '@prostojs/parser@0.6.0':
     resolution: {integrity: sha512-/sm+StB0O/HKNRWKGVQPtEy1bLIC8EgQekxMkK9lHPKmS7iQITfb/AqPTOSO70GNV5b1CNpiOJNZqc7pyGl6PA==}
 
-  '@prostojs/rewrite@0.2.3':
-    resolution: {integrity: sha512-cFanNxnZtDufI0EFiqDnDowJ/GyUhr4sGT8n+zSeG0sPsTFZBFAVPXojDirBY/z+pZNxfMoC3stUyXh21pL3IA==}
+  '@prostojs/rewrite@0.2.4':
+    resolution: {integrity: sha512-oitHGLJcq8QVykFlce7CuoDooFSBgGX63OtMnw8MfwqinK+BNyXLyZHUGgFt2G9Ww8WyYI+juelf5upgCNrKYg==}
 
   '@prostojs/router@0.3.6':
     resolution: {integrity: sha512-tQp2E4ME7RbtqQ9TTcHaF8pqlg7JddPtyJJHgf/BbwNgdgM2bMq8JoalrFnKxVsSwoCqpyyer4sy4+AiLwKeiw==}
@@ -3941,7 +3940,7 @@ snapshots:
 
   '@prostojs/parser@0.6.0': {}
 
-  '@prostojs/rewrite@0.2.3':
+  '@prostojs/rewrite@0.2.4':
     dependencies:
       '@prostojs/parser': 0.6.0
       minimatch: 11.0.4

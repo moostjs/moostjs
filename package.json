@@ -73,7 +73,6 @@
   },
   "pnpm": {
     "overrides": {
-      "minimatch": "^11.0.1",
       "handlebars": ">=4.7.10",
       "picomatch@>=4": ">=4.0.4",
       "defu": ">=6.1.5",
