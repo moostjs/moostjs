@@ -1,3 +1,12 @@
+## [0.7.1](https://github.com/moostjs/moostjs/compare/v0.7.0...v0.7.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **create-moost:** http template pins @wooksjs/http-static ^0.8.0; drop the glob override ([f1e3d36](https://github.com/moostjs/moostjs/commit/f1e3d360d7ea7285d62b29d0f40bc22124d02012))
+
+
+
 # [0.7.0](https://github.com/moostjs/moostjs/compare/v0.6.53...v0.7.0) (2026-10-21)
 
 Minor release: breaking changes below. All packages now build on wooks 0.8.0.
