@@ -11,6 +11,12 @@ import { getMoostMate } from '../metadata'
  *   overrides, which merge the parent's metadata under their own (so adding
  *   e.g. a rate-limit decorator to an override does not unbind the parent's
  *   `@Get`/`@Post` route).
+ * - Exception to "own keys win" (since 0.7.2): interceptors (incl.
+ *   `@Authenticate` guards), pipes and prop decorators ACCUMULATE on the class
+ *   and on overridden methods, parent first. The same interceptor/pipe
+ *   *reference* on both levels runs once; a factory called on each level runs
+ *   twice. A subclass can't remove a base class's class-level interceptors.
+ *   Routes, params and `@ImportController` still replace.
  * - On a method/prop: enables inheritance for just that member.
  * - `@Inherit(false)` on an overridden member opts out of the merge for a
  *   deliberate full replacement (the member keeps only its own metadata).

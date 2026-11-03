@@ -148,7 +148,7 @@ const values = extractTransports({ bearer: { format: 'JWT' } })  // { bearer: 'e
 ## Gotchas
 
 1. Missing all declared transports → `extractTransports` throws 401 automatically; handler is never called.
-2. Controller-level + handler-level `@Authenticate` are additive — both guards run; there is no runtime override.
+2. Controller-level + handler-level `@Authenticate` are additive — both guards run; there is no runtime override. Same across `extends` under `@Inherit()`: a subclass's `@Authenticate` adds to the base class's guards/interceptors (never drops a base error-mapping interceptor), and swagger documents both guards.
 3. Class-based guards: `static transports` is read at runtime — the generic alone is not enough.
 4. Guard's `handle` returning a value short-circuits with that value (useful for redirects / custom auth responses). `undefined` continues.
 5. Guards run at `GUARD` priority — execute before `INTERCEPTOR` priority.

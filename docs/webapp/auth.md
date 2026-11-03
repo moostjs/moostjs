@@ -190,6 +190,8 @@ export class ProductsController {
 
 To use a *different* guard for one endpoint, don't apply `@Authenticate` at the controller level — apply the right guard on each handler instead.
 
+Guards also add up across `extends`: an `@Inherit()` subclass with its own `@Authenticate` runs it together with the base class's guards and interceptors, so a base controller's error mapping keeps working ([details](/moost/meta/inherit#interceptors-and-pipes-add-up)).
+
 ::: info
 The generated OpenAPI spec is the one place where handler-level wins: when a handler declares its own `@Authenticate`, only its transports appear as the operation's security requirement. This affects documentation only, not runtime enforcement.
 :::

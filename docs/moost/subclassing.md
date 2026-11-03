@@ -42,7 +42,9 @@ Each row describes a subclass of a fully decorated parent (`@Controller('p')` + 
 | `@Controller('own')` + `@Inherit()`                | own (wins) | parent's         | parent's              | all, under the own prefix |
 | `@Inherit(false)` — explicit opt-out               | —          | —                | parent's (automatic)  | dropped (deliberate)      |
 
-Routes added by the subclass itself always register. With `@Inherit()` they combine with the parent's; without it, only the subclass's own routes are served. An override that carries its own route decorator *replaces* the parent's route for that method — see the [merge rules](/moost/meta/inherit) for the exact semantics (own keys win, array fields replace wholesale, `@Inherit(false)` per method).
+Routes added by the subclass itself always register. With `@Inherit()` they combine with the parent's; without it, only the subclass's own routes are served. An override that carries its own route decorator *replaces* the parent's route for that method — see the [merge rules](/moost/meta/inherit) for the exact semantics (own keys win, routes replace, `@Inherit(false)` per method).
+
+**Interceptors, guards and pipes add up.** With `@Inherit()`, a subclass that adds `@Authenticate(guard)` or `@Intercept(…)` keeps the base class's interceptors: both run, base first. The same holds for an override and its parent method. See [Interceptors and pipes add up](/moost/meta/inherit#interceptors-and-pipes-add-up).
 
 ## The route-drop trap
 
@@ -101,7 +103,8 @@ const app = new Moost({
 - **DON'T** expect `@Controller('own')` alone to carry the parent's routes — it only replaces the prefix; routes need `@Inherit()`.
 - **DON'T** re-declare a constructor just to "make DI work" — a decorated subclass without a constructor inherits the parent's constructor params automatically.
 - **DO** keep every class in a controller chain decorated (or use `@Inherit()` end to end) — an undecorated intermediate class cuts the metadata chain.
-- **DO** use `@Inherit(false)` (class- or method-level) for a deliberate full replacement — it also silences the route-drop warning.
+- **DO** use `@Inherit(false)` (class- or method-level) for a deliberate full replacement — it also silences the route-drop warning. On a method it drops only the parent method's metadata; the class-level interceptors still apply.
+- **DON'T** re-declare the base class's error mapping or guards on an `@Inherit()` subclass — they already run, and a factory called again (`@Intercept(makeX())`) runs twice. Remove such workarounds when upgrading to 0.7.2.
 
 ## See also
 

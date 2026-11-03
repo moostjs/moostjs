@@ -265,6 +265,8 @@ export class AdminController {
 }
 ```
 
+A subclass with `@Inherit()` keeps these and adds its own, base first — see [Interceptors and pipes add up](/moost/meta/inherit#interceptors-and-pipes-add-up).
+
 ### Globally
 
 Affects every handler in the application:

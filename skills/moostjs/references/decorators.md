@@ -177,10 +177,15 @@ class Base { @Get('health') health() { return 'ok' } }
 class App extends Base {}  // inherits @Get('health')
 ```
 
-Merge rules (shallow, own keys win):
+Merge rules (shallow, own keys win — except the accumulating lists of rule 2):
 
 1. **Decorated override under class-level `@Inherit()` MERGES** — parent method meta (route bindings, guards, descriptions) merged under the override's own, so adding e.g. a rate-limit decorator keeps the parent's `@Get`/`@Post` binding. *(Before 0.6.30: any own decorator silently dropped ALL parent method meta, route included.)*
-2. **Array fields replace wholesale** — an override with its own `@Get('x')` serves only `x`; `handlers`/`interceptors`/`pipes` are never concatenated with the parent's.
+2. **Interceptors, guards and pipes ACCUMULATE; routes, params and imports replace** — under `@Inherit()`, on the class and on overridden methods:
+   - Accumulated (parent first + own, then priority-sorted): interceptors (`@Intercept`, `@Authenticate`), pipes, `@Authenticate` in swagger (AND-combines inherited + own guards), prop decorators (base `@Resolve`/`@Const` props still resolve when the subclass adds its own). So `@Authenticate(guard)` on a subclass keeps the base's error-mapping interceptor — drop any re-declared-on-subclass workaround when upgrading.
+   - Dedup: the same interceptor/pipe REFERENCE on both levels is kept once (parent's position, subclass's priority/name); a factory called on each level (`@Intercept(makeX())`) yields two entries that both run (an `after` envelope wraps twice).
+   - NOT accumulated: route `handlers` (an override's own `@Get('x')` serves only `x`), params, `@ImportController` (own list replaces the base's).
+   - A subclass can't remove a base class's class-level interceptors — method `@Inherit(false)` drops only the parent METHOD's meta; put a guard you want to vary on the subclasses or a separate base. Without `@Inherit()` (or class `@Inherit(false)`) nothing flows.
+   - *(Up to 0.7.1 own interceptor/pipe lists replaced the parent's — the 0.6.30 "array fields replace wholesale" rule.)*
 3. **Params merge per index** — params with no own decorators inherit the parent's resolvers; a param that re-declares `@Body()` etc. keeps its own.
 4. **`@Inherit(false)` on an overridden member = full replacement** — only own metadata; the parent's route is NOT bound. Class-level `@Inherit(false)` = deliberate opt-out (also silences the route-drop warning, rule 8).
 5. **Ctor params**: a *decorated* subclass with NO declared constructor inherits the parent's ctor param meta automatically (DI resolves it, no `@Inherit()` needed); a declared constructor uses own params only — re-declare `@Inject` there. An entirely undecorated subclass inherits NOTHING (not even `injectable`), and an undecorated intermediate class breaks the automatic fallback (it walks one level only).

@@ -86,6 +86,8 @@ export class ArticleController {
 
 ::: warning Guards are additive
 Controller-level and method-level guards are **merged, not overridden** — every guard in the chain runs. `remove()` above requires the `editor` role (from the controller) *and* the `admin` role (from the method). To make a route require a different role than its controller, move it to a controller without the class-level guard.
+
+The same applies across `extends`: an `@Inherit()` subclass that adds a guard runs it *together with* the base class's guards and interceptors ([details](/moost/meta/inherit#interceptors-and-pipes-add-up)).
 :::
 
 ## Permission-based guard
