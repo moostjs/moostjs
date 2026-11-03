@@ -46,7 +46,7 @@
     "@wooksjs/event-wf": "catalog:"
   },
   "devDependencies": {
-    "vitest": "3.2.7"
+    "vitest": "4.1.12"
   },
   "peerDependencies": {
     "@prostojs/infact": "^0.6.1",

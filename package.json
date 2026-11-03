@@ -57,29 +57,30 @@
     "conventional-changelog-cli": "^4.1.0",
     "husky": "^9.1.7",
     "inquirer": "^12.11.1",
-    "oxfmt": "^0.34.0",
+    "oxfmt": "^0.76.0",
     "oxlint": "~1.49.0",
     "rolldown": "1.0.0-rc.5",
     "rollup": "^4.62.3",
     "rollup-plugin-dts": "^6.4.1",
     "typescript": "^5.9.3",
     "unplugin-swc": "^1.5.9",
-    "vite": "^7.3.6",
+    "vite": "^7.3.7",
     "vitepress": "2.0.0-alpha.17",
     "vitepress-plugin-llmstxt": "^0.5.2",
-    "vitest": "3.2.7",
+    "vitest": "4.1.12",
     "vue-chartjs": "^5.3.4",
     "zx": "^8.8.5"
   },
   "pnpm": {
     "overrides": {
-      "minimatch": "^10.2.3",
-      "handlebars": ">=4.7.9",
+      "minimatch": "^11.0.1",
+      "handlebars": ">=4.7.10",
       "picomatch@>=4": ">=4.0.4",
       "defu": ">=6.1.5",
-      "brace-expansion@>=4": ">=5.0.9",
+      "brace-expansion@>=4": ">=5.0.12",
       "yaml@>=2": ">=2.8.3",
-      "postcss@<8.5.10": ">=8.5.10"
+      "postcss@<8.5.10": ">=8.5.10",
+      "glob": "^14.0.2"
     }
   }
 }

@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@types/swagger-ui-dist": "3.30.5",
-    "vitest": "3.2.7"
+    "vitest": "4.1.12"
   },
   "peerDependencies": {
     "@moostjs/event-http": "workspace:^",

@@ -53,6 +53,6 @@
     "@moostjs/event-http": "workspace:^",
     "@wooksjs/event-http": "catalog:",
     "@wooksjs/http-body": "catalog:",
-    "vitest": "3.2.7"
+    "vitest": "4.1.12"
   }
 }
