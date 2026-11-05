@@ -105,10 +105,10 @@ describe('setTranslator() / useTranslate()', () => {
     ])
   })
 
-  it('is the identity without a translator', async () => {
+  it('fills params into the text without a translator', async () => {
     const http = await boot(new MoostHttp())
     expect(await json(await http.request('/greet'))).toEqual({
-      text: 'Hello, {name}',
+      text: 'Hello, Ann',
       untouched: 'No translation',
     })
   })

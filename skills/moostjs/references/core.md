@@ -212,21 +212,35 @@ class AppController {}
 
 ## Locale and translation
 
-Moost ships NO i18n runtime: locale per event + codes on errors + one translate hook; the app brings vue-i18n / i18next / a map.
+Moost ships NO i18n runtime: the app registers ONE translator (a plain map or any library); moost picks the request locale, translates HTTP error bodies, and gives code `useTranslate()`. No translator → nothing changes (no translation, no `Vary`).
 
 ```ts
-import { Locale, setTranslator, useLocale, useTranslate } from 'moost'
+import { formatMessage, getTranslatorLocales, Locale, registerMessages, setTranslator, translateErrorBody, useLocale, useTranslate, useTranslation } from 'moost'
 
-useLocale().get() / .set('de') / .set(() => pick())   // any event kind; children inherit
-@Locale() locale: string | undefined                   // param resolver = useLocale().get()
-setTranslator((text, params, { locale, event }) => catalog[locale ?? '']?.[text]) // process-wide; undefined = keep text; only applies where code calls useTranslate() (moost packages don't yet — opt-in)
-const t = useTranslate(ctx?); t('Name taken', { name }) // translator result or text unchanged (identity when none registered)
-getTranslator()                                          // undefined when none registered → skip per-locale work
+setTranslator({ en: {}, de: { NAME_TAKEN: 'Name {name} vergeben' } })  // map: locales = keys, first = default (rule 4a); {name} filled from params
+setTranslator((id, params, { locale, event }) => text | undefined, { locales: ['en', 'de'] }) // function: return FINAL text; list locales
+setTranslator(undefined)                                   // remove
+const t = useTranslate(ctx?); t(id, params?, fallback?)     // translator text (final) → else fallback as is → else formatMessage(registered template ?? id, params)
+registerMessages({ NAME_TAKEN: 'The name {name} is taken' }) // global code → English template; idempotent per object; packages call it on import
+useTranslation(ctx?)  // undefined without translator/locale; { locale, key, t, messages() }
+useLocale().get() / .set('de'); @Locale() locale            // any event kind; children inherit
 ```
 
-- HTTP locale policy: `new MoostHttp({ resolveLocale: () => … useAcceptLanguage().negotiate(['en','de'], 'en') })` — lazy, once per request; `negotiate` adds `Vary: Accept-Language`. `?lang` / cookie / profile precedence is APP policy.
-- `text` = source text as message id (gettext style) or a code (`WF_EXPIRED`, `NAME_TAKEN`); never interpolated by moost.
-- Error bodies: translate in ONE place — `new MoostHttp({ transformErrorBody: (body, err, ctx) => ({ ...body, message: useTranslate(ctx)(body.code ?? body.message, body.params) }) })` (also sees the router 404) or a `CATCH_ERROR` interceptor.
+| # | Rule |
+|---|------|
+| 1 | Id = stable UPPER_SNAKE `code` when the message has one, else the English source text. One namespace across app + packages. |
+| 2 | Translator result is FINAL — never re-filled. Fill is single-pass `{name}` (`formatMessage`): param values containing `{x}` are not expanded; missing params keep the placeholder. |
+| 3 | `fallback` is final, NEVER filled: pass already-filled English text, or `registerMessages()` the template and pass no fallback — never a template as fallback. |
+| 4 | Every `setTranslator()` call, and every `registerMessages()` that adds/changes a template, starts a new generation → `useTranslation().key` changes, `messages()` recomputed. Async-loaded languages: load before `listen`, or call `setTranslator` again after loading. |
+| 4a | Map WITHOUT the source language (`setTranslator({ de })`) → `de` is the default for no-header AND `Accept-Language: en` requests. Always `{ en: {}, de }`. |
+| 4b | Function translator WITHOUT `locales` → no default locale policy, no `key`, no error-body translation unless the app's `resolveLocale` / `useLocale().set()` gives a locale. Pass `{ locales }`. |
+| 5 | Translator throws → English fallback, logged once (per `setTranslator`). |
+| 6 | `MoostHttp` that creates its WooksHttp: default `resolveLocale` = `useAcceptLanguage().negotiate(getTranslatorLocales(), locales[0])` (no header → first locale; adds `Vary`; a single locale is used as is, no `Vary`); locales read per request. App `resolveLocale` replaces it. |
+| 7 | Same `MoostHttp`: every error body goes through `translateErrorBody` BEFORE the app's `transformErrorBody` (which still runs, with the untranslated body, if translation throws — logged once). A passed-in `WooksHttp` is untouched — give it a `resolveLocale` (rule 6) and call `translateErrorBody(body, ctx)` in its transform. |
+| 8 | `translateErrorBody`: body `code` → `t(code, params, message)`; `errors[]` entries (+ `details`) by `code` unless `custom: true`, else by message, fallback = entry message; uncoded top message equal to `path: message` of `errors[0]` follows that entry; else top message by text. Returns the same body when no translation. |
+| 9 | Clients branch on `code`, NEVER on `message` text. |
+| 10 | `messages()` = registered codes translated with placeholder params (`{ min: '{min}' }`), only those differing from English; memoized per `key` (`undefined` outside the translator's locales — don't memoize then). Plurals / ICU `#` / number formatters can't work → plain `{count}` / `{{count}}` in translations of registered codes. |
+| 11 | i18next: `keySeparator: false`, `nsSeparator: false`, `interpolation.escapeValue: false`; wrap with `i18next.exists(id, { lng })` → `undefined` when missing. |
 
 ## Patterns
 

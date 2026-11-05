@@ -186,7 +186,7 @@ The per-decorator option now trusts exactly **one** proxy hop (the right-most `X
 
 ## Locale
 
-`@Locale()` (from `moost`) resolves the locale of the current event — `useLocale().get()`, or `undefined` when nothing set one. Moost only carries the locale; your app decides how it is chosen, and translates with its own i18n library (see [Translating text](/moost/i18n)):
+`@Locale()` (from `moost`) resolves the locale of the current event — `useLocale().get()`, or `undefined` when nothing set one. With a translator registered (`setTranslator()`), `MoostHttp` picks it from `Accept-Language` among the translator's locales (the first one by default); pass `resolveLocale` for your own policy (see [Locale and Translation](/moost/i18n#the-locale-of-a-request)):
 
 ```ts
 import { Locale } from 'moost'

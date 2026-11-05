@@ -110,11 +110,11 @@ new MoostHttp({ trustProxy: 1, proxyHeaders: 'forwarded' }) // RFC 7239 Forwarde
 
 ```ts
 import { Locale } from 'moost'
-new MoostHttp({ resolveLocale: () => useAcceptLanguage().negotiate(['en', 'de'], 'en') }) // lazy, once per request; adds Vary
+new MoostHttp({ resolveLocale: () => pickLocale() }) // only for a custom policy (cookie, ?lang, profile); lazy, once per request
 @Get('x') x(@Locale() locale: string | undefined) {}
 ```
 
-Kind-agnostic (`useLocale()` from `moost`; workflows / in-process fetch inherit the request's). Moost never translates — see [core.md](core.md#locale-and-translation) for `setTranslator()` / `useTranslate()`.
+Without `resolveLocale`, a translator registered with locales (`setTranslator(map)` / `{ locales }`) makes `MoostHttp` negotiate `Accept-Language` against them (first = default). Kind-agnostic (`useLocale()` from `moost`; workflows / in-process fetch inherit the request's). See [core.md](core.md#locale-and-translation) for `setTranslator()` / `useTranslate()`.
 
 ## Gotchas
 

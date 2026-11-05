@@ -46,7 +46,7 @@ new MoostHttp(wooksHttpOptions)       // forwarded to createHttpApp (incl. `comp
 new MoostHttp(existingWooksHttp)      // reuse an instance
 ```
 
-App-level wooks options pass straight through: `trustProxy` (`false` default | hops | IP/CIDR list | `(addr, hop) => boolean` — drives `@Ip()`, `protocol()`, `host()`; see [http-request.md](http-request.md#ip--iplist)), `proxyHeaders` (`'x-forwarded'` | `'forwarded'`), `transformErrorBody(body, error, ctx)` (every error body incl. router 404 — the place to translate by `body.code`), `resolveLocale()` (locale policy for `useLocale()` / `@Locale()`). Re-exported types: `TTrustProxy`, `TTrustProxyFn`, `TProxyHeaders`, `TForwardedInfo`, `TFetchPeer`, `TTransformErrorBody`, `THttpErrorBody`; helpers `useAcceptLanguage`, `DEFAULT_HTTP_STATUS`, `getDefaultHttpStatus`.
+App-level wooks options pass straight through: `trustProxy` (`false` default | hops | IP/CIDR list | `(addr, hop) => boolean` — drives `@Ip()`, `protocol()`, `host()`; see [http-request.md](http-request.md#ip--iplist)), `proxyHeaders` (`'x-forwarded'` | `'forwarded'`), `transformErrorBody(body, error, ctx)` (every error body incl. router 404; runs AFTER the built-in `translateErrorBody`), `resolveLocale()` (locale policy for `useLocale()` / `@Locale()`; default = `Accept-Language` vs the translator's locales). Both defaults apply only when `MoostHttp` creates the WooksHttp ([core.md](core.md#locale-and-translation)). Re-exported types: `TTrustProxy`, `TTrustProxyFn`, `TProxyHeaders`, `TForwardedInfo`, `TFetchPeer`, `TTransformErrorBody`, `THttpErrorBody`; helpers `useAcceptLanguage`, `DEFAULT_HTTP_STATUS`, `getDefaultHttpStatus`.
 
 | Method | Returns | Notes |
 |---|---|---|

@@ -36,8 +36,17 @@ export * from './metadata'
 export * from './interceptor-handler'
 export * from './composables'
 export * from './define'
-export type { TTranslate, TTranslateContext } from './i18n'
-export { getTranslator, setTranslator, useTranslate } from './i18n'
+export type { TTranslate, TTranslateContext, TTranslation, TTranslations } from './i18n'
+export {
+  formatMessage,
+  getTranslator,
+  getTranslatorLocales,
+  registerMessages,
+  setTranslator,
+  translateErrorBody,
+  useTranslate,
+  useTranslation,
+} from './i18n'
 export type {
   Logger,
   Key,

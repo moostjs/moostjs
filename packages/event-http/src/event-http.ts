@@ -6,6 +6,7 @@ import {
   HttpError,
   httpKind,
   useResponse,
+  useAcceptLanguage,
   WooksHttp,
   WooksHttpResponse,
 } from '@wooksjs/event-http'
@@ -27,9 +28,12 @@ import {
   defineMoostEventHandler,
   forkEventContext,
   getMoostMate,
+  getTranslatorLocales,
   globalKey,
   MOOST_ADAPTER_BRAND,
   run,
+  translateErrorBody,
+  useLogger,
 } from 'moost'
 import type { ListenOptions } from 'net'
 import { Socket } from 'net'
@@ -91,6 +95,16 @@ export interface THttpHandlerMeta {
 
 const LOGGER_TITLE = 'moost-http'
 
+/**
+ * The default locale policy: `Accept-Language` negotiated against the translator's locales
+ * (the first without a match or header). Nothing to negotiate — no locale or a single one —
+ * adds no `Vary`.
+ */
+function negotiateTranslatorLocale(): string | undefined {
+  const locales = getTranslatorLocales()
+  return locales.length > 1 ? useAcceptLanguage().negotiate(locales, locales[0]) : locales[0]
+}
+
 /** Options for {@link MoostHttp.invoke}. */
 export interface TMoostHttpInvokeOptions {
   /**
@@ -148,6 +162,14 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
 
   protected httpApp: WooksHttp
 
+  /**
+   * @param httpApp - A `WooksHttp` to use as is, or the options of the one `MoostHttp` creates.
+   *   A created app translates error bodies (`translateErrorBody`, before your
+   *   `transformErrorBody`) and, without your `resolveLocale`, picks each request's locale from
+   *   the translator's `locales` by `Accept-Language` (see `setTranslator`). Both are no-ops
+   *   while no translator is registered. Your `transformErrorBody` runs even if the translation
+   *   throws (it then gets the untranslated body; logged once).
+   */
   constructor(httpApp?: WooksHttp | TWooksHttpOptions) {
     WooksHttpResponse.registerFramework({
       image: 'https://moost.org/moost-full-logo.svg',
@@ -157,13 +179,27 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
     })
     if (httpApp && httpApp instanceof WooksHttp) {
       this.httpApp = httpApp
-    } else if (httpApp) {
+    } else {
+      const transform = httpApp?.transformErrorBody
+      let failureLogged = false
       this.httpApp = createHttpApp({
         ...httpApp,
-        onNotFound: this.onNotFound.bind(this),
-      })
-    } else {
-      this.httpApp = createHttpApp({
+        resolveLocale: httpApp?.resolveLocale ?? negotiateTranslatorLocale,
+        transformErrorBody: (body, error, ctx) => {
+          let out = body
+          try {
+            out = translateErrorBody(body, ctx)
+          } catch (translationError) {
+            if (!failureLogged) {
+              failureLogged = true
+              useLogger(LOGGER_TITLE, ctx).error(
+                'Error body translation failed, sending it untranslated (logged once)',
+                translationError,
+              )
+            }
+          }
+          return transform ? transform(out, error, ctx) : out
+        },
         onNotFound: this.onNotFound.bind(this),
       })
     }

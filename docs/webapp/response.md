@@ -332,7 +332,7 @@ throw new HttpError(409, {
 // → 409 { statusCode: 409, error: 'Conflict', message: 'Name "x" is taken', code: 'NAME_TAKEN', params: { name: 'x' } }
 ```
 
-To rewrite every error body in one place — the router's 404 and unexpected 500s included — pass `transformErrorBody(body, error, ctx)` to `MoostHttp`. It is the natural place to translate messages by `code`; see [Internationalization](/moost/i18n). The workflow trigger's refusals use the same shape (`WF_EXPIRED`, `WF_FORBIDDEN`, … — see [Outlets](/wf/outlets)).
+With a translator registered (`setTranslator()`), `MoostHttp` translates every error body by its `code` (else its message text) in the request's locale — see [Locale and Translation](/moost/i18n#error-responses). To rewrite every error body in one place — the router's 404 and unexpected 500s included — pass `transformErrorBody(body, error, ctx)` to `MoostHttp`; it receives the already-translated body. The workflow trigger's refusals use the same shape (`WF_EXPIRED`, `WF_FORBIDDEN`, … — see [Outlets](/wf/outlets)).
 
 ### Conditional requests
 
