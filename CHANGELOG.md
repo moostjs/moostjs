@@ -1,3 +1,12 @@
+## [0.7.3](https://github.com/moostjs/moostjs/compare/v0.7.2...v0.7.3) (2026-11-05)
+
+
+### Features
+
+* **moost:** i18n — setTranslator with a map or function and locales, registerMessages, useTranslation, translated error bodies and Accept-Language locale by default ([85a19c1](https://github.com/moostjs/moostjs/commit/85a19c1131a9f4a06a7bef79d6dffc63c78f1479))
+
+
+
 ## [0.7.2](https://github.com/moostjs/moostjs/compare/v0.7.1...v0.7.2) (2026-11-03)
 
 
