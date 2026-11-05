@@ -10,14 +10,29 @@ import type {
 } from '@wooksjs/event-wf'
 import { createWfApp, handleWfOutletRequest, mintWfToken, WooksWf } from '@wooksjs/event-wf'
 import type { EventContext, Moost, TMoostAdapter, TMoostAdapterOptions } from 'moost'
-import { defineMoostEventHandler, MOOST_ADAPTER_BRAND, setControllerContext } from 'moost'
+import {
+  defineMoostEventHandler,
+  getMoostInfact,
+  MOOST_ADAPTER_BRAND,
+  setControllerContext,
+  useScopeId,
+} from 'moost'
 
 import { getWfMate } from './meta-types'
-import { releaseRunScopes } from './run-scope'
 
 /** Metadata attached to a workflow handler by the adapter. */
 export interface TWfHandlerMeta {
   path: string
+}
+
+/**
+ * Releases the moost DI scope of a workflow run when the run ends (paused, finished or
+ * failed): step handlers keep the run's `FOR_EVENT` instances alive across steps. Runs after
+ * the run's own `cleanup`, inside the workflow context. Module-level, so attaching it to a
+ * `WooksWf` shared by several `MoostWf` instances registers it once.
+ */
+function releaseRunScope() {
+  getMoostInfact().unregisterScope(useScopeId())
 }
 
 const LOGGER_TITLE = 'moost-wf'
@@ -55,7 +70,9 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     } else {
       this.wfApp = createWfApp() as WooksWf<T, IR>
     }
-    releaseRunScopes(this.wfApp)
+    // every run of the app — MoostWf.start(), getWfApp().start(), outlet triggers, mint —
+    // including start/resume captured before this adapter existed
+    this.wfApp.attachCleanup(releaseRunScope)
   }
 
   async onNotFound() {
@@ -169,7 +186,7 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     initialContext: T,
     opts?: TWfRunOptions<I, T, IR>,
   ): Promise<TFlowOutput<T, I, IR>> {
-    // the run's DI scope is released by the wfApp itself (see releaseRunScopes)
+    // the run's DI scope is released by the wfApp itself (attachCleanup in the constructor)
     return this.wfApp.start(schemaId, initialContext, opts)
   }
 

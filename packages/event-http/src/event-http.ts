@@ -41,47 +41,20 @@ import { Socket } from 'net'
 /** Marks the child context of {@link MoostHttp.invoke}. */
 const invocationKey = globalKey<true>('moost-http.invocation')
 
-/**
- * Releases of queued (pipelined) responses per connection: one socket 'close' listener per
- * connection, however many requests are queued on it.
- */
-const queuedReleases = new WeakMap<Socket, Set<() => void>>()
-
-function releaseQueued(this: Socket) {
-  const releases = queuedReleases.get(this)
-  queuedReleases.delete(this)
-  releases?.forEach((release) => release())
-}
-
 const holdScopeUntilResponseCloses = {
   init: ({ unscope }: { unscope: () => void }) => {
     const ctx = current()
-    const res = ctx.hasOwn(invocationKey) ? undefined : useResponse(ctx).getRawRes(true)
-    const connection = res && !res.closed ? (res.socket ?? res.req?.socket) : undefined
-    if (!res || !(connection instanceof Socket)) {
-      // The scope ends with the handler: an invoked route answers its caller; the client was
-      // already gone; or an in-process request (`fetch()` / `request()`), whose stand-in
-      // request has no network connection and whose response never emits 'close'.
+    const response = useResponse(ctx)
+    if (ctx.hasOwn(invocationKey) || !(response.getRawRes(true).req?.socket instanceof Socket)) {
+      // The scope ends with the handler: an invoked route answers its caller; an in-process
+      // request (`fetch()` / `request()`) has no network connection, and a streamed body its
+      // caller never reads would otherwise hold the FOR_EVENT scope forever.
       unscope()
       return
     }
-    if (res.socket) {
-      // 'close' fires once per response and unscope is idempotent: no once() wrapper needed
-      res.on('close', unscope)
-      return
-    }
-    // A pipelined HTTP/1.1 request: its response gets the socket only once the responses
-    // ahead of it are done — and never emits 'close' if the client disconnects before that.
-    let releases = queuedReleases.get(connection)
-    if (!releases) {
-      queuedReleases.set(connection, (releases = new Set()))
-      connection.once('close', releaseQueued)
-    }
-    releases.add(unscope)
-    res.on('close', () => {
-      releases.delete(unscope)
-      unscope()
-    })
+    // held until the response is sent or aborted (also a queued pipelined response whose
+    // client leaves); runs at once if the client is already gone
+    response.onClose(unscope)
   },
 }
 

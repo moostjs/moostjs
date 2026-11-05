@@ -31,7 +31,7 @@ Details and examples: [The after/error chain](/moost/interceptors#the-after-erro
 
 - **Trigger refusals are thrown** `HttpError`s with a `code` (`WF_EXPIRED`, `WF_FORBIDDEN`, …) and reach your error interceptors; the text moved from `body.error` to `body.message`. Clients reading `body.message ?? body.error` work with both. → [Access control and refusals](/wf/outlets#access-control-and-refusals).
 - **`allow: []` admits nothing** (it allowed everything), and `allow` / `block` also apply on resume.
-- **Run scopes:** create `createOutletHandler(wooksWf)` **after** `new MoostWf(wooksWf)`, or use `MoostWf.handleOutlet()` — a handler built before it misses the scope release. → [`getWfApp()`](/wf/api#getwfapp).
+- **Run scopes:** every run releases its DI scope when it ends or pauses, whoever starts it. Up to and including `0.7.2`, a `createOutletHandler(wooksWf)` built **before** `new MoostWf(wooksWf)` missed the release; since `0.7.3` (on `@wooksjs/event-wf` `0.8.1`) the order no longer matters. → [`getWfApp()`](/wf/api#getwfapp).
 
 ### Shutdown
 

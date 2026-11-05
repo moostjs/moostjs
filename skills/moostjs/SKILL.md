@@ -93,7 +93,7 @@ Docs checklist: <https://moost.org/moost/upgrade-0-7.html>. Each item's rule liv
 - Interceptor after/error hooks = ONE chain over the current value; outer error-only loggers miss recovered errors → read `original` — [interceptors.md](references/interceptors.md)
 - HTTP: PUT/PATCH/DELETE with body → `200`; numeric durations = SECONDS; error responses `Cache-Control: no-store`; automatic `304`/`412` with any `ETag`/`Last-Modified` — [http-response.md](references/http-response.md). `@Ip({ trustProxy: true })` deprecated (one hop, right-most) → `trustProxy` on `MoostHttp`; `@Query()` → `{}` — [http-request.md](references/http-request.md). Programmatic `fetch()` outside a request: unknown client (`''`), pass `{ remoteAddress }` — [event-http.md](references/event-http.md)
 - `@moostjs/vite`: unmatched route under `prefix` → JSON 404 (`prefixFallthrough: true` = old) — [vite.md](references/vite.md)
-- Workflows: refusals THROWN `HttpError` + `code`, text in `body.message`; `allow: []` admits nothing; `allow`/`block` on resume; `createOutletHandler(wooksWf)` AFTER `new MoostWf(wooksWf)`; `@prostojs/wf` ^0.3 — [event-wf.md](references/event-wf.md)
+- Workflows: refusals THROWN `HttpError` + `code`, text in `body.message`; `allow: []` admits nothing; `allow`/`block` on resume; run scopes released for every run whoever starts it (≤0.7.2: build `createOutletHandler(wooksWf)` after `new MoostWf`); `@prostojs/wf` ^0.3 — [event-wf.md](references/event-wf.md)
 - Swagger default codes follow the runtime rule — [swagger.md](references/swagger.md); `dispose()` awaits in-flight `runDetached` first — [core.md](references/core.md)
 
 ## Architecture pointers
