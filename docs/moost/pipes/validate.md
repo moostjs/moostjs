@@ -96,14 +96,14 @@ When validation fails `validator.validate()` throws `ValidatorError`. Without th
   "statusCode": 400,
   "message": "email: Invalid email",
   "error": "Bad Request",
-  "_body": [
+  "errors": [
     { "path": "email", "message": "Invalid email" },
     { "path": "password", "message": "Length must be >= 12" }
   ]
 }
 ```
 
-The `message` is the first failing rule (`"<path>: <message>"`), and the full error list is exposed under the `_body` key.
+The `message` is the first failing rule (`"<path>: <message>"`), and the full error list is under `errors` (up to `@atscript/moost-validator` 0.2.4: `_body`).
 
 Adapters such as `@moostjs/event-http` serialise that object as JSON automatically.
 

@@ -58,13 +58,13 @@ Example response:
   "statusCode": 400,
   "message": "email: Invalid email",
   "error": "Bad Request",
-  "_body": [
+  "errors": [
     { "path": "email", "message": "Invalid email" }
   ]
 }
 ```
 
-The `message` is the first failing rule (`"<path>: <message>"`); the full error list is under the `_body` key.
+The `message` is the first failing rule (`"<path>: <message>"`); the full error list is under `errors` (up to `@atscript/moost-validator` 0.2.4: `_body`).
 
 ## `UseValidationErrorTransform()`
 

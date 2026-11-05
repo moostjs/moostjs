@@ -57,14 +57,14 @@ export class UsersController {
 `import type { CreateUserDto }` is erased at compile time, so the runtime annotated type never reaches the decorator metadata and validation is **silently skipped**. Always use a value import for `.as` types used in validated parameters.
 :::
 
-That's it. When a request arrives with an invalid body, the validator pipe rejects it before your handler runs and returns a structured `400` response. `message` is the first failure as `"<path>: <message>"`, and the full error list is under `_body`:
+That's it. When a request arrives with an invalid body, the validator pipe rejects it before your handler runs and returns a structured `400` response. `message` is the first failure as `"<path>: <message>"`, and the full error list is under `errors` (each entry also carries a `code` and `params` for translation; up to `@atscript/moost-validator` 0.2.4 the list was under `_body`):
 
 ```json
 {
   "statusCode": 400,
   "message": "email: Must be a valid email",
   "error": "Bad Request",
-  "_body": [
+  "errors": [
     { "path": "email", "message": "Must be a valid email" },
     { "path": "password", "message": "Length must be >= 8" }
   ]
