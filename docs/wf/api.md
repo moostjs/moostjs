@@ -507,6 +507,20 @@ Serializable workflow state record persisted by a `WfStateStrategy` / stored by 
 
 Storage backend used by `HandleStateStrategy` (`set`, `get`, `delete`, `getAndDelete`, optional `cleanup`). Implement it to back state with Redis or a database. See [Outlets — Custom Store](/wf/outlets#custom-store).
 
+### `WfHandleHashOptions`
+
+Object form of `HandleStateStrategy`'s `hashHandles` option:
+
+```ts
+interface WfHandleHashOptions {
+  secret?: string | Buffer // HMAC key: store keys become wfk1_… instead of wfh1_…
+  rawFallback?: boolean // resume handles stored before hashing was turned on
+  legacyHandle?: (token: string) => boolean // which tokens count as such handles
+}
+```
+
+See [Outlets — Hashing Handles](/wf/outlets#hashing-handles).
+
 ### `WfFinishedResponse`
 
 Completion response set via `useWfFinished()`:
@@ -593,8 +607,25 @@ new EncapsulatedStateStrategy({ secret: '...', defaultTtl?: number })
 Server-side strategy — stores state in a `WfStateStore`, token is an opaque handle.
 
 ```ts
-new HandleStateStrategy({ store: WfStateStore, defaultTtl?: number, generateHandle?: () => string })
+new HandleStateStrategy({
+  store: WfStateStore,
+  defaultTtl?: number,
+  generateHandle?: () => string,
+  hashHandles?: boolean | WfHandleHashOptions,
+})
 ```
+
+`hashHandles` stores each entry under a hash of its handle instead of the handle itself. See [Outlets — Hashing Handles](/wf/outlets#hashing-handles).
+
+### `hashWfHandle(handle, secret?)`
+
+Returns the store key a `HandleStateStrategy` with `hashHandles` uses for a raw handle: `wfh1_…` (SHA-256), or `wfk1_…` (HMAC-SHA-256) with the same `secret` as `hashHandles.secret`. Throws on an empty `secret`. Use it to reach a hashed entry in the store without the strategy instance; to revoke from the app, call the strategy's `consume(handle)`.
+
+```ts
+hashWfHandle(handle: string, secret?: string | Buffer): string
+```
+
+Not exported in `0.7.0`–`0.7.3` — see [Outlets — Hashing Handles](/wf/outlets#hashing-handles).
 
 ### `WfStateStoreMemory`
 

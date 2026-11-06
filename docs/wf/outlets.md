@@ -269,6 +269,38 @@ class RedisStateStore implements WfStateStore {
 }
 ```
 
+#### Hashing Handles
+
+By default the store key is the handle the client holds, so anyone who can read the store (a database dump, a backup) can resume every open flow. Turn on `hashHandles` to store each entry under a hash of its handle instead:
+
+```ts
+import { HandleStateStrategy } from '@moostjs/event-wf'
+
+const state = new HandleStateStrategy({ store, hashHandles: true })
+// keyed hash: hashHandles: { secret: process.env.WF_HANDLE_SECRET! }
+```
+
+- **`true`** — store keys are `wfh1_` + SHA-256 of the handle. **`{ secret }`** — `wfk1_` + HMAC-SHA-256; use it when a custom `generateHandle` produces guessable handles. Changing or removing the secret invalidates every open handle.
+- **New handles** from the default generator are 22 URL-safe characters instead of a UUID; don't parse their shape.
+- **Upgrading.** Entries stored before hashing was on keep their raw key. With the default generator they still resume: the first resume reads the raw key once and moves the entry to the hashed key (or consumes it if the flow finishes); the handle doesn't change. With a custom `generateHandle` the fallback is off unless you pass `legacyHandle: (token) => boolean` matching exactly the handles you issued (`rawFallback: true` without it throws). `rawFallback: false` turns the fallback off. Give flows a TTL so pre-upgrade entries expire.
+- **Revoking a link.** Call `consume(handle)` on the strategy that issued it: it deletes the entry under its hashed key, and under the raw key while the raw-key fallback is on. The handle is the part of the `wfs` after the first `.` (the strategy name, see [Named Strategy Registry](#named-strategy-registry)).
+
+```ts
+const handle = wfs.slice(wfs.indexOf('.') + 1)
+await state.consume(handle)
+```
+
+Without the strategy instance (a separate process, a database job), compute the key with `hashWfHandle(handle, secret?)`, using the same `secret` as `hashHandles`. While the raw-key fallback is on, delete the raw handle too — an entry not resumed since hashing was turned on still sits there, and the "revoked" link would still resume:
+
+```ts
+import { hashWfHandle } from '@moostjs/event-wf'
+
+await store.delete(hashWfHandle(handle, process.env.WF_HANDLE_SECRET!))
+await store.delete(handle) // pre-hashing entry
+```
+
+In `0.7.0`–`0.7.3`, `@moostjs/event-wf` does not export `hashWfHandle` or `WfHandleHashOptions`: add `@prostojs/wf@^0.3.0` to your dependencies and import them from `@prostojs/wf/outlets`. `0.6.x` uses `@prostojs/wf` 0.2, which has no handle hashing.
+
 ### Named Strategy Registry
 
 Register strategies under names and pick one per workflow (or per workflow run). The active strategy name is embedded in the issued token as `<name>.<raw>`, so resume always picks the strategy that persisted the state — each strategy can have its own independent storage.

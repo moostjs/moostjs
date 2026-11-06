@@ -37,8 +37,10 @@ export {
   EncapsulatedStateStrategy,
   HandleStateStrategy,
   WfStateStoreMemory,
+  hashWfHandle,
 } from '@prostojs/wf/outlets'
 export type {
+  WfHandleHashOptions,
   WfOutlet,
   WfOutletRequest,
   WfOutletResult,

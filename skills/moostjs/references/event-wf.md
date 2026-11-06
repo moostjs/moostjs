@@ -23,13 +23,17 @@ Moost adapter over `@wooksjs/event-wf` + `@prostojs/wf` for multi-step workflows
 
 Use workflows for multi-stage processes needing branching, pause for external input, auditability, or time-spanning execution.
 
-**Key imports.** Every symbol in this file is exported from `'@moostjs/event-wf'` — the single entry point. That includes the outlet toolkit re-exported from `@wooksjs/event-wf` (`createHttpOutlet`, `createEmailOutlet`, `createOutletHandler`, `handleWfOutletRequest`, `useWfOutlet`, `useWfFinished`, `useWfStrategy`, `swapStrategy`, `useWfState`, `wfKind`) and the outlet primitives re-exported from `@prostojs/wf/outlets` (`outlet`, `outletHttp`, `outletEmail`, `EncapsulatedStateStrategy`, `HandleStateStrategy`, `WfStateStoreMemory`, plus their types). Do NOT import these from `@wooksjs/event-wf` or `@prostojs/wf` directly — they are not direct dependencies of the app, and cross-package class identity (e.g. `StepRetriableError`) is not guaranteed.
+**Key imports.** Every symbol in this file is exported from `'@moostjs/event-wf'` — the single entry point. That includes the outlet toolkit re-exported from `@wooksjs/event-wf` (`createHttpOutlet`, `createEmailOutlet`, `createOutletHandler`, `handleWfOutletRequest`, `useWfOutlet`, `useWfFinished`, `useWfStrategy`, `swapStrategy`, `useWfState`, `wfKind`) and the outlet primitives re-exported from `@prostojs/wf/outlets` (`outlet`, `outletHttp`, `outletEmail`, `EncapsulatedStateStrategy`, `HandleStateStrategy`, `WfStateStoreMemory`, `hashWfHandle`, plus their types incl. `WfHandleHashOptions`). Do NOT import these from `@wooksjs/event-wf` or `@prostojs/wf` directly — they are not direct dependencies of the app, and cross-package class identity (e.g. `StepRetriableError`) is not guaranteed.
 
 ```ts
 import { Controller, Injectable, Moost } from 'moost'
 import { MoostWf, Step, Workflow, WorkflowParam, WorkflowSchema } from '@moostjs/event-wf'
 
-interface TOrderCtx { orderId: string; validated: boolean; charged: boolean }
+interface TOrderCtx {
+  orderId: string
+  validated: boolean
+  charged: boolean
+}
 
 @Injectable('FOR_EVENT')
 @Controller()
@@ -38,8 +42,12 @@ class OrderCtrl {
   @Workflow('process-order')
   @WorkflowSchema<TOrderCtx>(['validate', 'charge'])
   processOrder() {}
-  @Step('validate') validate() { this.ctx.validated = true }
-  @Step('charge')   charge()   { this.ctx.charged = true }
+  @Step('validate') validate() {
+    this.ctx.validated = true
+  }
+  @Step('charge') charge() {
+    this.ctx.charged = true
+  }
 }
 
 const app = new Moost()
@@ -47,7 +55,11 @@ const wf = new MoostWf()
 app.adapter(wf)
 app.registerControllers(OrderCtrl)
 await app.init()
-const result = await wf.start('process-order', { orderId: 'ORD-001', validated: false, charged: false })
+const result = await wf.start('process-order', {
+  orderId: 'ORD-001',
+  validated: false,
+  charged: false,
+})
 ```
 
 ## MoostWf
@@ -88,15 +100,15 @@ Set TTL for paused state when this step pauses — on BOTH pause paths: returnin
 
 ### `WorkflowParam(name)` (param or property)
 
-| name | type |
-|---|---|
-| `'context'` | `T` — shared context |
-| `'input'` | `I \| undefined` — from `start()`/`resume()` |
-| `'stepId'` | `string \| null` (null in entry) |
-| `'schemaId'` | `string` |
-| `'indexes'` | `number[] \| undefined` — position in nested schemas |
-| `'resume'` | `boolean` (true when resuming) |
-| `'state'` | full `useWfState()` accessor object |
+| name         | type                                                 |
+| ------------ | ---------------------------------------------------- |
+| `'context'`  | `T` — shared context                                 |
+| `'input'`    | `I \| undefined` — from `start()`/`resume()`         |
+| `'stepId'`   | `string \| null` (null in entry)                     |
+| `'schemaId'` | `string`                                             |
+| `'indexes'`  | `number[] \| undefined` — position in nested schemas |
+| `'resume'`   | `boolean` (true when resuming)                       |
+| `'state'`    | full `useWfState()` accessor object                  |
 
 Property form requires `@Injectable('FOR_EVENT')`.
 
@@ -228,12 +240,12 @@ charge(@WorkflowParam('input') input?: TPayment) {
 }
 ```
 
-| Scenario | Use |
-|---|---|
-| Bug, invalid config | `Error` |
-| External service down | `StepRetriableError` |
+| Scenario                | Use                                                     |
+| ----------------------- | ------------------------------------------------------- |
+| Bug, invalid config     | `Error`                                                 |
+| External service down   | `StepRetriableError`                                    |
 | User validation failure | `StepRetriableError` with `errorList` + `inputRequired` |
-| Rate limit hit | `StepRetriableError` with `expires` |
+| Rate limit hit          | `StepRetriableError` with `expires`                     |
 
 ## Spies
 
@@ -266,18 +278,28 @@ outletEmail(target, template, context?)  // pause, trigger email
 ```ts
 new EncapsulatedStateStrategy({ secret: process.env.SECRET!, defaultTtl: 3_600_000 })
 ```
+
 Pros: zero infra, scales horizontally. Cons: **stateless — cannot be invalidated** (`consume()` is a no-op alias for `retrieve()`; a copy of the token remains valid until TTL). The ciphertext changes when state mutates, so the response token differs from the request token on every state-mutating resume — clients must read the renewed `wfs` from each response. NOT for auth / password reset / invite accept / financial ops.
 
 **`HandleStateStrategy`** — state server-side, token is a stable handle.
 
 ```ts
 new HandleStateStrategy({
-  store: new WfStateStoreMemory(),    // or custom WfStateStore
+  store: new WfStateStoreMemory(), // or custom WfStateStore
   defaultTtl: 3_600_000,
   generateHandle: () => crypto.randomUUID(),
 })
 ```
-Pros: small tokens, server-side revocation, **fail-closed on unexpected errors** (the engine re-persists under the same handle only *after* the step returns — an unexpected throw burns the handle). The `wfs` is minted on start and reused for the entire workflow run (engine passes `{ handle: token }` to `persist()` since `@wooksjs/event-wf` 0.7.14), so refresh / bookmark / lost-connection retry / magic-link reopen all keep working with the same URL token. Cons: needs persistent store in production (`WfStateStoreMemory` is dev-only — loses state on restart).
+
+Pros: small tokens, server-side revocation, **fail-closed on unexpected errors** (the engine re-persists under the same handle only _after_ the step returns — an unexpected throw burns the handle). The `wfs` is minted on start and reused for the entire workflow run (engine passes `{ handle: token }` to `persist()` since `@wooksjs/event-wf` 0.7.14), so refresh / bookmark / lost-connection retry / magic-link reopen all keep working with the same URL token. Cons: needs persistent store in production (`WfStateStoreMemory` is dev-only — loses state on restart).
+
+**Handle hashing (`hashHandles`).** `new HandleStateStrategy({ store, hashHandles: true })` stores each entry under `wfh1_` + SHA-256 of its handle instead of the handle (a store dump can't resume flows); `hashHandles: { secret }` (`WfHandleHashOptions`) → `wfk1_` + HMAC — use it with a guessable custom `generateHandle`. Off by default; turn it on for every DB-backed store.
+
+- Revoke by handle: `await strategy.consume(handle)` on the issuing strategy — deletes the hashed key and, while the raw-key fallback is on, the raw key; no second copy of the secret. `handle` = the part of the `wfs` after the first `.` (the `<name>.` strategy prefix, see Named strategy registry; `default.` for a single strategy) — never pass the whole `wfs`.
+- Without the strategy instance (separate process, DB job): `store.delete(hashWfHandle(handle, secret?))` with the same `secret` as `hashHandles`, and while the raw-key fallback is on also `store.delete(handle)` (a pre-hashing entry not resumed since still sits under the raw key, so the revoked link would still resume).
+- Pre-hashing entries keep raw keys. Default generator → they keep resuming (the first resume reads the raw key once and moves the entry to the hashed key, or consumes it if the flow finishes; the handle stays valid). Custom `generateHandle` → needs `legacyHandle: (token) => boolean` (`rawFallback: true` alone throws). `rawFallback: false` disables the fallback. Give flows a TTL.
+- Changing or removing the secret invalidates every open handle. Default handles are 22 URL-safe chars, not UUIDs — don't parse them.
+- 0.7.0–0.7.3: `hashWfHandle`/`WfHandleHashOptions` not exported here → add `@prostojs/wf@^0.3.0`, import from `@prostojs/wf/outlets` (0.6.x ships `@prostojs/wf` 0.2: no hashing).
 
 **`WfStateStoreMemory`** — in-memory store for dev/testing. `WfStateStore` interface: `set`, `get`, `delete`, `getAndDelete`, `cleanup?`.
 
@@ -319,7 +341,7 @@ async triggerWorkflow() {
 ### Token semantics
 
 - **Stable session credential (since `@wooksjs/event-wf` 0.7.14).** With `HandleStateStrategy` the `wfs` is minted on start, reused across every resume (engine re-persists under the same handle), and dies on finish or unexpected error. With `EncapsulatedStateStrategy` the ciphertext rotates on every state-mutating persist — clients must always read the renewed `wfs` from the response.
-- **`consume()` as concurrent-resume mutex**: every resume calls `strategy.consume(token)` atomically before the step. Two tabs racing the same `wfs`: one wins, the other gets a thrown `HttpError` **410 Gone** with `code: 'WF_EXPIRED'` (`message: 'Invalid or expired workflow state'`). After the winner re-persists, the loser's *next* attempt succeeds — the token is alive again.
+- **`consume()` as concurrent-resume mutex**: every resume calls `strategy.consume(token)` atomically before the step. Two tabs racing the same `wfs`: one wins, the other gets a thrown `HttpError` **410 Gone** with `code: 'WF_EXPIRED'` (`message: 'Invalid or expired workflow state'`). After the winner re-persists, the loser's _next_ attempt succeeds — the token is alive again.
 - **Fail-closed** (default; opt out per error with `restoreOnError`): consume fires before the step; re-persist happens only after the step returns. An unexpected throw during resume skips re-persist, the handle is gone, user must restart. Handle expected failures (wrong password, invalid input, rate limit) by returning an outlet signal instead of throwing; the engine re-persists under the same handle on the re-pause, so the same `wfs` keeps working.
 - **Replay protection at workflow layer, not transport.** The record advances after each successful step — a replayed token resumes from the current step, not a previous one. Steps with non-idempotent side effects should guard themselves (idempotency keys, advance counters), not rely on token rotation.
 - **`tokenDelivery`** on `WfOutlet`: `'caller'` (default for `createHttpOutlet`) merges token into HTTP response; `'out-of-band'` (default for `createEmailOutlet`) suppresses body/cookie write so the HTTP caller doesn't receive the token. Custom outlets whose resumer is a different principal than the HTTP caller (SMS, Slack, webhook) MUST declare `'out-of-band'` — otherwise it's a privilege escalation vector.
@@ -361,9 +383,13 @@ class OnboardingWf {
   }
   @Step('verify')
   @StepTTL(60 * 60 * 1000)
-  verify() { return outletEmail(this.ctx.email, 'verify-email') }
+  verify() {
+    return outletEmail(this.ctx.email, 'verify-email')
+  }
   @Step('welcome')
-  welcome() { useWfFinished().set({ type: 'redirect', value: '/dashboard' }) }
+  welcome() {
+    useWfFinished().set({ type: 'redirect', value: '/dashboard' })
+  }
 }
 
 @Controller('api')
@@ -391,7 +417,9 @@ class TicketController {
   constructor(private wf: MoostWf<TTicketCtx>) {}
   @Post() async create(@Body() body: { description: string }) {
     const result = await this.wf.start('support-ticket', {
-      ticketId: generateId(), description: body.description, status: 'new',
+      ticketId: generateId(),
+      description: body.description,
+      status: 'new',
     })
     return { finished: result.finished, state: result.finished ? undefined : result.state }
   }
@@ -405,7 +433,7 @@ Standard Moost features work on steps (interceptors, pipes, DI).
 
 ## Gotchas
 
-- `@WorkflowParam('resume')` is a **boolean**, not a function. Resume *function* is on `TFlowOutput`.
+- `@WorkflowParam('resume')` is a **boolean**, not a function. Resume _function_ is on `TFlowOutput`.
 - Regular errors reject the promise (not captured in output). Only `StepRetriableError` produces `finished: false` + `retry()`.
 - `expires` is informational — engine doesn't enforce.
 - `result.resume` / `result.retry` are in-process closures (re-enter the engine with a fresh event context, equivalent to `wf.resume(result.state, { input })`). Across process boundaries, serialize `result.state` and call `wf.resume()`.
