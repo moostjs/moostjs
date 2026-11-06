@@ -1,8 +1,8 @@
 import type { EventContext } from '@wooksjs/event-core'
-import { createEventContext, current, useLocale } from '@wooksjs/event-core'
+import { createEventContext, current, key as eventKey, useLocale } from '@wooksjs/event-core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { TTranslate } from './i18n'
+import type { TTranslate, TTranslateContext } from './i18n'
 import {
   formatMessage,
   getTranslator,
@@ -307,6 +307,180 @@ describe('registerMessages() + messages()', () => {
       Symbol.for('moost.i18n')
     ]
     expect(state.templates.get('I18N_SPEC_SHARED')).toBe('Shared')
+  })
+})
+
+describe('setTranslator({ scope })', () => {
+  const tenantKey = eventKey<string | undefined>('i18n.spec.tenant')
+  const scope = () => current().get(tenantKey)
+  const CATALOG = Object.freeze({ I18N_SPEC_ORDER: 'Order' })
+  const WORDING: Record<string, string> = { acme: 'Auftrag', globex: 'Bestellvorgang' }
+
+  /** Runs `fn` in a fresh event with `locale` and `tenant`. */
+  function withTenant<R>(
+    locale: string | undefined,
+    tenant: string | undefined,
+    fn: (ctx: EventContext) => R,
+  ): R {
+    return withCtx(locale, (ctx) => {
+      ctx.set(tenantKey, tenant)
+      return fn(ctx)
+    })
+  }
+
+  /** A translator wording I18N_SPEC_ORDER per tenant (German only), counting its calls. */
+  function tenantTranslator() {
+    const calls: unknown[] = []
+    const translate: TTranslate = (id, _params, { locale, scope: tenant }) => {
+      if (id !== 'I18N_SPEC_ORDER') {
+        return undefined
+      }
+      calls.push([locale, tenant])
+      return locale === 'de' ? (tenant === undefined ? 'Bestellung' : WORDING[tenant]) : undefined
+    }
+    return { translate, calls }
+  }
+
+  it('passes the scope to the translator (t, useTranslate, translateErrorBody)', () => {
+    const seen: TTranslateContext[] = []
+    setTranslator(
+      (_id, _params, ctx) => {
+        seen.push(ctx)
+        return undefined
+      },
+      { locales: ['en', 'de'], scope },
+    )
+    withTenant('de', 'acme', (ctx) => {
+      must(useTranslation()).t('A')
+      useTranslate()('B')
+      translateErrorBody({ message: 'C' })
+      expect(seen).toEqual([
+        { locale: 'de', scope: 'acme', event: ctx },
+        { locale: 'de', scope: 'acme', event: ctx },
+        { locale: 'de', scope: 'acme', event: ctx },
+      ])
+    })
+    seen.length = 0
+    withTenant('de', undefined, (ctx) => {
+      useTranslate()('D')
+      expect(seen).toEqual([{ locale: 'de', event: ctx }])
+      expect('scope' in seen[0]).toBe(false)
+    })
+  })
+
+  it('partitions memoized messages per scope: no cross-talk, each memoized', () => {
+    registerMessages(CATALOG)
+    const { translate, calls } = tenantTranslator()
+    setTranslator(translate, { locales: ['en', 'de'], scope })
+    const acme = withTenant('de', 'acme', () => must(useTranslation()).messages())
+    const globex = withTenant('de', 'globex', () => must(useTranslation()).messages())
+    const shared = withTenant('de', undefined, () => must(useTranslation()).messages())
+    expect(acme.I18N_SPEC_ORDER).toBe('Auftrag')
+    expect(globex.I18N_SPEC_ORDER).toBe('Bestellvorgang')
+    expect(shared.I18N_SPEC_ORDER).toBe('Bestellung')
+    calls.length = 0
+    expect(withTenant('de', 'acme', () => must(useTranslation()).messages())).toBe(acme)
+    expect(withTenant('de', 'globex', () => must(useTranslation()).messages())).toBe(globex)
+    expect(withTenant('de', undefined, () => must(useTranslation()).messages())).toBe(shared)
+    expect(calls).toEqual([])
+  })
+
+  it('key = generation:locale:scope, partition = locale:scope; unscoped events as before', () => {
+    setTranslator({ en: {}, de: DE }, { scope })
+    const acme = withTenant('de', 'acme', () => must(useTranslation()))
+    expect(acme.key).toMatch(/^\d+:de:acme$/)
+    expect(acme.partition).toBe('de:acme')
+    const shared = withTenant('de', undefined, () => must(useTranslation()))
+    expect(shared.key).toMatch(/^\d+:de$/)
+    expect(shared.partition).toBe('de')
+    expect(shared.key?.split(':')[0]).toBe(acme.key?.split(':')[0])
+    // a locale outside the list: no key, scoped or not
+    const fr = withTenant('fr', 'acme', () => must(useTranslation()))
+    expect(fr.key).toBeUndefined()
+    expect(fr.partition).toBe('fr:acme')
+  })
+
+  it('without a scope option (or after one is dropped): partition = locale, key = generation:locale', () => {
+    setTranslator({ en: {}, de: DE }, { scope })
+    setTranslator({ en: {}, de: DE })
+    const translation = withTenant('de', 'acme', () => must(useTranslation()))
+    expect(translation.partition).toBe('de')
+    expect(translation.key).toMatch(/^\d+:de$/)
+  })
+
+  it('a finite number names a scope; other non-strings are the shared wording', () => {
+    let value: unknown
+    setTranslator({ en: {}, de: DE }, { scope: () => value as string | number | undefined })
+    const partition = () => withCtx('de', () => must(useTranslation()).partition)
+    value = 42
+    expect(partition()).toBe('de:42')
+    for (value of [Number.NaN, Infinity, {}, null, true]) {
+      expect(partition()).toBe('de')
+    }
+  })
+
+  it('reads the scope per translation taken, in the given event (even outside it)', () => {
+    setTranslator({ en: {}, de: DE }, { scope })
+    const ctx = withTenant('de', undefined, (event) => {
+      expect(must(useTranslation()).partition).toBe('de')
+      event.set(tenantKey, 'acme')
+      expect(must(useTranslation()).partition).toBe('de:acme')
+      return event
+    })
+    expect(must(useTranslation(ctx)).partition).toBe('de:acme')
+  })
+
+  it('memoizes the first 32 scopes of a generation; later ones are computed per call', () => {
+    registerMessages(CATALOG)
+    const { translate, calls } = tenantTranslator()
+    setTranslator(translate, { locales: ['de'], scope })
+    for (let i = 0; i < 32; i++) {
+      expect(withTenant('de', `t${i}`, () => must(useTranslation()).key)).toBeDefined()
+    }
+    const late = withTenant('de', 't32', () => must(useTranslation()))
+    expect(late.key).toBeUndefined()
+    expect(late.partition).toBe('de:t32')
+    calls.length = 0
+    expect(late.t('I18N_SPEC_ORDER')).toBe('Order') // asked with its scope, no wording for it
+    expect(calls).toEqual([['de', 't32']])
+    calls.length = 0
+    late.messages()
+    late.messages()
+    expect(calls).toEqual([
+      ['de', 't32'],
+      ['de', 't32'],
+    ])
+    // admitted scopes and the unscoped partition keep their keys
+    expect(withTenant('de', 't0', () => must(useTranslation()).key)).toMatch(/:de:t0$/)
+    expect(withTenant('de', undefined, () => must(useTranslation()).key)).toMatch(/^\d+:de$/)
+    // a new generation starts over
+    setTranslator(translate, { locales: ['de'], scope })
+    expect(withTenant('de', 't32', () => must(useTranslation()).key)).toMatch(/:de:t32$/)
+  })
+
+  it('a throwing scope function: unscoped, not memoized, logged once', () => {
+    const { logger, errors } = createCaptureLogger()
+    setTranslator(
+      { en: {}, de: DE },
+      {
+        scope: () => {
+          throw new Error('no tenant')
+        },
+      },
+    )
+    withCtx(
+      'de',
+      () => {
+        const translation = must(useTranslation())
+        expect(translation.key).toBeUndefined()
+        expect(translation.partition).toBe('de')
+        expect(translation.t('Name taken')).toBe('Name vergeben')
+        expect(useTranslate()('Name taken')).toBe('Name vergeben')
+      },
+      logger,
+    )
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatch(/scope/i)
   })
 })
 

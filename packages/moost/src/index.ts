@@ -36,7 +36,13 @@ export * from './metadata'
 export * from './interceptor-handler'
 export * from './composables'
 export * from './define'
-export type { TTranslate, TTranslateContext, TTranslation, TTranslations } from './i18n'
+export type {
+  TTranslate,
+  TTranslateContext,
+  TTranslation,
+  TTranslations,
+  TTranslatorOptions,
+} from './i18n'
 export {
   formatMessage,
   getTranslator,

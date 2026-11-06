@@ -219,10 +219,11 @@ import { formatMessage, getTranslatorLocales, Locale, registerMessages, setTrans
 
 setTranslator({ en: {}, de: { NAME_TAKEN: 'Name {name} vergeben' } })  // map: locales = keys, first = default (rule 4a); {name} filled from params
 setTranslator((id, params, { locale, event }) => text | undefined, { locales: ['en', 'de'] }) // function: return FINAL text; list locales
+setTranslator((id, params, { locale, scope }) => …, { locales, scope: () => tenantId })  // per-tenant wording (rule 12)
 setTranslator(undefined)                                   // remove
 const t = useTranslate(ctx?); t(id, params?, fallback?)     // translator text (final) → else fallback as is → else formatMessage(registered template ?? id, params)
 registerMessages({ NAME_TAKEN: 'The name {name} is taken' }) // global code → English template; idempotent per object; packages call it on import
-useTranslation(ctx?)  // undefined without translator/locale; { locale, key, t, messages() }
+useTranslation(ctx?)  // undefined without translator/locale; { locale, partition, key, t, messages() }
 useLocale().get() / .set('de'); @Locale() locale            // any event kind; children inherit
 ```
 
@@ -239,8 +240,9 @@ useLocale().get() / .set('de'); @Locale() locale            // any event kind; c
 | 7 | Same `MoostHttp`: every error body goes through `translateErrorBody` BEFORE the app's `transformErrorBody` (which still runs, with the untranslated body, if translation throws — logged once). A passed-in `WooksHttp` is untouched — give it a `resolveLocale` (rule 6) and call `translateErrorBody(body, ctx)` in its transform. |
 | 8 | `translateErrorBody`: body `code` → `t(code, params, message)`; `errors[]` entries (+ `details`) by `code` unless `custom: true`, else by message, fallback = entry message; uncoded top message equal to `path: message` of `errors[0]` follows that entry; else top message by text. Returns the same body when no translation. |
 | 9 | Clients branch on `code`, NEVER on `message` text. |
-| 10 | `messages()` = registered codes translated with placeholder params (`{ min: '{min}' }`), only those differing from English; memoized per `key` (`undefined` outside the translator's locales — don't memoize then). Plurals / ICU `#` / number formatters can't work → plain `{count}` / `{{count}}` in translations of registered codes. |
+| 10 | `messages()` = registered codes translated with placeholder params (`{ min: '{min}' }`), only those differing from English; memoized per `key` (`undefined` outside the translator's locales or past the scope cap — don't memoize then). Own caches: one entry per `partition` (locale, + scope if any), replaced when `key` changes. Plurals / ICU `#` / number formatters can't work → plain `{count}` / `{{count}}` in translations of registered codes. |
 | 11 | i18next: `keySeparator: false`, `nsSeparator: false`, `interpolation.escapeValue: false`; wrap with `i18next.exists(id, { lng })` → `undefined` when missing. |
+| 12 | Per-tenant/brand/group wording: `setTranslator(t, { scope: () => string \| number \| undefined })` (moost ≥ 0.7.4). `scope` runs in the event context on every translation taken (keep it cheap: read an already-resolved value). Derive it from a VALIDATED value (authenticated principal's tenant), `undefined` for unknown tenants — NEVER raw request input (header/query): untrusted input can exhaust the cache slots and turn caching off for real tenants. Result → translator `ctx.scope` (finite number → its string; `undefined`/other values = shared wording, no `scope` prop) and partitions every cache via `key`/`partition` (rule 10). Translator MUST be pure per (id, params, locale, scope). First 32 distinct scopes per generation get a `key`; later ones → `key` undefined (translated per request). `scope` throws → shared wording, no `key`, logged once. Own per-partition caches: clear on `setTranslator()` if scopes change over time. atscript-db ≥ 0.1.172 (`/meta`) and atscript-ui ≥ 0.1.168 (wf form schemas) cache per scope; older ones serve the right wording but cache one scope per locale. |
 
 ## Patterns
 

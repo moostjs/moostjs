@@ -1,10 +1,15 @@
 import type { EventContext } from '@wooksjs/event-core'
-import { current, useLocale, useLogger } from '@wooksjs/event-core'
+import { current, run, tryGetCurrent, useLocale, useLogger } from '@wooksjs/event-core'
 
-/** What a translator gets besides the text: the event's locale and the event itself. */
+/** What a translator gets besides the text: the event's locale, its scope and the event itself. */
 export interface TTranslateContext {
   /** `useLocale().get()` of the event the text is translated for. */
   locale: string | undefined
+  /**
+   * The event's translation scope ({@link TTranslatorOptions.scope}) — e.g. a tenant whose
+   * wording differs. `undefined`: the shared wording.
+   */
+  scope?: string
   /** The event context — read anything else your policy needs from it. */
   event: EventContext
 }
@@ -29,6 +34,24 @@ export type TTranslate = (
  */
 export type TTranslations = Record<string, Record<string, string>>
 
+/** The options of {@link setTranslator}. */
+export interface TTranslatorOptions {
+  /** The locales the app serves, the default first. For a map: its keys by default. */
+  locales?: readonly string[]
+  /**
+   * The event's translation scope, for wording that differs by more than the locale (per
+   * tenant, brand, user group, …). Called in the event's context each time a translation is
+   * taken — keep it cheap. Its result is passed to the translator ({@link TTranslateContext.scope})
+   * and partitions everything memoized per translation ({@link TTranslation.key}); a finite
+   * number counts as its string, and `undefined` (or any other value) is the shared, unscoped
+   * wording. The translator must return the same text for the same (id, params, locale, scope).
+   *
+   * Derive it from a validated value (the authenticated principal's tenant), never straight from
+   * request input: only the first 32 scopes seen per generation get a {@link TTranslation.key}.
+   */
+  scope?: () => string | number | undefined
+}
+
 /** `t(id, params?, fallback?)` — see {@link useTranslate}. */
 type TTranslateFn = (id: string, params?: Record<string, unknown>, fallback?: string) => string
 
@@ -37,9 +60,17 @@ export interface TTranslation {
   /** The event's locale. */
   locale: string
   /**
-   * A memo key for anything derived from this translation: changes with every
-   * {@link setTranslator} call and every {@link registerMessages} call that adds or changes a
-   * template. `undefined` for a locale outside the translator's `locales` — don't memoize then.
+   * What to index memoized results by: the locale, plus the event's scope when it has one
+   * ({@link TTranslatorOptions.scope}). Keep one entry per partition, replaced when
+   * {@link TTranslation.key} changes.
+   */
+  partition: string
+  /**
+   * A memo key for anything derived from this translation: the locale, the scope (if any) and
+   * the generation — changes with every {@link setTranslator} call and every
+   * {@link registerMessages} call that adds or changes a template. `undefined` for a locale
+   * outside the translator's `locales`, or a scope past the cap ({@link TTranslatorOptions.scope})
+   * — don't memoize then.
    */
   key: string | undefined
   /** {@link useTranslate}'s `t`, bound to this translation. */
@@ -54,11 +85,20 @@ export interface TTranslation {
 
 interface TI18nState {
   translate?: TTranslate
+  /** `opts.scope` of the `setTranslator` call that registered `translate`. */
+  scoping?: { translate: TTranslate | undefined; get: () => string | number | undefined }
+  /**
+   * The scopes given memo keys in `generation` (at most {@link MAX_SCOPES}). Tagged rather than
+   * cleared by `newGeneration`: an older moost copy bumps the generation without knowing of it.
+   */
+  admittedScopes?: { generation: number; names: Set<string> }
   locales: readonly string[]
-  /** Bumped by `setTranslator` and by a `registerMessages` that changes a template: the only invalidation. */
+  /** Bumped by `setTranslator` and by a `registerMessages` that changes a template. */
   generation: number
   /** A translator failure was logged (reset by `setTranslator`). */
   failureLogged?: boolean
+  /** A scope function failure was logged (reset by `setTranslator`). */
+  scopeFailureLogged?: boolean
   catalogs: WeakSet<object>
   /** code → English template, of every registered catalog. */
   templates: Map<string, string>
@@ -72,6 +112,8 @@ interface TI18nState {
 // adds only what it lacks.
 const STATE = Symbol.for('moost.i18n')
 const NO_LOCALES: readonly string[] = Object.freeze([])
+/** Distinct scopes given memo keys per generation: keeps every memo keyed by `key` bounded. */
+const MAX_SCOPES = 32
 const state = ((globalThis as { [STATE]?: Partial<TI18nState> })[STATE] ??= {}) as TI18nState
 state.locales ??= NO_LOCALES
 state.generation ??= 0
@@ -102,13 +144,15 @@ state.memo ??= new Map()
  */
 export function setTranslator(
   translate: TTranslate | TTranslations | undefined,
-  opts?: { locales?: readonly string[] },
+  opts?: TTranslatorOptions,
 ): void {
   const isMap = typeof translate === 'object'
   state.translate = isMap ? mapTranslator(translate) : translate
+  state.scoping = opts?.scope && { translate: state.translate, get: opts.scope }
   const locales = opts?.locales ?? (isMap ? Object.keys(translate) : undefined)
   state.locales = translate && locales?.length ? Object.freeze([...locales]) : NO_LOCALES
   state.failureLogged = false
+  state.scopeFailureLogged = false
   newGeneration()
 }
 
@@ -147,7 +191,7 @@ export function registerMessages(catalog: Readonly<Record<string, string>>): voi
   }
 }
 
-/** The only invalidation: drops everything derived from the translator and the templates. */
+/** Drops everything derived from the translator and the templates. */
 function newGeneration(): void {
   state.generation++
   state.memo.clear()
@@ -197,7 +241,7 @@ export function useTranslate(ctx?: EventContext): TTranslateFn {
           translate,
           id,
           params,
-          (translateCtx ??= { locale: useLocale(event).get(), event }),
+          (translateCtx ??= translateContext(event, useLocale(event).get(), readScope(event))),
         )
       : undefined
     return out ?? untranslated(id, params, fallback)
@@ -224,9 +268,14 @@ export function useTranslation(ctx?: EventContext): TTranslation | undefined {
   if (locale === undefined) {
     return undefined
   }
-  const translateCtx: TTranslateContext = { locale, event }
+  const scope = readScope(event)
+  const translateCtx = translateContext(event, locale, scope)
   const generation = state.generation
-  const key = state.locales.includes(locale) ? `${generation}:${locale}` : undefined
+  const partition = typeof scope === 'string' ? `${locale}:${scope}` : locale
+  const key =
+    state.locales.includes(locale) && (scope === undefined || (scope !== null && admitted(scope)))
+      ? `${generation}:${partition}`
+      : undefined
   const t: TTranslateFn = (id, params, fallback) =>
     callTranslator(translate, id, params, translateCtx) ?? untranslated(id, params, fallback)
   const messages = () => {
@@ -241,7 +290,69 @@ export function useTranslation(ctx?: EventContext): TTranslation | undefined {
     }
     return out
   }
-  return { locale, key, t, messages }
+  return { locale, partition, key, t, messages }
+}
+
+function translateContext(
+  event: EventContext,
+  locale: string | undefined,
+  scope: string | undefined | null,
+): TTranslateContext {
+  return typeof scope === 'string' ? { locale, scope, event } : { locale, event }
+}
+
+/**
+ * The event's scope (`opts.scope`): `undefined` without one, `null` when the scope function
+ * threw (logged once) — translated unscoped then, and not memoized.
+ */
+function readScope(event: EventContext): string | undefined | null {
+  // (a scope set by this copy for the translator another copy has since replaced: ignored)
+  const scoping = state.scoping
+  if (!scoping || scoping.translate !== state.translate) {
+    return undefined
+  }
+  try {
+    const { get } = scoping
+    const scope: unknown = tryGetCurrent() === event ? get() : run(event, get)
+    return typeof scope === 'string'
+      ? scope
+      : typeof scope === 'number' && Number.isFinite(scope)
+        ? String(scope)
+        : undefined
+  } catch (error) {
+    logOnce(
+      'scopeFailureLogged',
+      event,
+      'The translation scope threw — translating unscoped, without memoizing (logged once)',
+      error,
+    )
+    return null
+  }
+}
+
+/** Whether `scope` gets memo keys: one of the first {@link MAX_SCOPES} of the generation. */
+function admitted(scope: string): boolean {
+  if (state.admittedScopes?.generation !== state.generation) {
+    state.admittedScopes = { generation: state.generation, names: new Set() }
+  }
+  const { names } = state.admittedScopes
+  if (names.size < MAX_SCOPES) {
+    names.add(scope)
+  }
+  return names.has(scope)
+}
+
+/** Logs a failure of the translator or the scope function once per `setTranslator`. */
+function logOnce(
+  flag: 'failureLogged' | 'scopeFailureLogged',
+  event: EventContext,
+  message: string,
+  error: unknown,
+): void {
+  if (!state[flag]) {
+    state[flag] = true
+    useLogger('i18n', event).error(message, error)
+  }
 }
 
 /** An error body's entry, as `translateErrorBody` reads it. */
@@ -268,11 +379,12 @@ interface TErrorEntry {
 export function translateErrorBody<
   T extends { message: string; code?: string; params?: Record<string, unknown>; errors?: unknown },
 >(body: T, ctx?: EventContext): T {
-  const translation = useTranslation(ctx)
-  if (!translation) {
+  const event = ctx ?? current()
+  if (!state.translate || useLocale(event).get() === undefined) {
     return body
   }
-  const { t } = translation
+  // (useTranslate, not useTranslation: an error body takes no memo key, so no scope slot)
+  const t = useTranslate(event)
   const source: unknown[] | undefined = Array.isArray(body.errors) ? body.errors : undefined
   const errors = source && translateEntries(source, t)
   let message: string
@@ -305,13 +417,12 @@ function callTranslator(
     const out = translate(id, params, ctx)
     return typeof out === 'string' ? out : undefined
   } catch (error) {
-    if (!state.failureLogged) {
-      state.failureLogged = true
-      useLogger('i18n', ctx.event).error(
-        `The translator threw for "${id}" — using the untranslated text (logged once)`,
-        error,
-      )
-    }
+    logOnce(
+      'failureLogged',
+      ctx.event,
+      `The translator threw for "${id}" — using the untranslated text (logged once)`,
+      error,
+    )
     return undefined
   }
 }
