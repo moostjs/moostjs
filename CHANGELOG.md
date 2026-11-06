@@ -1,3 +1,13 @@
+## [0.7.4](https://github.com/moostjs/moostjs/compare/v0.7.3...v0.7.4) (2026-11-06)
+
+
+### Features
+
+* **event-wf:** re-export hashWfHandle and WfHandleHashOptions; docs on hashing and revoking handles ([23a5b8b](https://github.com/moostjs/moostjs/commit/23a5b8b7446b7f73099aae9b41ca28a0c9770a32))
+* **moost:** setTranslator scope option — per-tenant wording with scoped translation partitions and keys ([ba44bad](https://github.com/moostjs/moostjs/commit/ba44bad9995b8a93ebc6f59a136f8f1cc1c8b77f))
+
+
+
 ## [0.7.3](https://github.com/moostjs/moostjs/compare/v0.7.2...v0.7.3) (2026-11-05)
 
 
