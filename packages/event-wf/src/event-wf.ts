@@ -186,7 +186,6 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
     initialContext: T,
     opts?: TWfRunOptions<I, T, IR>,
   ): Promise<TFlowOutput<T, I, IR>> {
-    // the run's DI scope is released by the wfApp itself (attachCleanup in the constructor)
     return this.wfApp.start(schemaId, initialContext, opts)
   }
 

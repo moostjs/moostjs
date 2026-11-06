@@ -13,6 +13,7 @@ import {
   useTranslate,
   useTranslation,
 } from './i18n'
+import { createCaptureLogger } from './tests/capture-logger.artifacts'
 
 const quiet = { info() {}, warn() {}, error() {}, debug() {}, log() {} }
 
@@ -105,8 +106,7 @@ describe('setTranslator(function)', () => {
   })
 
   it('falls back after a throwing translator and logs once', () => {
-    const error = vi.fn()
-    const logger = { ...quiet, error }
+    const { logger, errors } = createCaptureLogger()
     setTranslator(() => {
       throw new Error('boom')
     })
@@ -121,8 +121,8 @@ describe('setTranslator(function)', () => {
     )
     registerMessages({ I18N_SPEC_LOG_ONCE: 'Once' }) // a new template: not a new translator
     withCtx('de', () => expect(useTranslate()('B')).toBe('B'), logger)
-    expect(error).toHaveBeenCalledTimes(1)
-    expect(String(error.mock.calls[0][0])).toMatch(/translator/i)
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toMatch(/translator/i)
   })
 })
 

@@ -61,19 +61,15 @@ async function boot(http: MoostHttp) {
   return http
 }
 
-function json(res: Response | null) {
+function must(res: Response | null): Response {
   if (!res) {
     throw new Error('no route')
   }
-  return res.json() as Promise<Record<string, unknown>>
+  return res
 }
 
-function text(res: Response | null) {
-  if (!res) {
-    throw new Error('no route')
-  }
-  return res.text()
-}
+const json = (res: Response | null) => must(res).json() as Promise<Record<string, unknown>>
+const text = (res: Response | null) => must(res).text()
 
 const MESSAGES = {
   en: {},
@@ -229,25 +225,18 @@ describe('MoostHttp default error-body translation', () => {
     expect(body.message).toBe('Name Ann is taken')
   })
 
-  it('no translator: HTML and text error pages are byte-identical to a plain WooksHttp', async () => {
-    for (const accept of ['text/html', 'text/plain', 'application/json']) {
+  it('no translator: error pages and headers (no Vary) are byte-identical to a plain WooksHttp', async () => {
+    for (const accept of [undefined, 'text/html', 'text/plain', 'application/json']) {
+      const headers: Record<string, string> = accept ? { accept } : {}
       for (const path of ['/plain', '/taken']) {
         const plain = await boot(new MoostHttp(createHttpApp()))
-        const a = await plain.request(path, { headers: { accept } })
+        const a = await plain.request(path, { headers })
         const http = await boot(new MoostHttp())
-        const b = await http.request(path, { headers: { accept, 'accept-language': 'de' } })
+        const b = await http.request(path, { headers: { ...headers, 'accept-language': 'de' } })
         expect(await text(b)).toBe(await text(a))
         expect([...(b?.headers ?? [])]).toEqual([...(a?.headers ?? [])])
+        expect(b?.headers.get('vary')).toBeNull()
       }
     }
-  })
-
-  it('no translator: the same bytes as a plain WooksHttp, no Vary', async () => {
-    const plain = await boot(new MoostHttp(createHttpApp()))
-    const expected = await text(await plain.request('/taken'))
-    const http = await boot(new MoostHttp())
-    const res = await http.request('/taken', { headers: { 'accept-language': 'de' } })
-    expect(await text(res)).toBe(expected)
-    expect(res?.headers.get('vary')).toBeNull()
   })
 })

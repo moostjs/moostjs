@@ -279,10 +279,10 @@ Returns the underlying `WooksWf` instance for advanced low-level access.
 getWfApp(): WooksWf<T, IR>
 ```
 
-Runs started directly on it (`getWfApp().start()`, `createOutletHandler(wf.getWfApp())`, `mintWfToken(wf.getWfApp(), …)`) release their DI scope like runs started through `MoostWf` — the adapter registers the release with `WooksWf.attachCleanup()`, so it covers handlers built before `new MoostWf(wooksWf)` too. (Up to and including `0.7.2` the adapter replaced `start` / `resume`, and an outlet handler had to be created after `new MoostWf(wooksWf)`.) A `cleanup` you pass in the run options runs before the scope is released, so it can still resolve `FOR_EVENT` instances.
+Runs started directly on it (`getWfApp().start()`, `createOutletHandler(wf.getWfApp())`, `mintWfToken(wf.getWfApp(), …)`) release their DI scope like runs started through `MoostWf` — also through an outlet handler created before `new MoostWf(wooksWf)`. A `cleanup` you pass in the run options runs before the scope is released, so it can still resolve `FOR_EVENT` instances.
 
 ::: warning Version note
-Up to and including `0.6.53`, only `MoostWf.start()` / `resume()` released a run's `FOR_EVENT` DI scope; a run started on `getWfApp()` left it registered.
+Up to and including `0.6.53`, only `MoostWf.start()` / `resume()` released a run's `FOR_EVENT` DI scope; a run started on `getWfApp()` left it registered. Up to and including `0.7.2`, an outlet handler had to be created after `new MoostWf(wooksWf)` — see [Upgrading to 0.7](/moost/upgrade-0-7#workflows).
 :::
 
 ## Decorators (Outlets)

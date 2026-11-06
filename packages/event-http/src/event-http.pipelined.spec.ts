@@ -103,7 +103,7 @@ describe('MoostHttp event DI scope of pipelined HTTP/1.1 requests', () => {
     await vi.waitFor(() => expect(scopes().size).toBe(before))
   })
 
-  it('takes one connection listener for many queued requests, and releases every scope', async () => {
+  it('releases every scope of many queued requests without a MaxListeners warning', async () => {
     const warnings: string[] = []
     const onWarning = (warning: Error) => void warnings.push(warning.name)
     process.on('warning', onWarning)
