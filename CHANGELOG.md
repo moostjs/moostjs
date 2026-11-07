@@ -1,3 +1,12 @@
+## [0.7.6](https://github.com/moostjs/moostjs/compare/v0.7.5...v0.7.6) (2026-11-07)
+
+
+### Features
+
+* **event-wf:** re-export resolveExpiresAt and WfPersistOptions; wooks 0.8.3, @prostojs/wf 0.3.1 (strategy.expiresAtFor) ([535470b](https://github.com/moostjs/moostjs/commit/535470b1da63c1b63ab3153d3f05dbe60d2bb80b))
+
+
+
 ## [0.7.5](https://github.com/moostjs/moostjs/compare/v0.7.4...v0.7.5) (2026-11-07)
 
 
