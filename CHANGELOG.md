@@ -1,3 +1,13 @@
+## [0.7.5](https://github.com/moostjs/moostjs/compare/v0.7.4...v0.7.5) (2026-11-07)
+
+
+### Features
+
+* warn when two apps share the global Wooks router (claimWooks); translator context gets entry path/code/custom; setTranslator pathPrefix option ([3667498](https://github.com/moostjs/moostjs/commit/3667498465bbb1b68c4939d041bbd90b79f20844))
+* wooks 0.8.2 — resumeOnly trigger list, TTrustProxyCapped re-export ([ce12dc5](https://github.com/moostjs/moostjs/commit/ce12dc561b9c89803a0c1f00a01f17cc9a580b05))
+
+
+
 ## [0.7.4](https://github.com/moostjs/moostjs/compare/v0.7.3...v0.7.4) (2026-11-06)
 
 
