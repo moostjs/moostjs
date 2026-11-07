@@ -304,6 +304,10 @@ await store.delete(handle) // pre-hashing entry
 
 In `0.7.0`–`0.7.3`, `@moostjs/event-wf` does not export `hashWfHandle` or `WfHandleHashOptions`: add `@prostojs/wf@^0.3.0` to your dependencies and import them from `@prostojs/wf/outlets`. `0.6.x` uses `@prostojs/wf` 0.2, which has no handle hashing.
 
+### When a paused state expires
+
+To show when a link stops working (an invite's "valid until"), ask the strategy rather than recomputing it: `strategy.expiresAtFor({ ttl, expiresAt })` returns the epoch milliseconds a `persist` with those options records, `0` when nothing bounds the state, and `undefined` when it can't tell (a custom strategy without the method, or a subclass that overrides `persist`). Treat `undefined` as unknown, never as "never expires". The built-in strategies also expose `defaultTtl`. `resolveExpiresAt` and the `WfPersistOptions` type are also exported from `@moostjs/event-wf` (since `0.7.6`, needs `@prostojs/wf` 0.3.1+); `resolveExpiresAt` returns `undefined`, not `0`, for an unbounded state.
+
 ### Named Strategy Registry
 
 Register strategies under names and pick one per workflow (or per workflow run). The active strategy name is embedded in the issued token as `<name>.<raw>`, so resume always picks the strategy that persisted the state — each strategy can have its own independent storage.

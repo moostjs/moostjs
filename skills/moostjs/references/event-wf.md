@@ -23,7 +23,7 @@ Moost adapter over `@wooksjs/event-wf` + `@prostojs/wf` for multi-step workflows
 
 Use workflows for multi-stage processes needing branching, pause for external input, auditability, or time-spanning execution.
 
-**Key imports.** Every symbol in this file is exported from `'@moostjs/event-wf'` — the single entry point. That includes the outlet toolkit re-exported from `@wooksjs/event-wf` (`createHttpOutlet`, `createEmailOutlet`, `createOutletHandler`, `handleWfOutletRequest`, `useWfOutlet`, `useWfFinished`, `useWfStrategy`, `swapStrategy`, `useWfState`, `wfKind`) and the outlet primitives re-exported from `@prostojs/wf/outlets` (`outlet`, `outletHttp`, `outletEmail`, `EncapsulatedStateStrategy`, `HandleStateStrategy`, `WfStateStoreMemory`, `hashWfHandle`, plus their types incl. `WfHandleHashOptions`). Do NOT import these from `@wooksjs/event-wf` or `@prostojs/wf` directly — they are not direct dependencies of the app, and cross-package class identity (e.g. `StepRetriableError`) is not guaranteed.
+**Key imports.** Every symbol in this file is exported from `'@moostjs/event-wf'` — the single entry point. That includes the outlet toolkit re-exported from `@wooksjs/event-wf` (`createHttpOutlet`, `createEmailOutlet`, `createOutletHandler`, `handleWfOutletRequest`, `useWfOutlet`, `useWfFinished`, `useWfStrategy`, `swapStrategy`, `useWfState`, `wfKind`) and the outlet primitives re-exported from `@prostojs/wf/outlets` (`outlet`, `outletHttp`, `outletEmail`, `EncapsulatedStateStrategy`, `HandleStateStrategy`, `WfStateStoreMemory`, `hashWfHandle`, `resolveExpiresAt` (0.7.6+, `@prostojs/wf` 0.3.1+), plus their types incl. `WfHandleHashOptions`, `WfPersistOptions`). Do NOT import these from `@wooksjs/event-wf` or `@prostojs/wf` directly — they are not direct dependencies of the app, and cross-package class identity (e.g. `StepRetriableError`) is not guaranteed.
 
 ```ts
 import { Controller, Injectable, Moost } from 'moost'
@@ -300,6 +300,8 @@ Pros: small tokens, server-side revocation, **fail-closed on unexpected errors**
 - Pre-hashing entries keep raw keys. Default generator → they keep resuming (the first resume reads the raw key once and moves the entry to the hashed key, or consumes it if the flow finishes; the handle stays valid). Custom `generateHandle` → needs `legacyHandle: (token) => boolean` (`rawFallback: true` alone throws). `rawFallback: false` disables the fallback. Give flows a TTL.
 - Changing or removing the secret invalidates every open handle. Default handles are 22 URL-safe chars, not UUIDs — don't parse them.
 - 0.7.0–0.7.3: `hashWfHandle`/`WfHandleHashOptions` not exported here → add `@prostojs/wf@^0.3.0`, import from `@prostojs/wf/outlets` (0.6.x ships `@prostojs/wf` 0.2: no hashing).
+
+**Expiry time.** `strategy.expiresAtFor({ ttl, expiresAt })` → epoch ms a persist with those options records (show an invite's "valid until"); `0` = never; `undefined` = unknown (custom strategy without the method, or a subclass overriding `persist`) — never read `undefined` as "never". Built-ins also expose `defaultTtl`. 0.7.6+, `@prostojs/wf` 0.3.1+. `resolveExpiresAt(options, defaultTtl, now?)` is the underlying rule and returns `undefined` for unbounded.
 
 **`WfStateStoreMemory`** — in-memory store for dev/testing. `WfStateStore` interface: `set`, `get`, `delete`, `getAndDelete`, `cleanup?`.
 

@@ -42,7 +42,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@prostojs/wf": "^0.3.0",
+    "@prostojs/wf": "^0.3.1",
     "@wooksjs/event-wf": "catalog:"
   },
   "devDependencies": {

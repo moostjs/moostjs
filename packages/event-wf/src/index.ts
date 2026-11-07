@@ -38,12 +38,14 @@ export {
   HandleStateStrategy,
   WfStateStoreMemory,
   hashWfHandle,
+  resolveExpiresAt,
 } from '@prostojs/wf/outlets'
 export type {
   WfHandleHashOptions,
   WfOutlet,
   WfOutletRequest,
   WfOutletResult,
+  WfPersistOptions,
   WfState,
   WfStateStrategy,
   WfStateStore,
