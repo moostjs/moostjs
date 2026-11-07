@@ -15,6 +15,7 @@ export type {
   TSetCookieData,
   TTransformErrorBody,
   TTrustProxy,
+  TTrustProxyCapped,
   TTrustProxyFn,
 } from '@wooksjs/event-http'
 export {

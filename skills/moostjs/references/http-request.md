@@ -98,7 +98,7 @@ upload(@RawBody() raw: Buffer) {}
 @Ip() ip: string                                          // client IP per the app's trustProxy
 @IpList() ips: { remoteIp: string; forwarded: string[] }  // RAW socket peer + x-forwarded-for chain (forgeable)
 
-new MoostHttp({ trustProxy: 1 })                    // hops | IP/CIDR list (+ 'loopback'/'linklocal'/'uniquelocal') | (addr, hop) => boolean
+new MoostHttp({ trustProxy: 1 })                    // hops | IP/CIDR list (+ 'loopback'/'linklocal'/'uniquelocal') | { addresses, hops } (list capped at N hops — when clients share the proxies' range; 0.7.5+) | (addr, hop) => boolean
 new MoostHttp({ trustProxy: 1, proxyHeaders: 'forwarded' }) // RFC 7239 Forwarded instead of X-Forwarded-*
 ```
 

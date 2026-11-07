@@ -173,12 +173,13 @@ import { MoostHttp } from '@moostjs/event-http'
 const http = new MoostHttp({
     trustProxy: 1,            // one proxy in front (Caddy, nginx, a cloud load balancer)
     // trustProxy: ['loopback', '10.0.0.0/8'],   // or: the proxies' addresses / CIDRs
+    // trustProxy: { addresses: '10.0.0.0/8', hops: 1 }, // or: both, when clients share the proxies' range
     // trustProxy: (addr, hop) => hop < 2,        // or: a predicate
     // proxyHeaders: 'forwarded',                 // read RFC 7239 `Forwarded` instead of X-Forwarded-*
 })
 ```
 
-The client is the right-most `X-Forwarded-For` hop that is not trusted. The same setting drives `useRequest().protocol()` and `host()` (`X-Forwarded-Proto` / `X-Forwarded-Host`). IPv4-mapped addresses (`::ffff:10.0.0.5`) are returned as plain IPv4, and `@Ip()` is `''` when the client is unknown (an in-process [fetch](./fetch) without a peer, or a malformed entry written by a trusted proxy). `@IpList()` returns the raw, unvalidated values — never use it for access decisions.
+The client is the right-most `X-Forwarded-For` hop that is not trusted. The same setting drives `useRequest().protocol()` and `host()` (`X-Forwarded-Proto` / `X-Forwarded-Host`). IPv4-mapped addresses (`::ffff:10.0.0.5`) are returned as plain IPv4, and `@Ip()` is `''` when the client is unknown (an in-process [fetch](./fetch) without a peer, or a malformed entry written by a trusted proxy). `@IpList()` returns the raw, unvalidated values — never use it for access decisions. The wooks guide [Proxy Trust](https://wooks.moost.org/webapp/proxy-trust.html) covers every `trustProxy` form and when to cap an address list with `hops`.
 
 ::: warning Deprecated: `@Ip({ trustProxy: true })`
 The per-decorator option now trusts exactly **one** proxy hop (the right-most `X-Forwarded-For` entry). Up to and including `0.6.53` it took the left-most entry, which any client can forge. Configure `trustProxy` on `MoostHttp` and use `@Ip()` instead.

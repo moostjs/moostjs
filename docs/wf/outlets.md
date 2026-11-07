@@ -117,6 +117,8 @@ It routes through `MoostWf.start()` and `resume()` internally, so all Moost DI, 
 
 `allow` and `block` are enforced when a workflow is **started and when it is resumed**, and they are judged on the registered flow ID the request resolves to (`MoostWf.resolveSchemaId()`), not on how the caller spelled `wfid`: `block: ['admin']` also refuses `'/admin'` or `'adm%69n'`. An `allow` entry must equal the registered ID (for a parametric flow, its pattern). `allow: []` admits nothing — omit `allow` for no restriction. A refused resume answers `403` and does not consume the token.
 
+`resumeOnly` lists flows that may be **resumed but never started** through this trigger, for example an invite an admin starts with [`wf.mint()`](/wf/api#mint-options) and the user resumes from an emailed link. A start of a listed flow is refused even when `allow` also lists it, and a resume is admitted without an `allow` entry. `block` wins over both. The full matching rules are in the wooks guide: [Access Control](https://wooks.moost.org/wf/outlets.html#access-control).
+
 The trigger **throws** its refusals as `HttpError`s with a `code` and an English `message`, so they reach your error interceptors and can be translated by code:
 
 | `code` | Status | When |
@@ -125,8 +127,8 @@ The trigger **throws** its refusals as `HttpError`s with a `code` and an English
 | `WF_INVALID` | 400 | `wfid` is not a valid workflow ID |
 | `WF_INVALID_TOKEN` | 410 | the token is malformed or names no configured strategy |
 | `WF_EXPIRED` | 410 | the token's state is gone: expired, already used, or never existed |
-| `WF_FORBIDDEN` | 403 | `allow` / `block` refuses the flow (`params.reason`: `'not-allowed'` or `'blocked'`) |
-| `WF_NOT_FOUND` | 404 | with `allow`/`block` set, `wfid` resolves to no flow |
+| `WF_FORBIDDEN` | 403 | `allow` / `resumeOnly` / `block` refuses the flow (`params.reason`: `'not-allowed'` or `'blocked'`) |
+| `WF_NOT_FOUND` | 404 | with `allow` / `resumeOnly` / `block` set, `wfid` resolves to no flow |
 | `WF_UNKNOWN_OUTLET` | 500 | a step paused on an outlet the trigger does not have |
 
 The table is exported as `WF_TRIGGER_ERRORS` (type `WfTriggerErrorCode`) from `@moostjs/event-wf`. Clients reading `body.message ?? body.error` work with old and new servers.
@@ -142,6 +144,7 @@ The full `WfOutletTriggerConfig` interface:
 | Field | Type | Description |
 |-------|------|-------------|
 | `allow` | `string[]` | Whitelist of workflow IDs that can be started **or resumed**, matched against the registered flow ID (the pattern for a parametric flow). Omitted = no restriction; **`[]` = nothing allowed** |
+| `resumeOnly` | `string[]` | Workflow IDs that can be resumed but never started here; no `allow` entry needed |
 | `block` | `string[]` | Blacklist of workflow IDs (checked after `allow`), on start and resume |
 | `state` | `WfStateStrategy \| { strategies: Record<string, WfStateStrategy>, default: string \| ((wfid, flowId) => string) }` | State persistence strategy (required). See [State Strategies](#state-strategies) below. |
 | `outlets` | `WfOutlet[]` | Registered delivery channels (required) |

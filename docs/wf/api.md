@@ -227,7 +227,7 @@ async flow() {
 ```
 
 ::: info
-Must be called from within an HTTP event context so that wooks HTTP composables are available. `allow`/`block` are judged on the flow ID `resolveSchemaId()` resolves. Refusals are thrown as `HttpError`s with a `code` — see [Access control and refusals](/wf/outlets#access-control-and-refusals).
+Must be called from within an HTTP event context so that wooks HTTP composables are available. `allow` / `resumeOnly` / `block` are judged on the flow ID `resolveSchemaId()` resolves. Refusals are thrown as `HttpError`s with a `code` — see [Access control and refusals](/wf/outlets#access-control-and-refusals).
 :::
 
 ### `resolveSchemaId(id, opts?)`
@@ -264,7 +264,7 @@ mint(options: WfMintTokenOptions): Promise<WfMintTokenResult>
 | `meta` | Extra `state.meta` to persist |
 | `eventContext` | Parent event context for the run |
 
-Returns `{ token, inputRequired, expiresAt, output }`. `token` is `undefined` when the flow did not pause. No outlet is called — deliver the token yourself. `allow`/`block` are not checked when minting (the server chooses the flow); they apply when the token is resumed.
+Returns `{ token, inputRequired, expiresAt, output }`. `token` is `undefined` when the flow did not pause. No outlet is called — deliver the token yourself. `allow` / `resumeOnly` / `block` are not checked when minting (the server chooses the flow); they apply when the token is resumed. List the flow in `resumeOnly` to resume it on a trigger that must never start it.
 
 ```ts
 const { token } = await wf.mint({ wfid: 'invite', context: { email }, state, ttl: 7 * 86_400_000 })
@@ -424,6 +424,7 @@ Configuration for `handleOutlet()`:
 ```ts
 interface WfOutletTriggerConfig {
   allow?: string[]
+  resumeOnly?: string[]
   block?: string[]
   state: WfStateStrategy | { strategies: Record<string, WfStateStrategy>; default: string | ((wfid: string, flowId: string) => string) }
   outlets: WfOutlet[]
