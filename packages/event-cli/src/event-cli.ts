@@ -8,7 +8,12 @@ import type {
   TMoostAdapterOptions,
   TMoostParamsMetadata,
 } from 'moost'
-import { defineMoostEventHandler, MOOST_ADAPTER_BRAND, setInfactLoggingOptions } from 'moost'
+import {
+  claimWooks,
+  defineMoostEventHandler,
+  MOOST_ADAPTER_BRAND,
+  setInfactLoggingOptions,
+} from 'moost'
 import type { TCliClassMeta } from './meta-types'
 import { getCliMate } from './meta-types'
 
@@ -73,10 +78,14 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
 
   protected cliApp: WooksCli
 
+  /** No `WooksCli` was passed in: the one created routes through the global Wooks. */
+  private readonly createdApp: boolean
+
   protected optionTypes: Record<string, TFunction[]> = {}
 
   constructor(protected opts?: TMoostCliOpts) {
     const cliAppOpts = opts?.wooksCli
+    this.createdApp = !(cliAppOpts instanceof WooksCli)
     if (cliAppOpts && cliAppOpts instanceof WooksCli) {
       this.cliApp = cliAppOpts
     } else if (cliAppOpts) {
@@ -119,6 +128,8 @@ export class MoostCli implements TMoostAdapter<TCliHandlerMeta> {
 
   onInit(moost: Moost) {
     this.moost = moost
+    // warns when another app already routes through the same (by default the global) Wooks
+    claimWooks(moost, this.cliApp.getWooks(), this.name, { created: this.createdApp })
     const boolean = Object.entries(this.optionTypes)
       .filter(([_key, val]) => val.length === 1 && val[0] === Boolean)
       .map(([key, _val]) => key)

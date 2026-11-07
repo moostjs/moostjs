@@ -1,7 +1,11 @@
 import type { EventContext } from '@wooksjs/event-core'
 import { current, run, tryGetCurrent, useLocale, useLogger } from '@wooksjs/event-core'
 
-/** What a translator gets besides the text: the event's locale, its scope and the event itself. */
+/**
+ * What a translator gets besides the text: the event's locale, its scope and the event itself —
+ * plus, when an error body is translated ({@link translateErrorBody}), the entry's `path` and
+ * `code`.
+ */
 export interface TTranslateContext {
   /** `useLocale().get()` of the event the text is translated for. */
   locale: string | undefined
@@ -12,6 +16,25 @@ export interface TTranslateContext {
   scope?: string
   /** The event context — read anything else your policy needs from it. */
   event: EventContext
+  /**
+   * The field path (`'items.0.name'`, `''` for the root) of the error entry being
+   * translated — word a message per field. Only set by {@link translateErrorBody}, for its
+   * `errors` entries (and their `details`); error bodies are never memoized, while the memoized
+   * {@link TTranslation.messages} never carry a path.
+   */
+  path?: string
+  /**
+   * The code of the error entry (or error body) being translated — also when `text` is the
+   * entry's own message (an entry marked `custom`, or one translated by its text). Only set by
+   * {@link translateErrorBody}.
+   */
+  code?: string
+  /**
+   * `true` when the error entry carries the app's own message (`custom: true`, e.g. from
+   * `@expect.message`): `text` is that message — keep it unless you translate it as text. Only
+   * set by {@link translateErrorBody}.
+   */
+  custom?: boolean
 }
 
 /**
@@ -50,6 +73,13 @@ export interface TTranslatorOptions {
    * request input: only the first 32 scopes seen per generation get a {@link TTranslation.key}.
    */
   scope?: () => string | number | undefined
+  /**
+   * `false`: a translated error body's top `message` that repeats its first entry is just that
+   * entry's text, without the `path: ` prefix ({@link translateErrorBody}) — also when the entry
+   * has no translation (its English text). Bodies of events without a locale are not touched.
+   * Default `true`: `path: <translated>`, like the untranslated message.
+   */
+  pathPrefix?: boolean
 }
 
 /** `t(id, params?, fallback?)` — see {@link useTranslate}. */
@@ -87,6 +117,8 @@ interface TI18nState {
   translate?: TTranslate
   /** `opts.scope` of the `setTranslator` call that registered `translate`. */
   scoping?: { translate: TTranslate | undefined; get: () => string | number | undefined }
+  /** The translator registered with `opts.pathPrefix: false` (`undefined`: none). */
+  noPathPrefix?: TTranslate
   /**
    * The scopes given memo keys in `generation` (at most {@link MAX_SCOPES}). Tagged rather than
    * cleared by `newGeneration`: an older moost copy bumps the generation without knowing of it.
@@ -149,6 +181,7 @@ export function setTranslator(
   const isMap = typeof translate === 'object'
   state.translate = isMap ? mapTranslator(translate) : translate
   state.scoping = opts?.scope && { translate: state.translate, get: opts.scope }
+  state.noPathPrefix = opts?.pathPrefix === false ? state.translate : undefined
   const locales = opts?.locales ?? (isMap ? Object.keys(translate) : undefined)
   state.locales = translate && locales?.length ? Object.freeze([...locales]) : NO_LOCALES
   state.failureLogged = false
@@ -370,9 +403,11 @@ interface TErrorEntry {
  * event's locale — the body itself when there is no translation ({@link useTranslation}).
  *
  * - each entry of `errors` (and of its entries' `details`): by its `code` (unless `custom`),
- *   else by its message text, its English `message` being the fallback;
- * - the top `message`: by `code` when the body has one; else, when it is the first entry's
- *   message (`path: message`), the first entry's translation; else by its text.
+ *   else by its message text, its English `message` being the fallback; the translator gets the
+ *   entry's `path`, `code` and `custom` ({@link TTranslateContext});
+ * - the top `message`: by `code` when the body has one (the translator gets that `code`); else,
+ *   when it is the first entry's message (`path: message`), the first entry's translation
+ *   (`path: ` dropped with `setTranslator(t, { pathPrefix: false })`); else by its text.
  *
  * `MoostHttp` applies it to every error body when it creates the HTTP app.
  */
@@ -380,19 +415,27 @@ export function translateErrorBody<
   T extends { message: string; code?: string; params?: Record<string, unknown>; errors?: unknown },
 >(body: T, ctx?: EventContext): T {
   const event = ctx ?? current()
-  if (!state.translate || useLocale(event).get() === undefined) {
+  const translate = state.translate
+  const locale = useLocale(event).get()
+  if (!translate || locale === undefined) {
     return body
   }
-  // (useTranslate, not useTranslation: an error body takes no memo key, so no scope slot)
-  const t = useTranslate(event)
+  // (no memo key: an error body is never memoized, so the translator may word it per path)
+  const base = translateContext(event, locale, readScope(event))
+  const t: TEntryTranslateFn = (id, params, fallback, entry) =>
+    callTranslator(translate, id, params, entry ? entryContext(base, entry) : base) ??
+    untranslated(id, params, fallback)
   const source: unknown[] | undefined = Array.isArray(body.errors) ? body.errors : undefined
   const errors = source && translateEntries(source, t)
   let message: string
   if (typeof body.code === 'string' && body.code) {
-    message = t(body.code, body.params, body.message)
+    message =
+      callTranslator(translate, body.code, body.params, { ...base, code: body.code }) ??
+      untranslated(body.code, body.params, body.message)
   } else if (source && errors && isEntry(source[0]) && body.message === topMessage(source[0])) {
     // (translateEntries keeps an entry an entry)
-    message = topMessage(errors[0] as TErrorEntry)
+    const first = errors[0] as TErrorEntry
+    message = state.noPathPrefix === translate ? first.message : topMessage(first)
   } else {
     message = t(body.message, body.params, body.message)
   }
@@ -454,7 +497,39 @@ function isEntry(value: unknown): value is TErrorEntry {
   )
 }
 
-function translateEntries(entries: unknown[], t: TTranslateFn): unknown[] {
+type TEntryContext = Pick<TErrorEntry, 'path' | 'code' | 'custom'>
+
+/** `t` of {@link translateErrorBody}: also passes the entry's `path`, `code` and `custom` on. */
+type TEntryTranslateFn = (
+  id: string,
+  params: Record<string, unknown> | undefined,
+  fallback: string,
+  entry?: TEntryContext,
+) => string
+
+/** `base` with the entry's `path` and `code` (each only when a string) and `custom: true`. */
+function entryContext(
+  base: TTranslateContext,
+  { path, code, custom }: TEntryContext,
+): TTranslateContext {
+  const hasCode = typeof code === 'string' && code !== ''
+  if (typeof path !== 'string' && !hasCode && custom !== true) {
+    return base
+  }
+  const out: TTranslateContext = { ...base }
+  if (typeof path === 'string') {
+    out.path = path
+  }
+  if (hasCode) {
+    out.code = code
+  }
+  if (custom === true) {
+    out.custom = true
+  }
+  return out
+}
+
+function translateEntries(entries: unknown[], t: TEntryTranslateFn): unknown[] {
   return entries.map((entry) => {
     if (!isEntry(entry)) {
       return entry
@@ -463,7 +538,7 @@ function translateEntries(entries: unknown[], t: TTranslateFn): unknown[] {
       typeof entry.code === 'string' && entry.code && entry.custom !== true
         ? entry.code
         : entry.message
-    const out: TErrorEntry = { ...entry, message: t(id, entry.params, entry.message) }
+    const out: TErrorEntry = { ...entry, message: t(id, entry.params, entry.message, entry) }
     if (Array.isArray(entry.details)) {
       out.details = translateEntries(entry.details, t)
     }

@@ -3,7 +3,14 @@ import { brotliDecompressSync, gunzipSync } from 'node:zlib'
 
 import type { TWooksHttpOptions } from '@wooksjs/event-http'
 import { HttpError } from '@wooksjs/event-http'
-import { Controller, defineBeforeInterceptor, Intercept, Moost, TInterceptorPriority } from 'moost'
+import {
+  clearGlobalWooks,
+  Controller,
+  defineBeforeInterceptor,
+  Intercept,
+  Moost,
+  TInterceptorPriority,
+} from 'moost'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import { Compress, Get } from './decorators'
@@ -129,6 +136,7 @@ function decode(res: TRawResponse): string {
 }
 
 async function startApp(opts?: TWooksHttpOptions) {
+  clearGlobalWooks() // a fresh Wooks per app: no routes shared with the previous one
   const app = new Moost()
   const http = new MoostHttp(opts)
   app.adapter(http)

@@ -28,6 +28,8 @@ export type {
   TPrimitives,
 } from './common-types'
 export { isThenable, mergeSorted } from './shared-utils'
+export type { TClaimWooksOptions } from './wooks-owner'
+export { claimWooks } from './wooks-owner'
 
 export * from './moost'
 export * from './decorators'

@@ -1,5 +1,7 @@
 // oxlint-disable max-classes-per-file -- each case declares its own DI chain
+import { Get, MoostHttp } from '@moostjs/event-http'
 import {
+  Controller,
   getInfactSingletonInstances,
   getMoostInfact,
   getMoostMate,
@@ -210,5 +212,43 @@ describe('moostRestartCleanup — module eject and full reboot', () => {
     )
     expect(mergeCleanup(new Set(['/a.ts']), EJECT_ALL)).toBe(EJECT_ALL)
     expect(mergeCleanup(EJECT_ALL, new Set(['/b.ts']))).toBe(EJECT_ALL)
+  })
+})
+
+describe('moostRestartCleanup — app reload on the global Wooks', () => {
+  it('a reloaded app does not trigger the shared-Wooks warning', async () => {
+    const warnings: string[] = []
+    const noop = () => {}
+    const logger = {
+      warn: (...args: unknown[]) => void warnings.push(args.map(String).join(' ')),
+      error: noop,
+      log: noop,
+      info: noop,
+      debug: noop,
+      trace: noop,
+    }
+    /** One evaluation of the entry: a NEW controller class, app and adapter per call. */
+    async function boot() {
+      @Controller()
+      class PingController {
+        @Get('ping')
+        ping() {
+          return 'pong'
+        }
+      }
+      const app = new Moost({ logger })
+      const http = new MoostHttp()
+      app.adapter(http)
+      app.registerControllers(PingController)
+      await app.init()
+      return http
+    }
+
+    await boot()
+    await moostRestartCleanup()
+    const http = await boot()
+    expect(warnings.filter((w) => w.includes('A second Moost app binds'))).toEqual([])
+    const res = await http.request('/ping')
+    expect(await res?.text()).toBe('pong')
   })
 })

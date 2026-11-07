@@ -24,6 +24,7 @@ import type {
   TMoostMetadata,
 } from 'moost'
 import {
+  claimWooks,
   current,
   defineMoostEventHandler,
   forkEventContext,
@@ -135,6 +136,9 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
 
   protected httpApp: WooksHttp
 
+  /** No `WooksHttp` was passed in: the one created routes through the global Wooks. */
+  private readonly createdApp: boolean
+
   /**
    * @param httpApp - A `WooksHttp` to use as is, or the options of the one `MoostHttp` creates.
    *   A created app translates error bodies (`translateErrorBody`, before your
@@ -150,6 +154,7 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
       poweredBy: 'moostjs',
       version: __VERSION__,
     })
+    this.createdApp = !(httpApp instanceof WooksHttp)
     if (httpApp && httpApp instanceof WooksHttp) {
       this.httpApp = httpApp
     } else {
@@ -370,6 +375,8 @@ export class MoostHttp implements TMoostAdapter<THttpHandlerMeta> {
 
   onInit(moost: Moost) {
     this.moost = moost
+    // warns when another app already routes through the same (by default the global) Wooks
+    claimWooks(moost, this.httpApp.getWooks(), this.name, { created: this.createdApp })
   }
 
   /**

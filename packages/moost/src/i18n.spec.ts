@@ -354,9 +354,12 @@ describe('setTranslator({ scope })', () => {
       must(useTranslation()).t('A')
       useTranslate()('B')
       translateErrorBody({ message: 'C' })
+      translateErrorBody({ message: 'D', errors: [{ path: 'a', message: 'E', code: 'F' }] })
       expect(seen).toEqual([
         { locale: 'de', scope: 'acme', event: ctx },
         { locale: 'de', scope: 'acme', event: ctx },
+        { locale: 'de', scope: 'acme', event: ctx },
+        { locale: 'de', scope: 'acme', event: ctx, path: 'a', code: 'F' },
         { locale: 'de', scope: 'acme', event: ctx },
       ])
     })
@@ -366,6 +369,20 @@ describe('setTranslator({ scope })', () => {
       expect(seen).toEqual([{ locale: 'de', event: ctx }])
       expect('scope' in seen[0]).toBe(false)
     })
+  })
+
+  it('combines with pathPrefix: false (scoped wording, no prefix)', () => {
+    const { translate } = tenantTranslator()
+    setTranslator(translate, { locales: ['en', 'de'], scope, pathPrefix: false })
+    const body = {
+      statusCode: 400,
+      message: 'order: Order',
+      errors: [{ path: 'order', message: 'Order', code: 'I18N_SPEC_ORDER' }],
+    }
+    expect(withTenant('de', 'acme', (ctx) => translateErrorBody(body, ctx)).message).toBe('Auftrag')
+    expect(withTenant('de', undefined, (ctx) => translateErrorBody(body, ctx)).message).toBe(
+      'Bestellung',
+    )
   })
 
   it('partitions memoized messages per scope: no cross-talk, each memoized', () => {
@@ -598,6 +615,116 @@ describe('translateErrorBody()', () => {
     expect(out.errors[0].message).toBe('Handgemacht')
     const plain = { statusCode: 500, message: 'Untranslated {x}', params: { x: 1 } }
     expect(withCtx('de', (ctx) => translateErrorBody(plain, ctx)).message).toBe('Untranslated {x}')
+  })
+
+  it('passes each entry its path, code and custom (details too); a coded top message its code', () => {
+    const seen: [string, TTranslateContext][] = []
+    setTranslator(
+      (id, _params, ctx) => {
+        seen.push([id, ctx])
+        return ctx.path === 'items.0.qty' && ctx.code === 'REQUIRED' ? 'Menge fehlt' : undefined
+      },
+      { locales: ['en', 'de'] },
+    )
+    const body = {
+      statusCode: 400,
+      message: 'items.0.qty: Required',
+      errors: [
+        { path: 'items.0.qty', message: 'Required', code: 'REQUIRED' },
+        { path: 'name', message: 'Own text', code: 'CUSTOM', custom: true },
+        { path: '', message: 'Root entry' },
+        { message: 'No path', details: [{ path: 'u.0', message: 'Inner', code: 'TYPE' }] },
+      ],
+    }
+    withCtx('de', (ctx) => {
+      const out = translateErrorBody(body, ctx)
+      expect(out.message).toBe('items.0.qty: Menge fehlt')
+      expect(out.errors[0].message).toBe('Menge fehlt')
+      expect(seen).toEqual([
+        ['REQUIRED', { locale: 'de', event: ctx, path: 'items.0.qty', code: 'REQUIRED' }],
+        ['Own text', { locale: 'de', event: ctx, path: 'name', code: 'CUSTOM', custom: true }],
+        ['Root entry', { locale: 'de', event: ctx, path: '' }],
+        ['No path', { locale: 'de', event: ctx }],
+        ['TYPE', { locale: 'de', event: ctx, path: 'u.0', code: 'TYPE' }],
+      ])
+      expect('path' in seen[3][1]).toBe(false)
+      seen.length = 0
+      translateErrorBody({ statusCode: 404, message: 'Gone', code: 'GONE' }, ctx)
+      translateErrorBody({ statusCode: 500, message: 'Plain' }, ctx)
+      expect(seen).toEqual([
+        ['GONE', { locale: 'de', event: ctx, code: 'GONE' }],
+        ['Plain', { locale: 'de', event: ctx }],
+      ])
+      // useTranslate() and the templates carry no entry fields
+      seen.length = 0
+      useTranslate()('X')
+      expect(seen).toEqual([['X', { locale: 'de', event: ctx }]])
+    })
+  })
+
+  it('pathPrefix: false drops the path prefix of the first-entry top message; default keeps it', () => {
+    const body = {
+      statusCode: 400,
+      message: 'name: Expected minimum length of 3 characters',
+      errors: [
+        {
+          path: 'name',
+          message: 'Expected minimum length of 3 characters',
+          code: 'MIN_LENGTH',
+          params: { min: 3 },
+        },
+      ],
+    }
+    setTranslator({ en: {}, de })
+    expect(withCtx('de', (ctx) => translateErrorBody(body, ctx)).message).toBe(
+      'name: Mindestens 3 Zeichen',
+    )
+    setTranslator({ en: {}, de }, { pathPrefix: true })
+    expect(withCtx('de', (ctx) => translateErrorBody(body, ctx)).message).toBe(
+      'name: Mindestens 3 Zeichen',
+    )
+    setTranslator({ en: {}, de }, { pathPrefix: false })
+    const out = withCtx('de', (ctx) => translateErrorBody(body, ctx))
+    expect(out.message).toBe('Mindestens 3 Zeichen')
+    expect(out.errors[0]).toEqual({ ...body.errors[0], message: 'Mindestens 3 Zeichen' })
+    // untranslated entry: its English text, still without the prefix
+    const other = { ...body, errors: [{ ...body.errors[0], code: 'NO_SUCH_CODE' }] }
+    expect(withCtx('de', (ctx) => translateErrorBody(other, ctx)).message).toBe(
+      'Expected minimum length of 3 characters',
+    )
+    // only the first-entry rule: a coded or unrelated top message is unaffected
+    const coded = { ...body, code: 'CONFLICT' }
+    expect(withCtx('de', (ctx) => translateErrorBody(coded, ctx)).message).toBe('Konflikt')
+    // the option belongs to its setTranslator call
+    setTranslator({ en: {}, de })
+    expect(withCtx('de', (ctx) => translateErrorBody(body, ctx)).message).toBe(
+      'name: Mindestens 3 Zeichen',
+    )
+  })
+
+  it('pathPrefix: false with several entries, a root first entry, and no locale', () => {
+    setTranslator({ en: {}, de }, { pathPrefix: false })
+    const several = {
+      statusCode: 400,
+      message: 'name: Name is reserved',
+      errors: [
+        { path: 'name', message: 'Name is reserved' },
+        { path: 'nick', message: 'Hand-made entry' },
+      ],
+    }
+    const out = withCtx('de', (ctx) => translateErrorBody(several, ctx))
+    expect(out.message).toBe('Name ist reserviert') // the first entry's text only
+    expect(out.errors.map((e) => e.message)).toEqual(['Name ist reserviert', 'Handgemacht'])
+    const root = {
+      statusCode: 400,
+      message: 'Name is reserved',
+      errors: [{ path: '', message: 'Name is reserved' }],
+    }
+    expect(withCtx('de', (ctx) => translateErrorBody(root, ctx)).message).toBe(
+      'Name ist reserviert',
+    )
+    // an event without a locale: the body is not touched, prefix included
+    expect(withCtx(undefined, (ctx) => translateErrorBody(several, ctx))).toBe(several)
   })
 
   it('keeps non-object entries and non-array errors as they are', () => {

@@ -2,6 +2,7 @@
 import { connect } from 'node:net'
 import { Readable } from 'node:stream'
 import {
+  clearGlobalWooks,
   Controller,
   current,
   getMoostInfact,
@@ -71,6 +72,7 @@ describe('MoostHttp event DI scope of pipelined HTTP/1.1 requests', () => {
   let before = 0
 
   beforeEach(async () => {
+    clearGlobalWooks() // a fresh Wooks per app: no routes shared with the previous one
     alive = []
     const app = new Moost()
     http = new MoostHttp()

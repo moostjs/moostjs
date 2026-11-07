@@ -177,6 +177,15 @@ describe('MoostHttp default error-body translation', () => {
     expect(body.errors[0].message).toBe('Mindestens 3 Zeichen')
   })
 
+  it('pathPrefix: false sends the top message without the path prefix', async () => {
+    const http = await boot(new MoostHttp())
+    setTranslator(MESSAGES, { pathPrefix: false })
+    const res = await http.request('/invalid', { headers: { 'accept-language': 'de' } })
+    const body = (await json(res)) as { message: string; errors: { message: string }[] }
+    expect(body.message).toBe('Mindestens 3 Zeichen')
+    expect(body.errors[0].message).toBe('Mindestens 3 Zeichen')
+  })
+
   it("the app's transformErrorBody sees the translated body", async () => {
     const seen: string[] = []
     const http = await boot(

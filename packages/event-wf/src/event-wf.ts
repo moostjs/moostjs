@@ -11,6 +11,7 @@ import type {
 import { createWfApp, handleWfOutletRequest, mintWfToken, WooksWf } from '@wooksjs/event-wf'
 import type { EventContext, Moost, TMoostAdapter, TMoostAdapterOptions } from 'moost'
 import {
+  claimWooks,
   defineMoostEventHandler,
   getMoostInfact,
   MOOST_ADAPTER_BRAND,
@@ -59,10 +60,14 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
 
   protected wfApp: WooksWf<T, IR>
 
+  /** No `WooksWf` was passed in: the one created routes through the global Wooks. */
+  private readonly createdApp: boolean
+
   constructor(
     protected opts?: WooksWf<T, IR> | TWooksWfOptions,
     private readonly debug?: boolean,
   ) {
+    this.createdApp = !(opts instanceof WooksWf)
     if (opts && opts instanceof WooksWf) {
       this.wfApp = opts
     } else if (opts) {
@@ -93,6 +98,8 @@ export class MoostWf<T = any, IR = any> implements TMoostAdapter<TWfHandlerMeta>
 
   onInit(moost: Moost) {
     this.moost = moost
+    // warns when another app already routes through the same (by default the global) Wooks
+    claimWooks(moost, this.wfApp.getWooks(), this.name, { created: this.createdApp })
     this.toInit.forEach((fn) => {
       fn()
     })

@@ -2,6 +2,7 @@ import { useBody } from '@wooksjs/http-body'
 import { HttpError, useRequest, useResponse } from '@wooksjs/event-http'
 import type { EventContext } from 'moost'
 import {
+  clearGlobalWooks,
   Controller,
   defineBeforeInterceptor,
   getMoostInfact,
@@ -171,6 +172,7 @@ describe('MoostHttp.invoke / withControllerContext on a real server', () => {
   let before = 0
 
   beforeEach(async () => {
+    clearGlobalWooks() // a fresh Wooks per app: no routes shared with the previous one
     guardSeen.length = 0
     const app = new Moost()
     http = new MoostHttp()

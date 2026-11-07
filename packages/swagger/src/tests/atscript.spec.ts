@@ -1,5 +1,5 @@
 import { MoostHttp } from '@moostjs/event-http'
-import { Moost } from 'moost'
+import { clearGlobalWooks, Moost } from 'moost'
 
 import { mapToSwaggerSpec } from '../mapping'
 import { AtscriptController, LegacyThrowingController } from './atscript.artifacts'
@@ -131,6 +131,7 @@ describe('atscript annotated types', () => {
 
 describe('non-annotated toJsonSchema() errors', () => {
   it('must propagate (behavior unchanged for non-annotated types)', async () => {
+    clearGlobalWooks() // a fresh Wooks: no routes shared with the first app
     const app = new Moost()
     app.adapter(new MoostHttp())
     app.registerControllers(LegacyThrowingController)

@@ -2,7 +2,7 @@ import { createProvideRegistry } from '@prostojs/infact'
 import type { TWooksWsOptions } from '@wooksjs/event-ws'
 import { createWsApp, WooksWs } from '@wooksjs/event-ws'
 import type { Moost, TConsoleBase, TMoostAdapter, TMoostAdapterOptions } from 'moost'
-import { defineMoostEventHandler, MOOST_ADAPTER_BRAND } from 'moost'
+import { claimWooks, defineMoostEventHandler, MOOST_ADAPTER_BRAND } from 'moost'
 
 /** Handler metadata for routed WebSocket message events. */
 export interface TWsMessageHandlerMeta {
@@ -74,6 +74,9 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
 
   protected wsApp: WooksWs
 
+  /** Neither a `WooksWs` nor an HTTP app was passed in: standalone on the global Wooks. */
+  private readonly createdApp: boolean
+
   constructor(
     protected opts?: TMoostWsOpts & {
       /**
@@ -85,6 +88,7 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
     },
   ) {
     const wsOpts = opts?.wooksWs
+    this.createdApp = !(wsOpts instanceof WooksWs) && !opts?.httpApp
     if (wsOpts && wsOpts instanceof WooksWs) {
       this.wsApp = wsOpts
     } else {
@@ -120,6 +124,8 @@ export class MoostWs implements TMoostAdapter<TWsHandlerMeta> {
 
   onInit(moost: Moost) {
     this.moost = moost
+    // warns when another app already routes through the same (by default the global) Wooks
+    claimWooks(moost, this.wsApp.getWooks(), this.name, { created: this.createdApp })
   }
 
   /**

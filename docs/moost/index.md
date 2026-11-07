@@ -77,6 +77,59 @@ app.registerControllers(AppController).init()
 `app.adapter()` returns the **adapter instance**, not the Moost app — so you can chain adapter methods like `app.adapter(new MoostHttp()).listen(3000)`, but you cannot chain a second `.adapter()` call onto it.
 :::
 
+## Several Apps in One Process
+
+An adapter created without a Wooks app of its own (`new MoostHttp()`, `new MoostCli()`, …)
+routes through the process-wide global Wooks. Every adapter of one app shares it on purpose.
+Two **apps** in one process, typical in tests, then register their routes into one router.
+A request on a route both apps register runs the first app's handler chain. When that chain
+throws (a guard's 429, say), the error is swallowed and the second app's chain answers instead.
+
+When the second app's `init()` binds into a Wooks instance another app already uses, Moost logs
+a warning, once per Wooks instance (moost 0.7.5 or later). Apps that share a Wooks app you pass
+in yourself (`new MoostHttp(wooksHttp)`) are sharing on purpose and get no warning. To give each
+app its own router, call `clearGlobalWooks()` before creating each app:
+
+```ts
+import { clearGlobalWooks, Moost } from 'moost'
+import { MoostHttp } from '@moostjs/event-http'
+
+beforeEach(() => {
+  clearGlobalWooks() // the next `new MoostHttp()` gets a fresh Wooks
+})
+
+async function createTestApp() {
+  const app = new Moost()
+  const http = app.adapter(new MoostHttp())
+  app.registerControllers(AppController)
+  await app.init()
+  return http // http.request('/path') in the test
+}
+```
+
+The app created before the call keeps its own Wooks. `app.dispose()` does not remove an app's
+routes, so dispose alone doesn't separate two apps. Re-initialising the same app doesn't warn,
+and neither does a [`@moostjs/vite`](/webapp/vite) dev reload: it clears the global Wooks
+before the entry runs again.
+
+::: tip Passing an app instead
+`createHttpApp(opts, new Wooks())` (`Wooks` from `wooks`) also gives an app its own router, but
+`MoostHttp` uses a `WooksHttp` you pass in as is: it loses MoostHttp's error-body translation and
+`Accept-Language` negotiation ([Locale and Translation](/moost/i18n)). Prefer `clearGlobalWooks()`.
+:::
+
 ## Custom Adapters
 
 You can build your own adapter for any event-driven scenario — job queues, message brokers, custom protocols. All adapters implement the `TMoostAdapter` interface and share the same controller, DI, interceptor, and pipe infrastructure. Inside `bindHandler()`, adapters wrap each event with the `defineMoostEventHandler()` helper from `moost`, which runs the full lifecycle — DI scope, interceptors, argument pipes, and handler invocation.
+
+If your adapter routes through a Wooks instance, call `claimWooks()` from `moost` in its
+`onInit` (moost 0.7.5 or later). It warns once when another app already bound the same adapter's
+handlers into that Wooks ([Several Apps in One Process](#several-apps-in-one-process)). Pass
+`created: true` when the adapter created its Wooks app itself and so landed on the global Wooks.
+Without it, sharing is treated as deliberate and only an adapter that did create its app warns:
+
+```ts
+onInit(moost: Moost) {
+  claimWooks(moost, this.wooksApp.getWooks(), this.name, { created: !this.passedApp })
+}
+```

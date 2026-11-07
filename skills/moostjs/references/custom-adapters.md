@@ -304,6 +304,7 @@ Small helpers adapter authors may need:
 - `isThenable(v)` — type guard for `PromiseLike`; use it to keep your dispatch sync-first like `defineMoostEventHandler` does
 - `mergeSorted(a, b)` — merges arrays of `{ priority }` items into one priority-sorted list (how pipe/interceptor levels combine)
 - `getGlobalWooks()` / `clearGlobalWooks()` — access/reset the global Wooks app registry (re-exported from `wooks`; `clearGlobalWooks` is useful between tests or on HMR cleanup)
+- `claimWooks(moost, wooks, adapterName, { created? })` (moost ≥ 0.7.5) — call from `onInit` with the Wooks instance your adapter routes through (`wooksApp.getWooks()`); pass `created: true` when the adapter created its Wooks app itself (no app passed in → process-wide global Wooks). Warns once per Wooks instance when another app already bound handlers of the same adapter name into it and either claim is `created` (the built-in adapters do this); apps sharing a passed-in Wooks app stay silent
 - `ContextInjector`, `getContextInjector()`, `replaceContextInjector()`, `resetContextInjector()` — the tracing hook (re-exported from `@wooksjs/event-core`); `defineMoostEventHandler` wraps lifecycle stages through the injector active for each event (read per event, so one installed after `init()` applies to bound handlers too), and `@moostjs/otel` installs its span injector via `replaceContextInjector`
 
 ## Gotchas

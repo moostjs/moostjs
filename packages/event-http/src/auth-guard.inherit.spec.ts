@@ -1,5 +1,6 @@
 // oxlint-disable max-classes-per-file -- base controller + subclasses of one scenario
 import {
+  clearGlobalWooks,
   Controller,
   defineInterceptor,
   Inherit,
@@ -56,6 +57,7 @@ class BaseCrudController {
 class ProductsController extends BaseCrudController {}
 
 async function boot(controller: Function) {
+  clearGlobalWooks() // a fresh Wooks per app: no routes shared with the previous one
   const app = new Moost()
   const http = new MoostHttp()
   app.adapter(http)

@@ -2,6 +2,7 @@ import { Readable } from 'node:stream'
 
 import { useResponse } from '@wooksjs/event-http'
 import {
+  clearGlobalWooks,
   Controller,
   current,
   getMoostInfact,
@@ -111,6 +112,7 @@ describe('MoostHttp event DI scope on a real server', () => {
   let before = 0
 
   beforeEach(async () => {
+    clearGlobalWooks() // a fresh Wooks per app: no routes shared with the previous one
     probe = makeProbe()
     const app = new Moost()
     http = new MoostHttp()
