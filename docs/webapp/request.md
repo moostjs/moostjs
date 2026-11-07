@@ -179,7 +179,7 @@ const http = new MoostHttp({
 })
 ```
 
-The client is the right-most `X-Forwarded-For` hop that is not trusted. The same setting drives `useRequest().protocol()` and `host()` (`X-Forwarded-Proto` / `X-Forwarded-Host`). IPv4-mapped addresses (`::ffff:10.0.0.5`) are returned as plain IPv4, and `@Ip()` is `''` when the client is unknown (an in-process [fetch](./fetch) without a peer, or a malformed entry written by a trusted proxy). `@IpList()` returns the raw, unvalidated values — never use it for access decisions. The wooks guide [Proxy Trust](https://wooks.moost.org/webapp/proxy-trust.html) covers every `trustProxy` form and when to cap an address list with `hops`.
+The client is the right-most `X-Forwarded-For` hop that is not trusted. The same setting drives `useRequest().protocol()` and `host()` (`X-Forwarded-Proto` / `X-Forwarded-Host`). IPv4-mapped addresses (`::ffff:10.0.0.5`) are returned as plain IPv4, and `@Ip()` is `''` when the client is unknown (an in-process [fetch](./fetch) without a peer, or a malformed entry written by a trusted proxy). `@IpList()` returns the raw, unvalidated values — never use it for access decisions. The wooks guide [Proxy Trust](https://wooks.moost.org/webapp/proxy-trust.html) covers every `trustProxy` form and when to cap an address list with `hops` (the `{ addresses, hops }` form needs moost 0.7.5 or later; its type is exported as `TTrustProxyCapped`).
 
 ::: warning Deprecated: `@Ip({ trustProxy: true })`
 The per-decorator option now trusts exactly **one** proxy hop (the right-most `X-Forwarded-For` entry). Up to and including `0.6.53` it took the left-most entry, which any client can forge. Configure `trustProxy` on `MoostHttp` and use `@Ip()` instead.

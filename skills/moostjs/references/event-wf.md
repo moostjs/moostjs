@@ -301,7 +301,7 @@ Pros: small tokens, server-side revocation, **fail-closed on unexpected errors**
 - Changing or removing the secret invalidates every open handle. Default handles are 22 URL-safe chars, not UUIDs — don't parse them.
 - 0.7.0–0.7.3: `hashWfHandle`/`WfHandleHashOptions` not exported here → add `@prostojs/wf@^0.3.0`, import from `@prostojs/wf/outlets` (0.6.x ships `@prostojs/wf` 0.2: no hashing).
 
-**Expiry time.** `strategy.expiresAtFor({ ttl, expiresAt })` → epoch ms a persist with those options records (show an invite's "valid until"); `0` = never; `undefined` = unknown (custom strategy without the method, or a subclass overriding `persist`) — never read `undefined` as "never". Built-ins also expose `defaultTtl`. 0.7.6+, `@prostojs/wf` 0.3.1+. `resolveExpiresAt(options, defaultTtl, now?)` is the underlying rule and returns `undefined` for unbounded.
+**Expiry time.** `strategy.expiresAtFor?.({ ttl, expiresAt }, now?)` → epoch ms a persist with those options records, nothing persisted (show an invite's "valid until"); `0` = never; `undefined` = unknown (method is OPTIONAL on `WfStateStrategy` → call with `?.`; built-in subclass overriding `persist` → `undefined`) — never read `undefined` as "never", don't display it. Invalid `expiresAt` → `TypeError`. Built-ins also expose `defaultTtl`. `wf.mint()` already returns `expiresAt`. 0.7.6+ (`@prostojs/wf` 0.3.1). `resolveExpiresAt(options, defaultTtl, now?)` = the same rule for custom strategies, but returns `undefined` (not `0`) for unbounded.
 
 **`WfStateStoreMemory`** — in-memory store for dev/testing. `WfStateStore` interface: `set`, `get`, `delete`, `getAndDelete`, `cleanup?`.
 

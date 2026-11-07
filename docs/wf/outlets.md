@@ -22,7 +22,7 @@ Install or update the required packages:
 pnpm add @moostjs/event-wf@latest
 ```
 
-The outlet APIs come from the underlying packages (`@prostojs/wf` v0.2.1+ and `@wooksjs/event-wf` v0.7.16+), but everything is re-exported from `@moostjs/event-wf` for convenience — you only need one import source.
+The outlet APIs come from the underlying packages (`@moostjs/event-wf` `0.7.6` depends on `@prostojs/wf` `^0.3.1` and `@wooksjs/event-wf` `^0.8.3`), but everything is re-exported from `@moostjs/event-wf` — you only need one import source, and you don't install those packages yourself.
 
 ## Quick Example
 
@@ -145,7 +145,7 @@ The full `WfOutletTriggerConfig` interface:
 |-------|------|-------------|
 | `allow` | `string[]` | Whitelist of workflow IDs that can be started **or resumed**, matched against the registered flow ID (the pattern for a parametric flow). Omitted = no restriction; **`[]` = nothing allowed** |
 | `resumeOnly` | `string[]` | Workflow IDs that can be resumed but never started here; no `allow` entry needed |
-| `block` | `string[]` | Blacklist of workflow IDs (checked after `allow`), on start and resume |
+| `block` | `string[]` | Blacklist of workflow IDs, on start and resume; wins over `allow` and `resumeOnly` |
 | `state` | `WfStateStrategy \| { strategies: Record<string, WfStateStrategy>, default: string \| ((wfid, flowId) => string) }` | State persistence strategy (required). See [State Strategies](#state-strategies) below. |
 | `outlets` | `WfOutlet[]` | Registered delivery channels (required) |
 | `token` | `WfOutletTokenConfig` | Token read/write/naming configuration |
@@ -306,7 +306,23 @@ In `0.7.0`–`0.7.3`, `@moostjs/event-wf` does not export `hashWfHandle` or `WfH
 
 ### When a paused state expires
 
-To show when a link stops working (an invite's "valid until"), ask the strategy rather than recomputing it: `strategy.expiresAtFor({ ttl, expiresAt })` returns the epoch milliseconds a `persist` with those options records, `0` when nothing bounds the state, and `undefined` when it can't tell (a custom strategy without the method, or a subclass that overrides `persist`). Treat `undefined` as unknown, never as "never expires". The built-in strategies also expose `defaultTtl`. `resolveExpiresAt` and the `WfPersistOptions` type are also exported from `@moostjs/event-wf` (since `0.7.6`, needs `@prostojs/wf` 0.3.1+); `resolveExpiresAt` returns `undefined`, not `0`, for an unbounded state.
+To show when a link stops working (an invite's "valid until"), ask the strategy rather than recomputing it. `strategy.expiresAtFor({ ttl, expiresAt }, now?)` returns the expiry (epoch milliseconds) a `persist()` with the same options would record, without persisting anything:
+
+```ts
+const state = new HandleStateStrategy({ store, defaultTtl: 3_600_000 })
+
+state.expiresAtFor({}) // Date.now() + 3_600_000 (the strategy's defaultTtl)
+state.expiresAtFor({ ttl: 7 * 86_400_000 }) // Date.now() + 7 days
+state.expiresAtFor({ ttl: 0 }) // 0: never expires
+```
+
+- `0` means nothing bounds the state: it never expires.
+- `undefined` means the strategy can't tell: a subclass of a built-in strategy that overrides `persist()` returns it. The method is optional on `WfStateStrategy`, so a custom strategy may not have it at all — call it as `strategy.expiresAtFor?.(…)`. Treat `undefined` as unknown: don't show an expiry, and never read it as "never expires".
+- An invalid `expiresAt` (negative, `NaN`, infinite) throws a `TypeError`.
+
+The built-in strategies also expose their `defaultTtl`. [`wf.mint()`](/wf/api#mint-options) already returns the `expiresAt` of the token it mints.
+
+A custom strategy can apply the same rules with [`resolveExpiresAt(options, defaultTtl, now?)`](/wf/api#resolveexpiresat-options-defaultttl-now) — note it returns `undefined`, not `0`, for a state that never expires. `resolveExpiresAt` and the [`WfPersistOptions`](/wf/api#wfpersistoptions) type are exported from `@moostjs/event-wf` since `0.7.6`; `expiresAtFor()` and `defaultTtl` come with `@prostojs/wf` `0.3.1`, which `0.7.6` depends on.
 
 ### Named Strategy Registry
 

@@ -1,6 +1,6 @@
 # Upgrading to 0.7
 
-Moost `0.7.0` builds on wooks `0.8`. All `moost` / `@moostjs/*` packages share one version: upgrade them together, and upgrade `@prostojs/wf` to `^0.3.0` if your app lists it. This page is a checklist; each item links to the page that documents the current behaviour. The full list is in the [changelog](https://github.com/moostjs/moostjs/blob/main/CHANGELOG.md); the wooks side is in the [wooks 0.8.0 changelog](https://github.com/wooksjs/wooksjs/blob/main/CHANGELOG.md).
+Moost `0.7.0` builds on wooks `0.8`. All `moost` / `@moostjs/*` packages share one version: upgrade them together, and upgrade `@prostojs/wf` to `^0.3.1` if your app lists it (`^0.3.0` up to `0.7.5`), so it shares one copy with `@moostjs/event-wf`. This page is a checklist; each item links to the page that documents the current behaviour. The full list is in the [changelog](https://github.com/moostjs/moostjs/blob/main/CHANGELOG.md); the wooks side is in the [wooks 0.8.0 changelog](https://github.com/wooksjs/wooksjs/blob/main/CHANGELOG.md).
 
 ## Check these in your app
 
@@ -43,3 +43,5 @@ Details and examples: [The after/error chain](/moost/interceptors#the-after-erro
 - [`@Locale()`, `useLocale()`, `setTranslator()` / `useTranslate()`](/moost/i18n) — per-event locale and a translation hook for your own i18n library.
 - [Error `code` and `params`](/webapp/response#error-codes-and-params) on `HttpError` bodies, and `transformErrorBody` on `MoostHttp`.
 - [`MoostWf.mint()`](/wf/api#mint-options) (headless start that returns a resume token), [`resolveSchemaId()`](/wf/api#resolveschemaid-id-opts), and the trigger hooks `around`, `beforePersist`, `renderEnvelope`, `restoreOnError` → [Outlets configuration](/wf/outlets#configuration).
+- `0.7.5`: the workflow trigger's [`resumeOnly`](/wf/outlets#access-control-and-refusals) list, [per-field wording and `pathPrefix: false`](/moost/i18n#wording-per-field) for translated error bodies, `trustProxy: { addresses, hops }` ([client IP](/webapp/request#ip-address)), and a warning when [two apps share one Wooks router](/moost/#several-apps-in-one-process).
+- `0.7.6`: [when a paused state expires](/wf/outlets#when-a-paused-state-expires) — `strategy.expiresAtFor()`, `resolveExpiresAt`.

@@ -464,15 +464,31 @@ State persistence interface:
 interface WfStateStrategy {
   persist(
     state: WfState,
-    options?: { ttl?: number },
+    options?: WfPersistOptions,
     overrides?: { handle?: string }, // hint to reuse a handle so the wfs stays stable across resumes
   ): Promise<string>
   retrieve(token: string): Promise<WfState | null>          // no invalidation
   consume(token: string): Promise<WfState | null>           // atomic retrieve + invalidate (mutex against concurrent resumes)
+  expiresAtFor?(options?: WfPersistOptions, now?: number): number | undefined // 0 = never, undefined = unknown
 }
 ```
 
+`expiresAtFor()` (optional, `@prostojs/wf` `0.3.1`+) returns the expiry a `persist()` with these options would record, without persisting. The built-in strategies implement it and also expose a `defaultTtl` getter. See [Outlets — When a paused state expires](/wf/outlets#when-a-paused-state-expires).
+
 `HandleStateStrategy` honors the `handle` hint and reuses the same storage key on every resume — the `wfs` token is a stable session credential, not single-use. `EncapsulatedStateStrategy` ignores the hint (the ciphertext is a function of the state, so the token changes on every state mutation regardless). See [Outlets — Token Stability & Resume Semantics](./outlets.md#token-stability--resume-semantics).
+
+### `WfPersistOptions`
+
+Options of `WfStateStrategy.persist()` and `expiresAtFor()`. Exported since `0.7.6`.
+
+```ts
+interface WfPersistOptions {
+  ttl?: number // lifetime in ms from the persist call; overrides defaultTtl; <= 0 = never expires
+  expiresAt?: number // absolute expiry (ms timestamp), 0 = never; defaultTtl is then not applied
+}
+```
+
+With both, the earlier expiry wins. An invalid `expiresAt` (negative, `NaN`, infinite) throws a `TypeError`. The built-in strategies honour `expiresAt`; a custom strategy written for `@prostojs/wf` 0.2 may read only `ttl`.
 
 ### `WfOutlet`
 
@@ -627,6 +643,20 @@ hashWfHandle(handle: string, secret?: string | Buffer): string
 ```
 
 Not exported in `0.7.0`–`0.7.3` — see [Outlets — Hashing Handles](/wf/outlets#hashing-handles).
+
+### `resolveExpiresAt(options, defaultTtl, now?)`
+
+The expiry rule the built-in strategies apply: the absolute expiry (ms timestamp) a persist with `options` records, or `undefined` when nothing bounds the state (`expiresAtFor()` reports that case as `0`). Use it in a custom strategy to follow the same rules. Throws a `TypeError` for an invalid `options.expiresAt`. Exported since `0.7.6`.
+
+```ts
+resolveExpiresAt(
+  options: WfPersistOptions | undefined,
+  defaultTtl: number | undefined,
+  now?: number, // default Date.now()
+): number | undefined
+```
+
+See [Outlets — When a paused state expires](/wf/outlets#when-a-paused-state-expires).
 
 ### `WfStateStoreMemory`
 
