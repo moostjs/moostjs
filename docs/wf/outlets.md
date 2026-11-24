@@ -93,7 +93,7 @@ class AuthController {
 2. Workflow starts → `credentials` step returns `outletHttp(...)` → workflow pauses
 3. State is persisted by the strategy (server-side row for `HandleStateStrategy`, encrypted blob for `EncapsulatedStateStrategy`) → HTTP outlet returns the form payload + token (`wfs`) in the response
 4. Client renders the form, user fills it in, sends `POST /auth/flow` with `{ "wfs": "<token>", "input": { "username": "...", "password": "..." } }` — step input must be nested under the `input` key
-5. State is retrieved via `consume()` (atomic mutex against concurrent resumes) → workflow resumes at `credentials` with input → `create-session` runs → workflow finishes
+5. The trigger reads the paused state to check it against `allow`, then takes it with `consume()` (atomic mutex against concurrent resumes) → workflow resumes at `credentials` with input → `create-session` runs → workflow finishes
 6. Response includes the redirect and session cookie from `useWfFinished()`
 
 ## The `handleOutlet` Method
@@ -115,7 +115,7 @@ It routes through `MoostWf.start()` and `resume()` internally, so all Moost DI, 
 
 ### Access control and refusals
 
-`allow` and `block` are enforced when a workflow is **started and when it is resumed**, and they are judged on the registered flow ID the request resolves to (`MoostWf.resolveSchemaId()`), not on how the caller spelled `wfid`: `block: ['admin']` also refuses `'/admin'` or `'adm%69n'`. An `allow` entry must equal the registered ID (for a parametric flow, its pattern). `allow: []` admits nothing — omit `allow` for no restriction. A refused resume answers `403` and does not consume the token.
+`allow` and `block` are enforced when a workflow is **started and when it is resumed**, and they are judged on a registered flow ID, not on how the caller spelled `wfid`. A start is judged on the flow its `wfid` resolves to (`MoostWf.resolveSchemaId()`): `block: ['admin']` also refuses `'/admin'` or `'adm%69n'`. A resume is judged on the flow the paused state belongs to (its stored `schemaId`); the request is not resolved, and a `wfid` sent along with `wfs` is ignored. An `allow` entry must equal the registered ID (for a parametric flow, its pattern). `allow: []` admits nothing — omit `allow` for no restriction. A refused resume answers `403` and does not consume the token.
 
 `resumeOnly` lists flows that may be **resumed but never started** through this trigger, for example an invite an admin starts with [`wf.mint()`](/wf/api#mint-options) and the user resumes from an emailed link. A start of a listed flow is refused even when `allow` also lists it, and a resume is admitted without an `allow` entry. `block` wins over both. The full matching rules are in the wooks guide: [Access Control](https://wooks.moost.org/wf/outlets.html#access-control).
 

@@ -227,7 +227,7 @@ async flow() {
 ```
 
 ::: info
-Must be called from within an HTTP event context so that wooks HTTP composables are available. `allow` / `resumeOnly` / `startOnly` / `block` are judged on the flow ID `resolveSchemaId()` resolves. Refusals are thrown as `HttpError`s with a `code` — see [Access control and refusals](/wf/outlets#access-control-and-refusals).
+Must be called from within an HTTP event context so that wooks HTTP composables are available. `allow` / `resumeOnly` / `startOnly` / `block` are judged on a registered flow ID: on a start, the one `resolveSchemaId()` resolves `wfid` to; on a resume, the paused state's stored `schemaId`. Refusals are thrown as `HttpError`s with a `code` — see [Access control and refusals](/wf/outlets#access-control-and-refusals).
 :::
 
 ### `resolveSchemaId(id, opts?)`
