@@ -22,7 +22,7 @@ Install or update the required packages:
 pnpm add @moostjs/event-wf@latest
 ```
 
-The outlet APIs come from the underlying packages (`@moostjs/event-wf` `0.7.6` depends on `@prostojs/wf` `^0.3.1` and `@wooksjs/event-wf` `^0.8.3`), but everything is re-exported from `@moostjs/event-wf` — you only need one import source, and you don't install those packages yourself.
+The outlet APIs come from the underlying packages (`@moostjs/event-wf` `0.7.7` depends on `@prostojs/wf` `^0.3.1` and `@wooksjs/event-wf` `^0.8.4`), but everything is re-exported from `@moostjs/event-wf` — you only need one import source, and you don't install those packages yourself.
 
 ## Quick Example
 
@@ -119,6 +119,8 @@ It routes through `MoostWf.start()` and `resume()` internally, so all Moost DI, 
 
 `resumeOnly` lists flows that may be **resumed but never started** through this trigger, for example an invite an admin starts with [`wf.mint()`](/wf/api#mint-options) and the user resumes from an emailed link. A start of a listed flow is refused even when `allow` also lists it, and a resume is admitted without an `allow` entry. `block` wins over both. The full matching rules are in the wooks guide: [Access Control](https://wooks.moost.org/wf/outlets.html#access-control).
 
+`startOnly` (since `0.7.7`) is the mirror: flows that may be **started but never resumed** through this trigger, for example an invite an admin starts on a protected route whose emailed link is accepted only on the public trigger. A resume of a listed flow is refused even when `allow` also lists it, and the token is not consumed, so it still works on the trigger that admits it; a start is admitted without an `allow` entry. `block` wins over both, and a flow listed in both `resumeOnly` and `startOnly` can be neither started nor resumed. A `startOnly` flow can never be resumed through the same trigger, so it fits flows whose first pause hands the token to another trigger; a flow that asks the starter for more input on the same route would be refused there.
+
 The trigger **throws** its refusals as `HttpError`s with a `code` and an English `message`, so they reach your error interceptors and can be translated by code:
 
 | `code` | Status | When |
@@ -127,8 +129,8 @@ The trigger **throws** its refusals as `HttpError`s with a `code` and an English
 | `WF_INVALID` | 400 | `wfid` is not a valid workflow ID |
 | `WF_INVALID_TOKEN` | 410 | the token is malformed or names no configured strategy |
 | `WF_EXPIRED` | 410 | the token's state is gone: expired, already used, or never existed |
-| `WF_FORBIDDEN` | 403 | `allow` / `resumeOnly` / `block` refuses the flow (`params.reason`: `'not-allowed'` or `'blocked'`) |
-| `WF_NOT_FOUND` | 404 | with `allow` / `resumeOnly` / `block` set, `wfid` resolves to no flow |
+| `WF_FORBIDDEN` | 403 | `allow` / `resumeOnly` / `startOnly` / `block` refuses the flow (`params.reason`: `'not-allowed'` or `'blocked'`) |
+| `WF_NOT_FOUND` | 404 | with `allow` / `resumeOnly` / `startOnly` / `block` set, `wfid` resolves to no flow |
 | `WF_UNKNOWN_OUTLET` | 500 | a step paused on an outlet the trigger does not have |
 
 The table is exported as `WF_TRIGGER_ERRORS` (type `WfTriggerErrorCode`) from `@moostjs/event-wf`. Clients reading `body.message ?? body.error` work with old and new servers.
@@ -136,6 +138,37 @@ The table is exported as `WF_TRIGGER_ERRORS` (type `WfTriggerErrorCode`) from `@
 ::: warning Version note
 Up to and including `0.6.53` (wooks `0.7.x`), refusals were *returned* as `{ error: '…' }` bodies (bypassing error interceptors), `allow` / `block` were not checked on resume, and `allow: []` allowed every workflow.
 :::
+
+### Refusing a resume with `beforeResume`
+
+The access lists judge only the flow. For a check that depends on the paused state, pass `beforeResume(state, { strategy })` (since `0.7.7`). It is called on every resume, inside `around`, after the access lists admitted the token and **before** the token is consumed. `state` is the paused state the token points at; `strategy` is the name of the strategy that holds it (the token's `<name>.` prefix, `'default'` with a single strategy). Throw to refuse: the error propagates from `handleOutlet()` unchanged (to your error interceptors, like the trigger's own refusals), nothing runs, and the token is not consumed, so it stays usable.
+
+```ts
+import { HttpError } from '@moostjs/event-http'
+
+@Post('invites/accept')
+async acceptInvite() {
+  return this.wf.handleOutlet({
+    // ...
+    resumeOnly: ['invite'],
+    beforeResume: async (state, { strategy }) => {
+      // on this route, only tokens kept in the server-side 'store' strategy may resume
+      if (strategy !== 'store') {
+        throw new HttpError(403, 'Open the link from your invitation email')
+      }
+      const { teamId, email } = state.context as { teamId: string; email: string }
+      if (await this.teams.hasMember(teamId, email)) {
+        throw new HttpError(409, 'Already a member')
+      }
+    },
+  })
+}
+```
+
+- It is called once per run, on the state as read **before** the token is taken: a concurrent resume of the same token that pauses again in between is not seen. A check that must hold when the step runs belongs in the step.
+- Treat `state` as read-only: on an in-memory store it is the stored state itself, so a change would be resumed.
+- It is not called on a start, nor for a token whose state is gone (410 `WF_EXPIRED`).
+- Like the access lists, it makes every resume read the state with `strategy.retrieve()` before consuming it, so a custom strategy's `retrieve()` must not invalidate the token.
 
 ### Configuration
 
@@ -145,7 +178,8 @@ The full `WfOutletTriggerConfig` interface:
 |-------|------|-------------|
 | `allow` | `string[]` | Whitelist of workflow IDs that can be started **or resumed**, matched against the registered flow ID (the pattern for a parametric flow). Omitted = no restriction; **`[]` = nothing allowed** |
 | `resumeOnly` | `string[]` | Workflow IDs that can be resumed but never started here; no `allow` entry needed |
-| `block` | `string[]` | Blacklist of workflow IDs, on start and resume; wins over `allow` and `resumeOnly` |
+| `startOnly` | `string[]` | Workflow IDs that can be started but never resumed here; no `allow` entry needed |
+| `block` | `string[]` | Blacklist of workflow IDs, on start and resume; wins over `allow`, `resumeOnly` and `startOnly` |
 | `state` | `WfStateStrategy \| { strategies: Record<string, WfStateStrategy>, default: string \| ((wfid, flowId) => string) }` | State persistence strategy (required). See [State Strategies](#state-strategies) below. |
 | `outlets` | `WfOutlet[]` | Registered delivery channels (required) |
 | `token` | `WfOutletTokenConfig` | Token read/write/naming configuration |
@@ -154,7 +188,8 @@ The full `WfOutletTriggerConfig` interface:
 | `onFinished` | `(ctx) => unknown` | Override the completion response |
 | `restoreOnError` | `boolean \| ((error) => boolean)` | Opt-in: when a resume fails after the token was consumed, re-persist the pre-step state under the same token so it can be retried (at most `maxRestores` times). Rolls back what the step wrote to the context |
 | `maxRestores` | `number` | Limit for `restoreOnError` restores of one token |
-| `around` | `(run) => Promise<unknown>` | Wraps the access checks, start/resume, persist and delivery — e.g. `(run) => db.transaction(run)` to put the state row and the steps' writes in one transaction. `run()` may be called again (retrying transactions) |
+| `around` | `(run) => Promise<unknown>` | Wraps the access checks, `beforeResume`, start/resume, persist and delivery — e.g. `(run) => db.transaction(run)` to put the state row and the steps' writes in one transaction. `run()` may be called again (retrying transactions) |
+| `beforeResume` | `(state, { strategy }) => void \| Promise<void>` | Called on a resume after the access lists admitted it, before the token is consumed; throw to refuse (the token stays usable) — see [Refusing a resume](#refusing-a-resume-with-beforeresume) |
 | `beforePersist` | `(state, pause) => void \| Promise<void>` | Called with a paused state right before it is persisted; throw to abort |
 | `renderEnvelope` | `(envelope, info) => unknown` | Maps every body the trigger answers with (pause envelope, finished value), per request — the hook for translating workflow forms (read the locale with `useLocale()`) |
 
