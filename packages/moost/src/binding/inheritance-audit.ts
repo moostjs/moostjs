@@ -13,22 +13,56 @@ export interface TInheritanceAuditInput {
   classConstructor: TClassConstructor
   /** Effective metadata (`getMoostMate().read(...)` — inherit rules applied). */
   classMeta?: TMoostMetadata
-  /** Handler metas discovered on the class at bind time (post-inheritance). */
-  ownHandlersCount: number
+  /** Names of the methods that bound at least one handler (post-inheritance). */
+  boundMethods: ReadonlySet<string>
   /** True when the class was registered as a constructor — DI will instantiate it. */
   diInstantiated: boolean
 }
 
-/** Counts handler metas on the class' own prototype methods (its inherit rules applied). */
-function countHandlers(classConstructor: TClassConstructor): number {
+/**
+ * Route methods of the ancestors, closest first, each with the closest ancestor that declares
+ * handlers on it. The walk ends at an ancestor with a class-level `@Inherit(false)`: it replaced
+ * whatever its own ancestors declared on purpose.
+ */
+function ancestorRoutes(classConstructor: TClassConstructor): Map<string, TClassConstructor> {
   const mate = getMoostMate()
-  let count = 0
-  for (const name of Object.getOwnPropertyNames(classConstructor.prototype as object)) {
-    if (name !== 'constructor') {
-      count += mate.read(classConstructor, name)?.handlers?.length ?? 0
+  const routes = new Map<string, TClassConstructor>()
+  for (const ancestor of ancestorsOf(classConstructor)) {
+    for (const name of Object.getOwnPropertyNames(ancestor.prototype as object)) {
+      if (
+        name !== 'constructor' &&
+        !routes.has(name) &&
+        mate.read(ancestor, name)?.handlers?.length
+      ) {
+        routes.set(name, ancestor)
+      }
+    }
+    if (mate.read(ancestor)?.inherit === false) {
+      break
     }
   }
-  return count
+  return routes
+}
+
+/**
+ * Whether a member-level `@Inherit(false)` between the class and `definer` drops the route on
+ * purpose (the registered class itself included, `definer` excluded).
+ */
+function droppedOnPurpose(
+  classConstructor: TClassConstructor,
+  name: string,
+  definer: TClassConstructor,
+): boolean {
+  const mate = getMoostMate()
+  for (const cls of [classConstructor, ...ancestorsOf(classConstructor)]) {
+    if (cls === definer) {
+      return false
+    }
+    if (mate.read(cls, name)?.inherit === false) {
+      return true
+    }
+  }
+  return false
 }
 
 /**
@@ -54,49 +88,59 @@ function brokenLinksBetween(
 }
 
 /**
- * Route-drop trap: the registered class contributed 0 handlers while an
- * ancestor defines some — its routes silently 404. Fires when the class
- * carries no `@Inherit` decision (routes never flow by default) AND when it
- * carries `@Inherit()` but nothing flowed (that combination is always a bridge
- * broken by intermediate classes without `@Inherit()` of their own). An
- * explicit `@Inherit(false)` is a deliberate opt-out and stays silent.
+ * Route-drop trap: an ancestor's route method that the registered class
+ * neither binds nor drops on purpose silently 404s. Fires when the class
+ * carries no `@Inherit` decision (routes never flow by default) — also when it
+ * re-declares some of the routes — AND when it carries `@Inherit()` but routes
+ * did not flow (a bridge broken by intermediate classes without `@Inherit()` of
+ * their own). A class-level `@Inherit(false)` and a member-level
+ * `@Inherit(false)` on an override are deliberate drops and stay silent.
  */
 function auditRouteDrop(input: TInheritanceAuditInput): TParamAuditFinding | undefined {
-  if (input.ownHandlersCount > 0 || input.classMeta?.inherit === false) {
+  if (input.classMeta?.inherit === false) {
     return undefined
   }
-  for (const ancestor of ancestorsOf(input.classConstructor)) {
-    const count = countHandlers(ancestor)
-    if (count > 0) {
-      return { severity: 'warn-only', message: routeDropMessage(input, ancestor, count) }
+  const missing: string[] = []
+  // routes come closest first, so the last missing one is the farthest ancestor's
+  let farthest: TClassConstructor | undefined
+  for (const [name, definer] of ancestorRoutes(input.classConstructor)) {
+    if (input.boundMethods.has(name) || droppedOnPurpose(input.classConstructor, name, definer)) {
+      continue
     }
+    missing.push(`${definer.name}.${name}()`)
+    farthest = definer
   }
-  return undefined
+  if (!farthest) {
+    return undefined
+  }
+  return { severity: 'warn-only', message: routeDropMessage(input, missing, farthest) }
 }
 
 function routeDropMessage(
   input: TInheritanceAuditInput,
-  ancestor: TClassConstructor,
-  count: number,
+  missing: string[],
+  farthest: TClassConstructor,
 ): string {
   const name = input.classConstructor.name
+  const routes = missing.join(', ')
   if (input.classMeta?.inherit) {
-    // @Inherit() present but nothing flowed — name the broken link(s)
-    const links = brokenLinksBetween(input.classConstructor, ancestor)
+    // @Inherit() present but routes did not flow — name the broken link(s)
+    const links = brokenLinksBetween(input.classConstructor, farthest)
     const brokenBy =
       links.length > 0
         ? `the intermediate class(es) ${links.join(', ')} carry no @Inherit()`
         : 'the inherit chain between them is broken'
     return (
-      `[moost] ${name} has @Inherit() but registered 0 route handler(s) while its ancestor ` +
-      `${ancestor.name} defines ${count} — @Inherit() bridges one level at a time and ` +
-      `${brokenBy}. Add @Inherit() to each intermediate class or re-declare the routes.`
+      `[moost] ${name} has @Inherit() but does not bind the inherited route handler(s) ` +
+      `${routes} — @Inherit() bridges one level at a time and ${brokenBy}. ` +
+      `Add @Inherit() to each intermediate class or re-declare the routes.`
     )
   }
   return (
-    `[moost] ${name} extends ${ancestor.name} which defines ${count} route handler(s), ` +
-    `but ${name} registered 0 and has no @Inherit() — parent routes are not inherited ` +
-    `without it. Add @Inherit() or re-declare the routes.`
+    `[moost] ${name} does not bind the route handler(s) ${routes} of its ancestor(s) ` +
+    `and has no @Inherit() — parent routes are not inherited without it. Add @Inherit() ` +
+    `or re-declare the routes; to drop them on purpose, mark the class @Inherit(false) ` +
+    `(or an overriding method, for one route).`
   )
 }
 
@@ -154,10 +198,10 @@ function lostCtorParamsMessage(
 }
 
 /**
- * Bind-time inheritance audit (IMPROVEMENTS.md §3): detects the two real traps
+ * Bind-time inheritance audit: detects the two real traps
  * of subclassing decorated classes — parent routes silently dropping without a
  * working `@Inherit()` bridge, and parent constructor params silently not
- * resolving. Pure and warn-only: findings join the D1 collector and
+ * resolving. Pure and warn-only: findings join the param-audit findings and
  * `Moost.init()` logs them as warnings (they never reject `init()`).
  */
 export function auditInheritance(input: TInheritanceAuditInput): TParamAuditFinding[] {

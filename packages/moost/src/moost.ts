@@ -91,11 +91,12 @@ export interface TMoostOptions {
     /**
      * `inheritance` audits every registered controller for the two subclassing
      * traps (warn-only, never rejects `init()`):
-     * - a class that registered 0 handlers while an ancestor defines some,
-     *   without a deliberate `@Inherit(false)` opt-out — parent routes
-     *   silently 404 (fires both when no `@Inherit` decision exists and when
-     *   `@Inherit()` is present but an undecorated intermediate class breaks
-     *   the chain — the warning names the broken link);
+     * - a class that does not bind some of its ancestors' route handlers —
+     *   also when it re-declares the others — without a deliberate
+     *   `@Inherit(false)` (on the class, or on an overriding method) — those
+     *   routes silently 404 (fires both when no `@Inherit` decision exists and
+     *   when `@Inherit()` is present but an undecorated intermediate class
+     *   breaks the chain; the warning names the routes and the broken link);
      * - a DI-instantiated class with no effective constructor param metadata
      *   while a decorated ancestor declares constructor params — dependencies
      *   silently resolve to `undefined` (or the class is not seen as
@@ -259,7 +260,7 @@ export class Moost extends Hookable {
 
   protected unregisteredControllers: TControllerRegistration[] = []
 
-  /** D1 param-audit findings collected while binding controllers, flushed by `init()`. */
+  /** Param-audit findings collected while binding controllers, flushed by `init()`. */
   protected paramAuditFindings: TParamAuditFinding[] = []
 
   /** Effective `diagnostics.paramTypes` mode, resolved once (see {@link TMoostOptions}). */
@@ -268,7 +269,7 @@ export class Moost extends Hookable {
   /** Effective `diagnostics.inheritance` mode (see {@link TMoostOptions}). */
   protected readonly inheritanceAuditMode: TInheritanceAuditMode
 
-  /** D5: set once `init()` completes — late provide/replace registrations then warn. */
+  /** Set once `init()` completes — late provide/replace registrations then warn. */
   protected initialized = false
 
   /**
@@ -392,9 +393,9 @@ export class Moost extends Hookable {
     try {
       await this.bindControllers()
     } finally {
-      // D4: expose this app's controllers overview to the DI diagnostics scans
+      // expose this app's controllers overview to the DI diagnostics scans
       registerDiagnosticsSource(this)
-      // D1 findings are logged even when binding threw; a bind error then
+      // param-audit findings are logged even when binding threw; a bind error then
       // propagates from the try block, taking precedence over the audit error
       auditError = this.flushParamAudit()
     }
@@ -407,7 +408,7 @@ export class Moost extends Hookable {
     }
     // Flagged only after the adapters' onInit loop: registry updates made by
     // init() itself (top of this method) or by adapters during boot are part
-    // of the normal init flow and must not trigger the D5 late-registration
+    // of the normal init flow and must not trigger the late-registration
     // warning below (setProvideRegistry/setReplaceRegistry).
     this.initialized = true
   }
@@ -559,20 +560,26 @@ export class Moost extends Hookable {
     opts?: TRunDetachedOptions,
   ): Promise<Awaited<R> | undefined> {
     const logger = opts?.logger ?? this.getLogger(name)
-    const run = createEventContext({ logger }, detachedKind, {}, async () => {
-      const release = holdEventScopeLazily(getEventScope())
-      setControllerContext(this, 'runDetached' as keyof this, '', { prefix: '' })
-      // instrumentation names the event after the run (OpenTelemetry: span `DETACHED <name>`)
-      announceHandler(getContextInjector<TContextInjectorHook>(), detachedKind.name, name)
-      try {
-        return await fn()
-      } catch (error) {
-        logger.error(`Detached run "${name}" failed: ${errorMessage(error)}`, error)
-        return undefined
-      } finally {
-        release()
-      }
-    })
+    // annotated: inferred from `await fn()`, the promise would be typed `R`, not `Awaited<R>`
+    const run = createEventContext(
+      { logger },
+      detachedKind,
+      {},
+      async (): Promise<Awaited<R> | undefined> => {
+        const release = holdEventScopeLazily(getEventScope())
+        setControllerContext(this, 'runDetached' as keyof this, '', { prefix: '' })
+        // instrumentation names the event after the run (OpenTelemetry: span `DETACHED <name>`)
+        announceHandler(getContextInjector<TContextInjectorHook>(), detachedKind.name, name)
+        try {
+          return await fn()
+        } catch (error) {
+          logger.error(`Detached run "${name}" failed: ${errorMessage(error)}`, error)
+          return undefined
+        } finally {
+          release()
+        }
+      },
+    )
     this.detachedRuns.add(run)
     void run.finally(() => this.detachedRuns.delete(run))
     return run
@@ -678,7 +685,7 @@ export class Moost extends Hookable {
   }
 
   /**
-   * D1 audit of a DI-instantiated controller class' constructor params.
+   * Param audit of a DI-instantiated controller class' constructor params.
    * Findings are collected for `init()` to flush. Returns `true` when the
    * bind-time SINGLETON instantiation must be skipped: in `'error'` mode a
    * fatal-capable finding guarantees `init()` rejects with the aggregated
@@ -695,7 +702,7 @@ export class Moost extends Hookable {
   }
 
   /**
-   * Flushes D1 findings collected during binding: every finding is logged as a
+   * Flushes the param-audit findings collected during binding: every finding is logged as a
    * warning; in `'error'` mode, fatal-capable findings are folded into one
    * aggregate error message listing all of them, returned for `init()` to
    * throw (`init()` owns the precedence between this and a bind error).
@@ -801,13 +808,13 @@ export class Moost extends Hookable {
           : (findings) => this.paramAuditFindings.push(...findings),
     })
     this.controllersOverview.push(controllerOverview)
-    // §3 inheritance audit (warn-only) — route-drop and lost-ctor-params traps
+    // inheritance audit (warn-only) — route-drop and lost-ctor-params traps
     if (this.inheritanceAuditMode !== 'off') {
       this.paramAuditFindings.push(
         ...auditInheritance({
           classConstructor,
           classMeta,
-          ownHandlersCount: controllerOverview.handlers.length,
+          boundMethods: new Set(controllerOverview.handlers.map((h) => String(h.method))),
           diInstantiated: isControllerConsructor,
         }),
       )

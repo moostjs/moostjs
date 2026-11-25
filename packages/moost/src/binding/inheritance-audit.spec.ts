@@ -50,10 +50,10 @@ describe('inheritance audit — route-drop trap', () => {
     const warnings = await initApp(UsersController)
     const joined = warnings.join('\n')
     expect(joined).toContain(
-      'UsersController extends BaseCrudController which defines 2 route handler(s), ' +
-        'but UsersController registered 0 and has no @Inherit()',
+      'UsersController does not bind the route handler(s) BaseCrudController.list(), ' +
+        'BaseCrudController.read() of its ancestor(s) and has no @Inherit()',
     )
-    expect(joined).toContain('Add @Inherit() or re-declare the routes.')
+    expect(joined).toContain('Add @Inherit() or re-declare the routes')
   })
 
   it('is silent when @Inherit() is present (routes flow)', async () => {
@@ -73,8 +73,8 @@ describe('inheritance audit — route-drop trap', () => {
     const warnings = await initApp(RouteGapController)
     const joined = warnings.join('\n')
     expect(joined).toContain(
-      'RouteGapController has @Inherit() but registered 0 route handler(s) while its ancestor ' +
-        'BaseCrudController defines 2',
+      'RouteGapController has @Inherit() but does not bind the inherited route handler(s) ' +
+        'BaseCrudController.list(), BaseCrudController.read()',
     )
     expect(joined).toContain('the intermediate class(es) RouteGapMiddle carry no @Inherit()')
     expect(joined).toContain('Add @Inherit() to each intermediate class or re-declare the routes.')
@@ -88,7 +88,7 @@ describe('inheritance audit — route-drop trap', () => {
     expect(warnings.join('\n')).not.toContain('route handler(s)')
   })
 
-  it('is silent when the subclass re-declares its own routes', async () => {
+  it('is silent when the subclass re-declares every route', async () => {
     @Controller('own')
     class OwnRoutesController extends BaseCrudController {
       constructor(dep: Dep) {
@@ -99,9 +99,137 @@ describe('inheritance audit — route-drop trap', () => {
       override list() {
         return []
       }
+
+      @FakeGet('read')
+      override read() {
+        return {}
+      }
     }
 
     const warnings = await initApp(OwnRoutesController)
+    expect(warnings).toHaveLength(0)
+  })
+
+  it('warns when the subclass re-declares only some routes, naming the dropped ones', async () => {
+    @Controller('partial')
+    class PartialController extends BaseCrudController {
+      constructor(dep: Dep) {
+        super(dep)
+      }
+
+      @FakeGet('list')
+      override list() {
+        return []
+      }
+    }
+
+    const warnings = await initApp(PartialController)
+    const joined = warnings.join('\n')
+    expect(joined).toContain(
+      'PartialController does not bind the route handler(s) BaseCrudController.read() ' +
+        'of its ancestor(s) and has no @Inherit()',
+    )
+    expect(joined).not.toContain('BaseCrudController.list()')
+  })
+
+  it('is silent with @Inherit() and one re-declared route (the others flow)', async () => {
+    @Inherit()
+    class InheritOneController extends BaseCrudController {
+      @FakeGet('list-v2')
+      override list() {
+        return []
+      }
+    }
+
+    const warnings = await initApp(InheritOneController)
+    expect(warnings).toHaveLength(0)
+  })
+
+  it('warns with @Inherit() and one re-declared route when a broken chain drops the others', async () => {
+    class PartialGapMiddle extends BaseCrudController {}
+
+    @Inherit()
+    class PartialGapController extends PartialGapMiddle {
+      @FakeGet('list')
+      override list() {
+        return []
+      }
+    }
+
+    const warnings = await initApp(PartialGapController)
+    const joined = warnings.join('\n')
+    expect(joined).toContain(
+      'PartialGapController has @Inherit() but does not bind the inherited route handler(s) ' +
+        'BaseCrudController.read()',
+    )
+    expect(joined).toContain('the intermediate class(es) PartialGapMiddle carry no @Inherit()')
+    expect(joined).not.toContain('BaseCrudController.list()')
+  })
+
+  it('is silent when an override drops its route on purpose with a member-level @Inherit(false)', async () => {
+    @Controller('member-opt-out')
+    class MemberOptOutController extends BaseCrudController {
+      constructor(dep: Dep) {
+        super(dep)
+      }
+
+      @FakeGet('list')
+      override list() {
+        return []
+      }
+
+      @Inherit(false)
+      override read() {
+        return {}
+      }
+    }
+
+    @Inherit()
+    class InheritMemberOptOutController extends BaseCrudController {
+      @Inherit(false)
+      override read() {
+        return {}
+      }
+    }
+
+    expect(await initApp(MemberOptOutController)).toHaveLength(0)
+    expect(await initApp(InheritMemberOptOutController)).toHaveLength(0)
+  })
+
+  it('is silent when a middle class replaces its parent routes with a class-level @Inherit(false)', async () => {
+    @Inherit(false)
+    @Controller('replaced')
+    class ReplacingMiddle extends BaseCrudController {
+      constructor(dep: Dep) {
+        super(dep)
+      }
+
+      @FakeGet('only')
+      only() {
+        return 'only'
+      }
+    }
+
+    @Inherit()
+    class ReplacedController extends ReplacingMiddle {}
+
+    const warnings = await initApp(ReplacedController)
+    expect(warnings).toHaveLength(0)
+  })
+
+  it('is silent for a route a middle class drops with a member-level @Inherit(false)', async () => {
+    @Inherit()
+    class DroppingMiddle extends BaseCrudController {
+      @Inherit(false)
+      override read() {
+        return {}
+      }
+    }
+
+    @Inherit()
+    class AfterDropController extends DroppingMiddle {}
+
+    const warnings = await initApp(AfterDropController)
     expect(warnings).toHaveLength(0)
   })
 
@@ -133,13 +261,16 @@ describe('inheritance audit — route-drop trap', () => {
 })
 
 describe('inheritance audit — lost-constructor-params trap', () => {
-  it('warns for the portal case: subclass with NO own metadata at all over a decorated ancestor', async () => {
+  it('warns for a subclass with NO own metadata at all over a decorated ancestor', async () => {
     class BareSubController extends BaseCrudController {}
 
     const warnings = await initApp(BareSubController)
     const joined = warnings.join('\n')
     // both traps fire: routes dropped AND ctor params unresolvable
-    expect(joined).toContain('BareSubController extends BaseCrudController which defines 2')
+    expect(joined).toContain(
+      'BareSubController does not bind the route handler(s) BaseCrudController.list(), ' +
+        'BaseCrudController.read()',
+    )
     expect(joined).toContain(
       'BareSubController extends BaseCrudController whose constructor declares 1 DI param(s), ' +
         'but BareSubController carries no Moost metadata of its own',
@@ -205,7 +336,12 @@ describe('inheritance audit — lost-constructor-params trap', () => {
     }
 
     const warnings = await initApp(ZeroCtorController)
-    expect(warnings).toHaveLength(0)
+    // the one warning is about the parent's dropped routes, none about constructor params
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toContain(
+      'ZeroCtorController does not bind the route handler(s) BaseCrudController.list(), ' +
+        'BaseCrudController.read()',
+    )
   })
 
   it("is silenced by diagnostics: { inheritance: 'off' }", async () => {

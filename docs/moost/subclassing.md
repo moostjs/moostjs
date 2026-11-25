@@ -56,15 +56,46 @@ class UsersController extends BaseCrudController {}
 // boots fine — but GET /users and GET /users/:id do NOT exist
 ```
 
-Moost warns about this at bind time (during `init()`):
+The same happens to every route the subclass does not re-declare: re-declaring one route without `@Inherit()` drops all the others.
+
+```ts
+@Controller('users')
+class UsersController extends BaseCrudController {
+  @Get('')
+  override list() {
+    return super.list()
+  }
+}
+// GET /users works — GET /users/:id does NOT exist
+```
+
+Moost warns about both at bind time (during `init()`), naming each dropped route:
 
 ```
-[moost] UsersController extends BaseCrudController which defines 2 route handler(s),
-but UsersController registered 0 and has no @Inherit() — parent routes are not
-inherited without it. Add @Inherit() or re-declare the routes.
+[moost] UsersController does not bind the route handler(s) BaseCrudController.read()
+of its ancestor(s) and has no @Inherit() — parent routes are not inherited without it.
+Add @Inherit() or re-declare the routes; to drop them on purpose, mark the class
+@Inherit(false) (or an overriding method, for one route).
 ```
 
-The warning stays silent when the parent routes actually flow (a working `@Inherit()`), when the subclass registers routes of its own, and for a deliberate class-level `@Inherit(false)`. If `@Inherit()` is present but nothing flowed — an undecorated intermediate class breaks the chain, since `@Inherit()` bridges one level at a time — the warning fires and names the broken link; add `@Inherit()` to each intermediate class.
+The warning stays silent when every ancestor route is bound (a working `@Inherit()`, or every route re-declared) and for routes dropped on purpose: a class-level `@Inherit(false)` drops all of them, and an override marked `@Inherit(false)` without a route decorator drops that one:
+
+```ts
+// GET /:id is inherited; GET / is dropped on purpose — no warning
+@Inherit()
+class ReadOnlyController extends BaseCrudController {
+  @Inherit(false)
+  override list() {
+    return []
+  }
+}
+```
+
+If `@Inherit()` is present but routes did not flow — an undecorated intermediate class breaks the chain, since `@Inherit()` bridges one level at a time — the warning fires and names the broken link; add `@Inherit()` to each intermediate class.
+
+::: info Version note
+Up to and including `0.7.7`, the warning fired only when the subclass bound no route at all; a subclass that re-declared some routes lost the others silently.
+:::
 
 ## Constructor params across `extends`
 
@@ -103,7 +134,7 @@ const app = new Moost({
 - **DON'T** expect `@Controller('own')` alone to carry the parent's routes — it only replaces the prefix; routes need `@Inherit()`.
 - **DON'T** re-declare a constructor just to "make DI work" — a decorated subclass without a constructor inherits the parent's constructor params automatically.
 - **DO** keep every class in a controller chain decorated (or use `@Inherit()` end to end) — an undecorated intermediate class cuts the metadata chain.
-- **DO** use `@Inherit(false)` (class- or method-level) for a deliberate full replacement — it also silences the route-drop warning. On a method it drops only the parent method's metadata; the class-level interceptors still apply.
+- **DO** use `@Inherit(false)` (class- or method-level) for a deliberate full replacement or to drop routes on purpose — it also silences the route-drop warning for them. On a method it drops only the parent method's metadata; the class-level interceptors still apply.
 - **DON'T** re-declare the base class's error mapping or guards on an `@Inherit()` subclass — they already run, and a factory called again (`@Intercept(makeX())`) runs twice. Remove such workarounds when upgrading to 0.7.2.
 
 ## See also
