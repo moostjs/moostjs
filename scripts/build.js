@@ -69,7 +69,8 @@ run()
 
 async function generateTypes() {
   step('Generating Types')
-  await $`npx tsc`.nothrow()
+  // a type error anywhere in the workspace fails the build
+  await $`npx tsc`
 
   for (const ws of workspaces) {
     const builds = getBuildOptions(ws)
