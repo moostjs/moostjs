@@ -1,3 +1,14 @@
+## [0.7.8](https://github.com/moostjs/moostjs/compare/v0.7.7...v0.7.8) (2026-11-25)
+
+
+### Features
+
+* **event-http:** re-export DEFAULT_FORWARD_HEADERS and securityHeaders ([fee4600](https://github.com/moostjs/moostjs/commit/fee46003e365befdfb6694afefe192ce29bf7acd))
+* **moost:** inheritance audit names the routes a subclass drops ([af0095e](https://github.com/moostjs/moostjs/commit/af0095e3fdd50e050b365129598572753478a2dc))
+* **vite:** headers option, SSR CSP nonce, use() middleware runs first in dev ([d6b5e4f](https://github.com/moostjs/moostjs/commit/d6b5e4f194ad8aa2fbdd4edbf4055d193486b6a9))
+
+
+
 ## [0.7.7](https://github.com/moostjs/moostjs/compare/v0.7.6...v0.7.7) (2026-11-24)
 
 
