@@ -1,3 +1,12 @@
+## [0.7.9](https://github.com/moostjs/moostjs/compare/v0.7.8...v0.7.9) (2026-11-25)
+
+
+### Bug Fixes
+
+* **moost:** log the lost-constructor-params warning when the inherited constructor throws ([5fadb26](https://github.com/moostjs/moostjs/commit/5fadb266a4316cc697de681fe0807cfe7ff808e6))
+
+
+
 ## [0.7.8](https://github.com/moostjs/moostjs/compare/v0.7.7...v0.7.8) (2026-11-25)
 
 
