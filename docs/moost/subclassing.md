@@ -115,6 +115,8 @@ not seen as injectable and the constructor params will not resolve. Add @Inherit
 to BareSubController or re-declare the constructor.
 ```
 
+An inherited constructor that uses a dependency right away throws when it is called without one (`Cannot read properties of undefined`), and that error rejects `init()`. The warning is logged all the same, next to the error, so the log names the class to fix. Up to and including `0.7.8` the error came alone.
+
 ## Controlling the warnings
 
 Both checks are warn-only — they never fail `init()`. They are on by default and can be switched off via the `diagnostics` option:

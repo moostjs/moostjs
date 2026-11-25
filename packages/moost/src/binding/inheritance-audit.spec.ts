@@ -295,6 +295,34 @@ describe('inheritance audit — lost-constructor-params trap', () => {
     expect(joined).toContain('add @Inherit() to the intermediate class(es) (GapMiddle)')
   })
 
+  it('is reported when the inherited constructor throws without its dependencies', async () => {
+    @Controller('strict')
+    class StrictBase {
+      value: number
+
+      constructor(dep: Dep) {
+        this.value = dep.value
+      }
+    }
+    class StrictMiddle extends StrictBase {}
+
+    @Controller('strict-leaf')
+    class StrictLeaf extends StrictMiddle {}
+
+    const { logger, warnings } = createCaptureLogger()
+    const app = new Moost({ logger })
+    app.registerControllers(StrictLeaf)
+    // the constructor's own error still rejects init() — with the warning that explains it
+    await expect(app.init()).rejects.toThrow("reading 'value'")
+    expect(warnings.join('\n')).toContain(
+      'StrictLeaf has no constructor param metadata, but its ancestor StrictBase ' +
+        'declares 1 constructor param(s)',
+    )
+    expect(warnings.join('\n')).toContain(
+      'add @Inherit() to the intermediate class(es) (StrictMiddle)',
+    )
+  })
+
   it('never throws — findings are warn-only even in default dev mode', async () => {
     class WarnOnlySub extends BaseCrudController {}
 

@@ -87,6 +87,14 @@ function brokenLinksBetween(
   return links
 }
 
+/*
+ * Bind-time inheritance audit: the two real traps of subclassing decorated classes — parent
+ * routes silently dropping without a working `@Inherit()` bridge (`auditRouteDrop`, once the
+ * handlers are bound), and parent constructor params silently not resolving
+ * (`auditLostCtorParams`, before the class is instantiated). Pure and warn-only: findings join
+ * the param-audit findings and `Moost.init()` logs them as warnings (they never reject `init()`).
+ */
+
 /**
  * Route-drop trap: an ancestor's route method that the registered class
  * neither binds nor drops on purpose silently 404s. Fires when the class
@@ -96,7 +104,7 @@ function brokenLinksBetween(
  * their own). A class-level `@Inherit(false)` and a member-level
  * `@Inherit(false)` on an override are deliberate drops and stay silent.
  */
-function auditRouteDrop(input: TInheritanceAuditInput): TParamAuditFinding | undefined {
+export function auditRouteDrop(input: TInheritanceAuditInput): TParamAuditFinding | undefined {
   if (input.classMeta?.inherit === false) {
     return undefined
   }
@@ -155,7 +163,9 @@ function routeDropMessage(
  * An own zero-param constructor emits `params: []` and is a deliberate choice —
  * only truly absent params fire.
  */
-function auditLostCtorParams(input: TInheritanceAuditInput): TParamAuditFinding | undefined {
+export function auditLostCtorParams(
+  input: Omit<TInheritanceAuditInput, 'boundMethods'>,
+): TParamAuditFinding | undefined {
   if (!input.diInstantiated || input.classMeta?.params) {
     return undefined
   }
@@ -170,7 +180,7 @@ function auditLostCtorParams(input: TInheritanceAuditInput): TParamAuditFinding 
 }
 
 function lostCtorParamsMessage(
-  input: TInheritanceAuditInput,
+  input: Omit<TInheritanceAuditInput, 'boundMethods'>,
   ancestor: TClassConstructor,
   count: number,
 ): string {
@@ -195,15 +205,4 @@ function lostCtorParamsMessage(
     `injectable and the constructor params will not resolve. Add @Inherit() to ${name} ` +
     `or re-declare the constructor.`
   )
-}
-
-/**
- * Bind-time inheritance audit: detects the two real traps
- * of subclassing decorated classes — parent routes silently dropping without a
- * working `@Inherit()` bridge, and parent constructor params silently not
- * resolving. Pure and warn-only: findings join the param-audit findings and
- * `Moost.init()` logs them as warnings (they never reject `init()`).
- */
-export function auditInheritance(input: TInheritanceAuditInput): TParamAuditFinding[] {
-  return [auditRouteDrop(input), auditLostCtorParams(input)].filter((f) => f !== undefined)
 }

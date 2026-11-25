@@ -12,7 +12,7 @@ import { announceHandler } from './announce'
 import { bindControllerMethods } from './binding/bind-controller'
 import type { TFnInitHook, TInitHook } from './binding/bind-types'
 import type { TInheritanceAuditMode } from './binding/inheritance-audit'
-import { auditInheritance } from './binding/inheritance-audit'
+import { auditLostCtorParams, auditRouteDrop } from './binding/inheritance-audit'
 import type { TParamAuditFinding, TParamAuditMode } from './binding/param-audit'
 import { auditParams, formatParamAuditError, resolveParamAuditMode } from './binding/param-audit'
 import type { TAny, TAnyFn, TClassConstructor, TEmpty, TFunction, TObject } from './common-types'
@@ -758,6 +758,17 @@ export class Moost extends Hookable {
     const skipInstantiation =
       isControllerConsructor &&
       this.collectConstructorAudit((controller as TFunction).name, classMeta)
+    const classConstructor = isConstructor(controller)
+      ? controller
+      : (getConstructor(controller) as TClassConstructor)
+    const auditInput = { classConstructor, classMeta, diInstantiated: isControllerConsructor }
+    // collected before the class is instantiated: an inherited constructor called without its
+    // dependencies usually throws there, and init() logs the findings also when binding threw
+    const lostCtorParams =
+      this.inheritanceAuditMode === 'off' ? undefined : auditLostCtorParams(auditInput)
+    if (lostCtorParams) {
+      this.paramAuditFindings.push(lostCtorParams)
+    }
     if (
       !skipInstantiation &&
       isControllerConsructor &&
@@ -786,9 +797,6 @@ export class Moost extends Hookable {
       : (): Promise<TObject> =>
           infact.get(controller as TClassConstructor<TAny>, infactOpts) as Promise<TObject>
 
-    const classConstructor = isConstructor(controller)
-      ? controller
-      : (getConstructor(controller) as TClassConstructor)
     const controllerOverview = await bindControllerMethods({
       getInstance,
       classConstructor,
@@ -808,16 +816,16 @@ export class Moost extends Hookable {
           : (findings) => this.paramAuditFindings.push(...findings),
     })
     this.controllersOverview.push(controllerOverview)
-    // inheritance audit (warn-only) — route-drop and lost-ctor-params traps
-    if (this.inheritanceAuditMode !== 'off') {
-      this.paramAuditFindings.push(
-        ...auditInheritance({
-          classConstructor,
-          classMeta,
-          boundMethods: new Set(controllerOverview.handlers.map((h) => String(h.method))),
-          diInstantiated: isControllerConsructor,
-        }),
-      )
+    // inheritance audit (warn-only) — the route-drop trap, known once the handlers are bound
+    const routeDrop =
+      this.inheritanceAuditMode === 'off'
+        ? undefined
+        : auditRouteDrop({
+            ...auditInput,
+            boundMethods: new Set(controllerOverview.handlers.map((h) => String(h.method))),
+          })
+    if (routeDrop) {
+      this.paramAuditFindings.push(routeDrop)
     }
     this.handlerOverviewIndex = undefined // overview changed — drop the memoized index
     if (classMeta?.importController) {
