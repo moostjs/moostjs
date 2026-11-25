@@ -1,6 +1,6 @@
 {
   "name": "@moostjs/otel",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "description": "@moostjs/otel",
   "keywords": [
     "composables",
