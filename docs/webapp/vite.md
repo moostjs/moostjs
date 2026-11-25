@@ -227,6 +227,20 @@ They go on every response the server sends — Moost routes, SSR pages, the SPA 
 - In dev, Vite's own request checks run before them (malformed requests, host validation, CORS), so a CORS preflight that Vite answers does not carry them.
 - The option applies in middleware mode only. In backend mode Moost answers every request itself, in dev and in production, so the plugin ignores `headers` there (with a warning at startup): set them with `new MoostHttp({ defaultHeaders })`.
 
+**The set is fixed when the config is read.** `vite build` evaluates `vite.config.ts` on the build machine and writes the header set into the production server, so an environment variable read there is the build machine's, not the server's. For headers that depend on where the server runs (HSTS only when deployed, a CDN origin in the policy), compute them in a [custom server entry](#custom-server-entry) and pass them to `createSSRServer`. Run the same entry in dev (`tsx server.ts`) and the set is defined in one place:
+
+```ts
+// server.ts
+import { createSSRServer } from '@moostjs/vite/server'
+import { runtimeHeaders } from './src/headers'
+
+// called at server start, in dev and in production
+const app = await createSSRServer({ headers: runtimeHeaders() })
+await app.listen()
+```
+
+A function is not accepted in `moostVite({ headers })`: the Vite config is not part of the built server, so it could not be called there.
+
 The `securityHeaders()` helper from `@moostjs/event-http` returns a recommended set. Its default `Content-Security-Policy` (`default-src 'self'`) blocks inline scripts, including the SSR state script, so turn it off there and send a per-page policy from the render instead (see [Content Security Policy nonce](/webapp/ssr#content-security-policy-nonce)):
 
 ```ts

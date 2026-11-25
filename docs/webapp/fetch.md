@@ -71,7 +71,7 @@ async bulkClose(@Body() body: { ids: number[] }) {
 }
 ```
 
-Runs another route's full pipeline **inside the current request** and resolves to the handler's return value (or rejects with its error — a guard's `reply(new HttpError(...))` included). Unlike `fetch()`, no new request is built: the route reads the caller's request, headers and authorization directly, so custom identity headers and mTLS work without `forwardHeaders`.
+Runs another route's full pipeline **inside the current request** and resolves to the handler's return value (or rejects with its error — a guard's `reply(new HttpError(...))` included). When an interceptor answers in the handler's place (`reply(value)`), that value is what `invoke()` resolves to; a route whose handler body is empty because an interceptor produces the response, such as a workflow trigger route, therefore resolves to the interceptor's reply. Unlike `fetch()`, no new request is built: the route reads the caller's request, headers and authorization directly, so custom identity headers and mTLS work without `forwardHeaders`.
 
 | Option | Effect |
 | --- | --- |

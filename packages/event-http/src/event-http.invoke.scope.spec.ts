@@ -47,8 +47,20 @@ const idsGuard = defineBeforeInterceptor(async (reply) => {
   }
 }, TInterceptorPriority.GUARD)
 
+/** Answers in the handler's place, like a trigger route whose interceptor produces the response. */
+const answering = defineBeforeInterceptor((reply) => {
+  reply({ from: 'interceptor' })
+})
+
 @Controller('source')
 class SourceController {
+  // the handler body never runs: the interceptor's reply is the route's result
+  @Post('answered')
+  @Intercept(answering)
+  answered() {
+    return { from: 'handler' }
+  }
+
   @Post('close')
   @Intercept(idsGuard)
   async close(@Body() body: { ids: number[] }, @RawBody() raw: Buffer) {
@@ -138,6 +150,12 @@ class ViewController {
     }
   }
 
+  @Post('answered')
+  async answered() {
+    const http = (await useControllerContext().instantiate(MoostHttp)) as MoostHttp
+    return { invoked: await http.invoke('POST', '/source/answered') }
+  }
+
   @Post('as-source')
   async asSource() {
     const principal = await resolvePrincipal()
@@ -198,6 +216,14 @@ describe('MoostHttp.invoke / withControllerContext on a real server', () => {
       body: JSON.stringify(body),
     })
   }
+
+  // Why: a route may be answered by an interceptor (reply(value)) with an empty handler body;
+  // a caller delegating to it in-process needs that reply, not the unused handler value.
+  it('invoke() resolves to an interceptor reply when one answers for the handler', async () => {
+    const res = await post('/view/answered', {})
+    expect(await res.json()).toEqual({ invoked: { from: 'interceptor' } })
+    await released()
+  })
 
   it('runs the routed pipeline with the invoked body, its own scope and route — the caller is untouched', async () => {
     const res = await post('/view/run', { query: 'status=open', n: 3 })
