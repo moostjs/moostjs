@@ -112,6 +112,8 @@ class ReportsController {
 
 Never compressed: streams / fetch `Response` bodies, `text/event-stream`, `HEAD`, `204`/`206`/`304`, bodies with `Content-Encoding` already set, `Cache-Control: no-transform`, in-process `fetch()`/`invoke()`/SSR local fetch. Adds `Vary: Accept-Encoding`; weakens a strong `ETag`. Full rules: https://wooks.moost.org/webapp/compression.html
 
+Already-serialized JSON string (e.g. from a cache) → return the STRING with `@SetHeader('content-type', 'application/json')` (or `useResponse().setHeader(...)`), NOT `new Response(str)`: a string with an explicit `Content-Type` is sent as is (no re-serialization) and is compressible; a fetch `Response` never is. Long-lived shared objects → `prerenderJson(obj)` (serialized once, compressed once per coding).
+
 **BREACH**: body with a secret (CSRF/session token, API key) + attacker-influenced text (reflected query) → `@Compress(false)` on that handler, or split secret and reflected input into separate responses. Compress in ONE layer (adapter OR proxy/`compression()` middleware) — a Connect `compression()` middleware still compresses `@Compress(false)` responses.
 
 ## Body limits

@@ -213,7 +213,25 @@ new MoostHttp({
 })
 ```
 
-Streams, `text/event-stream`, `HEAD`, `204`/`304`, responses that already have `Content-Encoding` and in-process calls ([local fetch](./fetch)) are never compressed. The wooks guide [Response Compression](https://wooks.moost.org/webapp/compression.html) covers the full rules: what gets compressed, `Vary` and `ETag` handling, pre-serialized JSON and performance.
+Streams, a returned fetch `Response`, `text/event-stream`, `HEAD`, `204`/`304`, responses that already have `Content-Encoding` and in-process calls ([local fetch](./fetch)) are never compressed. The wooks guide [Response Compression](https://wooks.moost.org/webapp/compression.html) covers the full rules: what gets compressed, `Vary` and `ETag` handling, pre-serialized JSON and performance.
+
+**Already serialized JSON.** To send a JSON string you serialized yourself (from a cache, say) and keep it compressible, return the string with a JSON content type — not wrapped in `new Response(...)`. A string body with an explicit `Content-Type` is sent as is, not serialized again:
+
+```ts
+import { Get, SetHeader } from '@moostjs/event-http'
+import { Controller } from 'moost'
+
+@Controller()
+export class CatalogController {
+    @Get('catalog')
+    @SetHeader('content-type', 'application/json')
+    catalog() {
+        return catalogJsonCache.get() // a string, compressed like any other body
+    }
+}
+```
+
+For a large object that many requests return unchanged, `prerenderJson()` (from `@moostjs/event-http`) serializes it once and compresses it once per coding — see the wooks guide [Pre-serialized JSON & ETag](https://wooks.moost.org/webapp/composables/response.html#pre-serialized-json-etag).
 
 ### Per handler — `@Compress`
 

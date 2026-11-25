@@ -277,7 +277,7 @@ export function ReqId() {
  * @paramType string
  */
 export function Ip(opts?: { trustProxy: boolean }) {
-  return Resolve(() => useRequest().getIp(opts), 'ip')
+  return Resolve(() => (opts ? useRequest().getIp(opts) : useRequest().getIp()), 'ip')
 }
 
 /**

@@ -173,7 +173,7 @@ await http.request('/api/users', { method: 'GET' })            // convenience
 
 When called from within an HTTP context, identity headers are auto-forwarded from the parent context (default set: `authorization`, `cookie`, `accept-language`, `x-forwarded-for`, `x-request-id`), and `Set-Cookie` from the inner call propagates back onto the parent response. Customize via the `forwardHeaders` option (`string[]` or `false` to disable) in `new MoostHttp(wooksHttpOptions)`. Headers already set on the programmatic request are never overwritten.
 
-**`forwardHeaders` REPLACES the default list** — a bare `['my-header']` silently drops `authorization`/`cookie`. To extend: `forwardHeaders: [...DEFAULT_FORWARD_HEADERS, 'cloudfront-viewer-address']` (`DEFAULT_FORWARD_HEADERS` from `@wooksjs/event-http` ≥ 0.7.20).
+**`forwardHeaders` REPLACES the default list** — a bare `['my-header']` silently drops `authorization`/`cookie`. To extend: `forwardHeaders: [...DEFAULT_FORWARD_HEADERS, 'cloudfront-viewer-address']` (`import { DEFAULT_FORWARD_HEADERS } from '@moostjs/event-http'` — re-exported since 0.7.8; earlier: from `@wooksjs/event-http`).
 
 ### `withHttpContext(req, res, fn)` — identity for non-routed work
 
@@ -198,7 +198,7 @@ teardown()  // restore original fetch
 
 ## Re-exports
 
-From `@moostjs/event-http`: `httpKind`, `HttpError`, `useHttpContext`, `isCompressibleType` (default compression filter, see [http-response.md](http-response.md#response-compression)), `prerenderJson` (re-exported from `@wooksjs/event-http`; `prerenderJson(obj, { etag?: true })` serializes a long-lived response object once and reuses the JSON whenever a handler returns that same object — with `etag`, a matching `If-None-Match` on a GET/HEAD 200 answers `304`; never mutate a registered object). `MoostHttp` implements `TMoostAdapter<THttpHandlerMeta>` — `THttpHandlerMeta` (`{ method, path }`) is exported for code that inspects or extends the adapter.
+From `@moostjs/event-http`: `httpKind`, `HttpError`, `useHttpContext`, `DEFAULT_FORWARD_HEADERS` and `securityHeaders(opts?)` (+ type `SecurityHeadersOptions`; 0.7.8+ — before, import from `@wooksjs/event-http`; `securityHeaders()` = recommended response security headers for `new MoostHttp({ defaultHeaders })` or the vite plugin's `headers`), `isCompressibleType` (default compression filter, see [http-response.md](http-response.md#response-compression)), `prerenderJson` (re-exported from `@wooksjs/event-http`; `prerenderJson(obj, { etag?: true })` serializes a long-lived response object once and reuses the JSON whenever a handler returns that same object — with `etag`, a matching `If-None-Match` on a GET/HEAD 200 answers `304`; never mutate a registered object). `MoostHttp` implements `TMoostAdapter<THttpHandlerMeta>` — `THttpHandlerMeta` (`{ method, path }`) is exported for code that inspects or extends the adapter.
 
 ## Gotchas
 

@@ -97,7 +97,7 @@ When called from within an existing HTTP context (e.g. during SSR rendering), id
 The forwarded list is configurable via the adapter's `forwardHeaders` option:
 
 ```ts
-import { DEFAULT_FORWARD_HEADERS } from '@wooksjs/event-http'
+import { DEFAULT_FORWARD_HEADERS, MoostHttp } from '@moostjs/event-http'
 
 const http = new MoostHttp({
   forwardHeaders: [...DEFAULT_FORWARD_HEADERS, 'cloudfront-viewer-address'],
@@ -105,7 +105,7 @@ const http = new MoostHttp({
 ```
 
 ::: warning `forwardHeaders` replaces the defaults
-A bare list like `forwardHeaders: ['cloudfront-viewer-address']` **replaces** the default set — you'd silently lose `authorization`/`cookie` forwarding. Always spread `DEFAULT_FORWARD_HEADERS` when you mean to extend it. Set `forwardHeaders: false` to disable forwarding entirely.
+A bare list like `forwardHeaders: ['cloudfront-viewer-address']` **replaces** the default set — you'd silently lose `authorization`/`cookie` forwarding. Always spread `DEFAULT_FORWARD_HEADERS` when you mean to extend it. Set `forwardHeaders: false` to disable forwarding entirely. `@moostjs/event-http` re-exports `DEFAULT_FORWARD_HEADERS` since `0.7.8`; on earlier versions import it from `@wooksjs/event-http`.
 :::
 
 ## SSR Local Fetch
