@@ -131,6 +131,7 @@ export async function render(url: string, ctx?: TSSRRenderContext): Promise<TSSR
     head, // → per-page <title>/<meta>/canonical/OG/JSON-LD at <!--ssr-head-->
     status, // → HTTP status code (default 200)
     headers, // → extra response headers
+    nonce, // → CSP nonce for the state script and Vite's script tags
   }
 }
 ```
@@ -168,12 +169,47 @@ Then return `head` as a ready-to-insert tag string — exactly what a head manag
 - Set `cache-control` (or any header) via `headers`.
 - Redirect with `status: 301` and `headers: { location: '/new-url' }`.
 
-Headers are applied after the default `Content-Type: text/html`, so a render may override it.
+Headers are applied after the default `Content-Type: text/html`, so a render may override it. They also replace the plugin's [`headers`](/webapp/vite#response-headers) option for this page.
+
+### Content Security Policy nonce
+
+A nonce-based CSP needs a fresh nonce per response, on every inline script, in the `Content-Security-Policy` header too. The render owns it: generate it, return it as `nonce`, and send the matching header in `headers`:
+
+```ts
+// src/entry-server.ts
+import { randomBytes } from 'node:crypto'
+
+export async function render(url: string) {
+  const nonce = randomBytes(16).toString('base64')
+  // ...render the app...
+  return {
+    html,
+    state,
+    nonce,
+    headers: {
+      'content-security-policy': `script-src 'self' 'nonce-${nonce}'; object-src 'none'; base-uri 'self'`,
+    },
+  }
+}
+```
+
+The server then:
+
+- puts `nonce="…"` on the `window.__SSR_STATE__` script;
+- replaces Vite's [`html.cspNonce`](https://vite.dev/config/shared-options#html-cspnonce) placeholder in `index.html` with the nonce, so the script and style tags Vite adds (and its `<meta property="csp-nonce">`) carry it. Set the placeholder in `vite.config.ts` itself to use this: `html: { cspNonce: 'CSP_NONCE' }`. A value that another plugin adds to the config is not baked into the production server.
+
+Where no render nonce is set — a render that returns none, the SPA shell, any other static HTML — the placeholder ships unchanged. Never put the placeholder in a `Content-Security-Policy` header: it is a fixed, public value, not a nonce.
+
+Put the nonce on the inline tags you return in `head` yourself (`<script nonce="${nonce}">…`). JSON-LD (`<script type="application/ld+json">`) is data, not script, so CSP does not block it.
+
+The nonce must consist of base64 or base64url characters (`A-Z`, `a-z`, `0-9`, `+`, `/`, `-`, `_`, trailing `=`). Anything else fails the render with a `500` instead of being written into the page. It works the same in dev and in the production server.
 
 ::: tip Version
 On `@moostjs/vite` ≤ 0.6.28 `render()` honors only `{ html, state }` — `head` / `status` / `headers` and the `<!--ssr-head-->` marker are ignored. If you worked around the missing head seam by escaping the state `<script>` wrapper, drop that trick once upgraded and return `head` directly.
 
 On `@moostjs/vite` ≤ 0.6.30 `render()` receives only `url` (no `ctx`), and SSR self-calls run without [viewer identity](/webapp/fetch#ssr-viewer-identity) — they reach the API anonymous, from `127.0.0.1`.
+
+On `@moostjs/vite` ≤ 0.7.7 `nonce` is ignored: the state script carries no nonce and the `html.cspNonce` placeholder is left in the page.
 :::
 
 ## SSR vs SPA
@@ -217,7 +253,7 @@ Runs `node dist/server/server.js` — production server with static file serving
 
 ## Custom server entry
 
-Static files are precompressed at build time and the generated server sets cache headers (SSR pages get `Cache-Control: no-cache` unless `render()` returns one) — see [Compression and Caching](/webapp/vite#compression-and-caching). If you need custom middleware in production (compression of SSR/API responses, auth, logging), see the [Custom Server Entry](/webapp/vite#custom-server-entry) section in the Vite Plugin docs.
+Static files are precompressed at build time and the generated server sets cache headers (SSR pages get `Cache-Control: no-cache` unless `render()` returns one) — see [Compression and Caching](/webapp/vite#compression-and-caching). Security headers for every response (pages, static files, API) go in the plugin's [`headers`](/webapp/vite#response-headers) option. If you need custom middleware (compression of SSR/API responses, auth, logging), see the [Custom Server Entry](/webapp/vite#custom-server-entry) section in the Vite Plugin docs.
 
 ## Related
 

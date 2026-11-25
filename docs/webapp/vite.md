@@ -142,7 +142,7 @@ environments: {
 Up to and including `0.6.53`, `sirv` (the static file server of the generated production server) was an optional peer dependency of `@moostjs/vite`: a SPA or SSR build failed with `Could not resolve "sirv"` unless the app listed `sirv` in its own `dependencies`. It is now a regular dependency of `@moostjs/vite`.
 :::
 
-Your `entry-server.ts` `render(url)` can return per-page `<head>` tags plus an HTTP status and headers, not just HTML and state — see [the render contract](/webapp/ssr#the-render-contract). See [Vue + Moost (SSR)](/webapp/ssr) for the full guide.
+Your `entry-server.ts` `render(url)` can return per-page `<head>` tags, an HTTP status, headers and a CSP nonce, not just HTML and state — see [the render contract](/webapp/ssr#the-render-contract). See [Vue + Moost (SSR)](/webapp/ssr) for the full guide.
 
 ## Compression and Caching
 
@@ -203,6 +203,41 @@ The same settings can be overridden at runtime in a [custom server entry](#custo
 Up to and including `0.6.48`, the generated server sent no `Cache-Control` and no `ETag` (so no `304`), never served compressed files, and in SSR mode answered `GET /index.html` with the raw template, unfilled `<!--ssr-outlet-->` markers included.
 :::
 
+## Response Headers
+
+Since `0.7.8`. Security headers such as `X-Frame-Options` belong on every response, the HTML documents above all. The HTTP adapter's `defaultHeaders` reach only Moost routes; SSR pages, the SPA shell and static files are sent by the server around the app. Set them for the whole server with the `headers` option (middleware mode):
+
+```ts
+moostVite({
+  entry: '/src/main.ts',
+  middleware: true,
+  prefix: '/api',
+  ssrEntry: '/src/entry-server.ts',
+  headers: {
+    'x-frame-options': 'DENY',
+    'x-content-type-options': 'nosniff',
+    'referrer-policy': 'strict-origin-when-cross-origin',
+  },
+})
+```
+
+They go on every response the server sends — Moost routes, SSR pages, the SPA shell and static files — in dev and in the generated production server. They are set first, so anything more specific replaces them: a `use()` middleware of a [custom server entry](#custom-server-entry), a route's own headers, and the `headers` an SSR [render](/webapp/ssr#status-headers) returns. A `Cache-Control` among them replaces the built-in [cache policy](#compression-and-caching); a `Vary` is kept and `Accept-Encoding` is added to it for compressed files. `createSSRServer({ headers })` replaces the whole set at runtime.
+
+- An invalid header name or value (a line break, say) stops the dev server or the production server at startup, with an error naming the header.
+- In dev, Vite's own request checks run before them (malformed requests, host validation, CORS), so a CORS preflight that Vite answers does not carry them.
+- The option applies in middleware mode only. In backend mode Moost answers every request itself, in dev and in production, so the plugin ignores `headers` there (with a warning at startup): set them with `new MoostHttp({ defaultHeaders })`.
+
+The `securityHeaders()` helper from `@moostjs/event-http` returns a recommended set. Its default `Content-Security-Policy` (`default-src 'self'`) blocks inline scripts, including the SSR state script, so turn it off there and send a per-page policy from the render instead (see [Content Security Policy nonce](/webapp/ssr#content-security-policy-nonce)):
+
+```ts
+import { securityHeaders } from '@moostjs/event-http'
+
+moostVite({
+  // ...
+  headers: securityHeaders({ contentSecurityPolicy: false }),
+})
+```
+
 ## Custom Server Entry
 
 By default, `vite build` auto-generates a minimal production server. If you need custom middleware (compression of SSR responses, auth, logging), provide your own server file:
@@ -228,7 +263,11 @@ const app = await createSSRServer()
 await app.listen()
 ```
 
-`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `prefixFallthrough`, `port`, `host`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead`, `ssrFetchForwarding`, and (production only, since `0.6.49`) `precompressed` and `cacheControl` — see [Compression and Caching](#compression-and-caching). In production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?, host?)`.
+`createSSRServer` handles dev/prod automatically. It accepts an optional options object (`TSSRServerOptions`) to override what the plugin configured: `entry`, `ssrEntry`, `prefix`, `prefixFallthrough`, `port`, `host`, `clientDir`, `ssrOutlet`, `ssrState`, `ssrHead`, `ssrFetchForwarding`, `headers` (see [Response Headers](#response-headers)), and (production only, since `0.6.49`) `precompressed` and `cacheControl` — see [Compression and Caching](#compression-and-caching). In production, anything you don't override comes from values baked in at build time. The returned handle (`TSSRServer`) exposes `use(middleware)` for Connect-style middleware and `listen(port?, host?)`.
+
+**Middleware order.** `use()` middlewares run in the order you add them, after the `headers` option (so a middleware can replace those headers) and before Moost routes, static files and the SSR page or SPA shell — in dev also before Vite's module and file serving. Only Vite's own request checks (malformed requests, host validation, CORS) run earlier in dev. A middleware that answers the request (without calling `next()`) ends it there. The order is the same in dev and in production.
+
+**Failing middleware.** `next(error)`, a thrown error or a rejected promise (from an `async` middleware, before it called `next()`) fails the request: the next middlewares, routes and pages do not run. In production the response gets the error's `status` or `statusCode` (`400`–`599`, else `500`) and an empty body, and the error is logged; in dev Vite's error page answers. Error-handling middleware with four arguments (`(err, req, res, next)`) is not supported: `use()` throws for it.
 
 **Port and bind address.** In production, `listen(port?, host?)` resolves each value from the first one that is set:
 
@@ -238,7 +277,11 @@ await app.listen()
 `HOST=127.0.0.1` keeps a built app loopback-only behind a reverse proxy, and it works with the generated server entry too. `await app.listen()` resolves with the bound Node server, which you can `close()` for a graceful shutdown. It rejects on a bind error (`EADDRINUSE`, `EACCES`, unknown host). In dev, Vite's `server.port` / `server.host` apply instead, and a port or host passed to `createSSRServer` / `listen` only logs a warning.
 
 ::: tip
-`serverEntry` is only used during `vite build`. In dev, the plugin handles SSR/SPA fallback directly. If you need custom middleware in dev too, run `tsx server.ts` instead of `vite`.
+`serverEntry` is only used during `vite build`. In dev, the plugin handles SSR/SPA fallback directly. If you need your custom middleware in dev too, run `tsx server.ts` instead of `vite`: in dev, `createSSRServer()` starts Vite from your `vite.config.ts` and runs the `use()` middlewares ahead of Vite's own.
+:::
+
+::: warning Version note
+Up to and including `0.7.7`, `use()` middlewares in dev (`tsx server.ts`) ran after Vite's own middlewares and the SSR page, so they never saw page, static-file or route requests. Production was not affected.
 :::
 
 ## Hot Module Replacement
@@ -317,6 +360,7 @@ Earlier versions awaited only the entry's module evaluation: a rejecting `init()
 | `ssrExternal` | `string[]` | — | Packages to keep external in the middleware-mode SSR build (concatenated with `cfg.ssr.external`). See [SSR Bundle Size](#ssr-bundle-size). |
 | `precompress` | `boolean \| object` | `true` | Since `0.6.49`. Middleware mode: write `.br`/`.gz` copies of compressible client files after `vite build` and serve them from the generated server. See [Compression and Caching](#compression-and-caching). |
 | `cacheControl` | `boolean \| object` | `true` | Since `0.6.49`. Middleware mode: `Cache-Control` policy of the generated server (`immutable` hashed assets, `no-cache` for other files and HTML). See [Compression and Caching](#compression-and-caching). |
+| `headers` | `Record<string, string>` | — | Since `0.7.8`. Middleware mode: headers set first on every response (Moost routes, SSR pages, SPA shell, static files), in dev and in the generated server. See [Response Headers](#response-headers). |
 | `ssrExternalCheck` | `boolean \| { packages?: (string \| RegExp)[] }` | `true` | Warn after the middleware-mode SSR build when an externalized package depends on a **bundled** shared-state package (`moost`, `@moostjs/*`, `wooks`, `@wooksjs/*`, `@prostojs/infact`, `@prostojs/mate`, `@atscript/*` by default), and at dev-server startup when one depends on a package the SSR module runner **inlines**. `{ packages: [...] }` watches more — an exact name (`'lodash'`), a scope prefix (`'@acme/'`) or a `RegExp`. See [Keep consumers on the same side](#keep-consumers-on-the-same-side-as-the-shared-packages) and [Dev server: one runtime copy](#dev-server-one-runtime-copy). |
 
 ::: tip

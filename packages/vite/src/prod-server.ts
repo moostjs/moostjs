@@ -11,7 +11,18 @@ import {
   resolvePrecompressed,
   sendSpaShell,
 } from './prod-static'
-import type { TSSRHttpContextRunner, TSSRRender, TSSRRenderResult } from './utils'
+import { devSSRFallback } from './dev-ssr'
+import type { TDevSSRFallbackOptions } from './dev-ssr'
+import type { TConnectMiddleware } from './server-middleware'
+import {
+  assertMiddleware,
+  failRequest,
+  runMiddlewares,
+  SERVER_PLUGIN_NAME,
+  setResponseHeaders,
+  validateHeaders,
+} from './server-middleware'
+import type { TSSRHttpContextRunner, TSSRRender } from './utils'
 import {
   DEFAULT_SSR_HEAD,
   DEFAULT_SSR_OUTLET,
@@ -24,8 +35,6 @@ import {
 
 export type { TSSRRender, TSSRRenderContext, TSSRRenderResult } from './utils'
 export type { TCacheControlOptions, TPrecompressedOptions } from './prod-static'
-
-type TMiddleware = (req: IncomingMessage, res: ServerResponse, next: () => void) => void
 
 export interface TSSRServerOptions {
   /** Override: lazy import for the Moost app entry. */
@@ -86,11 +95,27 @@ export interface TSSRServerOptions {
    * Default: baked from the plugin's `cacheControl` option (on).
    */
   cacheControl?: boolean | TCacheControlOptions
+  /**
+   * Override: headers set on every response the server sends — Moost routes,
+   * SSR pages, the SPA shell and static files — in dev and production. They are
+   * set first, so a `use()` middleware, a route or the SSR render's `headers`
+   * replace them. Replaces the plugin's `headers` option entirely. Invalid names
+   * or values throw at startup.
+   */
+  headers?: Record<string, string>
 }
 
 export interface TSSRServer {
-  /** Add Connect-compatible middleware (runs in both dev and prod) */
-  use(middleware: TMiddleware): void
+  /**
+   * Add Connect-style `(req, res, next)` middleware. Middlewares run in order, after the
+   * `headers` option and before Moost routes, static files and the SPA/SSR page — in dev
+   * also before Vite's module and file serving (only Vite's own request checks, host
+   * validation and CORS handling run earlier). `next(error)`, a throw or a rejected promise
+   * fails the request (dev: Vite's error page; production: the error's `status` /
+   * `statusCode`, else `500`, with an empty body). Error-handling `(err, req, res, next)`
+   * middleware is not supported and throws.
+   */
+  use(middleware: TConnectMiddleware): void
   /**
    * Start the server; resolves with the bound server (for `address()` / `close()`)
    * and rejects on a bind error (`EADDRINUSE`, `EACCES`, bad host).
@@ -112,6 +137,8 @@ declare const __MOOST_SSR_HEAD__: string
 declare const __MOOST_SSR_FORWARDING__: boolean
 declare const __MOOST_PRECOMPRESS__: TPrecompressedOptions | false
 declare const __MOOST_CACHE_CONTROL__: TCacheControlOptions | false
+declare const __MOOST_HEADERS__: Record<string, string> | null
+declare const __MOOST_CSP_NONCE__: string | null
 
 /** URL of the address the server actually bound (wildcard binds print as localhost). */
 function serverUrl(server: Server): string {
@@ -129,10 +156,17 @@ function stripUndefined(obj: Record<string, unknown>): Record<string, unknown> {
 }
 
 export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSRServer> {
-  const userMiddlewares: TMiddleware[] = []
+  const userMiddlewares: TConnectMiddleware[] = []
   const opts = options ? stripUndefined(options as Record<string, unknown>) : {}
+  validateHeaders(
+    opts.headers as Record<string, string> | undefined,
+    'createSSRServer({ headers })',
+  )
+  const use = (middleware: TConnectMiddleware) => {
+    assertMiddleware(middleware)
+    userMiddlewares.push(middleware)
+  }
 
-  // ─── DEV MODE ───
   // In library dist: process.env.NODE_ENV stays as-is → both branches preserved.
   // In consumer's build:app: plugin defines process.env.NODE_ENV → 'production' → DCE removes dev branch.
   const isProd = process.env.MOOST_DEFERRED_ENV === 'production'
@@ -140,69 +174,60 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   // ─── DEV MODE ───
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite')
-    const vite = await createViteServer()
-
-    // Read config from plugin's configResolved hook
-    const pluginOpts = (vite.config as Record<string, any>).__moostViteOptions || {}
-    const config = { ...pluginOpts, ...opts }
-
-    const ssrEntry = config.ssrEntry as string | undefined
-    const ssrOutlet = (config.ssrOutlet as string) || DEFAULT_SSR_OUTLET
-    const ssrState = (config.ssrState as string) || DEFAULT_SSR_STATE
-    const ssrHead = (config.ssrHead as string) || DEFAULT_SSR_HEAD
-    const ssrForwarding = (config.ssrFetchForwarding as boolean | undefined) !== false
-    // Live ref to the booted MoostHttp instance, exposed by the plugin's
-    // configResolved hook (survives HMR reboots — the plugin re-points it).
-    const httpRef = (vite.config as Record<string, any>).__moostViteHttpRef as
-      | { current: TSSRHttpContextRunner | null }
-      | undefined
-
-    let ssrFallback: TMiddleware | null = null
-    if (ssrEntry) {
-      const fs = await import('node:fs/promises')
-      const path = await import('node:path')
-
-      ssrFallback = async (req: any, res, next) => {
-        if (req.method !== 'GET') {
-          return next()
-        }
-        const url = req.originalUrl || req.url || '/'
-        try {
-          let template = await fs.readFile(path.resolve(vite.config.root, 'index.html'), 'utf8')
-          template = await vite.transformIndexHtml(url, template)
-          const { render } = await vite.ssrLoadModule(ssrEntry)
-          const result: TSSRRenderResult = await renderSSRPage({
-            render: render as TSSRRender,
-            url,
-            req,
-            res,
-            http: ssrForwarding ? httpRef?.current : null,
-          })
-          sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
-        } catch (error: any) {
-          vite.ssrFixStacktrace(error)
-          console.error(error)
-          res.statusCode = 500
-          res.end(error.message)
-        }
-      }
-    }
+    // One inline plugin wires this server into Vite. Its `pre` configureServer hook registers
+    // the `headers` option and the use() middlewares ahead of Vite's file serving and the
+    // plugin's Moost middleware (only Vite's request checks, host validation and CORS come
+    // first), and the SSR page fallback after Vite's middlewares — with this server's
+    // overrides; the plugin's own fallback stands down. Vite runs the hook again for the new
+    // server on server.restart(), so the middlewares and the fallback survive a restart.
+    const vite = await createViteServer({
+      plugins: [
+        {
+          name: SERVER_PLUGIN_NAME,
+          configureServer: {
+            order: 'pre',
+            handler(server) {
+              const exposed = server.config as Record<string, any>
+              const config = { ...exposed.__moostViteOptions, ...opts }
+              const headers = config.headers as Record<string, string> | undefined
+              server.middlewares.use((req, res, next) => {
+                setResponseHeaders(res, headers)
+                runMiddlewares(userMiddlewares, req, res, next)
+              })
+              const ssrEntry = config.ssrEntry as string | undefined
+              if (!ssrEntry) {
+                return
+              }
+              const httpRef = exposed.__moostViteHttpRef as
+                | { current: TSSRHttpContextRunner | null }
+                | undefined
+              const forwarding = config.ssrFetchForwarding !== false
+              const fallback = devSSRFallback(server, {
+                ssrEntry,
+                markers: {
+                  ssrOutlet: config.ssrOutlet || DEFAULT_SSR_OUTLET,
+                  ssrState: config.ssrState || DEFAULT_SSR_STATE,
+                  ssrHead: config.ssrHead || DEFAULT_SSR_HEAD,
+                },
+                http: () => (forwarding ? httpRef?.current : null),
+                gate: exposed.__moostViteSsrGate as TDevSSRFallbackOptions['gate'],
+              })
+              return () => {
+                server.middlewares.use(fallback)
+              }
+            },
+          },
+        },
+      ],
+    })
 
     return {
-      use(mw) {
-        userMiddlewares.push(mw)
-      },
+      use,
       async listen(port, host) {
         if ((port ?? host ?? opts.port ?? opts.host) !== undefined) {
           console.warn(
             '[moost-vite] port/host passed to createSSRServer() or listen() are ignored in dev — set server.port / server.host in vite.config instead.',
           )
-        }
-        for (const mw of userMiddlewares) {
-          vite.middlewares.use(mw as any)
-        }
-        if (ssrFallback) {
-          vite.middlewares.use(ssrFallback as any)
         }
         await vite.listen()
         vite.printUrls()
@@ -248,6 +273,8 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   )
   const defaultPort = (opts.port as number) || Number(process.env.PORT) || 3000
   const defaultHost = (opts.host as string | undefined) ?? process.env.HOST
+  const headers = (opts.headers as Record<string, string> | undefined) ?? __MOOST_HEADERS__
+  const cspNonce = __MOOST_CSP_NONCE__ ?? undefined
 
   // Read HTML template once at startup
   const template = await fs.readFile(path.resolve(clientDir, 'index.html'), 'utf8')
@@ -343,7 +370,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
         if (cache?.html) {
           presetHeader(res, 'Cache-Control', cache.html)
         }
-        sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
+        sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead, cspNonce }, result)
       } else {
         sendSpaShell(req, res, spaShell, cache)
       }
@@ -363,21 +390,20 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
   )
 
   return {
-    use(mw) {
-      userMiddlewares.push(mw)
-    },
+    use,
     async listen(port, host) {
       const server = createHttpServer((req, res) => {
         const url = req.url || '/'
 
-        // 1. User middlewares (sequential)
-        let i = 0
-        const runNext = () => {
-          if (i < userMiddlewares.length) {
-            userMiddlewares[i++](req, res, runNext)
+        // 0. The `headers` option — first, so everything below can replace them
+        setResponseHeaders(res, headers)
+
+        // 1. User middlewares (sequential); a failing one answers with its status
+        runMiddlewares(userMiddlewares, req, res, (error) => {
+          if (error) {
+            failRequest(res, error)
             return
           }
-
           // 2. Moost first — gated to the configured mounts when prefix is set
           //    (pure fast path); a route miss goes to the no-match callback.
           if (moostHandler && (!prefixes || matchesPrefix(url, prefixes))) {
@@ -387,8 +413,7 @@ export async function createSSRServer(options?: TSSRServerOptions): Promise<TSSR
 
           // 3. Static assets → sirv, then SSR render or SPA fallback
           serveStatic(req, res)
-        }
-        runNext()
+        })
       })
       server.listen(port || defaultPort, host || defaultHost)
       await once(server, 'listening')

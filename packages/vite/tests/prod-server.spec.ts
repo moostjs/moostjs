@@ -7,7 +7,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { brotliDecompressSync, gunzipSync } from 'node:zlib'
-import { MoostHttp } from '@moostjs/event-http'
+import { Get, MoostHttp, SetHeader } from '@moostjs/event-http'
+import { Controller, Moost } from 'moost'
 import type { Plugin } from 'vite'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 
@@ -546,6 +547,285 @@ describe('createSSRServer (production) — prefix is an API mount', () => {
     expect(
       serverDefines({ prefix: '/api', prefixFallthrough: true }).__MOOST_PREFIX_FALLTHROUGH__,
     ).toBe('true')
+  })
+})
+
+// ─── `headers` option: set first on every response ───
+
+@Controller('api')
+class HeadersRouteController {
+  @Get('plain')
+  plain() {
+    return 'plain'
+  }
+
+  @Get('own')
+  @SetHeader('x-shared', 'route')
+  own() {
+    return 'own'
+  }
+}
+
+/** A Moost app with routes; its `listen()` is captured by the server. */
+async function bootRoutes() {
+  const app = new Moost()
+  const http = new MoostHttp()
+  app.adapter(http)
+  app.registerControllers(HeadersRouteController)
+  await app.init()
+  await http.listen()
+}
+
+describe('createSSRServer (production) — headers option', () => {
+  const HEADERS = { 'x-frame-options': 'DENY', 'x-shared': 'base' }
+  let spaDir: string
+  let ssrDir: string
+  beforeAll(async () => {
+    spaDir = await makeStaticDir(SPA_TEMPLATE)
+    ssrDir = await makeStaticDir(SSR_TEMPLATE)
+    writeFileSync(
+      join(ssrDir, 'entry-server.mjs'),
+      `export function render(url) {
+        return url === '/own' ? { html: 'OWN', headers: { 'x-shared': 'render' } } : { html: 'PAGE' }
+      }`,
+    )
+  })
+  afterAll(() => {
+    rmSync(spaDir, { recursive: true, force: true })
+    rmSync(ssrDir, { recursive: true, force: true })
+  })
+
+  it('bakes the headers option', () => {
+    expect(JSON.parse(serverDefines().__MOOST_HEADERS__)).toBeNull()
+    expect(JSON.parse(serverDefines({ headers: HEADERS }).__MOOST_HEADERS__)).toEqual(HEADERS)
+  })
+
+  it('sets them on Moost routes, the SPA shell and static files; routes and middlewares replace them', async () => {
+    const app = await createSSRServer({ clientDir: spaDir, headers: HEADERS, entry: bootRoutes })
+    app.use((req, res, next) => {
+      if (req.url === '/robots.txt') {
+        res.setHeader('x-shared', 'middleware')
+      }
+      next()
+    })
+    const server = await app.listen(await freePort(), '127.0.0.1')
+    started.push(server)
+
+    const route = await get(server, '/api/plain')
+    expect(route.body.toString()).toBe('plain')
+    expect(route.headers).toMatchObject(HEADERS)
+    const own = await get(server, '/api/own')
+    expect(own.headers).toMatchObject({ 'x-frame-options': 'DENY', 'x-shared': 'route' })
+
+    const shell = await get(server, '/some/page', { 'accept-encoding': 'br' })
+    expect(decode(shell)).toContain('SPA_SHELL')
+    expect(shell.headers).toMatchObject(HEADERS)
+
+    const asset = await get(server, '/assets/app-abc123.js')
+    expect(asset.headers).toMatchObject(HEADERS)
+    expect(asset.headers['cache-control']).toBe('public, max-age=31536000, immutable')
+
+    const robots = await get(server, '/robots.txt')
+    expect(robots.headers).toMatchObject({ 'x-frame-options': 'DENY', 'x-shared': 'middleware' })
+  })
+
+  it("sets them on SSR pages; the render result's headers replace them", async () => {
+    g.__MOOST_SSR_ENTRY__ = pathToFileURL(join(ssrDir, 'entry-server.mjs')).href
+    try {
+      const server = await start({ port: await freePort(), clientDir: ssrDir, headers: HEADERS })
+      const page = await get(server, '/page')
+      expect(page.body.toString()).toContain('PAGE')
+      expect(page.headers).toMatchObject(HEADERS)
+      const own = await get(server, '/own')
+      expect(own.headers).toMatchObject({ 'x-frame-options': 'DENY', 'x-shared': 'render' })
+    } finally {
+      g.__MOOST_SSR_ENTRY__ = undefined
+    }
+  })
+
+  it('uses the baked headers; createSSRServer({ headers }) replaces the whole set', async () => {
+    g.__MOOST_HEADERS__ = { 'x-baked': '1', 'x-frame-options': 'SAMEORIGIN' }
+    try {
+      const baked = await start({ port: await freePort(), clientDir: spaDir })
+      const bakedRes = await get(baked, '/')
+      expect(bakedRes.headers).toMatchObject({ 'x-baked': '1', 'x-frame-options': 'SAMEORIGIN' })
+      const replaced = await start({
+        port: await freePort(),
+        clientDir: spaDir,
+        headers: { 'x-frame-options': 'DENY' },
+      })
+      const res = await get(replaced, '/')
+      expect(res.headers['x-frame-options']).toBe('DENY')
+      expect(res.headers['x-baked']).toBeUndefined()
+    } finally {
+      g.__MOOST_HEADERS__ = undefined
+    }
+  })
+
+  it('merges a Vary among them with the precompressed variants, also on a 304', async () => {
+    const server = await start({
+      port: await freePort(),
+      clientDir: spaDir,
+      headers: { vary: 'Origin' },
+    })
+    const asset = await get(server, '/assets/app-abc123.js', { 'accept-encoding': 'br' })
+    expect(asset.headers['content-encoding']).toBe('br')
+    expect(asset.headers.vary).toBe('Origin, Accept-Encoding')
+    const revalidated = await get(server, '/assets/app-abc123.js', {
+      'accept-encoding': 'br',
+      'if-none-match': String(asset.headers.etag),
+    })
+    expect(revalidated.status).toBe(304)
+    expect(revalidated.headers.vary).toBe('Origin, Accept-Encoding')
+  })
+
+  it('rejects an invalid header name or value at startup, naming the header', async () => {
+    await expect(
+      createSSRServer({ clientDir: spaDir, headers: { 'x-split': 'a\r\nset-cookie: x=1' } }),
+    ).rejects.toThrow(/createSSRServer\(\{ headers \}\): invalid header "x-split"/)
+    expect(() =>
+      moostVite({ entry: './src/main.ts', middleware: true, headers: { 'bad name': '1' } }),
+    ).toThrow(/moostVite\(\{ headers \}\): invalid header "bad name"/)
+  })
+
+  it('warns once that the option is ignored outside middleware mode', () => {
+    const [plugin] = moostVite({ entry: './src/main.ts', headers: HEADERS }) as Plugin[]
+    const warn = vi.fn()
+    ;(plugin.configResolved as Function)({ logger: { warn } })
+    expect(warn).toHaveBeenCalledTimes(1)
+    expect(warn.mock.calls[0][0]).toContain('middleware mode only')
+    expect(warn.mock.calls[0][0]).toContain('defaultHeaders')
+  })
+})
+
+// ─── CSP nonce: render result → state script + Vite's html.cspNonce placeholder ───
+
+describe('createSSRServer (production) — CSP nonce', () => {
+  const NONCE_TEMPLATE =
+    '<html><head><meta property="csp-nonce" nonce="NONCE_PH"><!--ssr-head--></head>' +
+    '<body><!--ssr-outlet--><!--ssr-state-->' +
+    '<script type="module" nonce="NONCE_PH" src="/assets/app-abc123.js"></script></body></html>'
+  let dir: string
+  beforeAll(async () => {
+    dir = await makeStaticDir(NONCE_TEMPLATE)
+    writeFileSync(
+      join(dir, 'entry-server.mjs'),
+      `export function render(url) {
+        if (url === '/inject') {
+          return { html: 'INJECT', state: '{}', nonce: '"><script>alert(1)</script>' }
+        }
+        const nonce = 'cmFuZG9tLW5vbmNl'
+        return {
+          html: 'OK',
+          state: '{"a":1}',
+          nonce,
+          headers: { 'content-security-policy': "script-src 'self' 'nonce-" + nonce + "'" },
+        }
+      }`,
+    )
+    g.__MOOST_SSR_ENTRY__ = pathToFileURL(join(dir, 'entry-server.mjs')).href
+    g.__MOOST_CSP_NONCE__ = 'NONCE_PH'
+  })
+  afterAll(() => {
+    g.__MOOST_SSR_ENTRY__ = undefined
+    g.__MOOST_CSP_NONCE__ = undefined
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  it("bakes Vite's html.cspNonce placeholder", () => {
+    expect(JSON.parse(serverDefines().__MOOST_CSP_NONCE__)).toBeNull()
+    const defines = serverDefines({}, { html: { cspNonce: 'NONCE_PH' } })
+    expect(JSON.parse(defines.__MOOST_CSP_NONCE__)).toBe('NONCE_PH')
+  })
+
+  it('puts the nonce on the state script and on the tags Vite marked', async () => {
+    const server = await start({ port: await freePort(), clientDir: dir })
+    const page = await get(server, '/page')
+    const html = page.body.toString()
+    expect(page.status).toBe(200)
+    expect(page.headers['content-security-policy']).toBe(
+      "script-src 'self' 'nonce-cmFuZG9tLW5vbmNl'",
+    )
+    expect(html).toContain('<script nonce="cmFuZG9tLW5vbmNl">window.__SSR_STATE__={"a":1}</script>')
+    expect(html).toContain('<meta property="csp-nonce" nonce="cmFuZG9tLW5vbmNl">')
+    expect(html).toContain('<script type="module" nonce="cmFuZG9tLW5vbmNl" src="/assets/')
+    expect(html).not.toContain('NONCE_PH')
+  })
+
+  it('answers 500 for a nonce that is not base64/base64url, without emitting it', async () => {
+    const server = await start({ port: await freePort(), clientDir: dir })
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      const res = await get(server, '/inject')
+      expect(res.status).toBe(500)
+      expect(res.body.toString()).not.toContain('<script>alert(1)</script>')
+      expect(res.body.toString()).not.toContain('INJECT')
+    } finally {
+      errors.mockRestore()
+    }
+  })
+})
+
+// ─── use(): a failing middleware fails the request, never the process ───
+
+describe('createSSRServer (production) — failing use() middleware', () => {
+  let dir: string
+  beforeAll(async () => {
+    dir = await makeStaticDir(SPA_TEMPLATE)
+  })
+  afterAll(() => rmSync(dir, { recursive: true, force: true }))
+
+  it('stops the chain on next(error), a throw or a rejection; answers the status, not the message', async () => {
+    const app = await createSSRServer({ clientDir: dir, entry: bootRoutes })
+    app.use((req, _res, next) => {
+      if (req.url === '/api/plain?deny') {
+        next(Object.assign(new Error('secret reason'), { status: 403 }))
+        return
+      }
+      if (req.url === '/api/plain?fail') {
+        next(new Error('secret reason'))
+        return
+      }
+      if (req.url === '/api/plain?throw') {
+        throw new Error('secret reason')
+      }
+      next()
+    })
+    // an async middleware whose promise rejects before it calls next()
+    app.use(async (req, _res, next) => {
+      if (req.url === '/api/plain?reject') {
+        throw Object.assign(new Error('secret reason'), { statusCode: 401 })
+      }
+      next()
+    })
+    const server = await app.listen(await freePort(), '127.0.0.1')
+    started.push(server)
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      for (const [path, status] of [
+        ['/api/plain?deny', 403],
+        ['/api/plain?fail', 500],
+        ['/api/plain?throw', 500],
+        ['/api/plain?reject', 401],
+      ] as const) {
+        const res = await get(server, path)
+        expect(res.status).toBe(status)
+        expect(res.body.toString()).toBe('')
+      }
+      expect(errors).toHaveBeenCalledTimes(4)
+      // the process kept serving
+      const ok = await get(server, '/api/plain')
+      expect(ok).toMatchObject({ status: 200 })
+      expect(ok.body.toString()).toBe('plain')
+    } finally {
+      errors.mockRestore()
+    }
+  })
+
+  it('rejects an error-handling (err, req, res, next) middleware', async () => {
+    const app = await createSSRServer({ clientDir: dir, entry: () => new MoostHttp().listen() })
+    const errorHandler = (_err: unknown, _req: unknown, _res: unknown, _next: unknown) => {}
+    expect(() => app.use(errorHandler as never)).toThrow(/error-handling/)
   })
 })
 

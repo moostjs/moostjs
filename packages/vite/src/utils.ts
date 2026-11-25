@@ -33,6 +33,15 @@ export interface TSSRRenderResult {
   status?: number
   /** Extra response headers — e.g. `cache-control`, or `location` alongside `status: 301`. */
   headers?: Record<string, string>
+  /**
+   * A fresh CSP nonce for this response (base64 or base64url characters only; anything else
+   * fails the render). It is set on the `__SSR_STATE__` script and replaces the `html.cspNonce`
+   * placeholder (set in the Vite config itself) in the page template. Send the matching
+   * `Content-Security-Policy` in `headers`, and put it on your own `head` tags. Without a
+   * nonce — and in the SPA shell or any other static HTML — the placeholder ships unchanged:
+   * never put the placeholder in a CSP header.
+   */
+  nonce?: string
 }
 
 /**
@@ -100,19 +109,24 @@ export async function renderSSRPage(opts: {
   return render(url, ctx)
 }
 
-/** The three HTML placeholders substituted by {@link sendSSRResponse}. */
+/** The HTML placeholders substituted by {@link sendSSRResponse}. */
 export interface TSSRMarkers {
   ssrOutlet: string
   ssrState: string
   ssrHead: string
+  /** Vite's `html.cspNonce` value: the template's `nonce="…"` attributes carrying it get the render's nonce. */
+  cspNonce?: string
 }
+
+/** A CSP nonce: base64 / base64url characters, optional `=` padding. */
+const NONCE_RE = /^[\w+/-]+={0,2}$/
 
 /**
  * Applies an SSR render result to the HTTP response: sets the status code and
- * headers, then substitutes the outlet, state and head markers into the HTML
- * template. Shared by all three render call sites (the dev middleware, the dev
- * `createSSRServer` branch and the prod `createSSRServer` branch) so the render
- * contract stays identical across them.
+ * headers, then fills the outlet, state and head markers and the CSP nonce
+ * into the template. Shared by all three render call sites (the dev middleware,
+ * the dev `createSSRServer` branch and the prod `createSSRServer` branch) so the
+ * render contract stays identical across them.
  *
  * Fully backwards compatible: every field beyond `html` is optional, a missing
  * marker in the template is a no-op `String.replace`, and headers from the render
@@ -127,16 +141,29 @@ export function sendSSRResponse(
   markers: TSSRMarkers,
   result: TSSRRenderResult,
 ): void {
+  const { nonce } = result
+  if (nonce !== undefined && (typeof nonce !== 'string' || !NONCE_RE.test(nonce))) {
+    // checked before anything is written; the value is not echoed (it would land in the 500 body)
+    throw new TypeError(
+      'SSR render returned an invalid `nonce`: use base64 or base64url characters only ' +
+        '(A-Z, a-z, 0-9, +, /, -, _, with optional trailing =)',
+    )
+  }
   res.statusCode = result.status ?? 200
   res.setHeader('Content-Type', 'text/html')
-  if (result.headers) {
-    for (const [key, value] of Object.entries(result.headers)) {
-      res.setHeader(key, value)
-    }
+  for (const [key, value] of Object.entries(result.headers ?? {})) {
+    res.setHeader(key, value)
   }
-  const stateScript = result.state ? `<script>window.__SSR_STATE__=${result.state}</script>` : ''
+  const nonceAttr = nonce ? ` nonce="${nonce}"` : ''
+  const stateScript = result.state
+    ? `<script${nonceAttr}>window.__SSR_STATE__=${result.state}</script>`
+    : ''
+  const page =
+    nonce && markers.cspNonce
+      ? template.split(`nonce="${markers.cspNonce}"`).join(`nonce="${nonce}"`)
+      : template
   res.end(
-    template
+    page
       .replace(markers.ssrOutlet, () => result.html)
       .replace(markers.ssrState, () => stateScript)
       .replace(markers.ssrHead, () => result.head ?? ''),

@@ -38,10 +38,10 @@ import {
   matchesPrefix,
   normalizePrefixes,
   PLUGIN_NAME,
-  renderSSRPage,
-  sendSSRResponse,
 } from './utils'
-import type { TSSRHttpContextRunner, TSSRRender } from './utils'
+import type { TSSRHttpContextRunner } from './utils'
+import { devSSRFallback } from './dev-ssr'
+import { SERVER_PLUGIN_NAME, setResponseHeaders, validateHeaders } from './server-middleware'
 
 /** A simple request-response middleware type for Node’s http module. */
 type TMiddleware = (req: IncomingMessage, res: ServerResponse) => any
@@ -312,6 +312,18 @@ export interface TMoostViteDevOptions {
    * Default: `true`. Set `false` to send no `Cache-Control` from the server.
    */
   cacheControl?: boolean | TCacheControlOptions
+  /**
+   * Middleware mode: headers set on every response the server sends — Moost
+   * routes, SSR pages, the SPA shell and static files — in dev and in the
+   * generated production server (e.g. `X-Frame-Options`,
+   * `X-Content-Type-Options`, `Referrer-Policy`). They are set first, so a
+   * `createSSRServer().use()` middleware, a route or the SSR render's `headers`
+   * replace them. A `Cache-Control` here replaces the built-in cache policy.
+   * `createSSRServer({ headers })` overrides the whole set. Invalid names or
+   * values throw at startup. Ignored, with a warning, in backend mode: Moost
+   * answers every request there — use the adapter's `defaultHeaders`.
+   */
+  headers?: Record<string, string>
 }
 
 /** Extra packages the SSR split check should watch on top of its defaults. */
@@ -392,6 +404,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
   const isTest = process.env.NODE_ENV === 'test'
   const isProd = process.env.NODE_ENV === 'production'
   const externals = options.externals ?? true
+  validateHeaders(options.headers, 'moostVite({ headers })')
+  /** The `headers` option: middleware mode only (backend mode: see the warning in configResolved). */
+  const headers = options.middleware ? options.headers : undefined
 
   // Normalize prefix entries: ensure leading slash, strip trailing slash
   const prefixes = normalizePrefixes(options.prefix)
@@ -621,6 +636,20 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
     res.setHeader('Content-Type', 'text/plain')
     res.end(`Moost app failed to load: ${(bootError as Error).message}`)
   }
+  /**
+   * Runs before each dev SSR render (whichever fallback renders: this plugin's or the
+   * `createSSRServer()` one): the reload lock — an HMR mid-render would otherwise race
+   * ssrLoadModule against a half-ejected app — and the boot-error gate, since the local-fetch
+   * hook listen() installed would dispatch SSR self-fetches into a half-bound app.
+   */
+  const ssrGate = async (res: ServerResponse) => {
+    await drainReload()
+    if (bootError) {
+      answerBootError(res)
+      return true
+    }
+    return false
+  }
 
   /** Set by the middleware-mode `config` hook: the consumer externalized the runtime themselves. */
   let runtimeExternalized = false
@@ -661,6 +690,9 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
           __MOOST_SSR_HEAD__: JSON.stringify(ssrHead),
           __MOOST_PRECOMPRESS__: JSON.stringify(precompressedVariants),
           __MOOST_CACHE_CONTROL__: JSON.stringify(bakedCacheControl(cfg)),
+          __MOOST_HEADERS__: JSON.stringify(options.headers ?? null),
+          // Vite's placeholder nonce in the built template, replaced by the render's nonce
+          __MOOST_CSP_NONCE__: JSON.stringify(cfg.html?.cspNonce ?? null),
         }
 
         // Build inputs: server entry + Moost backend entry are always included,
@@ -859,9 +891,18 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
         ssrState: options.ssrState,
         ssrHead: options.ssrHead,
         ssrFetchForwarding: options.ssrFetchForwarding,
+        headers,
       }
       ;(config as Record<string, unknown>).__moostViteHttpRef = moostHttpRef
+      ;(config as Record<string, unknown>).__moostViteSsrGate = ssrGate
       resolvedConfig = config
+      if (options.headers && !options.middleware) {
+        config.logger.warn(
+          `[${PLUGIN_NAME}] The \`headers\` option applies in middleware mode only and is ignored: ` +
+            'in backend mode Moost answers every request itself, in dev and in production — ' +
+            'set the headers with `new MoostHttp({ defaultHeaders })` instead.',
+        )
+      }
     },
 
     /**
@@ -1171,50 +1212,48 @@ export function moostVite(options: TMoostViteDevOptions): PluginOption {
     !isProd && !isTest && options.middleware && options.ssrEntry
       ? {
           name: `${PLUGIN_NAME}:ssr-fallback`,
-          async configureServer(server) {
-            const fs = await import('node:fs/promises')
+          configureServer(server) {
+            // Under createSSRServer() its own plugin registers the fallback (with its overrides)
+            if (server.config.plugins.some((p) => p.name === SERVER_PLUGIN_NAME)) {
+              return
+            }
+            const fallback = devSSRFallback(server, {
+              ssrEntry: options.ssrEntry!,
+              markers: { ssrOutlet, ssrState, ssrHead },
+              http: () => (ssrForwarding ? moostHttpRef.current : null),
+              gate: ssrGate,
+            })
             // Return post-hook so this runs AFTER Vite's internal middleware
             return () => {
-              server.middlewares.use(async (req: any, res: ServerResponse, next: () => void) => {
-                if (req.method !== 'GET') {
-                  return next()
-                }
-                const url = req.originalUrl || req.url || '/'
-                try {
-                  // Same reload lock as the main middleware: an HMR mid-render would
-                  // otherwise race ssrLoadModule against a half-ejected app.
-                  await drainReload()
-                  if (bootError) {
-                    // Same gate as the main middleware: the local-fetch hook listen()
-                    // installed would dispatch SSR self-fetches into the half-bound app.
-                    answerBootError(res)
-                    return
-                  }
-                  let template = await fs.readFile(
-                    resolve(server.config.root, 'index.html'),
-                    'utf8',
-                  )
-                  template = await server.transformIndexHtml(url, template)
-                  const { render } = await server.ssrLoadModule(options.ssrEntry!)
-                  const result = await renderSSRPage({
-                    render: render as TSSRRender,
-                    url,
-                    req,
-                    res,
-                    http: ssrForwarding ? moostHttpRef.current : null,
-                  })
-                  sendSSRResponse(res, template, { ssrOutlet, ssrState, ssrHead }, result)
-                } catch (error: any) {
-                  server.ssrFixStacktrace(error)
-                  console.error(error)
-                  res.statusCode = 500
-                  res.end(error.message)
-                }
-              })
+              server.middlewares.use(fallback)
             }
           },
         }
       : null
 
-  return [pluginConfig, ssrFallbackPlugin]
+  // `headers` on every dev response: a `pre` hook registers it ahead of the other middlewares
+  // (only Vite's request checks, host validation and CORS run first). Under createSSRServer()
+  // its own plugin applies them (before the use() middlewares, and with its `headers`
+  // override), so this one stands down.
+  const headersPlugin: PluginOption =
+    !isProd && !isTest && headers
+      ? {
+          name: `${PLUGIN_NAME}:headers`,
+          enforce: 'pre',
+          configureServer: {
+            order: 'pre',
+            handler(server) {
+              if (server.config.plugins.some((p) => p.name === SERVER_PLUGIN_NAME)) {
+                return
+              }
+              server.middlewares.use((_req, res, next) => {
+                setResponseHeaders(res, headers)
+                next()
+              })
+            },
+          },
+        }
+      : null
+
+  return [pluginConfig, ssrFallbackPlugin, headersPlugin]
 }

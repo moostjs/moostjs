@@ -2,7 +2,12 @@ import type { ServerResponse } from 'node:http'
 import { describe, expect, it } from 'vitest'
 
 import type { TSSRMarkers, TSSRRenderResult } from '../src/utils'
-import { DEFAULT_SSR_HEAD, DEFAULT_SSR_OUTLET, DEFAULT_SSR_STATE, sendSSRResponse } from '../src/utils'
+import {
+  DEFAULT_SSR_HEAD,
+  DEFAULT_SSR_OUTLET,
+  DEFAULT_SSR_STATE,
+  sendSSRResponse,
+} from '../src/utils'
 
 const MARKERS: TSSRMarkers = {
   ssrOutlet: DEFAULT_SSR_OUTLET,
@@ -107,5 +112,78 @@ describe('sendSSRResponse', () => {
     expect(fake.body).toContain('price $5 & $$ and $& and $1')
     expect(fake.body).toContain('<script>window.__SSR_STATE__={"re":"$&$1$`"}</script>')
     expect(fake.body).toContain('<meta content="$$$&">')
+  })
+})
+
+describe('sendSSRResponse — CSP nonce', () => {
+  /** A template as Vite builds it with `html.cspNonce: 'NONCE_PH'`. */
+  const VITE_TEMPLATE =
+    `<html><head><meta property="csp-nonce" nonce="NONCE_PH"><!--ssr-head-->` +
+    `<script type="module" nonce="NONCE_PH" src="/assets/app.js"></script></head>` +
+    `<body><!--ssr-outlet--><!--ssr-state--></body></html>`
+  const withPlaceholder = (fake: TFakeRes, result: TSSRRenderResult) =>
+    sendSSRResponse(fake.res, VITE_TEMPLATE, { ...MARKERS, cspNonce: 'NONCE_PH' }, result)
+
+  it('puts the nonce on the state script', () => {
+    const fake = fakeRes()
+    render(fake, { html: 'x', state: '{"a":1}', nonce: 'r4nd0m+/Nonce==' })
+    expect(fake.body).toContain(
+      '<script nonce="r4nd0m+/Nonce==">window.__SSR_STATE__={"a":1}</script>',
+    )
+  })
+
+  it("replaces Vite's html.cspNonce placeholder with the render's nonce", () => {
+    const fake = fakeRes()
+    withPlaceholder(fake, { html: 'x', state: '{}', nonce: 'abc-DEF_123' })
+    expect(fake.body).not.toContain('NONCE_PH')
+    expect(fake.body).toContain('<meta property="csp-nonce" nonce="abc-DEF_123">')
+    expect(fake.body).toContain('<script type="module" nonce="abc-DEF_123" src="/assets/app.js">')
+    expect(fake.body).toContain('<script nonce="abc-DEF_123">window.__SSR_STATE__={}</script>')
+  })
+
+  it('leaves the template and the state script alone without a nonce', () => {
+    const fake = fakeRes()
+    withPlaceholder(fake, { html: 'x', state: '{}' })
+    expect(fake.body).toContain('nonce="NONCE_PH"')
+    expect(fake.body).toContain('<script>window.__SSR_STATE__={}</script>')
+  })
+
+  it('does not touch rendered markup that happens to contain the placeholder', () => {
+    const fake = fakeRes()
+    withPlaceholder(fake, { html: '<p nonce="NONCE_PH">user text</p>', nonce: 'n0nce' })
+    expect(fake.body).toContain('<p nonce="NONCE_PH">user text</p>')
+  })
+
+  it('rejects a nonce that is not base64/base64url before writing anything', () => {
+    for (const nonce of [
+      'abc" onload="alert(1)',
+      'abc"><script>alert(1)</script>',
+      "abc' x='",
+      'abc def',
+      'a=b',
+      '',
+      42 as unknown as string,
+    ]) {
+      const fake = fakeRes()
+      expect(() =>
+        withPlaceholder(fake, { html: 'x', state: '{}', nonce, headers: { 'x-a': '1' } }),
+      ).toThrow(/invalid `nonce`/)
+      expect(fake.body).toBe('')
+      expect(fake.headers).toEqual({})
+      expect(fake.statusCode).toBe(0)
+    }
+  })
+
+  it('does not echo a rejected nonce in the error message', () => {
+    const fake = fakeRes()
+    const attempt = '"><img src=x onerror=alert(1)>'
+    let message = ''
+    try {
+      render(fake, { html: 'x', nonce: attempt })
+    } catch (error) {
+      message = (error as Error).message
+    }
+    expect(message).toContain('invalid `nonce`')
+    expect(message).not.toContain(attempt)
   })
 })
