@@ -477,7 +477,7 @@ interface WfStateStrategy {
 
 `expiresAtFor()` (optional, `@prostojs/wf` `0.3.1`+) returns the expiry a `persist()` with these options would record, without persisting. The built-in strategies implement it and also expose a `defaultTtl` getter. See [Outlets — When a paused state expires](/wf/outlets#when-a-paused-state-expires).
 
-`HandleStateStrategy` honors the `handle` hint and reuses the same storage key on every resume — the `wfs` token is a stable session credential, not single-use. `EncapsulatedStateStrategy` ignores the hint (the ciphertext is a function of the state, so the token changes on every state mutation regardless). See [Outlets — Token Stability & Resume Semantics](./outlets.md#token-stability-resume-semantics).
+`HandleStateStrategy` honors the `handle` hint and reuses the same storage key on every resume — the `wfs` token is a stable session credential, not single-use. The trigger leaves the hint out, so a fresh handle is minted, in three cases: after a strategy swap, for a pause delivered out of band, and after `renewStateToken()`. `EncapsulatedStateStrategy` ignores the hint (the ciphertext is a function of the state, so the token changes on every state mutation regardless). See [Outlets — Token Stability & Resume Semantics](./outlets.md#token-stability-resume-semantics).
 
 ### `WfPersistOptions`
 
@@ -504,7 +504,7 @@ interface WfOutlet {
 }
 ```
 
-`tokenDelivery` controls whether the state token is returned to the HTTP caller or only delivered through the outlet's own channel — security-critical for custom outlets. See [Outlets — Out-of-Band Outlets](/wf/outlets#out-of-band-outlets).
+`tokenDelivery` controls whether the state token is returned to the HTTP caller or only delivered through the outlet's own channel — security-critical for custom outlets. An out-of-band pause always gets a fresh token, never the caller's. See [Outlets — Out-of-Band Outlets](/wf/outlets#out-of-band-outlets).
 
 ### `WfOutletRequest`
 
@@ -516,7 +516,7 @@ Optional return from `WfOutlet.deliver()` describing the HTTP response (`respons
 
 ### `WfPauseRequest`
 
-The `WfOutletRequest` extended with an optional `stateStrategy` name — the pause signal carried back to the trigger when a step swaps strategy. See [Outlets — Swapping the Strategy at Runtime](/wf/outlets#swapping-the-strategy-at-runtime).
+The `WfOutletRequest` extended with an optional `stateStrategy` name — the pause signal carried back to the trigger when a step swaps strategy. See [Outlets — Swapping the Strategy at Runtime](/wf/outlets#swapping-the-strategy-at-runtime). It also carries `renewStateToken: true` when a step called [`renewStateToken()`](#renewstatetoken): persist that pause under a fresh handle.
 
 ### `WfState`
 
@@ -704,12 +704,12 @@ Most steps do not need this — use `outletHttp()` / `outletEmail()` / `outlet()
 
 ### `useWfStrategy()`
 
-Inspects or swaps the active state strategy name from within a step. Returns `{ current(), swap(name) }`; the swapped name applies to the **next** pause. See [Outlets — Swapping the Strategy at Runtime](/wf/outlets#swapping-the-strategy-at-runtime).
+Inspects or swaps the active state strategy name from within a step. Returns `{ current(), swap(name), renewToken() }`; the swapped name applies to the **next** pause. See [Outlets — Swapping the Strategy at Runtime](/wf/outlets#swapping-the-strategy-at-runtime). `renewToken()` is the method form of [`renewStateToken()`](#renewstatetoken).
 
 ```ts
 import { useWfStrategy } from '@moostjs/event-wf'
 
-const { current, swap } = useWfStrategy()
+const { current, swap, renewToken } = useWfStrategy()
 ```
 
 ### `swapStrategy(name)`
@@ -720,6 +720,20 @@ Sugar for `useWfStrategy().swap(name)` — switches the strategy used for the ne
 import { swapStrategy } from '@moostjs/event-wf'
 
 swapStrategy('kv')
+```
+
+### `renewStateToken()`
+
+```ts
+function renewStateToken(): undefined
+```
+
+Sugar for `useWfStrategy().renewToken()`. The pause that ends the current request is persisted under a **new** state token, and the token the run was resumed with stops working (410 `WF_EXPIRED`). Use it in a step that raises the privilege of whoever holds the token, such as setting a password on an emailed invitation. It has no effect with `EncapsulatedStateStrategy`, or when the run finishes in the same request. It throws outside a workflow run. A paused output then carries `output.inputRequired.renewStateToken === true` for drivers that call `start()` / `resume()` themselves. Requires `@wooksjs/event-wf` 0.8.6 or later. See [Outlets — Renewing the Token](/wf/outlets#renewing-the-token).
+
+```ts
+import { renewStateToken } from '@moostjs/event-wf'
+
+renewStateToken()
 ```
 
 ### `useWfFinished()`

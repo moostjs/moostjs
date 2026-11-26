@@ -210,7 +210,7 @@ this.wf.handleOutlet({
 
 ### Token Stability & Resume Semantics
 
-The `wfs` token is a **workflow session credential**, not a per-step single-use token. With `HandleStateStrategy` it is minted on start and reused on every resume (the engine re-persists under the same handle), so a single `wfs` survives browser refresh, bookmark-and-resume, magic-link reopen on a different device, and lost-connection retry across the entire workflow run.
+The `wfs` token is a **workflow session credential**, not a per-step single-use token. With `HandleStateStrategy` it is minted on start and reused on every resume (the engine re-persists under the same handle), so a single `wfs` survives browser refresh, bookmark-and-resume, magic-link reopen on a different device, and lost-connection retry across the entire workflow run. A pause gets a **new** token instead after a strategy swap, when it is delivered [out of band](#out-of-band-outlets), and after a step called [`renewStateToken()`](#renewing-the-token).
 
 Every resume still calls `strategy.consume(token)` atomically **before** the step runs — but only as a brief mutex against concurrent resumes. Two tabs racing the same `wfs`: one wins, the other gets HTTP **410 Gone** (`code: 'WF_EXPIRED'`, `message: 'Invalid or expired workflow state'`). After the winner re-persists under the same handle, the loser's next attempt succeeds.
 
@@ -218,7 +218,7 @@ With `EncapsulatedStateStrategy` the token IS the state — `consume()` is a sta
 
 **Fail-closed on unexpected errors.** The engine re-persists under the same handle only **after** the step returns. An unexpected throw during resume skips that re-persist — the handle is gone and the user must restart the workflow. This is the security-preferred behavior (no lingering replayable token after a failed attempt). For expected validation failures (wrong password, invalid input, rate limit), return an outlet signal from the step handler instead of throwing — the engine re-persists under the same handle on the re-pause, and the same `wfs` keeps working. To let clients retry after an unexpected failure (a database timeout, say), opt in with [`restoreOnError`](#configuration): the pre-step state is re-persisted under the same token.
 
-**Replay protection.** Single-use rotation at the transport layer is no longer the model. The workflow record itself advances after each successful step, so a replayed token resumes from the current step, not a previous one — there is no way to re-execute a past step via the token. Steps with non-idempotent side effects should still guard themselves at the step layer (idempotency keys in the form payload, advance counters, etc.); do not rely on token rotation for replay safety.
+**Replay protection.** Single-use rotation at the transport layer is no longer the model. The workflow record itself advances after each successful step, so a replayed token resumes from the current step, not a previous one — there is no way to re-execute a past step via the token. Steps with non-idempotent side effects should still guard themselves at the step layer (idempotency keys in the form payload, advance counters, etc.); do not rely on token rotation for replay safety. Rotation does matter when a copy of the token stays behind while its holder gains privileges, for example an emailed invitation link after the invitee set a password: [renew the token](#renewing-the-token) in that step.
 
 ### Out-of-Band Outlets
 
@@ -228,6 +228,24 @@ An outlet's `tokenDelivery` field controls whether the `wfs` token is returned t
 - `tokenDelivery: 'out-of-band'` (default for `createEmailOutlet()`) — token is NOT returned to the caller; the outlet delivers it via its own channel (email link, SMS, etc.).
 
 Any custom outlet whose resumer is a different principal than the HTTP caller MUST declare `'out-of-band'`, otherwise the caller receives a token they shouldn't have — a privilege escalation vector.
+
+An out-of-band pause always gets a **new** token, even when the trigger would otherwise re-use the incoming one. This needs `@wooksjs/event-wf` 0.8.6 or later (moost 0.7.10). Before that version, an out-of-band pause reached by a resume on the same strategy delivered the caller's own token.
+
+For example, an admin fills an invitation form and submits it with their own `wfs`, so the run pauses on the email outlet. The invitee gets a fresh token, and the admin cannot continue the invitee's run:
+
+- With `HandleStateStrategy`, the admin's token stops working (410 `WF_EXPIRED`).
+- With `EncapsulatedStateStrategy`, the admin's token cannot be invalidated. It still replays the state from before the submit, so it can send more emails, but it never reaches the invitee's state.
+- With `token.write: 'cookie'`, the trigger also expires the admin's token cookie, so that browser can start a new run. It does the same when a resume finishes the run. A start (`wfid`) whose only token is a dead cookie ignores that token and starts. A resume with a dead cookie still gets 410, and its cookie is left alone. Send `wfid` only to start. A client that resumes through the cookie by sending `wfid` forks a **new** run if another request of the same run is in flight, because that request has consumed the token. `@atscript/vue-wf` `start()` does this with cookie transport to resume after a reload. It is the same browser and principal, so nothing is bypassed, but clients should not start while a request of the run is in flight. Give each cookie trigger that does not share `state` its own `token.name`. The full rules are in the wooks guide: [Token Configuration](https://wooks.moost.org/wf/outlets.html#token-configuration).
+
+#### What the waiting page can no longer do
+
+After the resume that sends the email, the page that made the request holds a spent token. Flows that relied on that page continuing the run now get 410:
+
+- A **Resend** button on the "check your inbox" page that resumes the same run. Start a new run instead. The earlier link stays valid until it expires, unless your app records the token it sent and revokes it with `strategy.consume(handle)` (the part after the first `.`).
+- **Polling** the run for completion from the waiting page. Poll your own app state instead, for example a record the last step writes.
+- **Typing an emailed code** into the same page. Pause on an in-band `outletHttp` form instead, and send the code from that step with your own mailer, so the page keeps its token.
+
+Only the holder of the latest link can resume from it, re-sends included. When a resume with the emailed token pauses on the email outlet again, a new link goes out and the one just used stops working.
 
 ## State Strategies
 
@@ -399,6 +417,25 @@ async awaitApproval() {
 
 To inspect the active name from within a step, use `useWfStrategy().current()`.
 
+### Renewing the Token
+
+One `wfs` stays valid for the whole run, which is wrong for a step that raises the privilege of whoever holds the token. For example, once an invitee has set a password, the emailed invitation link must no longer continue the flow; only the client that got this response should. Call `renewStateToken()` in that step, the way you would rotate a session id after login. It needs `@wooksjs/event-wf` 0.8.6 or later.
+
+```ts
+import { outletHttp, renewStateToken, Step, WorkflowParam } from '@moostjs/event-wf'
+
+@Step('set-password')
+async setPassword(@WorkflowParam('input') input?: { password: string }) {
+  if (!input) return outletHttp({ fields: ['password'] })
+  await this.users.setPassword(input.password)
+  renewStateToken() // the emailed link stops working from the next pause on
+}
+```
+
+The renewal applies to the pause that ends the current request, wherever it happens in the run. With `HandleStateStrategy` that pause is persisted under a new handle, so the old token answers 410 `WF_EXPIRED`. The new token goes out like any other, in the body `wfs` or as the cookie. Later requests re-use it as usual, until another renewal, a strategy swap or an out-of-band pause mints a new one.
+
+It has no effect on `EncapsulatedStateStrategy`: every pause already gets a new token there, but an old token stays valid until it expires, so refuse replays in the step itself. It has no effect either when the run finishes in the same request. A failed request discards the state persisted under the new handle; under `restoreOnError` the old state is restored under the old token. `renewStateToken()` is sugar for `useWfStrategy().renewToken()`, and both throw outside a workflow run. A run started inside the step (`wf.start(…, { eventContext: current() })`, `wf.mint()`) has its own renewal and strategy name. The full rules are in the wooks guide: [Renewing the token](https://wooks.moost.org/wf/outlets.html#renewing-the-token).
+
 ## Outlets
 
 An outlet is a delivery channel that sends the state token to the user. Two outlets are provided.
@@ -488,6 +525,8 @@ async sendVerification(@WorkflowParam('context') ctx: TRegistrationContext) {
 ```
 
 When the user clicks the link, the `wfs` token in the query string resumes the workflow — `token.read` includes `'query'` by default for exactly this case. Make sure the trigger endpoint also accepts GET requests (see the [complete example](#complete-example-auth-workflows)).
+
+The emailed token is always a new one, and the page whose request sent the email cannot continue the run (410). So a "Resend" button on the waiting page, polling the run from it, or typing an emailed code into it does not work. See [What the waiting page can no longer do](#what-the-waiting-page-can-no-longer-do).
 
 ### Custom Outlets
 
@@ -722,19 +761,22 @@ POST /auth/flow  { "wfs": "T1", "input": { "code": "123456" } }
   ← 302  Location: /dashboard   Set-Cookie: sid=...
 ```
 
-**Client-side flow for recovery** (same `wfs` throughout — the email-link token is the same `T1` minted at start; on `EncapsulatedStateStrategy` the token would rotate on every state change instead):
+**Client-side flow for recovery** (the email link carries a **new** token `T2`, because an [out-of-band](#out-of-band-outlets) pause always gets one. The browser's `T1` stops working, so only the mailbox owner can continue. From the link on, `T2` is re-used as usual):
 
 ```
 POST /auth/flow  { "wfid": "auth/recovery" }
   ← 200  { "type": "email-form", "fields": ["email"], "wfs": "T1" }
 
 POST /auth/flow  { "wfs": "T1", "input": { "email": "alice@example.com" } }
-  ← 200  (email sent, workflow paused at email outlet — no wfs in response; tokenDelivery: 'out-of-band')
+  ← 200  (email with T2 sent, workflow paused at email outlet — no wfs in response; tokenDelivery: 'out-of-band')
 
-GET /auth/flow?wfs=T1            (magic link — handled by the @Get('flow') route)
-  ← 200  { "type": "password-form", "fields": ["password"], "wfs": "T1" }
+POST /auth/flow  { "wfs": "T1" }
+  ← 410  { "code": "WF_EXPIRED", ... }   (the browser's token cannot continue the run)
 
-POST /auth/flow  { "wfs": "T1", "input": { "password": "n3wP@ss" } }
+GET /auth/flow?wfs=T2            (magic link — handled by the @Get('flow') route)
+  ← 200  { "type": "password-form", "fields": ["password"], "wfs": "T2" }
+
+POST /auth/flow  { "wfs": "T2", "input": { "password": "n3wP@ss" } }
   ← 302  Location: /dashboard   Set-Cookie: sid=...
 ```
 
@@ -781,6 +823,8 @@ swap('kv') // or use the sugar: swapStrategy('kv')
 ```
 
 Only the name format is validated here (`/^[A-Za-z0-9_-]+$/`); existence in the trigger's registry is validated at pause time.
+
+`renewToken()` (sugar: `renewStateToken()`) makes the pause that ends the current request persist under a new state token. See [Renewing the Token](#renewing-the-token).
 
 ### `useWfFinished()`
 
