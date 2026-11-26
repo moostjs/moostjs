@@ -1,6 +1,6 @@
 import { MoostHttp } from '@moostjs/event-http'
 import type { TControllerOverview } from 'moost'
-import { Moost } from 'moost'
+import { clearGlobalWooks, Moost } from 'moost'
 
 import { mapToSwaggerSpec } from '../mapping'
 import {
@@ -38,8 +38,17 @@ import {
 } from './mapping.artifacts'
 import { describe, it, expect, beforeAll } from 'vitest'
 
+/**
+ * A `MoostHttp` on a fresh global router, so every app in this file gets its own. The apps are
+ * created while the file is collected, before any hook runs: a `beforeEach()` would be too late.
+ */
+function freshMoostHttp() {
+  clearGlobalWooks()
+  return new MoostHttp()
+}
+
 const app = new Moost()
-app.adapter(new MoostHttp())
+app.adapter(freshMoostHttp())
 app.registerControllers(SwaggerControllerTest)
 let metadata: TControllerOverview[]
 let spec: ReturnType<typeof mapToSwaggerSpec>
@@ -329,7 +338,7 @@ describe('mapping', () => {
 
 describe('@SwaggerExclude', () => {
   const excludeApp = new Moost()
-  excludeApp.adapter(new MoostHttp())
+  excludeApp.adapter(freshMoostHttp())
   excludeApp.registerControllers(ExcludedController, PartialExcludeController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -354,7 +363,7 @@ describe('@SwaggerExclude', () => {
 
 describe('@SwaggerTag and @Description', () => {
   const tagApp = new Moost()
-  tagApp.adapter(new MoostHttp())
+  tagApp.adapter(freshMoostHttp())
   tagApp.registerControllers(TaggedController, DescribedSchemaController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -411,7 +420,7 @@ describe('@SwaggerTag and @Description', () => {
 
 describe('default status codes (the wooks runtime defaults)', () => {
   const statusApp = new Moost()
-  statusApp.adapter(new MoostHttp())
+  statusApp.adapter(freshMoostHttp())
   statusApp.registerControllers(StatusCodeController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -446,7 +455,7 @@ describe('default status codes (the wooks runtime defaults)', () => {
 
 describe('primitive constructor types', () => {
   const primApp = new Moost()
-  primApp.adapter(new MoostHttp())
+  primApp.adapter(freshMoostHttp())
   primApp.registerControllers(PrimitiveController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -483,7 +492,7 @@ describe('primitive constructor types', () => {
 
 describe('required vs optional body', () => {
   const bodyApp = new Moost()
-  bodyApp.adapter(new MoostHttp())
+  bodyApp.adapter(freshMoostHttp())
   bodyApp.registerControllers(RequiredBodyController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -507,7 +516,7 @@ describe('required vs optional body', () => {
 
 describe('array type in response', () => {
   const arrayApp = new Moost()
-  arrayApp.adapter(new MoostHttp())
+  arrayApp.adapter(freshMoostHttp())
   arrayApp.registerControllers(ArrayController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -527,7 +536,7 @@ describe('array type in response', () => {
 
 describe('component name collision', () => {
   const collisionApp = new Moost()
-  collisionApp.adapter(new MoostHttp())
+  collisionApp.adapter(freshMoostHttp())
   collisionApp.registerControllers(CollisionController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -561,7 +570,7 @@ describe('component name collision', () => {
 
 describe('toExampleData() duck-typing', () => {
   const exApp = new Moost()
-  exApp.adapter(new MoostHttp())
+  exApp.adapter(freshMoostHttp())
   exApp.registerControllers(ExampleDataController, ExampleDataOverrideController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -589,7 +598,7 @@ describe('toExampleData() duck-typing', () => {
 
 describe('security schemes', () => {
   const secApp = new Moost()
-  secApp.adapter(new MoostHttp())
+  secApp.adapter(freshMoostHttp())
   secApp.registerControllers(
     SecuredController,
     AllPublicController,
@@ -668,7 +677,7 @@ describe('security schemes', () => {
 
   it('must omit security for endpoints with no auth configuration', () => {
     const noAuthApp = new Moost()
-    noAuthApp.adapter(new MoostHttp())
+    noAuthApp.adapter(freshMoostHttp())
     noAuthApp.registerControllers(PrimitiveController)
     return noAuthApp.init().then(() => {
       const noAuthSpec = mapToSwaggerSpec(noAuthApp.getControllersOverview())
@@ -699,7 +708,7 @@ describe('security schemes', () => {
 
   it('must not include securitySchemes when no auth is configured', () => {
     const noAuthApp = new Moost()
-    noAuthApp.adapter(new MoostHttp())
+    noAuthApp.adapter(freshMoostHttp())
     noAuthApp.registerControllers(PrimitiveController)
     return noAuthApp.init().then(() => {
       const noAuthSpec = mapToSwaggerSpec(noAuthApp.getControllersOverview())
@@ -770,7 +779,7 @@ describe('OpenAPI 3.1 support', () => {
 
 describe('@SwaggerDeprecated', () => {
   const depApp = new Moost()
-  depApp.adapter(new MoostHttp())
+  depApp.adapter(freshMoostHttp())
   depApp.registerControllers(DeprecatedController, PartialDeprecatedController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -794,7 +803,7 @@ describe('@SwaggerDeprecated', () => {
 
 describe('operationId customization', () => {
   const opIdApp = new Moost()
-  opIdApp.adapter(new MoostHttp())
+  opIdApp.adapter(freshMoostHttp())
   opIdApp.registerControllers(OperationIdController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -822,7 +831,7 @@ describe('operationId customization', () => {
 
 describe('response headers', () => {
   const headerApp = new Moost()
-  headerApp.adapter(new MoostHttp())
+  headerApp.adapter(freshMoostHttp())
   headerApp.registerControllers(ResponseHeadersController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -862,7 +871,7 @@ describe('response headers', () => {
 
 describe('multiple content types per status code', () => {
   const mcApp = new Moost()
-  mcApp.adapter(new MoostHttp())
+  mcApp.adapter(freshMoostHttp())
   mcApp.registerControllers(MultiContentTypeController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -887,7 +896,7 @@ describe('multiple content types per status code', () => {
 
 describe('externalDocs', () => {
   const edApp = new Moost()
-  edApp.adapter(new MoostHttp())
+  edApp.adapter(freshMoostHttp())
   edApp.registerControllers(ExternalDocsController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -944,7 +953,7 @@ describe('externalDocs', () => {
 
 describe('discriminator ($defs hoisting)', () => {
   const discApp = new Moost()
-  discApp.adapter(new MoostHttp())
+  discApp.adapter(freshMoostHttp())
   discApp.registerControllers(DiscriminatorController)
   let spec: ReturnType<typeof mapToSwaggerSpec>
 
@@ -1028,7 +1037,7 @@ describe('discriminator ($defs hoisting)', () => {
 
 describe('@SwaggerLink', () => {
   const linkApp = new Moost()
-  linkApp.adapter(new MoostHttp())
+  linkApp.adapter(freshMoostHttp())
   linkApp.registerControllers(
     LinkByOperationIdController,
     LinkByHandlerRefController,
@@ -1105,7 +1114,7 @@ describe('@SwaggerLink', () => {
 
 describe('@SwaggerCallback', () => {
   const cbApp = new Moost()
-  cbApp.adapter(new MoostHttp())
+  cbApp.adapter(freshMoostHttp())
   cbApp.registerControllers(
     CallbackBasicController,
     CallbackCustomController,
@@ -1168,7 +1177,7 @@ describe('@SwaggerCallback', () => {
     const op = spec.paths['/callback-basic/subscribe'].post
     // The handler has callbacks, but let's check another app with no callbacks
     const noCallbackApp = new Moost()
-    noCallbackApp.adapter(new MoostHttp())
+    noCallbackApp.adapter(freshMoostHttp())
     noCallbackApp.registerControllers(PrimitiveController)
     return noCallbackApp.init().then(() => {
       const noCallbackSpec = mapToSwaggerSpec(noCallbackApp.getControllersOverview())

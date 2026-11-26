@@ -87,8 +87,13 @@ throws (a guard's 429, say), the error is swallowed and the second app's chain a
 
 When the second app's `init()` binds into a Wooks instance another app already uses, Moost logs
 a warning, once per Wooks instance (moost 0.7.5 or later). Apps that share a Wooks app you pass
-in yourself (`new MoostHttp(wooksHttp)`) are sharing on purpose and get no warning. To give each
-app its own router, call `clearGlobalWooks()` before creating each app:
+in yourself (`new MoostHttp(wooksHttp)`) are sharing on purpose and get no warning. With wooks
+0.8.7 or later the router also warns, once per app, naming the first route the app shares with
+another: `Route "GET /users" is already registered by another app on the shared router`. It goes
+to the Wooks logger (the console, topic `[wooks]`), not your Moost app's logger, unless you pass
+`logger` in the `MoostHttp` options. It also catches apps Moost stays quiet about: two
+`new MoostHttp(createHttpApp())` apps still share the global Wooks. Both warnings have the same
+fix: to give each app its own router, call `clearGlobalWooks()` before creating each app:
 
 ```ts
 import { clearGlobalWooks, Moost } from 'moost'

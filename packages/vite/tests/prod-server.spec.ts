@@ -8,9 +8,9 @@ import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { brotliDecompressSync, gunzipSync } from 'node:zlib'
 import { Get, MoostHttp, SetHeader } from '@moostjs/event-http'
-import { Controller, Moost } from 'moost'
+import { clearGlobalWooks, Controller, Moost } from 'moost'
 import type { Plugin } from 'vite'
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { moostVite } from '../src/moost-vite'
 import type { TMoostViteDevOptions } from '../src/moost-vite'
@@ -45,6 +45,11 @@ beforeAll(() => {
     g[name] = undefined
   }
   vi.spyOn(console, 'log').mockImplementation((msg: string) => void logs.push(msg))
+})
+
+// each test's app gets its own router: tests re-register the same routes (`bootRoutes()`)
+beforeEach(() => {
+  clearGlobalWooks()
 })
 
 afterEach(async () => {
