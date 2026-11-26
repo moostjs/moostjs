@@ -1,3 +1,12 @@
+## [0.7.10](https://github.com/moostjs/moostjs/compare/v0.7.9...v0.7.10) (2026-11-26)
+
+
+### Bug Fixes
+
+* **moost:** an event keeps its own controller context; re-export renewStateToken ([27db369](https://github.com/moostjs/moostjs/commit/27db369ce25cc812379eaa576d459d21d3182964))
+
+
+
 ## [0.7.9](https://github.com/moostjs/moostjs/compare/v0.7.8...v0.7.9) (2026-11-25)
 
 
