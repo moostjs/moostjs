@@ -2,7 +2,7 @@ export * from './decorators'
 export * from './event-wf'
 export type { TFlowOutput, TWorkflowSchema } from '@prostojs/wf'
 export { StepRetriableError } from '@prostojs/wf'
-export { swapStrategy, useWfState, useWfStrategy, wfKind } from '@wooksjs/event-wf'
+export { renewStateToken, swapStrategy, useWfState, useWfStrategy, wfKind } from '@wooksjs/event-wf'
 
 // Outlet orchestration (from @wooksjs/event-wf)
 export {

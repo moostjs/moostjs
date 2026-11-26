@@ -23,6 +23,9 @@ const controllerContextKey = globalKey<TControllerContextRecord>('controller.con
 /**
  * Sets the controller context for the current event scope.
  * Called internally by adapters when dispatching events to handlers.
+ *
+ * Written on the event's OWN context: an event running as a child of another (a workflow run
+ * under the HTTP request that started it) never replaces the parent event's controller context.
  */
 export function setControllerContext<T>(
   controller: T,
@@ -36,7 +39,12 @@ export function setControllerContext<T>(
     // no prefix given: the previously set one stays in effect
     prefix = _ctx.get(controllerContextKey).prefix
   }
-  _ctx.set(controllerContextKey, { instance: controller, method: method as string, route, prefix })
+  _ctx.setOwn(controllerContextKey, {
+    instance: controller,
+    method: method as string,
+    route,
+    prefix,
+  })
 }
 
 /** Reads the controller context; throws the per-field "not set" error when there is none. */

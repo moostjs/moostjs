@@ -339,3 +339,24 @@ describe('event scope held by a handler lifecycle (registered on demand)', () =>
     })
   })
 })
+
+describe('setControllerContext in a child event (e.g. a workflow run under the HTTP request)', () => {
+  it('writes the child’s own controller context, never the parent’s', () => {
+    const view = new ViewController()
+    const source = new SourceController()
+    createEventContext({ logger: testLogger }, () => {
+      setControllerContext(view, 'render' as never, '/view', { prefix: '' })
+      const parent = current()
+      createEventContext({ logger: testLogger, parent }, () => {
+        // before the child sets its own, it reads the parent's
+        expect(useControllerContext().getController()).toBe(view)
+        setControllerContext(source, 'check', '/source')
+        expect(useControllerContext().getController()).toBe(source)
+        expect(useControllerContext().getPrefix()).toBe('') // the prefix still falls through
+      })
+      expect(useControllerContext().getController()).toBe(view)
+      expect(useControllerContext().getMethod()).toBe('render')
+      expect(useControllerContext().getRoute()).toBe('/view')
+    })
+  })
+})
